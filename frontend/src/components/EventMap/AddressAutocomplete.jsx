@@ -15,12 +15,12 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
     if (!window.google || !containerRef.current) return;
 
     try {
-      // Create the new PlaceAutocompleteElement API
+      // Create the new PlaceAutocompleteElement API - removed 'fields' property
       const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
         inputElement: containerRef.current.querySelector('input'),
         types: ['address', 'geocode'],
-        componentRestrictions: { country: 'us' },
-        fields: ['formatted_address', 'geometry.location']
+        componentRestrictions: { country: 'us' }
+        // Removed fields property as it's not supported
       });
 
       autocompleteRef.current = autocompleteElement;
@@ -30,9 +30,9 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
         const place = autocompleteElement.getPlace();
         if (!place || !place.geometry) return;
 
-        onChange(place.formatted_address);
+        onChange(place.formatted_address || '');
         onSelect({
-          address: place.formatted_address,
+          address: place.formatted_address || '',
           location: {
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng(),
@@ -74,8 +74,64 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       };
     } catch (error) {
       console.error("Error initializing PlaceAutocompleteElement:", error);
-      // Fallback to a basic input if the new API fails
-      console.warn("Using basic input as fallback. Google Maps Places API couldn't be initialized.");
+      
+      // Fallback to legacy Autocomplete API if the new API fails
+      try {
+        console.warn("Falling back to legacy Autocomplete API");
+        
+        const input = containerRef.current.querySelector('input');
+        const autocomplete = new window.google.maps.places.Autocomplete(input, {
+          componentRestrictions: { country: 'us' },
+          types: ['geocode']
+        });
+        
+        autocompleteRef.current = autocomplete;
+        
+        // Add listener for place selection
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          if (!place.geometry) return;
+          
+          onChange(place.formatted_address);
+          onSelect({
+            address: place.formatted_address,
+            location: {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng(),
+            },
+          });
+        });
+        
+        // Apply styling to dropdown
+        const observer = new MutationObserver(() => {
+          const pacContainer = document.querySelector('.pac-container');
+          if (pacContainer) {
+            pacContainer.classList.add(
+              'bg-neutral-800',
+              'border',
+              'border-neutral-700',
+              'rounded-md',
+              'mt-1',
+              'shadow-lg'
+            );
+          }
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+        
+        return () => {
+          if (autocompleteRef.current) {
+            window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+          }
+          observer.disconnect();
+        };
+      } catch (fallbackError) {
+        console.error("Fallback also failed:", fallbackError);
+        console.warn("Using basic input as fallback. Google Maps Places API couldn't be initialized.");
+      }
     }
   }, [onSelect, onChange]);
 

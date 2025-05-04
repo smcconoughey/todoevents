@@ -98,10 +98,6 @@ const MapContainer = React.forwardRef(({
         // Use the shared loader instead of creating a new one
         await initGoogleMaps(GOOGLE_MAPS_API_KEY);
 
-        await new Promise(resolve => {
-          timeoutId = setTimeout(resolve, 100);
-        });
-
         if (!mapRef.current) return;
 
         const map = new google.maps.Map(mapRef.current, {
