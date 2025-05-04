@@ -22,28 +22,30 @@ services:
         value: 30
       - key: RENDER
         value: true
-      - key: CORS_ORIGINS
-        value: "https://eventfinder-web.onrender.com,https://eventfinder-admin.onrender.com"
 
   # Main frontend
   - type: web
     name: eventfinder-web
-    env: static
+    env: node
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_URL
         value: https://eventfinder-api.onrender.com
+      - key: NODE_VERSION
+        value: 18
 
   # Admin frontend
   - type: web
     name: eventfinder-admin
-    env: static
-    buildCommand: cd admin && npm install && npm run build
+    env: node
+    buildCommand: cd admin && npm install && npx vite build
     staticPublishPath: ./admin/dist
     envVars:
       - key: VITE_API_URL
         value: https://eventfinder-api.onrender.com
+      - key: NODE_VERSION
+        value: 18
 
 databases:
   - name: eventfinder-db
