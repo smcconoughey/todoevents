@@ -172,7 +172,6 @@ const MapContainer = React.forwardRef(({
     };
   }, []);
 
-  // The rest of your MapContainer component remains unchanged
   // Handle map center and zoom updates
   useEffect(() => {
     if (!mapInstanceRef.current) return;
