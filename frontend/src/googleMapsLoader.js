@@ -1,4 +1,4 @@
-// Simple async loader for Google Maps API
+// Improved loader that forces async loading
 let loaderPromise = null;
 
 export function initGoogleMaps(apiKey) {
@@ -8,6 +8,15 @@ export function initGoogleMaps(apiKey) {
     return Promise.resolve();
   }
 
+  // Check for existing script tags and remove if they don't have async
+  const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
+  existingScripts.forEach(script => {
+    if (!script.async) {
+      console.warn('Removing non-async Google Maps script');
+      script.parentNode.removeChild(script);
+    }
+  });
+
   // Only initialize once
   if (!loaderPromise) {
     loaderPromise = new Promise((resolve, reject) => {
@@ -16,6 +25,7 @@ export function initGoogleMaps(apiKey) {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
       script.async = true;
       script.defer = true;
+      script.id = 'google-maps-script';
       
       // Setup callbacks
       script.onload = () => resolve();
