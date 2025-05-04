@@ -1,79 +1,48 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 
 const DEBOUNCE_TIME = 2000;
 const MIN_CHARS = 5;
 
 const AddressAutocomplete = ({ onSelect, value, onChange }) => {
-  const inputRef = useRef(null);
-  const sessionTokenRef = useRef(null);
-  const timeoutRef = useRef(null);
+  const containerRef = useRef(null);
   const autocompleteRef = useRef(null);
-  const serviceRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const suggestionRef = useRef(null);
   const lastQueryTimeRef = useRef(0);
   const lastQueryRef = useRef('');
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!window.google || !inputRef.current) return;
-
-    sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
-    serviceRef.current = new window.google.maps.places.AutocompleteService();
-
-    // Create throttled version of getPlacePredictions
-    const originalGetPredictions = serviceRef.current.getPlacePredictions.bind(serviceRef.current);
-    serviceRef.current.getPlacePredictions = (request, callback) => {
-      const now = Date.now();
-      const timeSinceLastQuery = now - lastQueryTimeRef.current;
-      
-      if (!request.input || request.input.length < MIN_CHARS) {
-        callback([], window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS);
-        return;
+    // Clean up on unmount
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (autocompleteRef.current) {
+        // Clear any event listeners or references if needed
       }
-
-      if (timeSinceLastQuery < DEBOUNCE_TIME) {
-        callback([], window.google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT);
-        return;
-      }
-
-      if (lastQueryRef.current && 
-          request.input.toLowerCase().includes(lastQueryRef.current.toLowerCase())) {
-        return;
-      }
-
-      lastQueryTimeRef.current = now;
-      lastQueryRef.current = request.input;
-
-      originalGetPredictions({
-        ...request,
-        types: ['geocode', 'address'],
-      }, (predictions, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-          callback(predictions.slice(0, 2), status);
-        } else {
-          callback(predictions, status);
-        }
-      });
     };
+  }, []);
 
-    // Initialize Autocomplete
-    const autocomplete = new window.google.maps.places.Autocomplete(
-      inputRef.current,
-      {
-        componentRestrictions: { country: 'us' },
-        fields: ['formatted_address', 'geometry.location'],
-        types: ['geocode'],
-        sessionToken: sessionTokenRef.current
-      }
-    );
+  useEffect(() => {
+    if (!window.google || !containerRef.current) return;
 
-    autocompleteRef.current = autocomplete;
+    // Create PlaceAutocompleteElement
+    const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
+      inputElement: containerRef.current.querySelector('input'),
+      types: ['address', 'geocode'],
+      componentRestrictions: { country: 'us' },
+      bounds: {}, // Optional: Can restrict to specific area
+      fields: ['formatted_address', 'geometry.location']
+    });
 
-    // Place changed handler
-    const placeChangedListener = autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
+    // Store reference to the autocomplete element
+    autocompleteRef.current = autocompleteElement;
+
+    // Add listener for place selection
+    autocompleteElement.addListener('place_changed', () => {
+      const place = autocompleteElement.getPlace();
       if (!place.geometry) return;
 
-      // Force immediate update without rate limiting
       onChange(place.formatted_address);
       onSelect({
         address: place.formatted_address,
@@ -86,11 +55,15 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       // Reset rate limiting state
       lastQueryRef.current = '';
       lastQueryTimeRef.current = 0;
-      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
     });
 
-    // Add observer for styling
+    // Initialize AutocompleteSuggestion service
+    suggestionRef.current = new window.google.maps.places.AutocompleteSuggestion();
+
+    // Add observer for styling the autocomplete dropdown
     const observer = new MutationObserver((mutations) => {
+      // Apply custom styling to the autocomplete dropdown
+      // The selectors might need to be adjusted for the new PlaceAutocompleteElement
       const pacContainer = document.querySelector('.pac-container');
       if (pacContainer) {
         pacContainer.classList.add(
@@ -109,13 +82,13 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       subtree: true
     });
 
+    setIsLoaded(true);
+
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (placeChangedListener) placeChangedListener.remove();
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      }
       observer.disconnect();
+      if (autocompleteRef.current) {
+        autocompleteRef.current.remove();
+      }
     };
   }, [onSelect, onChange]);
 
@@ -129,28 +102,39 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
 
     // If input is too short, don't schedule showing predictions
     if (newValue.length < MIN_CHARS) {
-      const pacContainer = document.querySelector('.pac-container');
-      if (pacContainer) {
-        pacContainer.style.display = 'none';
-      }
       return;
     }
 
-    // Schedule showing predictions after debounce time
-    timeoutRef.current = setTimeout(() => {
-      const pacContainer = document.querySelector('.pac-container');
-      if (pacContainer) {
-        pacContainer.style.display = '';
-      }
-    }, DEBOUNCE_TIME);
+    // If enough time has passed since last query
+    const now = Date.now();
+    const timeSinceLastQuery = now - lastQueryTimeRef.current;
+    
+    if (timeSinceLastQuery < DEBOUNCE_TIME) {
+      return;
+    }
+
+    // Use AutocompleteSuggestion to get predictions
+    if (suggestionRef.current && newValue.length >= MIN_CHARS) {
+      timeoutRef.current = setTimeout(() => {
+        lastQueryTimeRef.current = now;
+        lastQueryRef.current = newValue;
+        
+        // The new API uses a different method structure
+        suggestionRef.current.getQueryPredictions({
+          input: newValue,
+          types: ['address', 'geocode'],
+          componentRestrictions: { country: 'us' },
+          fields: ['formatted_address', 'geometry.location']
+        });
+      }, DEBOUNCE_TIME);
+    }
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-4 h-4" />
         <input
-          ref={inputRef}
           type="text"
           value={value}
           onChange={handleInputChange}

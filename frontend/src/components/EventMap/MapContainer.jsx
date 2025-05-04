@@ -98,7 +98,8 @@ const MapContainer = React.forwardRef(({
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
           version: 'weekly',
-          libraries: ['places']
+          libraries: ['places'],
+          loadingStrategy: 'async'
         });
 
         await loader.load();
