@@ -5,17 +5,20 @@ import { initGoogleMaps } from './googleMapsLoader';
 
 function App() {
   useEffect(() => {
-    // Ensure API key is properly formatted with no spaces
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim();
-    if (!apiKey) {
-      console.error('Google Maps API key is missing or empty');
-      return;
-    }
+    // Get the API key and do some basic validation
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
-    // Initialize Google Maps once at the app level
-    initGoogleMaps(apiKey).catch(error => {
-      console.error('Failed to load Google Maps API:', error);
-    });
+    // Log a non-sensitive message about the key
+    if (!apiKey) {
+      console.error('Google Maps API key is missing from environment variables');
+    } else {
+      console.log(`API key loaded (length: ${apiKey.length})`);
+      
+      // Initialize Google Maps
+      initGoogleMaps(apiKey).catch(error => {
+        console.error('Failed to load Google Maps API:', error);
+      });
+    }
   }, []);
 
   return (

@@ -1,4 +1,4 @@
-// Improved loader that forces async loading
+// Enhanced loader with additional checks
 let loaderPromise = null;
 
 export function initGoogleMaps(apiKey) {
@@ -8,13 +8,11 @@ export function initGoogleMaps(apiKey) {
     return Promise.resolve();
   }
 
-  // Check for existing script tags and remove if they don't have async
+  // Remove ALL existing Google Maps script tags before adding our own
   const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
   existingScripts.forEach(script => {
-    if (!script.async) {
-      console.warn('Removing non-async Google Maps script');
-      script.parentNode.removeChild(script);
-    }
+    console.warn('Removing existing Google Maps script to prevent duplicate loading');
+    script.parentNode.removeChild(script);
   });
 
   // Only initialize once
@@ -28,7 +26,10 @@ export function initGoogleMaps(apiKey) {
       script.id = 'google-maps-script';
       
       // Setup callbacks
-      script.onload = () => resolve();
+      script.onload = () => {
+        console.log("Google Maps loaded with async attribute");
+        resolve();
+      };
       script.onerror = (error) => reject(error);
       
       // Add to document
