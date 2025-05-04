@@ -39,7 +39,7 @@ services:
   - type: web
     name: eventfinder-admin
     env: static
-    buildCommand: cd admin && npm install && npx vite build
+    buildCommand: cd admin && npm ci && NODE_ENV=production node ./node_modules/.bin/vite build
     staticPublishPath: admin/dist
     envVars:
       - key: VITE_API_URL
