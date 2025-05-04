@@ -9,6 +9,7 @@ export default defineConfig({
     {
       name: 'html-transform',
       transformIndexHtml(html) {
+        // Replace the Google Maps API key placeholder
         return html.replace(
           /%VITE_GOOGLE_MAPS_API_KEY%/g, 
           process.env.VITE_GOOGLE_MAPS_API_KEY || ''
