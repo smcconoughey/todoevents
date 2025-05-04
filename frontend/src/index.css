@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+
+  /* Core HTML element fixes */
+  html,
+  body,
+  #root {
+    @apply h-full;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow: hidden;
+  }
+
+  /* Map container specific styles */
+  .map-container {
+    @apply h-[calc(100dvh-4rem)] sm:h-full w-full;
+    will-change: transform;
+  }
+
+  /* Google Maps specific fixes */
+  .gm-style {
+    @apply font-sans;
+    
+    .gm-control-container {
+      @apply invert contrast-[90%] hue-rotate-180;
+    }
+
+    img:not([src*="svg"]) {
+      @apply invert contrast-[85%] hue-rotate-180 brightness-90;
+    }
+  }
+
+  .gm-fullscreen-control,
+  .gm-svpc,
+  .gmnoprint {
+    @apply scale-90 sm:scale-100;
+  }
+
+  /* Autocomplete styling */
+  .pac-container {
+    @apply mt-1 bg-black/90 backdrop-blur-sm border border-white/10 rounded-lg z-[100] p-2 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .pac-item {
+    @apply px-2 py-1.5 text-white bg-transparent border-t border-white/10 !important;
+    &:first-child { @apply border-t-0 !important; }
+    &:hover { @apply bg-white/10 !important; }
+  }
+
+  .pac-item-query {
+    @apply text-white !important;
+  }
+
+  .pac-matched {
+    @apply text-blue-400 !important;
+  }
+
+  /* Mobile specific fixes */
+  @media (max-width: 640px) {
+    body {
+      @apply overflow-hidden;
+    }
+
+    .map-container {
+      @apply h-[calc(100dvh-4rem)];
+    }
+  }
+
+  /* Radix UI fixes */
+  [data-radix-popper-content-wrapper] {
+    @apply z-[100] !important;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-foreground/20 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-foreground/30;
+  }
+}
+
+@layer components {
+  /* Custom components can be added here */
+}
+
+@layer utilities {
+  /* Custom utilities can be added here */
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+  }
+
+  .backdrop-blur-md {
+    backdrop-filter: blur(8px);
+  }
+
+  .backdrop-blur-lg {
+    backdrop-filter: blur(12px);
+  }
+}

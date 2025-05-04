@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: eventfinder-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 8000
+      - key: RAILWAY_ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        fromDatabase:
+          name: eventfinder-db
+          property: connectionString
+          
+databases:
+  - name: eventfinder-db
+    databaseName: eventfinder
+    plan: free

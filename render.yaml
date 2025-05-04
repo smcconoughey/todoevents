@@ -1,0 +1,51 @@
+services:
+  # Backend API service
+  - type: web
+    name: eventfinder-api
+    env: python
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && python -m uvicorn backend:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 8000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eventfinder-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: RENDER
+        value: true
+      - key: CORS_ORIGINS
+        value: "https://eventfinder-web.onrender.com,https://eventfinder-admin.onrender.com"
+
+  # Main frontend
+  - type: web
+    name: eventfinder-web
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://eventfinder-api.onrender.com
+
+  # Admin frontend
+  - type: web
+    name: eventfinder-admin
+    env: static
+    buildCommand: cd admin && npm install && npm run build
+    staticPublishPath: ./admin/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://eventfinder-api.onrender.com
+
+databases:
+  - name: eventfinder-db
+    databaseName: eventfinder
+    plan: free

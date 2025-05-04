@@ -1,0 +1,949 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Users,
+  Calendar,
+  Server,
+  Trash2,
+  Lock,
+  Unlock,
+  AlertTriangle,
+  LogOut,
+  X,
+  Filter,
+  Search,
+  BarChart2,
+  PieChart,
+  Database,
+  MessageSquare,
+  Shield,
+  Download,
+  ChevronDown
+} from 'lucide-react';
+
+// Utility functions for API calls
+const fetchData = async (endpoint, method = 'GET', body = null) => {
+  try {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+
+    const config = {
+      method,
+      headers,
+      ...(body && { body: JSON.stringify(body) })
+    };
+
+    const response = await fetch(`http://127.0.0.1:8000${endpoint}`, config);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.reload();
+        throw new Error('Unauthorized');
+      }
+
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Network response was not ok');
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
+
+// Login Component
+const LoginForm = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://127.0.0.1:8000/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          username: email,
+          password: password
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Login failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('token', data.access_token);
+      onLogin();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white shadow-md rounded-lg px-10 pt-8 pb-10 mb-4 w-full max-w-md"
+      >
+        <h2 className="text-3xl font-bold mb-8 text-blue-600 text-center">
+          Admin Portal
+        </h2>
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            {error}
+          </div>
+        )}
+        <div className="mb-6">
+          <label className="block text-gray-700 text-sm font-semibold mb-2">
+            Email Address
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your email"
+          />
+        </div>
+        <div className="mb-6">
+          <label className="block text-gray-700 text-sm font-semibold mb-2">
+            Password
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your password"
+          />
+        </div>
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-300"
+        >
+          Sign In
+        </button>
+      </form>
+    </div>
+  );
+};
+
+// Main Admin Dashboard Component
+const AdminDashboard = () => {
+  // State Management
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [users, setUsers] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [error, setError] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [userDetails, setUserDetails] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  // Search and Filter States
+  const [userSearch, setUserSearch] = useState('');
+  const [eventSearch, setEventSearch] = useState('');
+  const [userFilterRole, setUserFilterRole] = useState('all');
+  const [eventFilterCategory, setEventFilterCategory] = useState('all');
+
+  // Bulk Action States
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedEvents, setSelectedEvents] = useState([]);
+
+  // Analytics States
+  const [analytics, setAnalytics] = useState({
+    userRoleDistribution: {},
+    eventCategoryDistribution: {},
+    totalUsers: 0,
+    totalEvents: 0,
+    recentActivity: []
+  });
+
+  // Fetch user details and initial data
+  useEffect(() => {
+    const fetchUserAndData = async () => {
+      if (!isLoggedIn) return;
+
+      try {
+        // Fetch current user details
+        const userMe = await fetchData('/users/me');
+        setUserDetails(userMe);
+
+        // Check if user is an admin
+        if (userMe.role !== 'admin') {
+          setAccessDenied(true);
+          throw new Error('Insufficient admin permissions');
+        }
+
+        // Fetch admin data
+        const [usersData, eventsData] = await Promise.all([
+          fetchData('/admin/users'),
+          fetchData('/events')
+        ]);
+
+        setUsers(usersData);
+        setEvents(eventsData);
+
+        // Compute Analytics
+        const userRoleDistribution = usersData.reduce((acc, user) => {
+          acc[user.role] = (acc[user.role] || 0) + 1;
+          return acc;
+        }, {});
+
+        const eventCategoryDistribution = eventsData.reduce((acc, event) => {
+          acc[event.category] = (acc[event.category] || 0) + 1;
+          return acc;
+        }, {});
+
+        setAnalytics({
+          userRoleDistribution,
+          eventCategoryDistribution,
+          totalUsers: usersData.length,
+          totalEvents: eventsData.length,
+          recentActivity: [] // Placeholder for activity logs
+        });
+
+        setError(null);
+        setAccessDenied(false);
+      } catch (error) {
+        setError(error.message);
+        console.error('Error fetching data:', error);
+
+        if (error.message === 'Insufficient admin permissions') {
+          setAccessDenied(true);
+        } else {
+          handleLogout();
+        }
+      }
+    };
+
+    fetchUserAndData();
+  }, [isLoggedIn]);
+
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    setUserDetails(null);
+  };
+
+  // Filtered Users
+  const filteredUsers = useMemo(() => {
+    return users.filter(user =>
+      (userFilterRole === 'all' || user.role === userFilterRole) &&
+      (user.email.toLowerCase().includes(userSearch.toLowerCase()))
+    );
+  }, [users, userSearch, userFilterRole]);
+
+  // Filtered Events
+  const filteredEvents = useMemo(() => {
+    return events.filter(event =>
+      (eventFilterCategory === 'all' || event.category === eventFilterCategory) &&
+      (event.title.toLowerCase().includes(eventSearch.toLowerCase()))
+    );
+  }, [events, eventSearch, eventFilterCategory]);
+
+  // Bulk User Actions
+  const handleBulkUserAction = async (action) => {
+    try {
+      switch (action) {
+        case 'delete':
+          await Promise.all(
+            selectedUsers.map(userId =>
+              fetchData(`/admin/users/${userId}`, 'DELETE')
+            )
+          );
+          setUsers(users.filter(user => !selectedUsers.includes(user.id)));
+          setSelectedUsers([]);
+          break;
+        case 'changeRole':
+          await Promise.all(
+            selectedUsers.map(userId =>
+              fetchData(`/admin/users/${userId}/role`, 'PUT', {
+                role: userFilterRole === 'admin' ? 'user' : 'admin'
+              })
+            )
+          );
+          setUsers(users.map(user =>
+            selectedUsers.includes(user.id)
+              ? { ...user, role: userFilterRole === 'admin' ? 'user' : 'admin' }
+              : user
+          ));
+          setSelectedUsers([]);
+          break;
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  // Bulk Event Actions
+  const handleBulkEventAction = async (action) => {
+    try {
+      switch (action) {
+        case 'delete':
+          await Promise.all(
+            selectedEvents.map(eventId =>
+              fetchData(`/events/${eventId}`, 'DELETE')
+            )
+          );
+          setEvents(events.filter(event => !selectedEvents.includes(event.id)));
+          setSelectedEvents([]);
+          break;
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  // Export Data
+  const exportData = (dataType) => {
+    let data, headers, filename;
+
+    switch (dataType) {
+      case 'users':
+        data = filteredUsers.map(({ id, email, role }) => ({ id, email, role }));
+        headers = ['ID', 'Email', 'Role'];
+        filename = 'users_export.csv';
+        break;
+      case 'events':
+        data = filteredEvents.map(({ id, title, date, category }) =>
+          ({ id, title, date, category })
+        );
+        headers = ['ID', 'Title', 'Date', 'Category'];
+        filename = 'events_export.csv';
+        break;
+    }
+
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(header =>
+        row[header.toLowerCase()]
+      ).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // If not logged in, show login form
+  if (!isLoggedIn) {
+    return <LoginForm onLogin={() => setIsLoggedIn(true)} />;
+  }
+
+  // Access Denied Component
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white shadow-md rounded-lg p-8 max-w-md w-full text-center">
+          <AlertTriangle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Access Denied</h2>
+          <p className="text-gray-600 mb-6">
+            You do not have administrator permissions to access this dashboard.
+          </p>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Dashboard Component
+  const Dashboard = () => {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-md p-4 flex items-center">
+            <Users className="text-blue-600 mr-4" />
+            <div>
+              <h3 className="text-xl font-bold text-blue-600">{users.length}</h3>
+              <p className="text-gray-500">Total Users</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-4 flex items-center">
+            <Calendar className="text-green-600 mr-4" />
+            <div>
+              <h3 className="text-xl font-bold text-green-600">{events.length}</h3>
+              <p className="text-gray-500">Total Events</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-4 flex items-center">
+            <BarChart2 className="text-purple-600 mr-4" />
+            <div>
+              <h3 className="text-xl font-bold text-purple-600">
+                {Object.keys(analytics.userRoleDistribution).length}
+              </h3>
+              <p className="text-gray-500">User Roles</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-4 flex items-center">
+            <Shield className="text-orange-600 mr-4" />
+            <div>
+              <h3 className="text-xl font-bold text-orange-600">
+                {Object.keys(analytics.eventCategoryDistribution).length}
+              </h3>
+              <p className="text-gray-500">Event Categories</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                className="bg-blue-500 text-white py-2 rounded hover:bg-blue-600 flex items-center justify-center"
+                onClick={() => setActiveTab('users')}
+              >
+                <Users className="mr-2" /> Manage Users
+              </button>
+              <button
+                className="bg-green-500 text-white py-2 rounded hover:bg-green-600 flex items-center justify-center"
+                onClick={() => setActiveTab('events')}
+              >
+                <Calendar className="mr-2" /> Manage Events
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">System Status</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Users</span>
+                <span className="font-semibold">{users.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Events</span>
+                <span className="font-semibold">{events.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Admin Users</span>
+                <span className="font-semibold">
+                  {users.filter(user => user.role === 'admin').length}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Analytics Preview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">User Role Distribution</h3>
+            <div>
+              {Object.entries(analytics.userRoleDistribution).map(([role, count]) => (
+                <div key={role} className="flex justify-between items-center mb-2">
+                  <span className="capitalize">{role} Users</span>
+                  <span className="font-semibold text-blue-600">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">Event Category Distribution</h3>
+            <div>
+              {Object.entries(analytics.eventCategoryDistribution).map(([category, count]) => (
+                <div key={category} className="flex justify-between items-center mb-2">
+                  <span className="capitalize">{category} Events</span>
+                  <span className="font-semibold text-green-600">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  // User Management Component
+  const UserManagement = () => {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-blue-600">User Management</h2>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => exportData('users')}
+              className="flex items-center text-blue-600 hover:text-blue-800"
+              title="Export Users"
+            >
+              <Download className="w-5 h-5 mr-2" /> Export
+            </button>
+            {selectedUsers.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleBulkUserAction('delete')}
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                >
+                  Delete Selected
+                </button>
+                <button
+                  onClick={() => handleBulkUserAction('changeRole')}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                >
+                  Change Role
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="flex space-x-2 mb-4">
+          <div className="relative flex-grow">
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md pl-10"
+            />
+            <Search className="absolute left-3 top-3 text-gray-400" />
+          </div>
+          <select
+            value={userFilterRole}
+            onChange={(e) => setUserFilterRole(e.target.value)}
+            className="px-3 py-2 border rounded-md"
+          >
+            <option value="all">All Roles</option>
+            <option value="admin">Admins</option>
+            <option value="user">Users</option>
+          </select>
+        </div>
+
+        {/* User Table */}
+        <table className="w-full">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={selectedUsers.length === filteredUsers.length}
+                  onChange={(e) =>
+                    setSelectedUsers(
+                      e.target.checked
+                        ? filteredUsers.map(u => u.id)
+                        : []
+                    )
+                  }
+                />
+              </th>
+              <th className="p-3 text-left">ID</th>
+              <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Role</th>
+              <th className="p-3 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map(user => (
+              <tr key={user.id} className="border-b hover:bg-gray-50">
+                <td className="p-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.includes(user.id)}
+                    onChange={(e) =>
+                      setSelectedUsers(prev =>
+                        e.target.checked
+                          ? [...prev, user.id]
+                          : prev.filter(id => id !== user.id)
+                      )
+                    }
+                  />
+                </td>
+                <td className="p-3">{user.id}</td>
+                <td className="p-3">{user.email}</td>
+                <td className="p-3">
+                  <span className={`
+                  px-2 py-1 rounded text-xs font-semibold
+                  ${user.role === 'admin'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'}
+                `}>
+                    {user.role}
+                  </span>
+                </td>
+                <td className="p-3">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        // Implement user details/edit modal
+                        setError('User edit functionality not implemented yet');
+                      }}
+                      className="text-blue-500 hover:text-blue-700"
+                      title="Edit User"
+                    >
+                      <Users className="w-5 h-5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Event Management Component
+  const EventManagement = () => {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-blue-600">Event Management</h2>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => exportData('events')}
+              className="flex items-center text-blue-600 hover:text-blue-800"
+              title="Export Events"
+            >
+              <Download className="w-5 h-5 mr-2" /> Export
+            </button>
+            {selectedEvents.length > 0 && (
+              <button
+                onClick={() => handleBulkEventAction('delete')}
+                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+              >
+                Delete Selected
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="flex space-x-2 mb-4">
+          <div className="relative flex-grow">
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={eventSearch}
+              onChange={(e) => setEventSearch(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md pl-10"
+            />
+            <Search className="absolute left-3 top-3 text-gray-400" />
+          </div>
+          <select
+            value={eventFilterCategory}
+            onChange={(e) => setEventFilterCategory(e.target.value)}
+            className="px-3 py-2 border rounded-md"
+          >
+            <option value="all">All Categories</option>
+            {[...new Set(events.map(e => e.category))].map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Event Table */}
+        <table className="w-full">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={selectedEvents.length === filteredEvents.length}
+                  onChange={(e) =>
+                    setSelectedEvents(
+                      e.target.checked
+                        ? filteredEvents.map(event => event.id)
+                        : []
+                    )
+                  }
+                />
+              </th>
+              <th className="p-3 text-left">ID</th>
+              <th className="p-3 text-left">Title</th>
+              <th className="p-3 text-left">Date</th>
+              <th className="p-3 text-left">Category</th>
+              <th className="p-3 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredEvents.map(event => (
+              <tr key={event.id} className="border-b hover:bg-gray-50">
+                <td className="p-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedEvents.includes(event.id)}
+                    onChange={(e) =>
+                      setSelectedEvents(prev =>
+                        e.target.checked
+                          ? [...prev, event.id]
+                          : prev.filter(id => id !== event.id)
+                      )
+                    }
+                  />
+                </td>
+                <td className="p-3">{event.id}</td>
+                <td className="p-3">{event.title}</td>
+                <td className="p-3">{event.date}</td>
+                <td className="p-3">
+                  <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                    {event.category}
+                  </span>
+                </td>
+                <td className="p-3">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        // Implement event details/edit modal
+                        setError('Event edit functionality not implemented yet');
+                      }}
+                      className="text-blue-500 hover:text-blue-700"
+                      title="View Event Details"
+                    >
+                      <Calendar className="w-5 h-5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Analytics Component
+  const AnalyticsDashboard = () => {
+    const renderPieChart = (data, title) => {
+      const total = Object.values(data).reduce((a, b) => a + b, 0);
+      return (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-xl font-semibold text-blue-600 mb-4">{title}</h3>
+          <div className="flex flex-wrap items-center justify-center">
+            {Object.entries(data).map(([key, value]) => (
+              <div key={key} className="flex items-center m-2">
+                <div
+                  className="w-4 h-4 mr-2 rounded-full"
+                  style={{
+                    backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`
+                  }}
+                />
+                <span>{key}: {value} ({((value / total) * 100).toFixed(1)}%)</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Overall Statistics */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">System Overview</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="text-sm text-blue-600">Total Users</h4>
+                <p className="text-2xl font-bold text-blue-800">{analytics.totalUsers}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="text-sm text-green-600">Total Events</h4>
+                <p className="text-2xl font-bold text-green-800">{analytics.totalEvents}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* User Role Distribution */}
+          {renderPieChart(
+            analytics.userRoleDistribution,
+            'User Role Distribution'
+          )}
+        </div>
+
+        {/* Event Category Distribution */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {renderPieChart(
+            analytics.eventCategoryDistribution,
+            'Event Category Distribution'
+          )}
+
+          {/* Recent Activity Placeholder */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">Recent Activity</h3>
+            <p className="text-gray-500 text-center">
+              No recent activity logs available
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Moderation Tools Component
+  const ModerationTools = () => {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* User Moderation Quick Actions */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">User Moderation</h3>
+            <div className="space-y-4">
+              <button
+                className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 flex items-center justify-center"
+                onClick={() => setError('Mass user suspension not implemented')}
+              >
+                <Lock className="mr-2" /> Suspend Users
+              </button>
+              <button
+                className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 flex items-center justify-center"
+                onClick={() => setError('User account review not implemented')}
+              >
+                <Shield className="mr-2" /> Review Accounts
+              </button>
+            </div>
+          </div>
+
+          {/* Event Moderation Quick Actions */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">Event Moderation</h3>
+            <div className="space-y-4">
+              <button
+                className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 flex items-center justify-center"
+                onClick={() => setError('Mass event deletion not implemented')}
+              >
+                <Trash2 className="mr-2" /> Delete Inappropriate Events
+              </button>
+              <button
+                className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 flex items-center justify-center"
+                onClick={() => setError('Event review queue not implemented')}
+              >
+                <MessageSquare className="mr-2" /> Review Event Reports
+              </button>
+            </div>
+          </div>
+
+          {/* System Maintenance */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold text-blue-600 mb-4">System Maintenance</h3>
+            <div className="space-y-4">
+              <button
+                className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600 flex items-center justify-center"
+                onClick={() => setError('Database backup not implemented')}
+              >
+                <Database className="mr-2" /> Backup Database
+              </button>
+              <button
+                className="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600 flex items-center justify-center"
+                onClick={() => setError('System logs review not implemented')}
+              >
+                <BarChart2 className="mr-2" /> System Logs
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  // The rest of the AdminDashboard component continues...
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex">
+        {/* Sidebar */}
+        <div className="w-64 bg-white border-r shadow-md p-4">
+          <h1 className="text-2xl font-bold mb-8 text-blue-600">Admin Portal</h1>
+          <nav className="space-y-2">
+            {[
+              { name: 'Dashboard', icon: <Server className="mr-2" />, tab: 'dashboard' },
+              { name: 'Users', icon: <Users className="mr-2" />, tab: 'users' },
+              { name: 'Events', icon: <Calendar className="mr-2" />, tab: 'events' },
+              { name: 'Analytics', icon: <BarChart2 className="mr-2" />, tab: 'analytics' },
+              { name: 'Moderation', icon: <Shield className="mr-2" />, tab: 'moderation' }
+            ].map(item => (
+              <button
+                key={item.tab}
+                onClick={() => setActiveTab(item.tab)}
+                className={`
+                  w-full flex items-center p-2 rounded 
+                  ${activeTab === item.tab
+                    ? 'bg-blue-600/10 text-blue-600'
+                    : 'hover:bg-gray-100 text-gray-600'}
+                `}
+              >
+                {item.icon}
+                {item.name}
+              </button>
+            ))}
+          </nav>
+
+          {/* User Info and Logout */}
+          {userDetails && (
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">{userDetails.email}</p>
+                  <p className="text-xs text-gray-500 capitalize">{userDetails.role}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-red-500 hover:text-red-700"
+                  title="Logout"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 p-8">
+          {/* Error Banner */}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 flex items-center">
+              <AlertTriangle className="w-6 h-6 mr-3" />
+              <span className="flex-1">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="ml-4 hover:bg-red-200 rounded-full p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
+          {/* Content Sections */}
+          {/* Content Sections */}
+          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'users' && <UserManagement />}
+          {activeTab === 'events' && <EventManagement />}
+          {activeTab === 'analytics' && <AnalyticsDashboard />}
+          {activeTab === 'moderation' && <ModerationTools />}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;
