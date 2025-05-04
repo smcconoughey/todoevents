@@ -1,8 +1,8 @@
 // src/components/EventMap/MapContainer.jsx
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import categories from './categoryConfig';
+import { initGoogleMaps } from '@/googleMapsLoader';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
@@ -95,14 +95,8 @@ const MapContainer = React.forwardRef(({
 
     const initMap = async () => {
       try {
-        const loader = new Loader({
-          apiKey: GOOGLE_MAPS_API_KEY,
-          version: 'weekly',
-          libraries: ['places'],
-          loadingStrategy: 'async'
-        });
-
-        await loader.load();
+        // Use the shared loader instead of creating a new one
+        await initGoogleMaps(GOOGLE_MAPS_API_KEY);
 
         await new Promise(resolve => {
           timeoutId = setTimeout(resolve, 100);
@@ -182,6 +176,7 @@ const MapContainer = React.forwardRef(({
     };
   }, []);
 
+  // The rest of your MapContainer component remains unchanged
   // Handle map center and zoom updates
   useEffect(() => {
     if (!mapInstanceRef.current) return;

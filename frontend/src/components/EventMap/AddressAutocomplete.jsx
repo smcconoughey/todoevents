@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 
 const DEBOUNCE_TIME = 2000;
@@ -6,90 +6,77 @@ const MIN_CHARS = 5;
 
 const AddressAutocomplete = ({ onSelect, value, onChange }) => {
   const containerRef = useRef(null);
-  const autocompleteRef = useRef(null);
   const timeoutRef = useRef(null);
-  const suggestionRef = useRef(null);
+  const autocompleteRef = useRef(null);
   const lastQueryTimeRef = useRef(0);
   const lastQueryRef = useRef('');
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    // Clean up on unmount
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (autocompleteRef.current) {
-        // Clear any event listeners or references if needed
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!window.google || !containerRef.current) return;
 
-    // Create PlaceAutocompleteElement
-    const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
-      inputElement: containerRef.current.querySelector('input'),
-      types: ['address', 'geocode'],
-      componentRestrictions: { country: 'us' },
-      bounds: {}, // Optional: Can restrict to specific area
-      fields: ['formatted_address', 'geometry.location']
-    });
-
-    // Store reference to the autocomplete element
-    autocompleteRef.current = autocompleteElement;
-
-    // Add listener for place selection
-    autocompleteElement.addListener('place_changed', () => {
-      const place = autocompleteElement.getPlace();
-      if (!place.geometry) return;
-
-      onChange(place.formatted_address);
-      onSelect({
-        address: place.formatted_address,
-        location: {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-        },
+    try {
+      // Create the new PlaceAutocompleteElement API
+      const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
+        inputElement: containerRef.current.querySelector('input'),
+        types: ['address', 'geocode'],
+        componentRestrictions: { country: 'us' },
+        fields: ['formatted_address', 'geometry.location']
       });
 
-      // Reset rate limiting state
-      lastQueryRef.current = '';
-      lastQueryTimeRef.current = 0;
-    });
+      autocompleteRef.current = autocompleteElement;
 
-    // Initialize AutocompleteSuggestion service
-    suggestionRef.current = new window.google.maps.places.AutocompleteSuggestion();
+      // Add listener for place selection
+      autocompleteElement.addListener('place_changed', () => {
+        const place = autocompleteElement.getPlace();
+        if (!place || !place.geometry) return;
 
-    // Add observer for styling the autocomplete dropdown
-    const observer = new MutationObserver((mutations) => {
-      // Apply custom styling to the autocomplete dropdown
-      // The selectors might need to be adjusted for the new PlaceAutocompleteElement
-      const pacContainer = document.querySelector('.pac-container');
-      if (pacContainer) {
-        pacContainer.classList.add(
-          'bg-neutral-800',
-          'border',
-          'border-neutral-700',
-          'rounded-md',
-          'mt-1',
-          'shadow-lg'
-        );
-      }
-    });
+        onChange(place.formatted_address);
+        onSelect({
+          address: place.formatted_address,
+          location: {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          },
+        });
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+        // Reset rate limiting state
+        lastQueryRef.current = '';
+        lastQueryTimeRef.current = 0;
+      });
 
-    setIsLoaded(true);
+      // Add observer for styling the autocomplete dropdown
+      const observer = new MutationObserver(() => {
+        // Apply custom styling to the autocomplete dropdown
+        const pacContainer = document.querySelector('.pac-container');
+        if (pacContainer) {
+          pacContainer.classList.add(
+            'bg-neutral-800',
+            'border',
+            'border-neutral-700',
+            'rounded-md',
+            'mt-1',
+            'shadow-lg'
+          );
+        }
+      });
 
-    return () => {
-      observer.disconnect();
-      if (autocompleteRef.current) {
-        autocompleteRef.current.remove();
-      }
-    };
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      return () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        observer.disconnect();
+        if (autocompleteRef.current) {
+          autocompleteRef.current.remove();
+        }
+      };
+    } catch (error) {
+      console.error("Error initializing PlaceAutocompleteElement:", error);
+      // Fallback to a basic input if the new API fails
+      console.warn("Using basic input as fallback. Google Maps Places API couldn't be initialized.");
+    }
   }, [onSelect, onChange]);
 
   const handleInputChange = (e) => {
@@ -102,31 +89,11 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
 
     // If input is too short, don't schedule showing predictions
     if (newValue.length < MIN_CHARS) {
+      const pacContainer = document.querySelector('.pac-container');
+      if (pacContainer) {
+        pacContainer.style.display = 'none';
+      }
       return;
-    }
-
-    // If enough time has passed since last query
-    const now = Date.now();
-    const timeSinceLastQuery = now - lastQueryTimeRef.current;
-    
-    if (timeSinceLastQuery < DEBOUNCE_TIME) {
-      return;
-    }
-
-    // Use AutocompleteSuggestion to get predictions
-    if (suggestionRef.current && newValue.length >= MIN_CHARS) {
-      timeoutRef.current = setTimeout(() => {
-        lastQueryTimeRef.current = now;
-        lastQueryRef.current = newValue;
-        
-        // The new API uses a different method structure
-        suggestionRef.current.getQueryPredictions({
-          input: newValue,
-          types: ['address', 'geocode'],
-          componentRestrictions: { country: 'us' },
-          fields: ['formatted_address', 'geometry.location']
-        });
-      }, DEBOUNCE_TIME);
     }
   };
 
