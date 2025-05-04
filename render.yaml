@@ -24,10 +24,11 @@ services:
         value: true
 
   # Main frontend
-  - type: static
+  - type: web
     name: eventfinder-web
+    env: static
     buildCommand: cd frontend && npm install && npm run build
-    publishPath: frontend/dist
+    staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
         value: https://eventfinder-api.onrender.com
@@ -35,10 +36,11 @@ services:
         value: 18
 
   # Admin frontend
-  - type: static
+  - type: web
     name: eventfinder-admin
+    env: static
     buildCommand: cd admin && npm install && npx vite build
-    publishPath: admin/dist
+    staticPublishPath: admin/dist
     envVars:
       - key: VITE_API_URL
         value: https://eventfinder-api.onrender.com
