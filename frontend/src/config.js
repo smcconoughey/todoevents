@@ -3,7 +3,7 @@ const isDevelopment = import.meta.env.DEV;
 
 // Use environment variable or fall back to appropriate URLs
 export const API_URL = import.meta.env.VITE_API_URL || 
-  (isDevelopment ? 'http://localhost:8000' : '');
+  (isDevelopment ? 'http://localhost:8000' : 'https://eventfinder-api.onrender.com');
 
 export const fetchConfig = {
   credentials: 'include',
@@ -11,10 +11,6 @@ export const fetchConfig = {
     'Content-Type': 'application/json',
   },
 };
-
-const API_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://localhost:8000' : 'https://eventfinder-api.onrender.com');
-
 
 export default {
   API_URL,
