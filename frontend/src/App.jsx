@@ -17,6 +17,12 @@ function App() {
       return;
     }
     
+    if (apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+      console.error('Google Maps API key has not been changed from the default placeholder');
+      setMapsError('Invalid API key');
+      return;
+    }
+    
     console.log(`API key loaded (length: ${apiKey.length})`);
     
     // Initialize Google Maps
@@ -40,11 +46,20 @@ function App() {
               <p className="mb-4">
                 {mapsError === 'Missing API key' ? 
                   'Google Maps API key is missing. Please add VITE_GOOGLE_MAPS_API_KEY to your environment variables.' :
+                mapsError === 'Invalid API key' ?
+                  'Google Maps API key is invalid. Please replace the placeholder in your .env file with a valid API key.' :
                   'Failed to load Google Maps. Please check your API key and try again.'}
               </p>
               <p className="text-sm opacity-70">
                 See the README.md file for instructions on setting up your environment.
               </p>
+            </div>
+          </div>
+        ) : !mapsLoaded ? (
+          <div className="flex items-center justify-center h-full bg-neutral-900 text-white">
+            <div className="p-6 bg-neutral-800/50 border border-white/10 rounded-lg">
+              <h2 className="text-xl font-bold mb-2">Loading Maps...</h2>
+              <p>Initializing Google Maps API</p>
             </div>
           </div>
         ) : (

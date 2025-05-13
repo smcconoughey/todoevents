@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/radix-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -236,13 +237,12 @@ const CreateEventForm = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
         className="bg-neutral-900/95 backdrop-blur-sm border-white/10"
-        aria-describedby="create-event-dialog-description"
       >
         <DialogHeader>
           <DialogTitle>{initialEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
-          <p id="create-event-dialog-description" className="sr-only">
+          <DialogDescription id="create-event-dialog-description">
             {initialEvent ? 'Edit an existing event' : 'Create a new event with details'}
-          </p>
+          </DialogDescription>
           <button
             onClick={onClose}
             className="absolute right-4 top-4 rounded-full p-1.5 text-white/70 hover:bg-white/10 hover:text-white"

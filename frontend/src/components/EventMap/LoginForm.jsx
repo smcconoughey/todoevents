@@ -1,11 +1,11 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from './AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => {} }) => {
-  const { login, registerUser, loading, error: authError, statusMessage, clearError } = useContext(AuthContext);
+  const { login, registerUser, loading: authLoading, error: authError, statusMessage, clearError } = useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({
@@ -20,6 +20,14 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     number: false,
     special: false
   });
+
+  // This will help ensure that loading state doesn't get stuck
+  useEffect(() => {
+    // If auth context is no longer loading, we shouldn't be either
+    if (!authLoading && isLoading) {
+      setIsLoading(false);
+    }
+  }, [authLoading]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -57,25 +65,37 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         }
         
         // Call register function
-        await registerUser(form.email, form.password);
+        const success = await registerUser(form.email, form.password);
+        if (success) {
+          onSuccess();
+        }
       } else {
         // Call login function
-        await login(form.email, form.password);
+        const success = await login(form.email, form.password);
+        if (success) {
+          onSuccess();
+        }
       }
-      onSuccess();
     } catch (err) {
       setError(err.message || 'Authentication failed');
     } finally {
+      // Set loading to false even if there's an error
       setIsLoading(false);
     }
   };
 
   const toggleMode = () => {
+    // Clear any existing errors and reset loading state when switching modes
+    setError(null);
+    clearError();
+    setIsLoading(false);
     onModeChange(mode === 'login' ? 'register' : 'login');
   };
 
   // Display either local error or auth context error
   const displayError = error || authError;
+  // Combined loading state from both local and auth context
+  const isProcessing = isLoading || authLoading;
 
   return (
     <div className="space-y-4">
@@ -104,6 +124,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
             onChange={handleChange}
             placeholder="your@email.com"
             required
+            disabled={isProcessing}
           />
         </div>
         
@@ -116,6 +137,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
             onChange={handleChange}
             placeholder="••••••••"
             required
+            disabled={isProcessing}
           />
         </div>
         
@@ -129,6 +151,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
               onChange={handleChange}
               placeholder="••••••••"
               required
+              disabled={isProcessing}
             />
           </div>
         )}
@@ -136,9 +159,9 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         <Button 
           type="submit" 
           className="w-full bg-white text-black hover:bg-white/90"
-          disabled={isLoading || loading}
+          disabled={isProcessing}
         >
-          {(isLoading || loading)
+          {isProcessing 
             ? 'Loading...' 
             : mode === 'login' 
               ? 'Sign In' 
@@ -152,6 +175,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           type="button"
           className="text-sm text-white/70 hover:text-white"
           onClick={toggleMode}
+          disabled={isProcessing}
         >
           {mode === 'login' 
             ? "Don't have an account? Sign up" 

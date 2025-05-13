@@ -25,60 +25,98 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       const input = inputRef.current;
       if (!input) return;
       
-      console.log("Initializing Google Maps Places Autocomplete");
+      console.log("Initializing Google Maps Places Autocomplete Element");
       
-      // Create the autocomplete object
-      const autocomplete = new window.google.maps.places.Autocomplete(input, {
-        types: ['address'],
-        componentRestrictions: { country: "us" }
-      });
-      
-      // Store the reference
-      autocompleteRef.current = autocomplete;
-      
-      // Add listener for place selection
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        
-        if (!place.geometry) {
-          console.warn("Place selected has no geometry data");
-          return;
-        }
-        
-        const location = {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng()
-        };
-        
-        const address = place.formatted_address || '';
-        
-        // Update the input value
-        onChange(address);
-        
-        // Call the onSelect callback with the selection
-        onSelect({
-          address,
-          location
+      // Try using PlaceAutocompleteElement first (newer recommended API)
+      try {
+        const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
+          inputElement: input,
+          types: ['address'],
+          componentRestrictions: { country: 'us' }
         });
-      });
-      
-      setInitialized(true);
-      console.log("Google Maps Places Autocomplete initialized successfully");
-      
+        
+        // Store a reference
+        autocompleteRef.current = autocompleteElement;
+        
+        // Add event listener
+        const handlePlaceChanged = () => {
+          const place = autocompleteElement.getPlace();
+          if (!place || !place.geometry) return;
+          
+          const location = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+          
+          const address = place.formatted_address || '';
+          
+          // Update the input value
+          onChange(address);
+          
+          // Call the onSelect callback with the selection
+          onSelect({
+            address,
+            location
+          });
+        };
+
+        input.addEventListener('place_changed', handlePlaceChanged);
+        console.log("Successfully initialized PlaceAutocompleteElement");
+        setInitialized(true);
+        
+        return () => {
+          input.removeEventListener('place_changed', handlePlaceChanged);
+          if (typeof autocompleteElement.remove === 'function') {
+            autocompleteElement.remove();
+          }
+          autocompleteRef.current = null;
+        };
+      } catch (elementError) {
+        // If PlaceAutocompleteElement fails, fall back to Autocomplete
+        console.warn("PlaceAutocompleteElement failed, falling back to Autocomplete", elementError);
+        
+        // Create the autocomplete object
+        const autocomplete = new window.google.maps.places.Autocomplete(input, {
+          types: ['address'],
+          componentRestrictions: { country: "us" }
+        });
+        
+        // Store the reference
+        autocompleteRef.current = autocomplete;
+        
+        // Add listener for place selection
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          
+          if (!place.geometry) {
+            console.warn("Place selected has no geometry data");
+            return;
+          }
+          
+          const location = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+          
+          const address = place.formatted_address || '';
+          
+          // Update the input value
+          onChange(address);
+          
+          // Call the onSelect callback with the selection
+          onSelect({
+            address,
+            location
+          });
+        });
+        
+        setInitialized(true);
+        console.log("Google Maps Places Autocomplete initialized successfully (fallback)");
+      }
     } catch (err) {
       console.error("Error initializing Places Autocomplete:", err);
       setError("Failed to initialize address search");
     }
-    
-    // Cleanup function
-    return () => {
-      if (autocompleteRef.current) {
-        // The Google Maps JS API doesn't provide a direct way to destroy an Autocomplete instance
-        // but we can try to clean up event listeners
-        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        autocompleteRef.current = null;
-      }
-    };
   }, [onSelect, onChange]);
 
   return (
