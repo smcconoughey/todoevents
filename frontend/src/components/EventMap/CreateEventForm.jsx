@@ -237,6 +237,7 @@ const CreateEventForm = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
         className="bg-neutral-900/95 backdrop-blur-sm border-white/10"
+        aria-describedby="create-event-dialog-description"
       >
         <DialogHeader>
           <DialogTitle>{initialEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>

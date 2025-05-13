@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from './AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => {} }) => {
   const { login, registerUser, loading: authLoading, error: authError, statusMessage, clearError } = useContext(AuthContext);
@@ -20,6 +20,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     number: false,
     special: false
   });
+  const [registrationStep, setRegistrationStep] = useState(null);
 
   // This will help ensure that loading state doesn't get stuck
   useEffect(() => {
@@ -35,7 +36,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     }
   }, [authLoading, authError]);
 
-  // Add a timeout to reset loading state after 20 seconds as a safety measure
+  // Add a timeout to reset loading state after 30 seconds as a safety measure
   useEffect(() => {
     let timeout;
     if (isLoading) {
@@ -43,7 +44,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         console.warn("Login form loading timeout - resetting state");
         setIsLoading(false);
         setError("Request took too long. Please try again.");
-      }, 20000);
+      }, 30000);  // Increased to 30 seconds
     }
     return () => clearTimeout(timeout);
   }, [isLoading]);
@@ -85,11 +86,17 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           throw new Error('Password must be at least 8 characters long');
         }
         
+        // Update UI to show registration step
+        setRegistrationStep('creating');
+        
         // Call register function - fetchWithTimeout is now implemented in AuthContext
         const success = await registerUser(form.email, form.password);
         
         if (success) {
+          setRegistrationStep('success');
           onSuccess();
+        } else {
+          setRegistrationStep('error');
         }
       } else {
         // Call login function - fetchWithTimeout is now implemented in AuthContext
@@ -103,6 +110,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       console.error(`${mode === 'login' ? 'Login' : 'Registration'} error:`, err);
       setError(err.message || 'Authentication failed');
       setIsLoading(false);
+      setRegistrationStep('error');
     }
   };
 
@@ -111,6 +119,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     setError(null);
     clearError();
     setIsLoading(false);
+    setRegistrationStep(null);
     onModeChange(mode === 'login' ? 'register' : 'login');
   };
 
@@ -121,6 +130,35 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
 
   return (
     <div className="space-y-4">
+      {/* Registration Steps Indicator */}
+      {mode === 'register' && registrationStep && (
+        <div className="mb-4">
+          <div className={`rounded-md p-3 flex items-center gap-2
+            ${registrationStep === 'creating' ? 'bg-blue-500/20 text-blue-200' : 
+              registrationStep === 'success' ? 'bg-green-500/20 text-green-200' : 
+              'bg-red-500/20 text-red-200'}`}>
+            {registrationStep === 'creating' && (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Creating your account...</span>
+              </>
+            )}
+            {registrationStep === 'success' && (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Account created successfully!</span>
+              </>
+            )}
+            {registrationStep === 'error' && (
+              <>
+                <AlertCircle className="w-4 h-4" />
+                <span>Error creating account.</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Error Messages */}
       {displayError && (
         <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 text-sm flex items-start gap-2">
@@ -185,7 +223,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           disabled={isProcessing}
         >
           {isProcessing 
-            ? 'Loading...' 
+            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {mode === 'login' ? 'Signing In...' : 'Creating Account...'}</>
             : mode === 'login' 
               ? 'Sign In' 
               : 'Create Account'

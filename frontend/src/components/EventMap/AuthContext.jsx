@@ -103,6 +103,7 @@ export const AuthProvider = ({ children }) => {
     }, timeoutMs);
     
     try {
+      console.log(`Making request to ${url} with timeout ${timeoutMs}ms`);
       const response = await fetch(url, {
         ...options,
         signal
@@ -112,7 +113,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       clearTimeout(timeout);
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout. Please try again.');
+        console.error(`Request to ${url} timed out after ${timeoutMs}ms`);
+        throw new Error('Request timeout. The server might be busy, please try again later.');
       }
       throw error;
     }
@@ -163,7 +165,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log(`Attempting registration for ${email}...`);
       
-      // Use the fetchWithTimeout helper with a 20 second timeout for registration
+      // Use the fetchWithTimeout helper with a 30 second timeout for registration
       const response = await fetchWithTimeout(
         `${API_URL}/users`,
         {
@@ -177,7 +179,7 @@ export const AuthProvider = ({ children }) => {
             role: 'user'
           })
         },
-        20000 // 20 second timeout for registration which might take longer
+        30000 // Increased to 30 second timeout for registration which might take longer
       );
 
       await handleResponse(response);
@@ -188,9 +190,16 @@ export const AuthProvider = ({ children }) => {
       return await login(email, password);
     } catch (error) {
       console.error("Registration error:", error);
-      const errorMessage = error.message === 'Failed to fetch' 
-        ? 'Unable to connect to server. Please check your internet connection.' 
-        : error.message;
+      let errorMessage;
+      
+      if (error.message === 'Failed to fetch') {
+        errorMessage = 'Unable to connect to server. Please check your internet connection.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Registration is taking longer than expected. Please try again or use a different email.';
+      } else {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       return false;
     } finally {

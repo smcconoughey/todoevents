@@ -941,6 +941,7 @@ const EventMap = ({ mapsLoaded = false }) => {
       >
         <DialogContent 
           className="bg-neutral-900/95 backdrop-blur-sm border-white/10 p-6"
+          aria-describedby="login-dialog-description"
         >
           <DialogHeader>
             <DialogTitle className="text-white mb-4">
