@@ -939,11 +939,17 @@ const EventMap = () => {
           }
         }}
       >
-        <DialogContent className="bg-neutral-900/95 backdrop-blur-sm border-white/10 p-6">
+        <DialogContent 
+          className="bg-neutral-900/95 backdrop-blur-sm border-white/10 p-6"
+          aria-describedby="login-dialog-description"
+        >
           <DialogHeader>
             <DialogTitle className="text-white mb-4">
               {loginMode === 'login' ? 'Sign In' : 'Create Account'}
             </DialogTitle>
+            <p id="login-dialog-description" className="sr-only">
+              {loginMode === 'login' ? 'Sign in to your account' : 'Create a new account'}
+            </p>
           </DialogHeader>
           <LoginForm
             mode={loginMode}

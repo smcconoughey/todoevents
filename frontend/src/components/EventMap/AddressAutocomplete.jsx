@@ -11,8 +11,13 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
   const autocompleteRef = useRef(null);
   const lastQueryTimeRef = useRef(0);
   const lastQueryRef = useRef('');
+  const initializationAttemptedRef = useRef(false);
 
   useEffect(() => {
+    // Only attempt initialization once
+    if (initializationAttemptedRef.current) return;
+    initializationAttemptedRef.current = true;
+
     // Don't proceed if Google Maps isn't loaded or the container doesn't exist
     if (!window.google || !window.google.maps || !containerRef.current) return;
     
@@ -20,66 +25,37 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
     if (!input) return;
     
     try {
-      // Try the new PlaceAutocompleteElement API first
-      try {
-        console.log("Attempting to use PlaceAutocompleteElement API");
-        
-        // Create the element
-        const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
-          inputElement: input,
-          types: ['address', 'geocode'],
-          componentRestrictions: { country: 'us' }
-        });
-        
-        // Store a reference
-        autocompleteRef.current = autocompleteElement;
-        
-        // The new way to add event listeners is different
-        const placeChangedEvent = new CustomEvent('place_changed');
-        input.addEventListener('place_changed', () => {
-          const place = autocompleteElement.getPlace();
-          if (!place || !place.geometry) return;
-          
-          onChange(place.formatted_address || '');
-          onSelect({
-            address: place.formatted_address || '',
-            location: {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-            },
-          });
-        });
-        
-        console.log("Successfully initialized PlaceAutocompleteElement");
-      } catch (newApiError) {
-        // If the new API fails, fall back to the legacy one
-        console.error("Error initializing PlaceAutocompleteElement:", newApiError);
-        console.log("Falling back to legacy Autocomplete API");
-        
-        // Initialize legacy Autocomplete
-        const autocomplete = new window.google.maps.places.Autocomplete(input, {
-          componentRestrictions: { country: 'us' },
-          types: ['geocode']
-        });
-        
-        autocompleteRef.current = autocomplete;
-        
-        // Add listener for place selection (legacy way)
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          if (!place.geometry) return;
-          
-          onChange(place.formatted_address);
-          onSelect({
-            address: place.formatted_address,
-            location: {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-            },
-          });
-        });
-      }
+      console.log("Attempting to use PlaceAutocompleteElement API");
       
+      // Create the element
+      const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
+        inputElement: input,
+        types: ['address', 'geocode'],
+        componentRestrictions: { country: 'us' }
+      });
+      
+      // Store a reference
+      autocompleteRef.current = autocompleteElement;
+      
+      // Add event listener
+      const handlePlaceChanged = () => {
+        const place = autocompleteElement.getPlace();
+        if (!place || !place.geometry) return;
+        
+        onChange(place.formatted_address || '');
+        onSelect({
+          address: place.formatted_address || '',
+          location: {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          },
+        });
+      };
+
+      input.addEventListener('place_changed', handlePlaceChanged);
+      
+      console.log("Successfully initialized PlaceAutocompleteElement");
+
       // Add observer for styling the autocomplete dropdown
       const observer = new MutationObserver(() => {
         const pacContainer = document.querySelector('.pac-container');
@@ -103,17 +79,17 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       return () => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (autocompleteRef.current) {
-          // Clean up event listeners
+          input.removeEventListener('place_changed', handlePlaceChanged);
           if (typeof autocompleteRef.current.remove === 'function') {
             autocompleteRef.current.remove();
-          } else if (typeof window.google.maps.event.clearInstanceListeners === 'function') {
-            window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
           }
+          autocompleteRef.current = null;
         }
         observer.disconnect();
+        initializationAttemptedRef.current = false;
       };
     } catch (error) {
-      console.error("All autocomplete initialization attempts failed:", error);
+      console.error("Autocomplete initialization failed:", error);
       console.warn("Using basic input as fallback. Google Maps Places API couldn't be initialized.");
     }
   }, [onSelect, onChange]);

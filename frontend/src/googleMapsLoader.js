@@ -8,32 +8,35 @@ export function initGoogleMaps(apiKey) {
     return Promise.resolve();
   }
 
-  // Remove ALL existing Google Maps script tags before adding our own
-  const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
-  existingScripts.forEach(script => {
-    console.warn('Removing existing Google Maps script to prevent duplicate loading');
-    script.parentNode.removeChild(script);
-  });
-
   // Only initialize once
   if (!loaderPromise) {
     loaderPromise = new Promise((resolve, reject) => {
-      // Create script with async attribute
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
-      script.async = true;
-      script.defer = true;
-      script.id = 'google-maps-script';
-      
-      // Setup callbacks
-      script.onload = () => {
-        console.log("Google Maps loaded with async attribute");
-        resolve();
-      };
-      script.onerror = (error) => reject(error);
-      
-      // Add to document
-      document.head.appendChild(script);
+      try {
+        // Create script element
+        const script = document.createElement('script');
+        script.id = 'google-maps-script';
+        script.defer = true;
+        script.async = true;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
+        
+        // Define callback in window scope
+        window.initMap = () => {
+          console.log("Google Maps loaded successfully");
+          resolve();
+        };
+        
+        // Handle errors
+        script.onerror = (error) => {
+          console.error("Error loading Google Maps:", error);
+          reject(error);
+        };
+        
+        // Add to document
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error("Error setting up Google Maps loader:", error);
+        reject(error);
+      }
     });
   }
   
