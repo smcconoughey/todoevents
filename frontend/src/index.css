@@ -1,3 +1,4 @@
+/* Main application styles - critical for the application to render properly */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
