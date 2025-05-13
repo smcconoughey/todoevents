@@ -82,19 +82,42 @@ export const AuthProvider = ({ children }) => {
     try {
       responseText = await response.text();
       const data = responseText ? JSON.parse(responseText) : {};
+      
       if (!response.ok) {
         console.error("API error response:", response.status, data);
-        throw new Error(data.detail || 'An error occurred');
+        
+        // Handle specific status codes
+        switch (response.status) {
+          case 400:
+            throw new Error(data.detail || 'Invalid request');
+          case 401:
+            throw new Error('Invalid credentials');
+          case 403:
+            throw new Error('Permission denied');
+          case 408:
+            throw new Error('Request timeout. The server is busy, please try again later.');
+          case 429:
+            throw new Error('Too many requests. Please try again later.');
+          case 500:
+            throw new Error('Internal server error. Please try again later.');
+          case 503:
+            throw new Error('Service temporarily unavailable. Please try again later.');
+          default:
+            throw new Error(data.detail || 'An error occurred');
+        }
       }
       return data;
     } catch (e) {
       console.error("Error parsing response:", e, "Response text:", responseText);
-      throw new Error("Failed to process server response");
+      if (e.message.includes('JSON')) {
+        throw new Error("Failed to process server response");
+      }
+      throw e;
     }
   };
 
-  // Helper to handle API requests with timeout
-  const fetchWithTimeout = async (url, options, timeoutMs = 15000) => {
+  // Helper to handle API requests with timeout and retry
+  const fetchWithTimeout = async (url, options, timeoutMs = 15000, maxRetries = 1) => {
     const controller = new AbortController();
     const { signal } = controller;
     
@@ -102,21 +125,65 @@ export const AuthProvider = ({ children }) => {
       controller.abort();
     }, timeoutMs);
     
-    try {
-      console.log(`Making request to ${url} with timeout ${timeoutMs}ms`);
-      const response = await fetch(url, {
-        ...options,
-        signal
-      });
-      clearTimeout(timeout);
-      return response;
-    } catch (error) {
-      clearTimeout(timeout);
-      if (error.name === 'AbortError') {
-        console.error(`Request to ${url} timed out after ${timeoutMs}ms`);
-        throw new Error('Request timeout. The server might be busy, please try again later.');
+    let lastError = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Making request to ${url} (attempt ${attempt + 1}/${maxRetries + 1}) with timeout ${timeoutMs}ms`);
+        const response = await fetch(url, {
+          ...options,
+          signal
+        });
+        clearTimeout(timeout);
+        return response;
+      } catch (error) {
+        clearTimeout(timeout);
+        lastError = error;
+        
+        if (error.name === 'AbortError') {
+          console.error(`Request to ${url} timed out after ${timeoutMs}ms`);
+          if (attempt < maxRetries) {
+            console.log(`Retrying after timeout (attempt ${attempt + 1}/${maxRetries})...`);
+            continue;
+          }
+          throw new Error('Request timeout. The server might be busy, please try again later.');
+        }
+        
+        if (attempt < maxRetries) {
+          console.log(`Retrying after error: ${error.message} (attempt ${attempt + 1}/${maxRetries})...`);
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+          continue;
+        }
+        
+        throw error;
       }
-      throw error;
+    }
+    
+    throw lastError;
+  };
+
+  // Check server health before important operations
+  const checkServerHealth = async () => {
+    try {
+      const response = await fetch(`${API_URL}/health`);
+      if (!response.ok) {
+        console.error("Server health check failed", response.status);
+        return false;
+      }
+      
+      const data = await response.json();
+      console.log("Server health:", data);
+      
+      if (data.status !== "healthy") {
+        console.warn("Server health degraded:", data);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error checking server health:", error);
+      return false;
     }
   };
 
@@ -127,6 +194,13 @@ export const AuthProvider = ({ children }) => {
 
     try {
       console.log(`Attempting login for ${email}...`);
+      
+      // Check server health first
+      const isHealthy = await checkServerHealth();
+      if (!isHealthy) {
+        console.warn("Server health check failed before login");
+      }
+      
       const formData = new FormData();
       formData.append('username', email);
       formData.append('password', password);
@@ -136,7 +210,9 @@ export const AuthProvider = ({ children }) => {
         {
           method: 'POST',
           body: formData
-        }
+        },
+        15000,  // 15 second timeout
+        1       // 1 retry
       );
 
       const data = await handleResponse(response);
@@ -165,6 +241,12 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log(`Attempting registration for ${email}...`);
       
+      // Check server health first
+      const isHealthy = await checkServerHealth();
+      if (!isHealthy) {
+        console.warn("Server health check failed before registration");
+      }
+      
       // Use the fetchWithTimeout helper with a 30 second timeout for registration
       const response = await fetchWithTimeout(
         `${API_URL}/users`,
@@ -179,7 +261,8 @@ export const AuthProvider = ({ children }) => {
             role: 'user'
           })
         },
-        30000 // Increased to 30 second timeout for registration which might take longer
+        30000, // Increased to 30 second timeout for registration which might take longer
+        2      // 2 retries for registration
       );
 
       await handleResponse(response);
@@ -195,7 +278,7 @@ export const AuthProvider = ({ children }) => {
       if (error.message === 'Failed to fetch') {
         errorMessage = 'Unable to connect to server. Please check your internet connection.';
       } else if (error.message.includes('timeout')) {
-        errorMessage = 'Registration is taking longer than expected. Please try again or use a different email.';
+        errorMessage = 'Registration is taking longer than expected. The server might be busy, please try again later.';
       } else {
         errorMessage = error.message;
       }

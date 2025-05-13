@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from './AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Clock } from 'lucide-react';
 
 const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => {} }) => {
   const { login, registerUser, loading: authLoading, error: authError, statusMessage, clearError } = useContext(AuthContext);
@@ -21,6 +21,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     special: false
   });
   const [registrationStep, setRegistrationStep] = useState(null);
+  const [showFallbackOption, setShowFallbackOption] = useState(false);
 
   // This will help ensure that loading state doesn't get stuck
   useEffect(() => {
@@ -33,8 +34,13 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     if (authError) {
       setIsLoading(false);
       console.error("Auth error:", authError);
+      
+      // If it's a timeout error on registration, show fallback option
+      if (mode === 'register' && authError.includes('timeout')) {
+        setShowFallbackOption(true);
+      }
     }
-  }, [authLoading, authError]);
+  }, [authLoading, authError, mode]);
 
   // Add a timeout to reset loading state after 30 seconds as a safety measure
   useEffect(() => {
@@ -43,11 +49,17 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       timeout = setTimeout(() => {
         console.warn("Login form loading timeout - resetting state");
         setIsLoading(false);
-        setError("Request took too long. Please try again.");
+        const timeoutMessage = "Request took too long. The server might be busy.";
+        setError(timeoutMessage);
+        
+        // Show fallback option if on registration screen
+        if (mode === 'register') {
+          setShowFallbackOption(true);
+        }
       }, 30000);  // Increased to 30 seconds
     }
     return () => clearTimeout(timeout);
-  }, [isLoading]);
+  }, [isLoading, mode]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -72,6 +84,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     clearError();
     setError(null);
     setIsLoading(true);
+    setShowFallbackOption(false);
 
     console.log(`Attempting to ${mode === 'login' ? 'login' : 'register'} with email: ${form.email}`);
 
@@ -111,6 +124,28 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       setError(err.message || 'Authentication failed');
       setIsLoading(false);
       setRegistrationStep('error');
+      
+      // If this is a timeout error on registration, show fallback option
+      if (mode === 'register' && err.message && err.message.includes('timeout')) {
+        setShowFallbackOption(true);
+      }
+    }
+  };
+
+  const handleContinueAnyway = () => {
+    // Store credentials in localStorage to attempt registration later
+    try {
+      localStorage.setItem('pendingRegistration', JSON.stringify({
+        email: form.email,
+        password: form.password,
+        timestamp: new Date().toISOString()
+      }));
+      
+      console.log("Stored registration info for later attempt");
+      setRegistrationStep('deferred');
+      onSuccess(); // Allow user to continue using the app
+    } catch (err) {
+      console.error("Failed to save registration for later:", err);
     }
   };
 
@@ -120,6 +155,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     clearError();
     setIsLoading(false);
     setRegistrationStep(null);
+    setShowFallbackOption(false);
     onModeChange(mode === 'login' ? 'register' : 'login');
   };
 
@@ -136,6 +172,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           <div className={`rounded-md p-3 flex items-center gap-2
             ${registrationStep === 'creating' ? 'bg-blue-500/20 text-blue-200' : 
               registrationStep === 'success' ? 'bg-green-500/20 text-green-200' : 
+              registrationStep === 'deferred' ? 'bg-yellow-500/20 text-yellow-200' :
               'bg-red-500/20 text-red-200'}`}>
             {registrationStep === 'creating' && (
               <>
@@ -147,6 +184,12 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
               <>
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Account created successfully!</span>
+              </>
+            )}
+            {registrationStep === 'deferred' && (
+              <>
+                <Clock className="w-4 h-4" />
+                <span>Registration saved for later. Using app as guest.</span>
               </>
             )}
             {registrationStep === 'error' && (
@@ -164,6 +207,22 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 text-sm flex items-start gap-2">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>{displayError}</span>
+        </div>
+      )}
+
+      {/* Fallback Option */}
+      {showFallbackOption && mode === 'register' && (
+        <div className="p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-md text-yellow-200 text-sm space-y-2">
+          <div className="flex items-start gap-2">
+            <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>The registration service is currently taking too long to respond. This may be due to temporary server issues at Render.com.</span>
+          </div>
+          <Button 
+            onClick={handleContinueAnyway}
+            className="w-full mt-2 bg-yellow-500/30 hover:bg-yellow-500/50 text-yellow-100"
+          >
+            Continue Without Account
+          </Button>
         </div>
       )}
 

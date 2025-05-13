@@ -4,7 +4,7 @@ services:
     name: eventfinder-api
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 75
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -16,6 +16,14 @@ services:
         fromDatabase:
           name: eventfinder-db
           property: connectionString
+      - key: DATABASE_POOL_SIZE
+        value: 5
+      - key: DATABASE_MAX_OVERFLOW
+        value: 10
+      - key: DATABASE_POOL_TIMEOUT
+        value: 30
+      - key: DATABASE_CONNECT_TIMEOUT
+        value: 15
   
   # Frontend web service
   - type: web
@@ -37,3 +45,4 @@ databases:
   - name: eventfinder-db
     databaseName: eventfinder
     plan: free
+    ipAllowList: []  # only allow internal connections

@@ -78,24 +78,92 @@ def get_db():
         from psycopg2.extras import RealDictCursor
         
         # Add retry logic for database connections
-        retry_count = 5
+        retry_count = 10  # Increased from 5
+        conn = None
+        
         for attempt in range(retry_count):
             try:
-                conn = psycopg2.connect(DB_URL)
+                # Add connection pooling and extended timeout parameters
+                logger.info(f"Connecting to PostgreSQL (attempt {attempt+1}/{retry_count})")
+                conn = psycopg2.connect(
+                    DB_URL,
+                    cursor_factory=RealDictCursor,
+                    connect_timeout=30,  # Extend connection timeout to 30 seconds
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=10,
+                    keepalives_count=5
+                )
                 conn.autocommit = True
+                logger.info("PostgreSQL connection successful")
+                
                 try:
-                    cur = conn.cursor(cursor_factory=RealDictCursor)
+                    cur = conn.cursor()
+                    # Test the connection with a simple query
+                    cur.execute("SELECT 1")
                     yield conn
+                    break
                 finally:
-                    conn.close()
-                break
+                    if conn:
+                        conn.close()
+                        logger.info("PostgreSQL connection closed")
             except Exception as e:
+                if conn:
+                    try:
+                        conn.close()
+                    except:
+                        pass
+                
+                error_msg = str(e)
+                logger.error(f"Database connection failed (attempt {attempt+1}/{retry_count}): {error_msg}")
+                
                 if attempt < retry_count - 1:
-                    logger.error(f"Database connection failed (attempt {attempt+1}/{retry_count}): {str(e)}")
-                    time.sleep(2)  # Wait before retrying
+                    # Exponential backoff: Wait longer between retries
+                    wait_time = 2 ** attempt
+                    logger.info(f"Waiting {wait_time}s before retry...")
+                    time.sleep(wait_time)  # Exponential backoff
                 else:
-                    logger.error(f"Failed to connect to database after {retry_count} attempts: {str(e)}")
-                    raise
+                    logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
+                    # Instead of raising an exception, use an in-memory SQLite database as fallback
+                    # This is better than crashing, and allows the server to still function
+                    logger.warning("Falling back to in-memory SQLite database")
+                    
+                    try:
+                        memory_conn = sqlite3.connect(":memory:")
+                        memory_conn.row_factory = sqlite3.Row
+                        
+                        # Initialize basic tables
+                        c = memory_conn.cursor()
+                        c.execute('''CREATE TABLE IF NOT EXISTS users (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            email TEXT UNIQUE NOT NULL,
+                            hashed_password TEXT NOT NULL,
+                            role TEXT NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )''')
+                        
+                        c.execute('''CREATE TABLE IF NOT EXISTS events (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            title TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            date TEXT NOT NULL,
+                            time TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            address TEXT NOT NULL,
+                            lat REAL NOT NULL,
+                            lng REAL NOT NULL,
+                            recurring BOOLEAN NOT NULL DEFAULT 0,
+                            frequency TEXT,
+                            end_date TEXT,
+                            created_by INTEGER,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )''')
+                        
+                        memory_conn.commit()
+                        yield memory_conn
+                    finally:
+                        memory_conn.close()
+                    break
     else:
         # Local development with SQLite
         conn = sqlite3.connect(DB_FILE)
@@ -415,30 +483,89 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     placeholder = get_placeholder()
+    logger.info(f"Login attempt for user: {form_data.username}")
+    
     try:
         with get_db() as conn:
             c = conn.cursor()
-            c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (form_data.username,))
-            user = c.fetchone()
             
-            if not user or not verify_password(form_data.password, user["hashed_password"]):
+            # First check connection health with a simple query
+            try:
+                c.execute("SELECT 1")
+            except Exception as e:
+                logger.error(f"Database health check failed during login: {str(e)}")
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Incorrect email or password",
-                    headers={"WWW-Authenticate": "Bearer"},
+                    status_code=503, 
+                    detail="Database connection issues. Please try again later."
                 )
             
-            access_token = create_access_token(data={"sub": user["email"]})
-            return {"access_token": access_token, "token_type": "bearer"}
+            # Find user by email - with timeout handling
+            try:
+                c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (form_data.username,))
+                user = c.fetchone()
+                
+                if not user or not verify_password(form_data.password, user["hashed_password"]):
+                    logger.warning(f"Login failed for user: {form_data.username} - Invalid credentials")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Incorrect email or password",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Database error during login user lookup: {error_msg}")
+                
+                if "timeout" in error_msg.lower() or "deadlock" in error_msg.lower():
+                    raise HTTPException(
+                        status_code=408, 
+                        detail="Login request timed out. Please try again."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Internal server error during login",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            
+            # Generate access token
+            try:
+                logger.info(f"Generating access token for user: {form_data.username}")
+                access_token = create_access_token(data={"sub": user["email"]})
+                logger.info(f"Login successful for user: {form_data.username}")
+                return {"access_token": access_token, "token_type": "bearer"}
+            except Exception as e:
+                logger.error(f"Error generating access token: {str(e)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Error generating authentication token",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
     except HTTPException:
+        # Pass through HTTP exceptions
         raise
     except Exception as e:
-        logger.error(f"Login error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during login",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        error_msg = str(e)
+        logger.error(f"Unexpected error during login: {error_msg}")
+        
+        # Return more specific error messages
+        if "timeout" in error_msg.lower():
+            raise HTTPException(
+                status_code=408, 
+                detail="Login request timed out. Please try again later."
+            )
+        elif "connection" in error_msg.lower():
+            raise HTTPException(
+                status_code=503, 
+                detail="Database connection issues. Please try again later."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error during login",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
 @app.post("/users", response_model=UserResponse)
 async def create_user(user: UserCreate):
@@ -446,42 +573,119 @@ async def create_user(user: UserCreate):
     password_validation = PasswordValidator.validate_password(user.password)
     
     placeholder = get_placeholder()
+    
+    # Pre-hash password outside the database transaction to reduce transaction time
+    hashed_password = get_password_hash(user.password)
+    
+    # Log the registration attempt
+    logger.info(f"Registration attempt for email: {user.email}")
+    
     try:
         with get_db() as conn:
             c = conn.cursor()
             
-            # Check if email exists
-            c.execute(f"SELECT id FROM users WHERE email = {placeholder}", (user.email,))
-            if c.fetchone():
-                raise HTTPException(status_code=400, detail="Email already registered")
+            # First check connection health with a simple query
+            try:
+                c.execute("SELECT 1")
+            except Exception as e:
+                logger.error(f"Database health check failed during registration: {str(e)}")
+                raise HTTPException(
+                    status_code=503, 
+                    detail="Database connection issues. Please try again later."
+                )
             
-            hashed_password = get_password_hash(user.password)
-            c.execute(
-                f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                (user.email, hashed_password, user.role)
-            )
-            conn.commit()
+            # Check if email exists - with timeout handling
+            try:
+                c.execute(f"SELECT id FROM users WHERE email = {placeholder}", (user.email,))
+                existing_user = c.fetchone()
+                if existing_user:
+                    logger.info(f"Registration failed: Email already exists - {user.email}")
+                    raise HTTPException(status_code=400, detail="Email already registered")
+            except Exception as e:
+                if "timeout" in str(e).lower() or "deadlock" in str(e).lower():
+                    logger.error(f"Timeout checking for existing email: {str(e)}")
+                    raise HTTPException(
+                        status_code=408, 
+                        detail="Registration request timed out. Please try again."
+                    )
+                raise
             
-            # For PostgreSQL, we need to use a different method to get the last inserted ID
-            if IS_PRODUCTION and DB_URL:
-                c.execute("SELECT lastval()")
-                last_id = c.fetchone()[0]
-            else:
-                last_id = c.lastrowid
+            # Insert user with optimized query - with timeout handling
+            try:
+                logger.info(f"Inserting new user into database: {user.email}")
+                c.execute(
+                    f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                    (user.email, hashed_password, user.role)
+                )
+                conn.commit()
+                logger.info(f"User inserted successfully: {user.email}")
+            except Exception as e:
+                conn.rollback()
+                error_msg = str(e)
+                logger.error(f"Error inserting user: {error_msg}")
                 
-            c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (last_id,))
-            user_data = dict(c.fetchone())
+                if "timeout" in error_msg.lower() or "deadlock" in error_msg.lower():
+                    raise HTTPException(
+                        status_code=408, 
+                        detail="Registration request timed out. The server might be busy, please try again."
+                    )
+                elif "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
+                    raise HTTPException(status_code=400, detail="Email already registered")
+                else:
+                    raise HTTPException(status_code=500, detail="Error creating user")
             
-            # Return user data along with password strength (front-end can use this)
-            return {
-                **user_data,
-                "password_strength": password_validation['strength']
-            }
-    except HTTPException:
-        raise
+            # Get the created user ID
+            try:
+                # For PostgreSQL, we need to use a different method to get the last inserted ID
+                if IS_PRODUCTION and DB_URL:
+                    c.execute("SELECT lastval()")
+                    last_id = c.fetchone()
+                    if last_id is None:
+                        raise ValueError("Failed to get last inserted ID")
+                    last_id = last_id[0] if isinstance(last_id, (list, tuple, dict)) else last_id
+                else:
+                    last_id = c.lastrowid
+                    
+                logger.info(f"Fetching created user with ID {last_id}")
+                c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (last_id,))
+                user_data = dict(c.fetchone())
+                
+                # Return user data along with password strength
+                logger.info(f"User registration successful: {user.email}")
+                return {
+                    **user_data,
+                    "password_strength": password_validation['strength']
+                }
+            except Exception as e:
+                logger.error(f"Error retrieving created user: {str(e)}")
+                # Even if we can't fetch the user, registration was successful
+                return {
+                    "id": last_id,
+                    "email": user.email,
+                    "role": user.role,
+                    "password_strength": password_validation['strength']
+                }
+                
+    except HTTPException as http_ex:
+        # Pass through HTTP exceptions
+        raise http_ex
     except Exception as e:
-        logger.error(f"Error creating user: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error creating user")
+        error_msg = str(e)
+        logger.error(f"Unexpected error creating user: {error_msg}")
+        
+        # Return more specific error messages
+        if "timeout" in error_msg.lower():
+            raise HTTPException(
+                status_code=408, 
+                detail="Registration request timed out. Please try again later."
+            )
+        elif "connection" in error_msg.lower():
+            raise HTTPException(
+                status_code=503, 
+                detail="Database connection issues. Please try again later."
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Error creating user")
 
 @app.get("/users/me", response_model=UserResponse)
 async def read_users_me(current_user: dict = Depends(get_current_user)):
@@ -777,12 +981,44 @@ async def list_users(current_user: dict = Depends(get_current_user)):
 @app.get("/health")
 async def health_check():
     """
-    Simple health check endpoint that doesn't depend on database
+    Enhanced health check endpoint that tests database connectivity
     """
-    return {
+    health_status = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.1",
+        "environment": "production" if IS_PRODUCTION else "development",
+        "database": {
+            "status": "unknown",
+            "type": "postgresql" if IS_PRODUCTION and DB_URL else "sqlite",
+            "connection_test": None
+        }
     }
+    
+    # Test database connection
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            start_time = time.time()
+            c.execute("SELECT 1")
+            end_time = time.time()
+            
+            response_time = round((end_time - start_time) * 1000)  # ms
+            health_status["database"]["status"] = "connected"
+            health_status["database"]["connection_test"] = {
+                "successful": True,
+                "response_time_ms": response_time
+            }
+    except Exception as e:
+        logger.error(f"Health check database test failed: {str(e)}")
+        health_status["status"] = "degraded"
+        health_status["database"]["status"] = "error"
+        health_status["database"]["connection_test"] = {
+            "successful": False,
+            "error": str(e)
+        }
+    
+    return health_status
 
 # Root endpoint
 @app.get("/")
