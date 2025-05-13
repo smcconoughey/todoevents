@@ -13,9 +13,7 @@ export function useDialogDescription(providedDescription = '') {
     descriptionProps: {
       'aria-describedby': providedDescription || descriptionId
     },
-    renderDescription: (text = 'Dialog content') => {
-      if (providedDescription) return null;
-      return <span id={descriptionId} className="sr-only">{text}</span>;
-    }
+    getDescriptionId: () => descriptionId,
+    getDescriptionText: (text = 'Dialog content') => text
   };
 } 

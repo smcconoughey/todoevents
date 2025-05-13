@@ -22,8 +22,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose
-} from "@/components/ui/dialog";
+  DialogDescription
+} from "@/components/ui/radix-dialog";
 import {
   Sheet,
   SheetContent,
