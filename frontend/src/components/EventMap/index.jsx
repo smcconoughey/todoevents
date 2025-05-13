@@ -957,6 +957,7 @@ const EventMap = () => {
               setShowLoginDialog(false);
               setIsCreateFormOpen(true);
             }}
+            onModeChange={(newMode) => setLoginMode(newMode)}
           />
         </DialogContent>
       </Dialog>

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { API_URL } from '@/config';
 
 export const AuthContext = createContext({
   user: null,
@@ -44,7 +45,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/users/me', {
+        const response = await fetch(`${API_URL}/users/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -90,7 +91,7 @@ export const AuthProvider = ({ children }) => {
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await fetch('http://127.0.0.1:8000/token', {
+      const response = await fetch(`${API_URL}/token`, {
         method: 'POST',
         body: formData
       });
@@ -116,7 +117,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/users', {
+      const response = await fetch(`${API_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

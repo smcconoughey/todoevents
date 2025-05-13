@@ -2,12 +2,12 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from './AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useDialogDescription } from '@/hooks/useDialogDescription';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
-const LoginForm = ({ mode = 'login', onSuccess = () => {} }) => {
-  const { login, register, loading, error, statusMessage } = useContext(AuthContext);
+const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => {} }) => {
+  const { login, registerUser, loading, error: authError, statusMessage, clearError } = useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -23,6 +23,10 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {} }) => {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+
+    if (e.target.name === 'password') {
+      validatePassword(e.target.value);
+    }
   };
 
   const validatePassword = (pass) => {
@@ -37,6 +41,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {} }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    clearError();
     setError(null);
     setIsLoading(true);
 
@@ -45,8 +50,16 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {} }) => {
         if (form.password !== form.confirmPassword) {
           throw new Error('Passwords do not match');
         }
-        await register(form.email, form.password);
+        
+        // Check basic password requirements
+        if (form.password.length < 8) {
+          throw new Error('Password must be at least 8 characters long');
+        }
+        
+        // Call register function
+        await registerUser(form.email, form.password);
       } else {
+        // Call login function
         await login(form.email, form.password);
       }
       onSuccess();
@@ -58,15 +71,18 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {} }) => {
   };
 
   const toggleMode = () => {
-    // This would be handled by the parent component
+    onModeChange(mode === 'login' ? 'register' : 'login');
   };
+
+  // Display either local error or auth context error
+  const displayError = error || authError;
 
   return (
     <div className="space-y-4">
       {/* Error Messages */}
-      {error && (
+      {displayError && (
         <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 text-sm">
-          {error}
+          {displayError}
         </div>
       )}
 
@@ -120,9 +136,9 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {} }) => {
         <Button 
           type="submit" 
           className="w-full bg-white text-black hover:bg-white/90"
-          disabled={isLoading}
+          disabled={isLoading || loading}
         >
-          {isLoading 
+          {(isLoading || loading)
             ? 'Loading...' 
             : mode === 'login' 
               ? 'Sign In' 
