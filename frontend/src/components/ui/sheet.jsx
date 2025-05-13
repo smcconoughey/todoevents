@@ -42,21 +42,28 @@ const sheetVariants = cva(
   }
 )
 
-const SheetContent = React.forwardRef(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(
-        sheetVariants({ side }),
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
+const SheetContent = React.forwardRef(({ side = "right", className, children, ...props }, ref) => {
+  // Generate a unique ID for accessibility
+  const [descriptionId] = React.useState(() => `sheet-desc-${Math.random().toString(36).substring(2, 9)}`);
+  
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(
+          sheetVariants({ side }),
+          className
+        )}
+        aria-describedby={descriptionId}
+        {...props}
+      >
+        {children}
+        <span id={descriptionId} className="sr-only">Sheet content</span>
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+})
 
 SheetContent.displayName = SheetPrimitive.Content.displayName
 

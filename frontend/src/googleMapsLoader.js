@@ -1,4 +1,8 @@
-// Enhanced loader with additional checks
+// Using the official Google Maps loading pattern 
+// https://developers.google.com/maps/documentation/javascript/load-maps-js-api
+
+import { Loader } from '@googlemaps/js-api-loader';
+
 let loaderPromise = null;
 
 export function initGoogleMaps(apiKey) {
@@ -10,32 +14,19 @@ export function initGoogleMaps(apiKey) {
 
   // Only initialize once
   if (!loaderPromise) {
-    loaderPromise = new Promise((resolve, reject) => {
-      try {
-        // Create script element
-        const script = document.createElement('script');
-        script.id = 'google-maps-script';
-        script.async = true; // Set async explicitly
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
-        
-        // Define callback in window scope
-        window.initMap = () => {
-          console.log("Google Maps loaded successfully");
-          resolve();
-        };
-        
-        // Handle errors
-        script.onerror = (error) => {
-          console.error("Error loading Google Maps:", error);
-          reject(error);
-        };
-        
-        // Add to document
-        document.head.appendChild(script);
-      } catch (error) {
-        console.error("Error setting up Google Maps loader:", error);
-        reject(error);
-      }
+    const loader = new Loader({
+      apiKey: apiKey,
+      version: 'weekly',
+      libraries: ['places'],
+      mapIds: [''], // Add your map IDs if using cloud-based maps
+    });
+
+    loaderPromise = loader.load();
+    
+    loaderPromise.then(() => {
+      console.log("Google Maps loaded successfully");
+    }).catch(error => {
+      console.error("Error loading Google Maps:", error);
     });
   }
   
