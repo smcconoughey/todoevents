@@ -15,8 +15,7 @@ export function initGoogleMaps(apiKey) {
         // Create script element
         const script = document.createElement('script');
         script.id = 'google-maps-script';
-        script.defer = true;
-        script.async = true;
+        script.async = true; // Set async explicitly
         script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
         
         // Define callback in window scope

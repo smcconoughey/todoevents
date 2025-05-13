@@ -18,6 +18,7 @@ import {
 import categories from './categoryConfig';
 import { AuthContext } from './AuthContext';
 import AddressAutocomplete from './AddressAutocomplete';
+import { API_URL } from '@/config';
 
 const CreateEventForm = ({
   isOpen,
@@ -87,7 +88,7 @@ const CreateEventForm = ({
       if (!isOpen) return;
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/health');
+        const response = await fetch(`${API_URL}/health`);
         if (!response.ok) throw new Error('Server health check failed');
         setConnectionError(false);
       } catch (err) {
@@ -202,8 +203,8 @@ const CreateEventForm = ({
       };
 
       const url = initialEvent
-        ? `http://127.0.0.1:8000/events/${initialEvent.id}`
-        : 'http://127.0.0.1:8000/events';
+        ? `${API_URL}/events/${initialEvent.id}`
+        : `${API_URL}/events`;
       const method = initialEvent ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
