@@ -185,7 +185,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
 );
 
 
-const EventMap = () => {
+const EventMap = ({ mapsLoaded = false }) => {
   const { user, token, logout } = useContext(AuthContext);
 
   const [events, setEvents] = useState([]);
@@ -199,7 +199,7 @@ const EventMap = () => {
   const [showDesktopList, setShowDesktopList] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeView, setActiveView] = useState('map');
+  const [activeView, setActiveView] = useState(mapsLoaded ? 'map' : 'list');
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [loginMode, setLoginMode] = useState('login');
   const [filteredEvents, setFilteredEvents] = useState([]);

@@ -27,7 +27,25 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     if (!authLoading && isLoading) {
       setIsLoading(false);
     }
-  }, [authLoading]);
+
+    // If auth context has an error, make sure we're not in loading state
+    if (authError) {
+      setIsLoading(false);
+      console.error("Auth error:", authError);
+    }
+  }, [authLoading, authError]);
+
+  // Add a timeout to reset loading state after 10 seconds as a safety measure
+  useEffect(() => {
+    let timeout;
+    if (isLoading) {
+      timeout = setTimeout(() => {
+        console.warn("Login form loading timeout - resetting state");
+        setIsLoading(false);
+      }, 10000);
+    }
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -53,6 +71,8 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     setError(null);
     setIsLoading(true);
 
+    console.log(`Attempting to ${mode === 'login' ? 'login' : 'register'} with email: ${form.email}`);
+
     try {
       if (mode === 'register') {
         if (form.password !== form.confirmPassword) {
@@ -64,22 +84,35 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           throw new Error('Password must be at least 8 characters long');
         }
         
-        // Call register function
-        const success = await registerUser(form.email, form.password);
+        // Call register function with a timeout for safety
+        const registerPromise = registerUser(form.email, form.password);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Registration request timed out')), 15000)
+        );
+        
+        const success = await Promise.race([registerPromise, timeoutPromise]);
+        console.log("Registration result:", success);
+        
         if (success) {
           onSuccess();
         }
       } else {
-        // Call login function
-        const success = await login(form.email, form.password);
+        // Call login function with a timeout for safety
+        const loginPromise = login(form.email, form.password);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Login request timed out')), 15000)
+        );
+        
+        const success = await Promise.race([loginPromise, timeoutPromise]);
+        console.log("Login result:", success);
+        
         if (success) {
           onSuccess();
         }
       }
     } catch (err) {
+      console.error(`${mode === 'login' ? 'Login' : 'Registration'} error:`, err);
       setError(err.message || 'Authentication failed');
-    } finally {
-      // Set loading to false even if there's an error
       setIsLoading(false);
     }
   };
@@ -101,8 +134,9 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     <div className="space-y-4">
       {/* Error Messages */}
       {displayError && (
-        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 text-sm">
-          {displayError}
+        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 text-sm flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>{displayError}</span>
         </div>
       )}
 

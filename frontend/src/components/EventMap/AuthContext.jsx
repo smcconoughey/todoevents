@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
   // Clear error after 5 seconds
   useEffect(() => {
     if (error) {
+      console.log("Auth error set:", error);
       const timer = setTimeout(() => setError(null), 5000);
       return () => clearTimeout(timer);
     }
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
+        console.log("Validating token...");
         const response = await fetch(`${API_URL}/users/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -56,7 +58,9 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           localStorage.setItem('token', token);
           setStatusMessage('Authentication successful');
+          console.log("Token validation successful");
         } else {
+          console.error("Token validation failed:", response.status);
           throw new Error('Session expired. Please login again.');
         }
       } catch (error) {
@@ -74,11 +78,19 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const handleResponse = async (response) => {
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.detail || 'An error occurred');
+    let responseText;
+    try {
+      responseText = await response.text();
+      const data = responseText ? JSON.parse(responseText) : {};
+      if (!response.ok) {
+        console.error("API error response:", response.status, data);
+        throw new Error(data.detail || 'An error occurred');
+      }
+      return data;
+    } catch (e) {
+      console.error("Error parsing response:", e, "Response text:", responseText);
+      throw new Error("Failed to process server response");
     }
-    return data;
   };
 
   const login = async (email, password) => {
@@ -87,6 +99,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
 
     try {
+      console.log(`Attempting login for ${email}...`);
       const formData = new FormData();
       formData.append('username', email);
       formData.append('password', password);
@@ -100,11 +113,14 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', data.access_token);
       setToken(data.access_token);
       setStatusMessage('Login successful');
+      console.log("Login successful");
       return true;
     } catch (error) {
-      setError(error.message === 'Failed to fetch' 
-        ? 'Unable to connect to server' 
-        : error.message);
+      console.error("Login error:", error);
+      const errorMessage = error.message === 'Failed to fetch' 
+        ? 'Unable to connect to server. Please check your internet connection.' 
+        : error.message;
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);
@@ -117,6 +133,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
 
     try {
+      console.log(`Attempting registration for ${email}...`);
       const response = await fetch(`${API_URL}/users`, {
         method: 'POST',
         headers: {
@@ -131,13 +148,16 @@ export const AuthProvider = ({ children }) => {
 
       await handleResponse(response);
       setStatusMessage('Registration successful');
+      console.log("Registration successful");
       
       // Auto login after successful registration
       return await login(email, password);
     } catch (error) {
-      setError(error.message === 'Failed to fetch' 
-        ? 'Unable to connect to server' 
-        : error.message);
+      console.error("Registration error:", error);
+      const errorMessage = error.message === 'Failed to fetch' 
+        ? 'Unable to connect to server. Please check your internet connection.' 
+        : error.message;
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);

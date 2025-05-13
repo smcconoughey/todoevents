@@ -1,177 +1,99 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
-
-const MIN_CHARS = 5;
+import React, { useState } from 'react';
+import { Search, MapPin } from 'lucide-react';
 
 const AddressAutocomplete = ({ onSelect, value, onChange }) => {
-  const containerRef = useRef(null);
-  const inputRef = useRef(null);
-  const autocompleteRef = useRef(null);
-  const [initialized, setInitialized] = useState(false);
-  const [error, setError] = useState(null);
+  const [manualLocation, setManualLocation] = useState(null);
 
-  // Initialize Google Maps autocomplete when the component mounts
-  useEffect(() => {
-    if (!window.google || !window.google.maps || !window.google.maps.places) {
-      console.error("Google Maps Places API not loaded");
-      setError("Google Maps Places API not loaded");
-      return;
+  const handleManualSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!value.trim()) return;
+    
+    // Create a simple mock location with a placeholder lat/lng
+    // These coordinates are for the center of the US
+    const defaultLocation = {
+      lat: 39.8283,
+      lng: -98.5795
+    };
+    
+    // You can customize this with different default coordinates if needed
+    const locationData = {
+      address: value,
+      location: manualLocation || defaultLocation
+    };
+    
+    // Call the onSelect callback with our location data
+    if (onSelect) {
+      onSelect(locationData);
     }
+  };
 
+  // Allow setting custom coordinates if needed
+  const handleSetCustomCoordinates = () => {
+    // Ask for coordinates in a simple prompt
+    const latLngString = prompt("Enter latitude and longitude (format: lat,lng)", 
+      manualLocation ? `${manualLocation.lat},${manualLocation.lng}` : "39.8283,-98.5795");
+    
+    if (!latLngString) return;
+    
     try {
-      // If already initialized, do nothing
-      if (autocompleteRef.current) return;
+      const [lat, lng] = latLngString.split(',').map(coord => parseFloat(coord.trim()));
       
-      const input = inputRef.current;
-      if (!input) return;
+      if (isNaN(lat) || isNaN(lng)) {
+        alert("Invalid coordinates format. Use format: latitude,longitude");
+        return;
+      }
       
-      console.log("Initializing Google Maps Places Autocomplete Element");
+      setManualLocation({ lat, lng });
       
-      // Try using PlaceAutocompleteElement first (newer recommended API)
-      try {
-        const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
-          inputElement: input,
-          types: ['address'],
-          componentRestrictions: { country: 'us' }
+      // If we already have an address, update the location right away
+      if (value.trim()) {
+        onSelect({
+          address: value,
+          location: { lat, lng }
         });
-        
-        // Store a reference
-        autocompleteRef.current = autocompleteElement;
-        
-        // Add event listener
-        const handlePlaceChanged = () => {
-          const place = autocompleteElement.getPlace();
-          if (!place || !place.geometry) return;
-          
-          const location = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng()
-          };
-          
-          const address = place.formatted_address || '';
-          
-          // Update the input value
-          onChange(address);
-          
-          // Call the onSelect callback with the selection
-          onSelect({
-            address,
-            location
-          });
-        };
-
-        input.addEventListener('place_changed', handlePlaceChanged);
-        console.log("Successfully initialized PlaceAutocompleteElement");
-        setInitialized(true);
-        
-        return () => {
-          input.removeEventListener('place_changed', handlePlaceChanged);
-          if (typeof autocompleteElement.remove === 'function') {
-            autocompleteElement.remove();
-          }
-          autocompleteRef.current = null;
-        };
-      } catch (elementError) {
-        // If PlaceAutocompleteElement fails, fall back to Autocomplete
-        console.warn("PlaceAutocompleteElement failed, falling back to Autocomplete", elementError);
-        
-        // Create the autocomplete object
-        const autocomplete = new window.google.maps.places.Autocomplete(input, {
-          types: ['address'],
-          componentRestrictions: { country: "us" }
-        });
-        
-        // Store the reference
-        autocompleteRef.current = autocomplete;
-        
-        // Add listener for place selection
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          
-          if (!place.geometry) {
-            console.warn("Place selected has no geometry data");
-            return;
-          }
-          
-          const location = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng()
-          };
-          
-          const address = place.formatted_address || '';
-          
-          // Update the input value
-          onChange(address);
-          
-          // Call the onSelect callback with the selection
-          onSelect({
-            address,
-            location
-          });
-        });
-        
-        setInitialized(true);
-        console.log("Google Maps Places Autocomplete initialized successfully (fallback)");
       }
     } catch (err) {
-      console.error("Error initializing Places Autocomplete:", err);
-      setError("Failed to initialize address search");
+      alert("Invalid coordinates format. Use format: latitude,longitude");
     }
-  }, [onSelect, onChange]);
+  };
 
   return (
-    <div className="relative" ref={containerRef}>
-      <div className="relative">
+    <div className="space-y-2">
+      <form onSubmit={handleManualSubmit} className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-4 h-4" />
         <input
-          ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full pl-10 pr-4 py-2 rounded-md bg-white/10 border-0 text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/20 transition-all"
-          placeholder="Enter address (min. 5 characters)"
+          placeholder="Enter address manually"
           autoComplete="off"
         />
-      </div>
+        <button 
+          type="submit"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-xs text-white/70"
+        >
+          Set
+        </button>
+      </form>
       
-      {error && (
-        <div className="mt-1 text-red-400 text-xs">{error}</div>
-      )}
-
-      <style jsx global>{`
-        .pac-container {
-          background-color: #262626;
-          border: 1px solid #404040;
-          border-radius: 0.375rem;
-          margin-top: 0.25rem;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-          z-index: 9999;
-          overflow-y: auto;
-        }
-        .pac-item {
-          padding: 0.5rem 1rem;
-          color: #ffffff;
-          cursor: pointer !important;
-          font-family: inherit;
-          border-top: 1px solid #404040;
-        }
-        .pac-item:first-child {
-          border-top: none;
-        }
-        .pac-item:hover {
-          background-color: #404040;
-        }
-        .pac-item-query {
-          color: #ffffff;
-          font-size: 0.875rem;
-        }
-        .pac-matched {
-          color: #60A5FA;
-        }
-        .pac-icon {
-          filter: invert(1);
-        }
-      `}</style>
+      <div className="flex justify-between">
+        <button
+          type="button"
+          onClick={handleSetCustomCoordinates}
+          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+        >
+          <MapPin className="h-3 w-3" />
+          {manualLocation ? "Change Coordinates" : "Set Custom Coordinates"}
+        </button>
+        
+        {manualLocation && (
+          <span className="text-xs text-white/50">
+            {manualLocation.lat.toFixed(4)}, {manualLocation.lng.toFixed(4)}
+          </span>
+        )}
+      </div>
     </div>
   );
 };

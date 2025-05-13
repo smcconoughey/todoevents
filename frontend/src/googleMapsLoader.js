@@ -6,15 +6,10 @@ import { Loader } from '@googlemaps/js-api-loader';
 let loaderPromise = null;
 
 export function initGoogleMaps(apiKey) {
-  // If Google Maps is already loaded with places library, return resolved promise
-  if (window.google && window.google.maps && window.google.maps.places) {
+  // If Google Maps is already loaded, return resolved promise
+  if (window.google && window.google.maps) {
     console.log("Google Maps already loaded, using existing instance");
     return Promise.resolve();
-  }
-  
-  // If Google Maps is loaded but places library is missing, log a warning
-  if (window.google && window.google.maps && !window.google.maps.places) {
-    console.warn("Google Maps loaded but Places API is missing");
   }
 
   // Only initialize once
@@ -29,18 +24,14 @@ export function initGoogleMaps(apiKey) {
     const loader = new Loader({
       apiKey: apiKey,
       version: 'weekly',
-      libraries: ['places'],
+      // Don't request the places library since we're not using it
+      libraries: [],
       mapIds: [''], // Add your map IDs if using cloud-based maps
     });
 
     loaderPromise = loader.load()
       .then(() => {
-        // Verify places library was loaded
-        if (!window.google.maps.places) {
-          console.error("Google Maps loaded but Places library is missing");
-          throw new Error("Places library not loaded");
-        }
-        console.log("Google Maps loaded successfully with Places library");
+        console.log("Google Maps loaded successfully");
         return Promise.resolve();
       })
       .catch(error => {
