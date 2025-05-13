@@ -3,9 +3,8 @@ services:
   - type: web
     name: eventfinder-api
     env: python
-    rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 75
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -14,21 +13,24 @@ services:
       - key: RAILWAY_ENVIRONMENT
         value: production
       - key: SECRET_KEY
-        fromDatabase:
-          name: eventfinder-db
-          property: connectionString
+        value: 3a4f89cc0b7db4bf2a97e6fe9f9a8e29fcb43d8f5d67c8a3
+      - key: DATABASE_URL
+        value: postgresql://eventfinder_user:J6euBSG7jS6U0aPZxMjy5CfuUnOAhjj8@dpg-d0bs2huuk2gs7383mnu0-a.oregon-postgres.render.com/eventfinder
+      - key: DATABASE_POOL_SIZE
+        value: 5
+      - key: DATABASE_MAX_OVERFLOW
+        value: 10
+      - key: DATABASE_POOL_TIMEOUT
+        value: 30
+      - key: DATABASE_CONNECT_TIMEOUT
+        value: 15
   
   # Frontend web service
   - type: web
     name: eventfinder-web
     env: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build:render
-    staticPublishPath: ./dist
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
     routes:
       - type: rewrite
         source: /*
@@ -43,3 +45,4 @@ databases:
   - name: eventfinder-db
     databaseName: eventfinder
     plan: free
+    ipAllowList: ["0.0.0.0/0"]  # allow connections from anywhere (for development)

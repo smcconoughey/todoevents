@@ -13,9 +13,9 @@ services:
       - key: RAILWAY_ENVIRONMENT
         value: production
       - key: SECRET_KEY
-        fromDatabase:
-          name: eventfinder-db
-          property: connectionString
+        value: 3a4f89cc0b7db4bf2a97e6fe9f9a8e29fcb43d8f5d67c8a3
+      - key: DATABASE_URL
+        value: postgresql://eventfinder_user:J6euBSG7jS6U0aPZxMjy5CfuUnOAhjj8@dpg-d0bs2huuk2gs7383mnu0-a.oregon-postgres.render.com/eventfinder
       - key: DATABASE_POOL_SIZE
         value: 5
       - key: DATABASE_MAX_OVERFLOW
@@ -45,4 +45,4 @@ databases:
   - name: eventfinder-db
     databaseName: eventfinder
     plan: free
-    ipAllowList: []  # only allow internal connections
+    ipAllowList: ["0.0.0.0/0"]  # allow connections from anywhere (for development)
