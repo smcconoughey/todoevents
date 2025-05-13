@@ -6,10 +6,15 @@ import { Loader } from '@googlemaps/js-api-loader';
 let loaderPromise = null;
 
 export function initGoogleMaps(apiKey) {
-  // If Google Maps is already loaded, return resolved promise
-  if (window.google && window.google.maps) {
+  // If Google Maps is already loaded with places library, return resolved promise
+  if (window.google && window.google.maps && window.google.maps.places) {
     console.log("Google Maps already loaded, using existing instance");
     return Promise.resolve();
+  }
+  
+  // If Google Maps is loaded but places library is missing, log a warning
+  if (window.google && window.google.maps && !window.google.maps.places) {
+    console.warn("Google Maps loaded but Places API is missing");
   }
 
   // Only initialize once
@@ -24,14 +29,36 @@ export function initGoogleMaps(apiKey) {
     const loader = new Loader({
       apiKey: apiKey,
       version: 'weekly',
-      // Don't request the places library since we're not using it
-      libraries: [],
-      mapIds: [''], // Add your map IDs if using cloud-based maps
+      // Include the places library specifically for address search
+      libraries: ['places'],
+      // Optimization options
+      mapIds: [''], 
+      authReferrerPolicy: 'origin',
+      channel: 'eventapp',
     });
 
     loaderPromise = loader.load()
       .then(() => {
-        console.log("Google Maps loaded successfully");
+        // Verify places library was loaded
+        if (window.google?.maps?.places) {
+          // Pre-warm the Places service with a session token to optimize billing
+          try {
+            // Create a session token for optimized billing
+            new window.google.maps.places.AutocompleteSessionToken();
+            
+            // Pre-create an instance of the service we'll use
+            // This helps with initial latency when the user first interacts
+            const tempDiv = document.createElement('div');
+            new window.google.maps.places.AutocompleteService();
+            new window.google.maps.places.PlacesService(tempDiv);
+            
+            console.log("Google Maps loaded successfully with Places library");
+          } catch (e) {
+            console.warn("Places API initialized with limitations:", e);
+          }
+        } else {
+          console.warn("Places library not fully loaded");
+        }
         return Promise.resolve();
       })
       .catch(error => {

@@ -240,7 +240,7 @@ const CreateEventForm = ({
       >
         <DialogHeader>
           <DialogTitle>{initialEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
-          <DialogDescription id="create-event-dialog-description">
+          <DialogDescription id="create-event-dialog-description" className="text-white/60">
             {initialEvent ? 'Edit an existing event' : 'Create a new event with details'}
           </DialogDescription>
           <button

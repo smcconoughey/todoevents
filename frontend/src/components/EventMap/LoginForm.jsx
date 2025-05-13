@@ -35,14 +35,15 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     }
   }, [authLoading, authError]);
 
-  // Add a timeout to reset loading state after 10 seconds as a safety measure
+  // Add a timeout to reset loading state after 20 seconds as a safety measure
   useEffect(() => {
     let timeout;
     if (isLoading) {
       timeout = setTimeout(() => {
         console.warn("Login form loading timeout - resetting state");
         setIsLoading(false);
-      }, 10000);
+        setError("Request took too long. Please try again.");
+      }, 20000);
     }
     return () => clearTimeout(timeout);
   }, [isLoading]);
@@ -84,27 +85,15 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           throw new Error('Password must be at least 8 characters long');
         }
         
-        // Call register function with a timeout for safety
-        const registerPromise = registerUser(form.email, form.password);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Registration request timed out')), 15000)
-        );
-        
-        const success = await Promise.race([registerPromise, timeoutPromise]);
-        console.log("Registration result:", success);
+        // Call register function - fetchWithTimeout is now implemented in AuthContext
+        const success = await registerUser(form.email, form.password);
         
         if (success) {
           onSuccess();
         }
       } else {
-        // Call login function with a timeout for safety
-        const loginPromise = login(form.email, form.password);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Login request timed out')), 15000)
-        );
-        
-        const success = await Promise.race([loginPromise, timeoutPromise]);
-        console.log("Login result:", success);
+        // Call login function - fetchWithTimeout is now implemented in AuthContext
+        const success = await login(form.email, form.password);
         
         if (success) {
           onSuccess();

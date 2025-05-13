@@ -946,7 +946,7 @@ const EventMap = ({ mapsLoaded = false }) => {
             <DialogTitle className="text-white mb-4">
               {loginMode === 'login' ? 'Sign In' : 'Create Account'}
             </DialogTitle>
-            <DialogDescription id="login-dialog-description">
+            <DialogDescription id="login-dialog-description" className="text-white/60 mb-4">
               {loginMode === 'login' ? 'Sign in to your account' : 'Create a new account'}
             </DialogDescription>
           </DialogHeader>

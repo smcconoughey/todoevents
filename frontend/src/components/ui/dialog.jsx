@@ -62,6 +62,16 @@ export const DialogTitle = ({ children }) => (
   </h2>
 );
 
+// Add proper DialogDescription component that's visually styled
+export const DialogDescription = ({ children, id, className = "" }) => (
+  <p 
+    id={id}
+    className={`mt-2 text-sm text-white/70 ${className}`}
+  >
+    {children}
+  </p>
+);
+
 // Add DialogClose component
 export const DialogClose = ({ children, onClick, ...props }) => {
   const handleClick = (e) => {

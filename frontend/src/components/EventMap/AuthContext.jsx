@@ -93,6 +93,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Helper to handle API requests with timeout
+  const fetchWithTimeout = async (url, options, timeoutMs = 15000) => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal
+      });
+      clearTimeout(timeout);
+      return response;
+    } catch (error) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please try again.');
+      }
+      throw error;
+    }
+  };
+
   const login = async (email, password) => {
     setError(null);
     setStatusMessage(null);
@@ -104,10 +129,13 @@ export const AuthProvider = ({ children }) => {
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await fetch(`${API_URL}/token`, {
-        method: 'POST',
-        body: formData
-      });
+      const response = await fetchWithTimeout(
+        `${API_URL}/token`, 
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
 
       const data = await handleResponse(response);
       localStorage.setItem('token', data.access_token);
@@ -134,17 +162,23 @@ export const AuthProvider = ({ children }) => {
 
     try {
       console.log(`Attempting registration for ${email}...`);
-      const response = await fetch(`${API_URL}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      
+      // Use the fetchWithTimeout helper with a 20 second timeout for registration
+      const response = await fetchWithTimeout(
+        `${API_URL}/users`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            role: 'user'
+          })
         },
-        body: JSON.stringify({
-          email,
-          password,
-          role: 'user'
-        })
-      });
+        20000 // 20 second timeout for registration which might take longer
+      );
 
       await handleResponse(response);
       setStatusMessage('Registration successful');
