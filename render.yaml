@@ -3,15 +3,15 @@ services:
   - type: web
     name: eventfinder-api
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 75
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120 --access-log
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
         value: 8000
-      - key: RAILWAY_ENVIRONMENT
-        value: production
+      - key: RENDER
+        value: true
       - key: SECRET_KEY
         value: 3a4f89cc0b7db4bf2a97e6fe9f9a8e29fcb43d8f5d67c8a3
       - key: DATABASE_URL
@@ -29,7 +29,7 @@ services:
   - type: web
     name: eventfinder-web
     env: static
-    buildCommand: cd frontend && npm install && npm run build
+    buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/dist
     routes:
       - type: rewrite
@@ -40,9 +40,11 @@ services:
         value: https://eventfinder-api.onrender.com
       - key: VITE_GOOGLE_MAPS_API_KEY
         sync: false
+      - key: NODE_ENV
+        value: production
           
 databases:
   - name: eventfinder-db
     databaseName: eventfinder
     plan: free
-    ipAllowList: ["0.0.0.0/0"]  # allow connections from anywhere (for development)
+    ipAllowList: [] # Make this empty to begin with, then update in the dashboard

@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from pydantic import BaseModel, EmailStr, validator
 from passlib.context import CryptContext
@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key-for-development-only")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
-# Environment configuration
+# Environment configuration 
 IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
 DB_URL = os.getenv("DATABASE_URL", None)
 
@@ -44,21 +44,83 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="EventFinder API")
 
-# CORS middleware with correct Render.com domains
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# Dynamic CORS origins based on environment
+def get_cors_origins():
+    base_origins = [
         "http://localhost:5173",  # Local Vite dev server
         "http://127.0.0.1:5173",
         "http://localhost:5174",  # Admin dashboard local
         "http://127.0.0.1:5174",
-        "https://eventfinder-api.onrender.com",  # Main API
-        "https://eventfinder-web.onrender.com",  # Main frontend
-        "https://eventfinder-admin.onrender.com",  # Admin frontend
-    ],
+    ]
+    
+    if IS_PRODUCTION:
+        # In production, add common Render.com patterns
+        production_origins = [
+            "https://eventfinder-api.onrender.com",
+            "https://eventfinder-web.onrender.com", 
+            "https://eventfinder-admin.onrender.com",
+            "https://todoevents-1.onrender.com",
+            "https://todoevents-1-frontend.onrender.com", 
+            "https://todoevents-1-web.onrender.com",
+            "https://todoevents-api.onrender.com",
+            "https://todoevents-frontend.onrender.com",
+            "https://todoevents-web.onrender.com",
+        ]
+        return base_origins + production_origins
+    else:
+        return base_origins
+
+# Custom CORS middleware for flexible Render.com handling
+@app.middleware("http")
+async def cors_handler(request, call_next):
+    # Handle preflight requests
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin")
+        
+        # Allow any localhost origin in development
+        if origin and ("localhost" in origin or "127.0.0.1" in origin):
+            return Response(
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers": "*",
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Max-Age": "86400",
+                }
+            )
+        
+        # In production, allow any onrender.com subdomain
+        if IS_PRODUCTION and origin and origin.endswith(".onrender.com"):
+            return Response(
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers": "*",
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Max-Age": "86400",
+                }
+            )
+    
+    response = await call_next(request)
+    
+    # Add CORS headers to actual responses
+    origin = request.headers.get("origin")
+    if origin:
+        if ("localhost" in origin or "127.0.0.1" in origin) or \
+           (IS_PRODUCTION and origin.endswith(".onrender.com")):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    return response
+
+# CORS middleware with dynamic origins (as fallback)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
 
 # Database file for SQLite (development only)
@@ -88,7 +150,7 @@ def get_db():
                 conn = psycopg2.connect(
                     DB_URL,
                     cursor_factory=RealDictCursor,
-                    connect_timeout=30,  # Extend connection timeout to 30 seconds
+                    connect_timeout=15,  # Reduced from 30 to 15 seconds for faster retries
                     keepalives=1,
                     keepalives_idle=30,
                     keepalives_interval=10,
@@ -99,7 +161,7 @@ def get_db():
                 
                 try:
                     cur = conn.cursor()
-                    # Test the connection with a simple query
+                    # Test the connection with a simple query with timeout
                     cur.execute("SELECT 1")
                     yield conn
                     break
@@ -118,52 +180,18 @@ def get_db():
                 logger.error(f"Database connection failed (attempt {attempt+1}/{retry_count}): {error_msg}")
                 
                 if attempt < retry_count - 1:
-                    # Exponential backoff: Wait longer between retries
-                    wait_time = 2 ** attempt
+                    # Exponential backoff with shorter base wait time
+                    wait_time = min(2 ** attempt, 8)  # Cap at 8 seconds
                     logger.info(f"Waiting {wait_time}s before retry...")
-                    time.sleep(wait_time)  # Exponential backoff
+                    time.sleep(wait_time)
                 else:
                     logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
-                    # Instead of raising an exception, use an in-memory SQLite database as fallback
-                    # This is better than crashing, and allows the server to still function
-                    logger.warning("Falling back to in-memory SQLite database")
-                    
-                    try:
-                        memory_conn = sqlite3.connect(":memory:")
-                        memory_conn.row_factory = sqlite3.Row
-                        
-                        # Initialize basic tables
-                        c = memory_conn.cursor()
-                        c.execute('''CREATE TABLE IF NOT EXISTS users (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            email TEXT UNIQUE NOT NULL,
-                            hashed_password TEXT NOT NULL,
-                            role TEXT NOT NULL,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )''')
-                        
-                        c.execute('''CREATE TABLE IF NOT EXISTS events (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            title TEXT NOT NULL,
-                            description TEXT NOT NULL,
-                            date TEXT NOT NULL,
-                            time TEXT NOT NULL,
-                            category TEXT NOT NULL,
-                            address TEXT NOT NULL,
-                            lat REAL NOT NULL,
-                            lng REAL NOT NULL,
-                            recurring BOOLEAN NOT NULL DEFAULT 0,
-                            frequency TEXT,
-                            end_date TEXT,
-                            created_by INTEGER,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )''')
-                        
-                        memory_conn.commit()
-                        yield memory_conn
-                    finally:
-                        memory_conn.close()
-                    break
+                    # Instead of falling back to SQLite, raise a proper HTTP exception
+                    # This is better for debugging connection issues in production
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Database connection failed. Please try again later."
+                    )
     else:
         # Local development with SQLite
         conn = sqlite3.connect(DB_FILE)
@@ -986,7 +1014,7 @@ async def health_check():
     health_status = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.1",
+        "version": "1.0.2",
         "environment": "production" if IS_PRODUCTION else "development",
         "database": {
             "status": "unknown",
@@ -995,28 +1023,63 @@ async def health_check():
         }
     }
     
-    # Test database connection
+    # Test database connection with shorter timeout for health checks
     try:
-        with get_db() as conn:
-            c = conn.cursor()
-            start_time = time.time()
-            c.execute("SELECT 1")
-            end_time = time.time()
+        if IS_PRODUCTION and DB_URL:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
             
-            response_time = round((end_time - start_time) * 1000)  # ms
-            health_status["database"]["status"] = "connected"
-            health_status["database"]["connection_test"] = {
-                "successful": True,
-                "response_time_ms": response_time
-            }
+            start_time = time.time()
+            conn = psycopg2.connect(
+                DB_URL,
+                cursor_factory=RealDictCursor,
+                connect_timeout=5  # Short timeout for health checks
+            )
+            
+            try:
+                c = conn.cursor()
+                c.execute("SELECT 1")
+                c.fetchone()
+                end_time = time.time()
+                
+                response_time = round((end_time - start_time) * 1000)  # ms
+                health_status["database"]["status"] = "connected"
+                health_status["database"]["connection_test"] = {
+                    "successful": True,
+                    "response_time_ms": response_time
+                }
+            finally:
+                conn.close()
+        else:
+            # SQLite health check
+            start_time = time.time()
+            conn = sqlite3.connect(DB_FILE)
+            try:
+                c = conn.cursor()
+                c.execute("SELECT 1")
+                c.fetchone()
+                end_time = time.time()
+                
+                response_time = round((end_time - start_time) * 1000)  # ms
+                health_status["database"]["status"] = "connected"
+                health_status["database"]["connection_test"] = {
+                    "successful": True,
+                    "response_time_ms": response_time
+                }
+            finally:
+                conn.close()
+                
     except Exception as e:
         logger.error(f"Health check database test failed: {str(e)}")
         health_status["status"] = "degraded"
         health_status["database"]["status"] = "error"
         health_status["database"]["connection_test"] = {
             "successful": False,
-            "error": str(e)
+            "error": str(e)[:200]  # Truncate long error messages
         }
+    
+    # Return appropriate HTTP status code based on health
+    status_code = 200 if health_status["status"] == "healthy" else 503
     
     return health_status
 
