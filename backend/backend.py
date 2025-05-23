@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, JSONResponse
 
 from pydantic import BaseModel, EmailStr, validator
 from passlib.context import CryptContext
@@ -82,53 +82,58 @@ async def cors_handler(request, call_next):
     if request.method == "OPTIONS":
         logger.info(f"Handling preflight request from origin: {origin}")
         
-        # Allow any localhost origin in development
-        if origin and ("localhost" in origin or "127.0.0.1" in origin):
-            logger.info("Allowing localhost origin")
-            return Response(
-                headers={
-                    "Access-Control-Allow-Origin": origin,
-                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                    "Access-Control-Allow-Headers": "*",
-                    "Access-Control-Allow-Credentials": "true",
-                    "Access-Control-Max-Age": "86400",
-                }
-            )
+        # For any origin, send proper preflight response
+        allowed_origin = origin if origin else "*"
         
-        # In production, allow any onrender.com subdomain
-        if IS_PRODUCTION and origin and origin.endswith(".onrender.com"):
-            logger.info(f"Allowing onrender.com origin: {origin}")
-            return Response(
-                headers={
-                    "Access-Control-Allow-Origin": origin,
-                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                    "Access-Control-Allow-Headers": "*",
-                    "Access-Control-Allow-Credentials": "true",
-                    "Access-Control-Max-Age": "86400",
-                }
-            )
-        
-        # If we don't recognize the origin, still send a response for debugging
-        logger.warning(f"Unrecognized origin in preflight: {origin}")
+        if ("localhost" in origin or "127.0.0.1" in origin) or \
+           (IS_PRODUCTION and ".onrender.com" in origin):
+            logger.info(f"Allowing origin: {origin}")
+        else:
+            logger.warning(f"Unrecognized origin in preflight but allowing for debugging: {origin}")
+            
         return Response(
             headers={
+                "Access-Control-Allow-Origin": allowed_origin,
                 "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+                "Access-Control-Allow-Credentials": "true",
                 "Access-Control-Max-Age": "86400",
             }
         )
     
-    response = await call_next(request)
-    
-    # Add CORS headers to actual responses
-    if origin:
-        if ("localhost" in origin or "127.0.0.1" in origin) or \
-           (IS_PRODUCTION and origin.endswith(".onrender.com")):
+    try:
+        # Call the next middleware or endpoint handler
+        response = await call_next(request)
+        
+        # Add CORS headers to successful responses
+        if origin:
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
-            logger.info(f"Added CORS headers for origin: {origin}")
-    
-    return response
+            logger.info(f"Added CORS headers for successful response to origin: {origin}")
+        
+        return response
+        
+    except Exception as e:
+        # Handle exceptions and ensure CORS headers are added to error responses
+        logger.error(f"Error during request processing: {str(e)}")
+        
+        # Create response with error details
+        status_code = 500
+        if isinstance(e, HTTPException):
+            status_code = e.status_code
+            
+        error_response = JSONResponse(
+            status_code=status_code,
+            content={"detail": str(e)},
+        )
+        
+        # Add CORS headers to error response
+        if origin:
+            error_response.headers["Access-Control-Allow-Origin"] = origin
+            error_response.headers["Access-Control-Allow-Credentials"] = "true"
+            logger.info(f"Added CORS headers for error response to origin: {origin}")
+            
+        return error_response
 
 # CORS middleware with dynamic origins (as fallback)
 app.add_middleware(
