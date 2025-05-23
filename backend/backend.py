@@ -54,8 +54,9 @@ def get_cors_origins():
     ]
     
     if IS_PRODUCTION:
-        # In production, add common Render.com patterns
+        # In production, add common Render.com patterns including the actual deployed URL
         production_origins = [
+            "https://todoevents.onrender.com",  # Actual frontend URL
             "https://eventfinder-api.onrender.com",
             "https://eventfinder-web.onrender.com", 
             "https://eventfinder-admin.onrender.com",
@@ -73,12 +74,17 @@ def get_cors_origins():
 # Custom CORS middleware for flexible Render.com handling
 @app.middleware("http")
 async def cors_handler(request, call_next):
+    # Log the request for debugging
+    origin = request.headers.get("origin")
+    logger.info(f"Request: {request.method} {request.url} from origin: {origin}")
+    
     # Handle preflight requests
     if request.method == "OPTIONS":
-        origin = request.headers.get("origin")
+        logger.info(f"Handling preflight request from origin: {origin}")
         
         # Allow any localhost origin in development
         if origin and ("localhost" in origin or "127.0.0.1" in origin):
+            logger.info("Allowing localhost origin")
             return Response(
                 headers={
                     "Access-Control-Allow-Origin": origin,
@@ -91,6 +97,7 @@ async def cors_handler(request, call_next):
         
         # In production, allow any onrender.com subdomain
         if IS_PRODUCTION and origin and origin.endswith(".onrender.com"):
+            logger.info(f"Allowing onrender.com origin: {origin}")
             return Response(
                 headers={
                     "Access-Control-Allow-Origin": origin,
@@ -100,16 +107,26 @@ async def cors_handler(request, call_next):
                     "Access-Control-Max-Age": "86400",
                 }
             )
+        
+        # If we don't recognize the origin, still send a response for debugging
+        logger.warning(f"Unrecognized origin in preflight: {origin}")
+        return Response(
+            headers={
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Max-Age": "86400",
+            }
+        )
     
     response = await call_next(request)
     
     # Add CORS headers to actual responses
-    origin = request.headers.get("origin")
     if origin:
         if ("localhost" in origin or "127.0.0.1" in origin) or \
            (IS_PRODUCTION and origin.endswith(".onrender.com")):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
+            logger.info(f"Added CORS headers for origin: {origin}")
     
     return response
 

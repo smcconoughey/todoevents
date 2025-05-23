@@ -1,50 +1,45 @@
 services:
   # Backend API service
   - type: web
-    name: eventfinder-api
+    name: todoevents-backend
     env: python
-    buildCommand: cd backend && pip install -r requirements.txt
-    startCommand: cd backend && uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120 --access-log
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: PORT
-        value: 8000
       - key: RENDER
         value: true
       - key: SECRET_KEY
         value: 3a4f89cc0b7db4bf2a97e6fe9f9a8e29fcb43d8f5d67c8a3
       - key: DATABASE_URL
-        value: postgresql://eventfinder_user:J6euBSG7jS6U0aPZxMjy5CfuUnOAhjj8@dpg-d0bs2huuk2gs7383mnu0-a.oregon-postgres.render.com/eventfinder
-      - key: DATABASE_POOL_SIZE
-        value: 5
-      - key: DATABASE_MAX_OVERFLOW
-        value: 10
-      - key: DATABASE_POOL_TIMEOUT
-        value: 30
-      - key: DATABASE_CONNECT_TIMEOUT
-        value: 15
+        fromDatabase:
+          name: todoevents-db
+          property: connectionString
+      - key: PORT
+        value: 8000
   
   # Frontend web service
   - type: web
-    name: eventfinder-web
+    name: todoevents
     env: static
-    buildCommand: cd frontend && npm ci && npm run build
-    staticPublishPath: ./frontend/dist
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://eventfinder-api.onrender.com
-      - key: VITE_GOOGLE_MAPS_API_KEY
-        sync: false
+        value: https://todoevents-backend.onrender.com
       - key: NODE_ENV
         value: production
-          
+
+# Database
 databases:
-  - name: eventfinder-db
-    databaseName: eventfinder
+  - name: todoevents-db
+    databaseName: todoevents
+    user: todoevents_user
     plan: free
-    ipAllowList: [] # Make this empty to begin with, then update in the dashboard
