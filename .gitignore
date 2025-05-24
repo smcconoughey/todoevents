@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+venv/
+env/
+.env
+*.sqlite3
+*.db
+
+# Node.js/React
+node_modules/
+dist/
+frontend/.env
+.DS_Store
+.cache/
+.parcel-cache/
+
+# Local development
+.idea/
+.vscode/
+*.swp
+*.swo

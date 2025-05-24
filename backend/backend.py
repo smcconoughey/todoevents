@@ -318,10 +318,73 @@ def init_db():
                             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                             FOREIGN KEY(user_id) REFERENCES users(id)
                         )''')
+                
+            # Ensure password_resets table exists
+            if IS_PRODUCTION and DB_URL:
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS password_resets (
+                        id SERIAL PRIMARY KEY,
+                        email TEXT NOT NULL,
+                        reset_code TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                ''')
+            else:
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS password_resets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        email TEXT NOT NULL,
+                        reset_code TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                ''')
+            
+            # Check for default admin user and create if needed
+            create_default_admin_user(conn)
+            
     except Exception as e:
         logger.error(f"Error initializing database: {str(e)}")
         # Don't raise the exception here - this allows the app to start even if DB init fails
         # We'll handle DB errors at the endpoint level
+
+def create_default_admin_user(conn):
+    """Create a default admin user if no admin users exist in the database"""
+    try:
+        placeholder = get_placeholder()
+        c = conn.cursor()
+        
+        # Check if any admin users exist
+        c.execute(f"SELECT COUNT(*) as admin_count FROM users WHERE role = {placeholder}", (UserRole.ADMIN,))
+        admin_count = c.fetchone()
+        
+        # Convert to integer based on database type
+        if IS_PRODUCTION and DB_URL:
+            # PostgreSQL returns a dict
+            admin_count = admin_count['admin_count']
+        else:
+            # SQLite returns a tuple
+            admin_count = admin_count[0]
+            
+        if admin_count == 0:
+            logger.info("No admin users found. Creating default admin user.")
+            admin_email = "admin@todoevents.com"
+            admin_password = "Admin123!"  # This should be changed after first login
+            hashed_password = get_password_hash(admin_password)
+            
+            c.execute(
+                f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                (admin_email, hashed_password, UserRole.ADMIN)
+            )
+            conn.commit()
+            logger.info(f"Default admin user created: {admin_email}")
+            logger.info("IMPORTANT: Remember to change the default admin password after first login")
+        else:
+            logger.info(f"Found {admin_count} existing admin users. Default admin creation skipped.")
+            
+    except Exception as e:
+        logger.error(f"Error creating default admin user: {str(e)}")
 
 # Initialize database
 try:
@@ -768,6 +831,168 @@ async def check_password_strength(password: str):
     Useful for real-time password feedback
     """
     return PasswordValidator.validate_password(password)
+
+# Password Reset Models
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordResetVerify(BaseModel):
+    email: EmailStr
+    reset_code: str
+
+class PasswordReset(BaseModel):
+    email: EmailStr
+    reset_code: str
+    new_password: str
+    
+    @validator('new_password')
+    def validate_password(cls, v):
+        # Use the PasswordValidator to get validation results
+        validation = PasswordValidator.validate_password(v)
+        
+        # If not valid, raise a validation error with all feedback
+        if not validation['is_valid']:
+            raise ValueError('\n'.join(validation['feedback']))
+        
+        return v
+
+# Password Reset Endpoints
+@app.post("/request-password-reset")
+async def request_password_reset(request: PasswordResetRequest):
+    """Request a password reset code"""
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user exists
+            c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (request.email,))
+            user = c.fetchone()
+            
+            if not user:
+                # Always return success for security reasons
+                # This prevents email enumeration attacks
+                return {"detail": "If your email is registered, you will receive a reset code"}
+            
+            # Generate a 6-digit reset code
+            import random
+            reset_code = ''.join(random.choices('0123456789', k=6))
+            reset_expiry = datetime.utcnow() + timedelta(minutes=30)
+            
+            # Store the reset code in the database
+            # First, create a password_resets table if it doesn't exist
+            if IS_PRODUCTION and DB_URL:
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS password_resets (
+                        id SERIAL PRIMARY KEY,
+                        email TEXT NOT NULL,
+                        reset_code TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                ''')
+            else:
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS password_resets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        email TEXT NOT NULL,
+                        reset_code TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                ''')
+            
+            # Delete any existing reset codes for this user
+            c.execute(f"DELETE FROM password_resets WHERE email = {placeholder}", (request.email,))
+            
+            # Insert the new reset code
+            c.execute(
+                f"INSERT INTO password_resets (email, reset_code, expires_at) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                (request.email, reset_code, reset_expiry)
+            )
+            
+            # In a real production system, you would send an email with the reset code
+            # For demo purposes, we'll just log it
+            logger.info(f"Password reset code for {request.email}: {reset_code}")
+            
+            # For development, return the reset code in the response
+            # In production, remove this and use proper email delivery
+            if not IS_PRODUCTION:
+                return {
+                    "detail": "Reset code generated",
+                    "reset_code": reset_code
+                }
+            
+            return {"detail": "If your email is registered, you will receive a reset code"}
+            
+    except Exception as e:
+        logger.error(f"Error requesting password reset: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error requesting password reset")
+
+@app.post("/verify-reset-code")
+async def verify_reset_code(request: PasswordResetVerify):
+    """Verify a password reset code"""
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if reset code exists and is valid
+            c.execute(
+                f"SELECT * FROM password_resets WHERE email = {placeholder} AND reset_code = {placeholder} AND expires_at > {placeholder}",
+                (request.email, request.reset_code, datetime.utcnow())
+            )
+            reset = c.fetchone()
+            
+            if not reset:
+                raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+            
+            return {"detail": "Reset code verified"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying reset code: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error verifying reset code")
+
+@app.post("/reset-password")
+async def reset_password(request: PasswordReset):
+    """Reset password with a valid reset code"""
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if reset code exists and is valid
+            c.execute(
+                f"SELECT * FROM password_resets WHERE email = {placeholder} AND reset_code = {placeholder} AND expires_at > {placeholder}",
+                (request.email, request.reset_code, datetime.utcnow())
+            )
+            reset = c.fetchone()
+            
+            if not reset:
+                raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+            
+            # Update the user's password
+            hashed_password = get_password_hash(request.new_password)
+            c.execute(
+                f"UPDATE users SET hashed_password = {placeholder} WHERE email = {placeholder}",
+                (hashed_password, request.email)
+            )
+            
+            # Delete all reset codes for this user
+            c.execute(f"DELETE FROM password_resets WHERE email = {placeholder}", (request.email,))
+            
+            return {"detail": "Password has been reset successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting password: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error resetting password")
 
 # Event Endpoints
 @app.get("/events", response_model=List[EventResponse])

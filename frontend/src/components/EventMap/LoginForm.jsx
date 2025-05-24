@@ -2,7 +2,8 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from './AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, CheckCircle2, Loader2, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Clock, Eye, EyeOff } from 'lucide-react';
+import PasswordResetForm from './PasswordResetForm';
 
 const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => {} }) => {
   const { login, registerUser, loading: authLoading, error: authError, statusMessage, clearError } = useContext(AuthContext);
@@ -22,6 +23,8 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
   });
   const [registrationStep, setRegistrationStep] = useState(null);
   const [showFallbackOption, setShowFallbackOption] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // This will help ensure that loading state doesn't get stuck
   useEffect(() => {
@@ -95,8 +98,9 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         }
         
         // Check basic password requirements
-        if (form.password.length < 8) {
-          throw new Error('Password must be at least 8 characters long');
+        const allRequirementsMet = Object.values(validationStatus).every(Boolean);
+        if (!allRequirementsMet) {
+          throw new Error('Password does not meet all requirements');
         }
         
         // Update UI to show registration step
@@ -158,11 +162,53 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     setShowFallbackOption(false);
     onModeChange(mode === 'login' ? 'register' : 'login');
   };
+  
+  const handleForgotPasswordClick = () => {
+    setShowForgotPassword(true);
+  };
+  
+  const handleBackFromReset = () => {
+    setShowForgotPassword(false);
+  };
+
+  // Password requirements component
+  const PasswordRequirements = () => (
+    <div className="mt-2 space-y-1">
+      <p className="text-xs text-white/50">Password requirements:</p>
+      <ul className="space-y-1">
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.length ? 'text-green-400' : 'text-white/50'}`}>
+          {validationStatus.length ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+          At least 8 characters
+        </li>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.uppercase ? 'text-green-400' : 'text-white/50'}`}>
+          {validationStatus.uppercase ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+          At least one uppercase letter
+        </li>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.lowercase ? 'text-green-400' : 'text-white/50'}`}>
+          {validationStatus.lowercase ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+          At least one lowercase letter
+        </li>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.number ? 'text-green-400' : 'text-white/50'}`}>
+          {validationStatus.number ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+          At least one number
+        </li>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.special ? 'text-green-400' : 'text-white/50'}`}>
+          {validationStatus.special ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+          At least one special character
+        </li>
+      </ul>
+    </div>
+  );
 
   // Display either local error or auth context error
   const displayError = error || authError;
   // Combined loading state from both local and auth context
   const isProcessing = isLoading || authLoading;
+  
+  // If showing forgot password form
+  if (showForgotPassword) {
+    return <PasswordResetForm onBack={handleBackFromReset} onSuccess={handleBackFromReset} />;
+  }
 
   return (
     <div className="space-y-4">
@@ -201,39 +247,57 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           </div>
         </div>
       )}
-
-      {/* Error Messages */}
+      
+      {/* Error Alert */}
       {displayError && (
-        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 text-sm flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{displayError}</span>
-        </div>
-      )}
-
-      {/* Fallback Option */}
-      {showFallbackOption && mode === 'register' && (
-        <div className="p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-md text-yellow-200 text-sm space-y-2">
-          <div className="flex items-start gap-2">
-            <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>The registration service is currently taking too long to respond. This may be due to temporary server issues at Render.com.</span>
+        <div className="bg-red-500/20 text-red-200 p-3 rounded-md flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+          <div>
+            {/* Add helpful additional context based on error type */}
+            <p>{displayError}</p>
+            {displayError.includes('Invalid credentials') && mode === 'login' && (
+              <p className="text-sm mt-1">
+                Check that your email and password are correct. 
+                <button 
+                  className="text-red-200 underline hover:text-red-100 ml-1"
+                  onClick={handleForgotPasswordClick}
+                >
+                  Forgot password?
+                </button>
+              </p>
+            )}
+            {displayError.includes('timeout') && (
+              <p className="text-sm mt-1">The server might be busy. Please try again later.</p>
+            )}
           </div>
-          <Button 
-            onClick={handleContinueAnyway}
-            className="w-full mt-2 bg-yellow-500/30 hover:bg-yellow-500/50 text-yellow-100"
-          >
-            Continue Without Account
-          </Button>
         </div>
       )}
-
-      {/* Success Messages */}
-      {statusMessage && (
-        <div className="p-3 bg-green-500/20 border border-green-500/50 rounded text-green-200 text-sm flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{statusMessage}</span>
+      
+      {/* Fallback Option for Registration */}
+      {showFallbackOption && mode === 'register' && (
+        <div className="bg-yellow-500/20 text-yellow-200 p-3 rounded-md mb-3">
+          <p className="mb-2">Server appears to be busy. You can:</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSubmit({ preventDefault: () => {} })}
+              className="border-yellow-400/30 text-yellow-200 hover:bg-yellow-400/20"
+            >
+              Try Again
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleContinueAnyway}
+              className="border-yellow-400/30 text-yellow-200 hover:bg-yellow-400/20"
+            >
+              Continue As Guest
+            </Button>
+          </div>
         </div>
       )}
-
+      
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm text-white/70">Email</label>
@@ -250,15 +314,27 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         
         <div className="space-y-2">
           <label className="text-sm text-white/70">Password</label>
-          <Input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="••••••••"
-            required
-            disabled={isProcessing}
-          />
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+              disabled={isProcessing}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          
+          {/* Show password requirements for registration */}
+          {mode === 'register' && <PasswordRequirements />}
         </div>
         
         {mode === 'register' && (
@@ -273,13 +349,16 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
               required
               disabled={isProcessing}
             />
+            {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
+              <p className="text-xs text-red-300 mt-1">Passwords do not match</p>
+            )}
           </div>
         )}
         
         <Button 
           type="submit" 
           className="w-full bg-white text-black hover:bg-white/90"
-          disabled={isProcessing}
+          disabled={isProcessing || (mode === 'register' && (!Object.values(validationStatus).every(Boolean) || form.password !== form.confirmPassword))}
         >
           {isProcessing 
             ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {mode === 'login' ? 'Signing In...' : 'Creating Account...'}</>
@@ -288,20 +367,31 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
               : 'Create Account'
           }
         </Button>
+        
+        {mode === 'login' && (
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleForgotPasswordClick}
+              className="text-sm text-white/50 hover:text-white underline"
+            >
+              Forgot Password?
+            </button>
+          </div>
+        )}
       </form>
       
-      <div className="text-center mt-4">
-        <button 
-          type="button"
-          className="text-sm text-white/70 hover:text-white"
-          onClick={toggleMode}
-          disabled={isProcessing}
-        >
-          {mode === 'login' 
-            ? "Don't have an account? Sign up" 
-            : "Already have an account? Sign in"
-          }
-        </button>
+      <div className="pt-2 text-center">
+        <p className="text-sm text-white/50">
+          {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
+          <button
+            type="button"
+            onClick={toggleMode}
+            className="text-white hover:underline"
+          >
+            {mode === 'login' ? 'Create one' : 'Sign in'}
+          </button>
+        </p>
       </div>
     </div>
   );

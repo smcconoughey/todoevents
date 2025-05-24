@@ -14,7 +14,8 @@ import {
   Clock,
   Menu,
   Filter,
-  Search
+  Search,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -961,6 +962,28 @@ const EventMap = ({ mapsLoaded = false }) => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* User Menu or Account Section */}
+      {user && (
+        <div className="user-menu">
+          {/* Existing menu items */}
+          
+          {/* Add this new admin dashboard link if user is admin */}
+          {user.role === 'admin' && (
+            <a 
+              href="/admin" 
+              className="flex items-center gap-2 p-2 text-sm hover:bg-black/20 rounded-md"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Shield size={16} />
+              Admin Dashboard
+            </a>
+          )}
+          
+          {/* Logout button or other options */}
+        </div>
+      )}
     </div>
   );
 };

@@ -55,7 +55,10 @@ export const AuthProvider = ({ children }) => {
         
         if (response.ok) {
           const userData = await response.json();
-          setUser(userData);
+          setUser({
+            ...userData,
+            role: userData.role || 'user'
+          });
           localStorage.setItem('token', token);
           setStatusMessage('Authentication successful');
           console.log("Token validation successful");

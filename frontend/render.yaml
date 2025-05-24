@@ -1,8 +1,10 @@
 services:
   - type: web
-    name: todoevents-frontend
-    env: static
+    name: todoevents
+    env: node
+    rootDir: frontend
     buildCommand: npm ci && npm run build
+    startCommand: npx serve -s dist
     staticPublishPath: ./dist
     routes:
       - type: rewrite
@@ -12,4 +14,6 @@ services:
       - key: VITE_API_URL
         value: https://todoevents-backend.onrender.com
       - key: NODE_ENV
-        value: production 
+        value: production
+      - key: NODE_VERSION
+        value: 18.x 
