@@ -5,7 +5,7 @@ services:
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120
+    startCommand: python fix_database.py && uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """
 Database verification and repair script for todoevents backend
+Run automatically during container startup on Render
 """
 import os
 import sys
 import time
+import logging
 import psycopg2
 from psycopg2.extras import RealDictCursor
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('db_setup')
 
 # Get the database URL from environment or command line
 DB_URL = os.getenv("DATABASE_URL")
@@ -15,9 +24,8 @@ if len(sys.argv) > 1:
 
 # Check if DB_URL is set
 if not DB_URL:
-    print("❌ No DATABASE_URL provided!")
-    print("Please set DATABASE_URL environment variable or provide it as an argument:")
-    print("python fix_database.py \"your-database-url\"")
+    logger.error("No DATABASE_URL provided!")
+    logger.error("Please set DATABASE_URL environment variable or provide it as an argument")
     sys.exit(1)
 
 # Check tables required for the app
@@ -25,71 +33,63 @@ REQUIRED_TABLES = ["users", "events", "activity_logs"]
 
 def check_connection():
     """Test basic connectivity to the database"""
-    print(f"Testing connection to database...")
+    logger.info("Testing connection to database...")
     if DB_URL.startswith("postgresql://"):
         # Only show first part for security
         parts = DB_URL.split("@")
         if len(parts) > 1:
             masked_url = f"{parts[0].split('://')[0]}://****@{parts[1]}"
-            print(f"Database URL: {masked_url}")
+            logger.info(f"Database URL: {masked_url}")
         else:
-            print(f"Database URL: {DB_URL[:20]}{'*' * 20}")
+            logger.info(f"Database URL: {DB_URL[:20]}{'*' * 20}")
     else:
-        print(f"Database URL: {DB_URL[:20]}{'*' * 20}")
+        logger.info(f"Database URL: {DB_URL[:20]}{'*' * 20}")
     
     start_time = time.time()
     
-    try:
-        # Connect with timeout
-        conn = psycopg2.connect(
-            DB_URL,
-            cursor_factory=RealDictCursor,
-            connect_timeout=15  # Increased timeout for slow connections
-        )
-        
-        # Test a simple query
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1 as test")
-            result = cur.fetchone()
-        
-        conn.close()
-        
-        end_time = time.time()
-        duration = end_time - start_time
-        
-        print(f"\n✅ Connection successful!")
-        print(f"Query result: {result['test']}")
-        print(f"Connection time: {duration:.2f} seconds")
-        
-        return True
-        
-    except Exception as e:
-        end_time = time.time()
-        duration = end_time - start_time
-        
-        print(f"\n❌ Connection failed!")
-        print(f"Error: {str(e)}")
-        print(f"Time elapsed: {duration:.2f} seconds")
-        
-        # Specific guidance based on error
-        if "password authentication" in str(e).lower():
-            print("\nTIP: This appears to be an authentication error. Check your username and password.")
-        elif "timeout" in str(e).lower():
-            print("\nTIP: Connection is timing out. This could be because:")
-            print("  - The database is on a private network")
-            print("  - Firewall rules are blocking the connection")
-            print("  - The server is overloaded or not running")
-        elif "not known" in str(e).lower():
-            print("\nTIP: Hostname cannot be resolved. Check:")
-            print("  - Is the hostname spelled correctly?")
-            print("  - Does the host exist?")
-            print("  - Is DNS working properly?")
-        
-        return False
+    # Try up to 5 times with increasing backoff
+    max_retries = 5
+    retry_delays = [2, 5, 10, 15, 30]  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            # Connect with timeout
+            conn = psycopg2.connect(
+                DB_URL,
+                cursor_factory=RealDictCursor,
+                connect_timeout=20  # Increased timeout for slow connections
+            )
+            
+            # Test a simple query
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 as test")
+                result = cur.fetchone()
+            
+            conn.close()
+            
+            end_time = time.time()
+            duration = end_time - start_time
+            
+            logger.info(f"Connection successful! Query result: {result['test']}")
+            logger.info(f"Connection time: {duration:.2f} seconds")
+            
+            return True
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Connection attempt {attempt+1}/{max_retries} failed: {error_msg}")
+            
+            if attempt < max_retries - 1:
+                delay = retry_delays[attempt]
+                logger.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logger.error("All connection attempts failed")
+                return False
 
 def check_tables():
     """Check if required tables exist, and create them if they don't"""
-    print("\nChecking required tables...")
+    logger.info("Checking required tables...")
     
     try:
         conn = psycopg2.connect(
@@ -107,19 +107,19 @@ def check_tables():
                     missing_tables.append(table)
         
         if not missing_tables:
-            print("✅ All required tables exist.")
+            logger.info("All required tables exist.")
             
             # Count rows in the users table
             with conn.cursor() as cur:
                 cur.execute("SELECT COUNT(*) as user_count FROM users")
                 user_count = cur.fetchone()['user_count']
-                print(f"Users in database: {user_count}")
+                logger.info(f"Users in database: {user_count}")
                 
             return True
         
         # Create missing tables
-        print(f"❌ Missing tables: {', '.join(missing_tables)}")
-        print("Creating missing tables...")
+        logger.info(f"Missing tables: {', '.join(missing_tables)}")
+        logger.info("Creating missing tables...")
         
         with conn.cursor() as cur:
             # Create users table if missing
@@ -133,7 +133,7 @@ def check_tables():
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
-                print("Created users table")
+                logger.info("Created users table")
             
             # Create events table if missing
             if "events" in missing_tables:
@@ -156,7 +156,7 @@ def check_tables():
                         FOREIGN KEY(created_by) REFERENCES users(id)
                     )
                 ''')
-                print("Created events table")
+                logger.info("Created events table")
             
             # Create activity_logs table if missing
             if "activity_logs" in missing_tables:
@@ -170,13 +170,13 @@ def check_tables():
                         FOREIGN KEY(user_id) REFERENCES users(id)
                     )
                 ''')
-                print("Created activity_logs table")
+                logger.info("Created activity_logs table")
         
-        print("✅ All missing tables have been created")
+        logger.info("All missing tables have been created")
         return True
         
     except Exception as e:
-        print(f"❌ Error checking/creating tables: {str(e)}")
+        logger.error(f"Error checking/creating tables: {str(e)}")
         return False
     finally:
         if 'conn' in locals():
@@ -197,7 +197,7 @@ def create_admin_user():
             user_count = cur.fetchone()['user_count']
             
             if user_count > 0:
-                print("\n✅ Users already exist in the database")
+                logger.info("Users already exist in the database")
                 return True
             
             # No users exist, create an admin
@@ -213,37 +213,33 @@ def create_admin_user():
                 (admin_email, hashed_password, "admin")
             )
             
-            print("\n✅ Created admin user")
-            print(f"Email: {admin_email}")
-            print(f"Password: {admin_password}")
-            print("IMPORTANT: Change this password after first login!")
+            logger.info("Created admin user")
+            logger.info(f"Email: {admin_email}")
+            logger.info(f"Password: {admin_password}")
             
             return True
     except Exception as e:
-        print(f"\n❌ Error creating admin user: {str(e)}")
+        logger.error(f"Error creating admin user: {str(e)}")
         return False
     finally:
         if 'conn' in locals():
             conn.close()
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print(" DATABASE VERIFICATION AND REPAIR")
-    print("=" * 50)
+    logger.info("DATABASE VERIFICATION AND REPAIR")
     
     # Step 1: Test connection
     if not check_connection():
-        print("\nFailed to connect to the database. Please check the URL and credentials.")
-        sys.exit(1)
+        logger.error("Failed to connect to the database. Please check the URL and credentials.")
+        # Don't exit with error - allow server to start anyway
+        # This prevents the container from crashing on deployment
     
     # Step 2: Check and create tables
     if not check_tables():
-        print("\nFailed to verify/create tables. Please check database permissions.")
-        sys.exit(1)
+        logger.error("Failed to verify/create tables. Please check database permissions.")
+        # Don't exit with error - allow server to start anyway
     
     # Step 3: Create admin user if needed
     create_admin_user()
     
-    print("\n" + "=" * 50)
-    print(" DATABASE VERIFICATION COMPLETE")
-    print("=" * 50) 
+    logger.info("DATABASE VERIFICATION COMPLETE") 
