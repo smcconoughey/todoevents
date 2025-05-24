@@ -122,5 +122,15 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    // Use a try-catch block to make the plugin dependency more resilient
+    function() {
+      try {
+        return require("tailwindcss-animate");
+      } catch (error) {
+        console.warn("Warning: tailwindcss-animate plugin not found, animations may not work correctly.");
+        return {};
+      }
+    }()
+  ],
 }

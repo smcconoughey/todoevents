@@ -1,23 +1,72 @@
 # Python
 __pycache__/
 *.py[cod]
-*.class
-venv/
+*$py.class
+*.so
+.Python
 env/
-.env
-*.sqlite3
-*.db
-
-# Node.js/React
-node_modules/
+build/
+develop-eggs/
 dist/
-frontend/.env
-.DS_Store
-.cache/
-.parcel-cache/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+.venv/
+.env
+.env.local
+.env.development
+.env.test
+.env.production
 
-# Local development
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+frontend/dist/
+frontend/dist-ssr/
+frontend/public/hot/
+
+# Logs
+logs
+*.log
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor specific
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+
+# Database
+*.sqlite3
+*.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+.cache/
+.pytest_cache/
+
+# Local deployment files
+.render/
