@@ -1005,8 +1005,13 @@ async def list_events(
     Open to all users, no authentication required.
     """
     placeholder = get_placeholder()
+    conn = None
+    
     try:
-        with get_db() as conn:
+        # Get connection outside of nested try blocks
+        conn = next(get_db().__enter__())
+        
+        try:
             c = conn.cursor()
             
             # Base query to get all events
@@ -1026,31 +1031,49 @@ async def list_events(
             # Order by date and time
             query += " ORDER BY date, time"
             
-            try:
-                # Execute query with timeout handling
-                logger.info(f"Executing list_events query: {query} with params: {params}")
-                c.execute(query, params)
-                events = c.fetchall()
-                logger.info(f"Successfully fetched {len(events) if events else 0} events")
+            # Execute query with timeout handling
+            logger.info(f"Executing list_events query: {query} with params: {params}")
+            
+            # Execute the query
+            c.execute(query, params)
+            events = c.fetchall()
+            logger.info(f"Successfully fetched {len(events) if events else 0} events")
+            
+            # Convert to list of dictionaries safely
+            result = []
+            for event in events:
+                try:
+                    event_dict = dict(event)
+                    
+                    # Convert datetime objects to ISO format strings
+                    if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
+                        event_dict['created_at'] = event_dict['created_at'].isoformat()
+                    
+                    result.append(event_dict)
+                except Exception as e:
+                    logger.error(f"Error converting event to dict: {str(e)}")
+                    # Skip this event but continue with others
+                    continue
+            
+            # Commit if needed (for PostgreSQL session management)
+            if IS_PRODUCTION and DB_URL:
+                conn.commit()
                 
-                # Convert to list of dictionaries
-                result = []
-                for event in events:
-                    try:
-                        event_dict = dict(event)
-                        result.append(event_dict)
-                    except Exception as e:
-                        logger.error(f"Error converting event to dict: {str(e)}")
-                        # Skip this event but continue with others
-                        continue
-                
-                return result
-            except Exception as query_error:
-                logger.error(f"Database query error in list_events: {str(query_error)}")
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Database error: {str(query_error)[:200]}"
-                )
+            return result
+        except Exception as query_error:
+            logger.error(f"Database query error in list_events: {str(query_error)}")
+            
+            # Try to rollback if possible
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception as rollback_error:
+                    logger.error(f"Rollback failed: {str(rollback_error)}")
+                    
+            raise HTTPException(
+                status_code=500,
+                detail=f"Database error: {str(query_error)}"
+            ) from None
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions
         raise http_ex
@@ -1064,6 +1087,14 @@ async def list_events(
             raise HTTPException(status_code=503, detail="Database connection issues")
         else:
             raise HTTPException(status_code=500, detail="Error retrieving events")
+    finally:
+        # Ensure connection is closed
+        if conn:
+            try:
+                conn.close()
+                logger.info("Connection closed in list_events finally block")
+            except Exception as close_error:
+                logger.error(f"Error closing connection: {str(close_error)}")
 
 @app.get("/events/{event_id}", response_model=EventResponse)
 async def read_event(event_id: int):
@@ -1081,7 +1112,14 @@ async def read_event(event_id: int):
             if not event:
                 raise HTTPException(status_code=404, detail="Event not found")
             
-            return dict(event)
+            # Convert to dict and handle datetime fields
+            event_dict = dict(event)
+            
+            # Convert datetime to string for serialization
+            if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
+                event_dict['created_at'] = event_dict['created_at'].isoformat()
+            
+            return event_dict
             
     except HTTPException:
         raise
@@ -1092,13 +1130,19 @@ async def read_event(event_id: int):
 @app.post("/events", response_model=EventResponse)
 async def create_event(event: EventCreate, current_user: dict = Depends(get_current_user)):
     placeholder = get_placeholder()
+    conn = None
+    transaction_failed = False
+    
     try:
-        with get_db() as conn:
+        # Log the event data for debugging
+        logger.info(f"Creating event: {event.dict()}")
+        
+        # Connect to database outside try block
+        conn = next(get_db().__enter__())
+        
+        try:
             c = conn.cursor()
-
-            # Log the event data for debugging
-            logger.info(f"Creating event: {event.dict()}")
-
+            
             # Check for near-duplicate events to prevent accidental double submissions
             duplicate_check = f"""
                 SELECT id FROM events 
@@ -1144,50 +1188,80 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 current_user["id"]
             )
             
-            # Catch any potential database errors specifically
-            try:
-                c.execute(query, values)
-                conn.commit()
+            # Execute insert query
+            c.execute(query, values)
+            
+            # For PostgreSQL, we need to use a different method to get the last inserted ID
+            if IS_PRODUCTION and DB_URL:
+                c.execute("SELECT lastval()")
+                result = c.fetchone()
+                last_id = result[0] if result else None
+            else:
+                last_id = c.lastrowid
+            
+            if not last_id:
+                conn.rollback()
+                transaction_failed = True
+                raise ValueError("Failed to get ID of created event")
                 
-                # For PostgreSQL, we need to use a different method to get the last inserted ID
-                if IS_PRODUCTION and DB_URL:
-                    c.execute("SELECT lastval()")
-                    result = c.fetchone()
-                    last_id = result[0] if result else None
-                else:
-                    last_id = c.lastrowid
+            # Get the newly created event
+            c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (last_id,))
+            event_data = c.fetchone()
+            
+            if not event_data:
+                conn.rollback()
+                transaction_failed = True
+                raise ValueError("Created event not found")
+            
+            # Commit the transaction
+            conn.commit()
                 
-                if not last_id:
-                    raise ValueError("Failed to get ID of created event")
-                    
-                c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (last_id,))
-                event_data = c.fetchone()
+            # Convert to dict and handle datetime fields
+            event_dict = dict(event_data)
+            
+            # Convert datetime to string for serialization
+            if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
+                event_dict['created_at'] = event_dict['created_at'].isoformat()
                 
-                if not event_data:
-                    raise ValueError("Created event not found")
-                    
-                return dict(event_data)
-            except Exception as db_error:
-                # Attempt to rollback transaction
+            # Return the event data
+            return event_dict
+        except Exception as db_error:
+            # Log detailed database error
+            error_msg = str(db_error)
+            logger.error(f"Database error while executing event creation: {error_msg}")
+            
+            # Make sure to rollback if something went wrong and we haven't already
+            if conn and not transaction_failed:
                 try:
                     conn.rollback()
-                except:
-                    pass
-                logger.error(f"Database error while executing event creation: {str(db_error)}")
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Database error: {str(db_error)[:200]}"
-                )
+                except Exception as rollback_error:
+                    logger.error(f"Rollback failed: {str(rollback_error)}")
+                    
+            # Re-raise as HTTP exception with detailed info
+            raise HTTPException(
+                status_code=500,
+                detail=f"Database error: {error_msg}"
+            ) from None  # Prevent chained exceptions
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions
         raise http_ex
     except Exception as e:
-        logger.error(f"Error creating event: {str(e)}")
-        # Return a safer error that won't cause issues with generator handling
+        error_msg = str(e)
+        logger.error(f"Error creating event: {error_msg}")
+        
+        # Return a safer error without the generator error
         raise HTTPException(
             status_code=400, 
-            detail=f"Could not create event: {str(e)[:200]}"
-        )
+            detail=f"Could not create event: {error_msg}"
+        ) from None  # Prevent chained exceptions
+    finally:
+        # Ensure database connection is closed
+        if conn:
+            try:
+                conn.close()
+                logger.info("Connection closed in create_event finally block")
+            except Exception as close_error:
+                logger.error(f"Error closing connection: {str(close_error)}")
 
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):

@@ -42,6 +42,7 @@ import LoginForm from './LoginForm';
 import CalendarFilter from './CalendarFilter';
 
 import { API_URL } from '@/config';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
 
 const normalizeDate = (date) => {
@@ -252,12 +253,16 @@ const EventMap = ({ mapsLoaded = false }) => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_URL}/events`, { headers });
-      if (!response.ok) throw new Error('Failed to fetch events');
-      const data = await response.json();
+      const data = await fetchWithTimeout(`${API_URL}/events`, { 
+        method: 'GET',
+        headers 
+      });
+      
       setEvents(data);
     } catch (error) {
       console.error('Error fetching events:', error);
+      
+      // Show a more user-friendly error or toast notification here if needed
     }
   };
 
@@ -336,29 +341,27 @@ const EventMap = ({ mapsLoaded = false }) => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/events`, {
+      console.log("Submitting event data:", newEvent);
+      
+      const savedEvent = await fetchWithTimeout(`${API_URL}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(newEvent),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setShowLoginDialog(true);
-          return;
-        }
-        throw new Error('Failed to create event');
-      }
-
+      }, 20000); // 20 second timeout
+      
       await fetchEvents();
       setIsCreateFormOpen(false);
       setSelectedLocation(null);
       setSelectedEvent(null);
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Error saving event:', error);
+      // Could display an error notification here
+      if (error.message && error.message.includes('401')) {
+        setShowLoginDialog(true);
+      }
     }
   };
 
@@ -366,25 +369,20 @@ const EventMap = ({ mapsLoaded = false }) => {
     if (!user) return;
 
     try {
-      const response = await fetch(`${API_URL}/events/${eventId}`, {
+      await fetchWithTimeout(`${API_URL}/events/${eventId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          setShowLoginDialog(true);
-          return;
-        }
-        throw new Error('Failed to delete event');
-      }
-
       await fetchEvents();
       setSelectedEvent(null);
     } catch (error) {
       console.error('Error deleting event:', error);
+      if (error.message && error.message.includes('401')) {
+        setShowLoginDialog(true);
+      }
     }
   };
 
