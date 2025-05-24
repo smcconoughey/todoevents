@@ -162,7 +162,7 @@ def get_db():
         from psycopg2.extras import RealDictCursor
         
         # Add retry logic for database connections
-        retry_count = 10  # Increased from 5
+        retry_count = 10
         conn = None
         
         for attempt in range(retry_count):
@@ -172,29 +172,25 @@ def get_db():
                 conn = psycopg2.connect(
                     DB_URL,
                     cursor_factory=RealDictCursor,
-                    connect_timeout=15,  # Reduced from 30 to 15 seconds for faster retries
+                    connect_timeout=15,
                     keepalives=1,
                     keepalives_idle=30,
                     keepalives_interval=10,
                     keepalives_count=5
                 )
-                conn.autocommit = True
+                # Don't set autocommit=True by default to allow explicit transaction control
                 logger.info("PostgreSQL connection successful")
                 
-                try:
-                    cur = conn.cursor()
-                    # Test the connection with a simple query with timeout
-                    cur.execute("SELECT 1")
-                    yield conn
-                    break
-                finally:
-                    if conn:
-                        conn.close()
-                        logger.info("PostgreSQL connection closed")
+                # Test the connection with a simple query
+                cur = conn.cursor()
+                cur.execute("SELECT 1")
+                break  # Connection successful, exit retry loop
+                
             except Exception as e:
                 if conn:
                     try:
                         conn.close()
+                        conn = None
                     except:
                         pass
                 
@@ -209,11 +205,18 @@ def get_db():
                 else:
                     logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
                     # Instead of falling back to SQLite, raise a proper HTTP exception
-                    # This is better for debugging connection issues in production
                     raise HTTPException(
                         status_code=503,
                         detail="Database connection failed. Please try again later."
                     )
+        
+        # If we made it here, conn should be valid
+        try:
+            yield conn
+        finally:
+            if conn:
+                conn.close()
+                logger.info("PostgreSQL connection closed")
     else:
         # Local development with SQLite
         conn = sqlite3.connect(DB_FILE)
@@ -1007,21 +1010,20 @@ async def list_events(
     placeholder = get_placeholder()
     
     try:
-        # Use context manager properly
+        # Use connection manager
         with get_db() as conn:
             try:
-                c = conn.cursor()
+                cursor = conn.cursor()
                 
-                # Base query to get all events
+                # Build query with parameters
                 query = "SELECT * FROM events WHERE 1=1"
                 params = []
                 
-                # Add category filter if provided
+                # Add filters if provided
                 if category:
                     query += f" AND category = {placeholder}"
                     params.append(category)
                 
-                # Add date filter if provided
                 if date:
                     query += f" AND date = {placeholder}"
                     params.append(date)
@@ -1029,48 +1031,55 @@ async def list_events(
                 # Order by date and time
                 query += " ORDER BY date, time"
                 
-                # Execute query with timeout handling
+                # Log and execute the query
                 logger.info(f"Executing list_events query: {query} with params: {params}")
+                cursor.execute(query, params)
                 
-                # Execute the query
-                c.execute(query, params)
-                events = c.fetchall()
+                # Fetch all events
+                events = cursor.fetchall()
                 logger.info(f"Successfully fetched {len(events) if events else 0} events")
                 
-                # Convert to list of dictionaries safely
+                # Process results
                 result = []
                 for event in events:
                     try:
+                        # Convert row to dict
                         event_dict = dict(event)
                         
-                        # Convert datetime objects to ISO format strings
+                        # Convert datetime to string format
                         if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                             event_dict['created_at'] = event_dict['created_at'].isoformat()
                         
                         result.append(event_dict)
-                    except Exception as e:
-                        logger.error(f"Error converting event to dict: {str(e)}")
-                        # Skip this event but continue with others
+                    except Exception as conversion_error:
+                        logger.error(f"Error converting event to dict: {str(conversion_error)}")
+                        # Skip problematic events rather than failing completely
                         continue
                 
                 return result
-            except Exception as query_error:
-                logger.error(f"Database query error in list_events: {str(query_error)}")
                 
-                # Try to rollback if possible
+            except Exception as query_error:
+                # Log the error
+                error_msg = str(query_error)
+                logger.error(f"Database error in list_events: {error_msg}")
+                
+                # If transaction is active, try to roll it back
                 try:
                     conn.rollback()
                 except Exception as rollback_error:
                     logger.error(f"Rollback failed: {str(rollback_error)}")
-                    
+                
+                # Return appropriate error
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Database error: {str(query_error)}"
+                    detail=f"Database error: {error_msg}"
                 ) from None
+                
     except HTTPException as http_ex:
-        # Re-raise HTTP exceptions
+        # Pass through HTTP exceptions
         raise http_ex
     except Exception as e:
+        # Handle any other exceptions
         error_msg = str(e)
         logger.error(f"Error retrieving events: {error_msg}")
         
@@ -1114,28 +1123,35 @@ async def read_event(event_id: int):
 
 @app.post("/events", response_model=EventResponse)
 async def create_event(event: EventCreate, current_user: dict = Depends(get_current_user)):
+    """
+    Create a new event. Requires user authentication.
+    """
     placeholder = get_placeholder()
     
+    # Log the event data for debugging
+    logger.info(f"Creating event: {event.dict()}")
+    
     try:
-        # Log the event data for debugging
-        logger.info(f"Creating event: {event.dict()}")
-        
-        # Use context manager properly
+        # Use database connection with explicit transaction control
         with get_db() as conn:
+            # Start transaction - autocommit should be off by default
+            conn.autocommit = False
+            
+            cursor = conn.cursor()
+            
+            # Check for duplicates first
+            duplicate_check = f"""
+                SELECT id FROM events 
+                WHERE title = {placeholder} 
+                AND date = {placeholder} 
+                AND time = {placeholder} 
+                AND lat = {placeholder} 
+                AND lng = {placeholder} 
+                AND category = {placeholder}
+            """
+            
             try:
-                c = conn.cursor()
-                
-                # Check for near-duplicate events to prevent accidental double submissions
-                duplicate_check = f"""
-                    SELECT id FROM events 
-                    WHERE title = {placeholder} 
-                    AND date = {placeholder} 
-                    AND time = {placeholder} 
-                    AND lat = {placeholder} 
-                    AND lng = {placeholder} 
-                    AND category = {placeholder}
-                """
-                c.execute(duplicate_check, (
+                cursor.execute(duplicate_check, (
                     event.title, 
                     event.date, 
                     event.time, 
@@ -1144,14 +1160,16 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     event.category
                 ))
                 
-                if c.fetchone():
+                duplicate = cursor.fetchone()
+                if duplicate:
+                    # No need for rollback since we haven't modified anything
                     raise HTTPException(
                         status_code=400, 
                         detail="An event with these exact details already exists"
                     )
-
-                # Insert new event with user ID
-                query = f"""
+                
+                # Insert the new event
+                insert_query = f"""
                     INSERT INTO events (
                         title, description, date, time, category,
                         address, lat, lng, recurring, frequency,
@@ -1160,79 +1178,92 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}
-                    )
+                    ) RETURNING id
                 """
+                
                 values = (
-                    event.title, event.description, event.date,
-                    event.time, event.category, event.address,
-                    event.lat, event.lng, event.recurring,
-                    event.frequency, event.end_date,
+                    event.title, 
+                    event.description, 
+                    event.date,
+                    event.time, 
+                    event.category, 
+                    event.address,
+                    event.lat, 
+                    event.lng, 
+                    event.recurring,
+                    event.frequency, 
+                    event.end_date,
                     current_user["id"]
                 )
                 
-                # Execute insert query
-                c.execute(query, values)
-                
-                # For PostgreSQL, we need to use a different method to get the last inserted ID
+                # For PostgreSQL, use RETURNING to get the ID in one step
                 if IS_PRODUCTION and DB_URL:
-                    c.execute("SELECT lastval()")
-                    result = c.fetchone()
-                    last_id = result[0] if result else None
+                    cursor.execute(insert_query, values)
+                    result = cursor.fetchone()
+                    event_id = result['id'] if result else None
                 else:
-                    last_id = c.lastrowid
+                    # SQLite doesn't support RETURNING, so we use lastrowid
+                    cursor.execute(insert_query.replace(" RETURNING id", ""), values)
+                    event_id = cursor.lastrowid
                 
-                if not last_id:
+                if not event_id:
+                    # Roll back if we couldn't get the event ID
                     conn.rollback()
                     raise ValueError("Failed to get ID of created event")
-                    
-                # Get the newly created event
-                c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (last_id,))
-                event_data = c.fetchone()
+                
+                # Fetch the created event
+                fetch_query = f"SELECT * FROM events WHERE id = {placeholder}"
+                cursor.execute(fetch_query, (event_id,))
+                event_data = cursor.fetchone()
                 
                 if not event_data:
+                    # Roll back if we couldn't find the created event
                     conn.rollback()
                     raise ValueError("Created event not found")
                 
                 # Commit the transaction
                 conn.commit()
-                    
-                # Convert to dict and handle datetime fields
+                
+                # Convert to dict and process datetime objects
                 event_dict = dict(event_data)
                 
-                # Convert datetime to string for serialization
+                # Convert datetime objects to ISO format strings
                 if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                     event_dict['created_at'] = event_dict['created_at'].isoformat()
-                    
-                # Return the event data
-                return event_dict
-            except Exception as db_error:
-                # Log detailed database error
-                error_msg = str(db_error)
-                logger.error(f"Database error while executing event creation: {error_msg}")
                 
-                # Make sure to rollback if something went wrong
+                return event_dict
+                
+            except HTTPException as http_ex:
+                # Pass through HTTP exceptions without modification
+                raise http_ex
+            except Exception as e:
+                # Attempt to roll back the transaction
                 try:
                     conn.rollback()
                 except Exception as rollback_error:
-                    logger.error(f"Rollback failed: {str(rollback_error)}")
-                    
-                # Re-raise as HTTP exception with detailed info
+                    logger.error(f"Transaction rollback failed: {str(rollback_error)}")
+                
+                # Log the detailed error
+                error_msg = str(e)
+                logger.error(f"Database error in create_event: {error_msg}")
+                
+                # Wrap in HTTP exception
                 raise HTTPException(
                     status_code=500,
                     detail=f"Database error: {error_msg}"
-                ) from None  # Prevent chained exceptions
+                ) from None
+    
     except HTTPException as http_ex:
-        # Re-raise HTTP exceptions
+        # Pass through HTTP exceptions
         raise http_ex
     except Exception as e:
+        # Catch any remaining errors
         error_msg = str(e)
         logger.error(f"Error creating event: {error_msg}")
-        
-        # Return a safer error without the generator error
         raise HTTPException(
             status_code=400, 
             detail=f"Could not create event: {error_msg}"
-        ) from None  # Prevent chained exceptions
+        ) from None
 
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):
@@ -1391,52 +1422,22 @@ async def health_check():
         }
     }
     
-    # Test database connection with shorter timeout for health checks
+    # Test database connection
+    start_time = time.time()
     try:
-        if IS_PRODUCTION and DB_URL:
-            import psycopg2
-            from psycopg2.extras import RealDictCursor
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
             
-            start_time = time.time()
-            conn = psycopg2.connect(
-                DB_URL,
-                cursor_factory=RealDictCursor,
-                connect_timeout=5  # Short timeout for health checks
-            )
+            end_time = time.time()
+            response_time = round((end_time - start_time) * 1000)  # ms
             
-            try:
-                c = conn.cursor()
-                c.execute("SELECT 1")
-                c.fetchone()
-                end_time = time.time()
-                
-                response_time = round((end_time - start_time) * 1000)  # ms
-                health_status["database"]["status"] = "connected"
-                health_status["database"]["connection_test"] = {
-                    "successful": True,
-                    "response_time_ms": response_time
-                }
-            finally:
-                conn.close()
-        else:
-            # SQLite health check
-            start_time = time.time()
-            conn = sqlite3.connect(DB_FILE)
-            try:
-                c = conn.cursor()
-                c.execute("SELECT 1")
-                c.fetchone()
-                end_time = time.time()
-                
-                response_time = round((end_time - start_time) * 1000)  # ms
-                health_status["database"]["status"] = "connected"
-                health_status["database"]["connection_test"] = {
-                    "successful": True,
-                    "response_time_ms": response_time
-                }
-            finally:
-                conn.close()
-                
+            health_status["database"]["status"] = "connected"
+            health_status["database"]["connection_test"] = {
+                "successful": True,
+                "response_time_ms": response_time
+            }
     except Exception as e:
         logger.error(f"Health check database test failed: {str(e)}")
         health_status["status"] = "degraded"
