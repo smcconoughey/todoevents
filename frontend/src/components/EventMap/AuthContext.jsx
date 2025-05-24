@@ -121,35 +121,37 @@ export const AuthProvider = ({ children }) => {
 
   // Helper to handle API requests with timeout and retry
   const fetchWithTimeout = async (url, options, timeoutMs = 15000, maxRetries = 1) => {
-    const controller = new AbortController();
-    const { signal } = controller;
-    
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
-    
+    // Create a timeout promise that rejects after specified time
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Request timeout. The server might be busy, please try again later.'));
+      }, timeoutMs);
+    });
+
     let lastError = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         console.log(`Making request to ${url} (attempt ${attempt + 1}/${maxRetries + 1}) with timeout ${timeoutMs}ms`);
-        const response = await fetch(url, {
-          ...options,
-          signal
-        });
-        clearTimeout(timeout);
+        
+        // Use Promise.race to compete between the fetch and timeout
+        const response = await Promise.race([
+          fetch(url, options),
+          timeoutPromise
+        ]);
+        
         return response;
       } catch (error) {
-        clearTimeout(timeout);
         lastError = error;
         
-        if (error.name === 'AbortError') {
+        if (error.message.includes('timeout')) {
           console.error(`Request to ${url} timed out after ${timeoutMs}ms`);
           if (attempt < maxRetries) {
             console.log(`Retrying after timeout (attempt ${attempt + 1}/${maxRetries})...`);
+            // Wait briefly before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
           }
-          throw new Error('Request timeout. The server might be busy, please try again later.');
         }
         
         if (attempt < maxRetries) {
