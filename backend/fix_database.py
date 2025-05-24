@@ -197,25 +197,88 @@ def create_admin_user():
             user_count = cur.fetchone()['user_count']
             
             if user_count > 0:
-                logger.info("Users already exist in the database")
+                # Check specifically for admin user
+                cur.execute("SELECT * FROM users WHERE email = 'admin@todoevents.com'")
+                admin = cur.fetchone()
+                if admin:
+                    logger.info("Admin user already exists")
+                    # Test the admin password in a try block
+                    try:
+                        from passlib.context import CryptContext
+                        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+                        test_password = "Admin123!"
+                        if pwd_context.verify(test_password, admin["hashed_password"]):
+                            logger.info("Admin password verification successful")
+                        else:
+                            logger.warning("Admin password verification failed, resetting password")
+                            # Reset password
+                            new_hashed_password = pwd_context.hash(test_password)
+                            cur.execute(
+                                "UPDATE users SET hashed_password = %s WHERE email = 'admin@todoevents.com'",
+                                (new_hashed_password,)
+                            )
+                            logger.info("Admin password has been reset to 'Admin123!'")
+                    except Exception as e:
+                        logger.error(f"Error verifying admin password: {str(e)}")
+                        # Force reset password due to error
+                        try:
+                            # Use direct bcrypt import as a fallback
+                            import bcrypt
+                            salt = bcrypt.gensalt()
+                            hashed = bcrypt.hashpw("Admin123!".encode('utf-8'), salt).decode('utf-8')
+                            cur.execute(
+                                "UPDATE users SET hashed_password = %s WHERE email = 'admin@todoevents.com'",
+                                (hashed,)
+                            )
+                            logger.info("Admin password has been forcibly reset using direct bcrypt")
+                        except Exception as e:
+                            logger.error(f"Failed to reset admin password: {str(e)}")
+                else:
+                    logger.info("Users exist but no admin user found, creating one")
+                    # Create admin user with direct bcrypt to avoid passlib errors
+                    try:
+                        import bcrypt
+                        salt = bcrypt.gensalt()
+                        hashed = bcrypt.hashpw("Admin123!".encode('utf-8'), salt).decode('utf-8')
+                        cur.execute(
+                            "INSERT INTO users (email, hashed_password, role) VALUES (%s, %s, %s)",
+                            ("admin@todoevents.com", hashed, "admin")
+                        )
+                        logger.info("Created admin user with direct bcrypt")
+                        logger.info("Email: admin@todoevents.com")
+                        logger.info("Password: Admin123!")
+                    except Exception as e:
+                        logger.error(f"Failed to create admin user: {str(e)}")
                 return True
             
-            # No users exist, create an admin
-            from passlib.context import CryptContext
-            pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-            
-            admin_email = "admin@todoevents.com"
-            admin_password = "Admin123!"  # Would be better to generate this
-            hashed_password = pwd_context.hash(admin_password)
-            
-            cur.execute(
-                "INSERT INTO users (email, hashed_password, role) VALUES (%s, %s, %s)",
-                (admin_email, hashed_password, "admin")
-            )
-            
-            logger.info("Created admin user")
-            logger.info(f"Email: {admin_email}")
-            logger.info(f"Password: {admin_password}")
+            # No users exist, create an admin 
+            logger.info("No users found, creating admin user")
+            try:
+                # Try with passlib first
+                try:
+                    from passlib.context import CryptContext
+                    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+                    admin_email = "admin@todoevents.com"
+                    admin_password = "Admin123!"
+                    hashed_password = pwd_context.hash(admin_password)
+                except Exception as e:
+                    logger.error(f"Error with passlib: {str(e)}")
+                    # Fallback to direct bcrypt
+                    import bcrypt
+                    salt = bcrypt.gensalt()
+                    hashed_password = bcrypt.hashpw("Admin123!".encode('utf-8'), salt).decode('utf-8')
+                
+                cur.execute(
+                    "INSERT INTO users (email, hashed_password, role) VALUES (%s, %s, %s)",
+                    ("admin@todoevents.com", hashed_password, "admin")
+                )
+                
+                logger.info("Created admin user")
+                logger.info("Email: admin@todoevents.com")
+                logger.info("Password: Admin123!")
+            except Exception as e:
+                logger.error(f"Failed to create admin user: {str(e)}")
+                return False
             
             return True
     except Exception as e:

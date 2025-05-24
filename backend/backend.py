@@ -550,11 +550,20 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 )
             
             # Find user by email - with timeout handling
+            user = None
             try:
                 c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (form_data.username,))
                 user = c.fetchone()
                 
-                if not user or not verify_password(form_data.password, user["hashed_password"]):
+                if not user:
+                    logger.warning(f"Login failed for user: {form_data.username} - User not found")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Incorrect email or password",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+                
+                if not verify_password(form_data.password, user["hashed_password"]):
                     logger.warning(f"Login failed for user: {form_data.username} - Invalid credentials")
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -580,21 +589,30 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                     )
             
             # Generate access token
-            try:
-                logger.info(f"Generating access token for user: {form_data.username}")
-                access_token = create_access_token(data={"sub": user["email"]})
-                logger.info(f"Login successful for user: {form_data.username}")
-                return {"access_token": access_token, "token_type": "bearer"}
-            except Exception as e:
-                logger.error(f"Error generating access token: {str(e)}")
+            if user:  # Extra safety check
+                try:
+                    logger.info(f"Generating access token for user: {form_data.username}")
+                    access_token = create_access_token(data={"sub": user["email"]})
+                    logger.info(f"Login successful for user: {form_data.username}")
+                    return {"access_token": access_token, "token_type": "bearer"}
+                except Exception as e:
+                    logger.error(f"Error generating access token: {str(e)}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Error generating authentication token",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            else:
+                # This should not happen due to the checks above, but as a fallback
                 raise HTTPException(
-                    status_code=500,
-                    detail="Error generating authentication token",
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication failed",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-    except HTTPException:
+                
+    except HTTPException as http_ex:
         # Pass through HTTP exceptions
-        raise
+        raise http_ex
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Unexpected error during login: {error_msg}")
@@ -611,8 +629,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 detail="Database connection issues. Please try again later."
             )
         else:
+            # Catch all for any other unexpected errors
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=500,
                 detail="Internal server error during login",
                 headers={"WWW-Authenticate": "Bearer"},
             )
