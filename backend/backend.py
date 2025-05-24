@@ -1068,6 +1068,9 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
         with get_db() as conn:
             c = conn.cursor()
 
+            # Log the event data for debugging
+            logger.info(f"Creating event: {event.dict()}")
+
             # Check for near-duplicate events to prevent accidental double submissions
             duplicate_check = f"""
                 SELECT id FROM events 
@@ -1113,24 +1116,50 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 current_user["id"]
             )
             
-            c.execute(query, values)
-            conn.commit()
-            
-            # For PostgreSQL, we need to use a different method to get the last inserted ID
-            if IS_PRODUCTION and DB_URL:
-                c.execute("SELECT lastval()")
-                last_id = c.fetchone()[0]
-            else:
-                last_id = c.lastrowid
+            # Catch any potential database errors specifically
+            try:
+                c.execute(query, values)
+                conn.commit()
                 
-            c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (last_id,))
-            return dict(c.fetchone())
-            
-    except HTTPException:
-        raise
+                # For PostgreSQL, we need to use a different method to get the last inserted ID
+                if IS_PRODUCTION and DB_URL:
+                    c.execute("SELECT lastval()")
+                    result = c.fetchone()
+                    last_id = result[0] if result else None
+                else:
+                    last_id = c.lastrowid
+                
+                if not last_id:
+                    raise ValueError("Failed to get ID of created event")
+                    
+                c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (last_id,))
+                event_data = c.fetchone()
+                
+                if not event_data:
+                    raise ValueError("Created event not found")
+                    
+                return dict(event_data)
+            except Exception as db_error:
+                # Attempt to rollback transaction
+                try:
+                    conn.rollback()
+                except:
+                    pass
+                logger.error(f"Database error while executing event creation: {str(db_error)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Database error: {str(db_error)[:200]}"
+                )
+    except HTTPException as http_ex:
+        # Re-raise HTTP exceptions
+        raise http_ex
     except Exception as e:
         logger.error(f"Error creating event: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        # Return a safer error that won't cause issues with generator handling
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Could not create event: {str(e)[:200]}"
+        )
 
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):

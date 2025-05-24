@@ -1,11 +1,16 @@
-export const createMarkerIcon = (category, isDetailed = false) => {
+import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
+
+export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DARK) => {
+  const isDarkMode = theme === THEME_DARK;
+  const strokeColor = isDarkMode ? '#FFFFFF' : '#52B788';
+  
   if (!isDetailed) {
     return {
       path: google.maps.SymbolPath.CIRCLE,
       fillColor: category.markerColor,
       fillOpacity: 1,
       strokeWeight: 2,
-      strokeColor: '#FFFFFF',
+      strokeColor: strokeColor,
       scale: 6,
     };
   }
@@ -17,8 +22,8 @@ export const createMarkerIcon = (category, isDetailed = false) => {
 
     const svgString = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-        <circle cx="16" cy="16" r="15" fill="${category.markerColor}" stroke="white" stroke-width="2"/>
-        <g transform="translate(8,8) scale(0.66)" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="16" cy="16" r="15" fill="${category.markerColor}" stroke="${strokeColor}" stroke-width="2"/>
+        <g transform="translate(8,8) scale(0.66)" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="${pathData}"/>
         </g>
       </svg>
@@ -37,7 +42,7 @@ export const createMarkerIcon = (category, isDetailed = false) => {
       fillColor: category.markerColor,
       fillOpacity: 1,
       strokeWeight: 2,
-      strokeColor: '#FFFFFF',
+      strokeColor: strokeColor,
       scale: 6,
     };
   }

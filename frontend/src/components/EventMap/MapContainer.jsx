@@ -1,33 +1,86 @@
 // src/components/EventMap/MapContainer.jsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import categories from './categoryConfig';
 import { initGoogleMaps } from '@/googleMapsLoader';
+import { ThemeContext, THEME_DARK, THEME_LIGHT } from '@/components/ThemeContext';
+import { createMarkerIcon } from './markerUtils';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
 const DEFAULT_ZOOM = 4;
 
-const createMarkerIcon = (categoryId) => {
-  const category = categories.find(cat => cat.id === categoryId) || categories[0];
-  
-  if (category.markerSVG) {
-    return {
-      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(category.markerSVG)}`,
-      scaledSize: new google.maps.Size(40, 50),
-      anchor: new google.maps.Point(20, 50)
-    };
+// Dark mode map styles
+const darkMapStyles = [
+  {
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#FFFFFF" }]
+  },
+  {
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#000000" }]
+  },
+  {
+    featureType: "landscape",
+    elementType: "geometry",
+    stylers: [{ color: "#0A1A2F" }]
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#0F4C81" }]
+  },
+  {
+    featureType: "poi",
+    stylers: [{ visibility: "off" }]
   }
+];
 
-  return {
-    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-    fillColor: category.markerColor || '#6B7280',
-    fillOpacity: 1,
-    strokeColor: 'white',
-    strokeWeight: 2,
-    scale: 7
-  };
-};
+// Light mode map styles with mint green accents
+const lightMapStyles = [
+  {
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#2D3E36" }]
+  },
+  {
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#F8F9F3" }]
+  },
+  {
+    featureType: "landscape",
+    elementType: "geometry",
+    stylers: [{ color: "#E8F0E6" }]
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#97CDC3" }]
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#FFFFFF" }]
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#52B788" }]
+  },
+  {
+    featureType: "poi",
+    elementType: "geometry",
+    stylers: [{ color: "#D1E6CF" }]
+  },
+  {
+    featureType: "poi",
+    stylers: [{ visibility: "on" }]
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#52B788" }]
+  }
+];
 
 const normalizeDate = (date) => {
   if (!date) return null;
@@ -54,7 +107,6 @@ const isDateInRange = (dateStr, range) => {
   return true;
 };
 
-
 const MapContainer = React.forwardRef(({
   events = [],
   onEventClick,
@@ -72,6 +124,10 @@ const MapContainer = React.forwardRef(({
   const proximityCircleRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const resizeObserverRef = useRef(null);
+  
+  // Get current theme from context
+  const { theme } = useContext(ThemeContext);
+  const isDarkMode = theme === THEME_DARK;
 
   // Reset view functionality
   React.useImperativeHandle(ref, () => ({
@@ -89,6 +145,16 @@ const MapContainer = React.forwardRef(({
     }
   }));
 
+  // Update map styles when theme changes
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      console.log("Updating map styles to:", isDarkMode ? "dark mode" : "light mode");
+      mapInstanceRef.current.setOptions({
+        styles: isDarkMode ? darkMapStyles : lightMapStyles
+      });
+    }
+  }, [theme]);
+
   // Initialize map
   useEffect(() => {
     let timeoutId;
@@ -103,30 +169,7 @@ const MapContainer = React.forwardRef(({
         const map = new google.maps.Map(mapRef.current, {
           center: mapCenter || DEFAULT_CENTER,
           zoom: mapCenter ? 13 : DEFAULT_ZOOM,
-          styles: [
-            {
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#FFFFFF" }]
-            },
-            {
-              elementType: "labels.text.stroke",
-              stylers: [{ color: "#000000" }]
-            },
-            {
-              featureType: "landscape",
-              elementType: "geometry",
-              stylers: [{ color: "#0A1A2F" }]
-            },
-            {
-              featureType: "water",
-              elementType: "geometry",
-              stylers: [{ color: "#0F4C81" }]
-            },
-            {
-              featureType: "poi",
-              stylers: [{ visibility: "off" }]
-            }
-          ],
+          styles: isDarkMode ? darkMapStyles : lightMapStyles,
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
@@ -193,11 +236,20 @@ const MapContainer = React.forwardRef(({
         proximityCircleRef.current.setMap(null);
       }
 
+      // Adjust proximity circle color based on theme
+      const circleColors = isDarkMode ? {
+        stroke: '#FFFFFF',
+        fill: '#FFFFFF'
+      } : {
+        stroke: '#52B788',
+        fill: '#52B788'
+      };
+
       proximityCircleRef.current = new google.maps.Circle({
-        strokeColor: '#FFFFFF',
+        strokeColor: circleColors.stroke,
         strokeOpacity: 0.3,
         strokeWeight: 2,
-        fillColor: '#FFFFFF',
+        fillColor: circleColors.fill,
         fillOpacity: 0.1,
         map: map,
         center: mapCenter,
@@ -207,7 +259,7 @@ const MapContainer = React.forwardRef(({
       proximityCircleRef.current.setMap(null);
       proximityCircleRef.current = null;
     }
-  }, [mapCenter, proximityRange]);
+  }, [mapCenter, proximityRange, theme]);
 
   // Handle event markers
   useEffect(() => {
@@ -242,7 +294,7 @@ const MapContainer = React.forwardRef(({
       const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
         map: mapInstanceRef.current,
-        icon: createMarkerIcon(event.category),
+        icon: createMarkerIcon(categories.find(cat => cat.id === event.category) || categories[0], true, theme),
         optimized: true
       });
 
@@ -256,6 +308,9 @@ const MapContainer = React.forwardRef(({
     markersRef.current = markers;
 
     if (markers.length > 0) {
+      // Use theme-appropriate colors for clusters
+      const clusterColor = isDarkMode ? 'rgba(25, 118, 210, 0.9)' : 'rgba(82, 183, 136, 0.9)';
+
       clustererRef.current = new MarkerClusterer({
         map: mapInstanceRef.current,
         markers: markers,
@@ -271,9 +326,9 @@ const MapContainer = React.forwardRef(({
               },
               icon: {
                 path: google.maps.SymbolPath.CIRCLE,
-                fillColor: 'rgba(25, 118, 210, 0.9)',
+                fillColor: clusterColor,
                 fillOpacity: 0.9,
-                strokeColor: '#ffffff',
+                strokeColor: isDarkMode ? '#ffffff' : '#ffffff',
                 strokeWeight: 2,
                 scale: Math.min(10 + Math.log2(count) * 2, 22),
               },
@@ -283,13 +338,16 @@ const MapContainer = React.forwardRef(({
         },
       });
     }
-  }, [events, selectedCategory, selectedDate]);
+  }, [events, selectedCategory, selectedDate, theme]);
+
+  // Determine background color based on theme
+  const bgColor = isDarkMode ? 'bg-[#0A1A2F]' : 'bg-[#E8F0E6]';
 
   return (
-    <div className="relative h-full w-full bg-[#0A1A2F]">
+    <div className={`relative h-full w-full ${bgColor}`}>
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0A1A2F]">
-          <div className="text-white text-lg">Loading map...</div>
+        <div className={`absolute inset-0 flex items-center justify-center ${bgColor}`}>
+          <div className="text-primary text-lg">Loading map...</div>
         </div>
       )}
       <div ref={mapRef} className="absolute inset-0" />
