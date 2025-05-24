@@ -208,7 +208,16 @@ const CreateEventForm = ({
         : `${API_URL}/events`;
       const method = initialEvent ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      console.log('Submitting event data:', eventData);
+      console.log('Request URL:', url);
+      console.log('Request method:', method);
+
+      // Use Promise with timeout to avoid generator issues
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 15000);
+      });
+
+      const fetchPromise = fetch(url, {
         method: method,
         headers: {
           'Content-Type': 'application/json',
@@ -217,13 +226,35 @@ const CreateEventForm = ({
         body: JSON.stringify(eventData)
       });
 
+      // Race between fetch and timeout
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+      
+      // Handle response status
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to save event');
+        let errorMessage = 'Failed to save event';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
 
-      const savedEvent = await response.json();
-      await onSubmit(savedEvent);
+      // Parse response body
+      let savedEvent;
+      try {
+        const text = await response.text();
+        savedEvent = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Invalid response from server');
+      }
+
+      // Complete form submission
+      if (onSubmit) {
+        await onSubmit(savedEvent);
+      }
       onClose();
     } catch (error) {
       console.error('Error saving event:', error);

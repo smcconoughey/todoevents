@@ -3,11 +3,12 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+.dark-mode {
   /* Common variables */
   --transition-speed: 0.3s;
   
-  /* Default theme (dark) */
+  /* Dark theme (default) */
   --bg-main: #0a0a0a;
   --bg-card: rgba(23, 23, 23, 0.95);
   --bg-card-hover: rgba(38, 38, 38, 0.95);
@@ -24,16 +25,17 @@
 }
 
 /* Light theme variables */
-[data-theme='light'] {
+[data-theme='light'],
+.light-mode {
   --bg-main: #f8f9f3; /* Soft bamboo/mint background */
-  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card: rgba(255, 255, 255, 0.9);
   --bg-card-hover: rgba(242, 247, 236, 0.95);
   --bg-card-active: rgba(226, 235, 213, 0.95);
-  --text-primary: rgba(28, 40, 38, 0.9);
-  --text-secondary: rgba(28, 40, 38, 0.7);
-  --text-tertiary: rgba(28, 40, 38, 0.5);
-  --border-color: rgba(180, 208, 167, 0.3);
-  --border-color-hover: rgba(162, 188, 151, 0.5);
+  --text-primary: rgba(28, 40, 38, 0.95);
+  --text-secondary: rgba(28, 40, 38, 0.8);
+  --text-tertiary: rgba(28, 40, 38, 0.6);
+  --border-color: rgba(180, 208, 167, 0.5);
+  --border-color-hover: rgba(162, 188, 151, 0.7);
   --accent-color: #52b788; /* Fresh mint accent */
   --error-color: #e76f51;
   --success-color: #2b9348;
@@ -44,40 +46,72 @@
 @layer base {
   body {
     @apply transition-colors duration-300;
-    background-color: var(--bg-main);
-    color: var(--text-primary);
+    background-color: var(--bg-main) !important;
+    color: var(--text-primary) !important;
   }
   
   .bg-neutral-950 {
-    background-color: var(--bg-main);
+    background-color: var(--bg-main) !important;
   }
   
   .bg-neutral-900\/95 {
-    background-color: var(--bg-card);
+    background-color: var(--bg-card) !important;
+  }
+  
+  .bg-neutral-800 {
+    background-color: var(--bg-card) !important;
   }
   
   .border-white\/10 {
-    border-color: var(--border-color);
+    border-color: var(--border-color) !important;
+  }
+  
+  .border-neutral-700 {
+    border-color: var(--border-color) !important;
   }
   
   .text-white {
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
   }
   
   .text-white\/70 {
-    color: var(--text-secondary);
+    color: var(--text-secondary) !important;
   }
   
   .text-white\/50 {
-    color: var(--text-tertiary);
+    color: var(--text-tertiary) !important;
   }
   
   .hover\:bg-white\/10:hover {
-    background-color: var(--bg-card-hover);
+    background-color: var(--bg-card-hover) !important;
   }
   
   .hover\:bg-white\/15:hover {
-    background-color: var(--bg-card-active);
+    background-color: var(--bg-card-active) !important;
+  }
+  
+  .hover\:bg-neutral-700:hover {
+    background-color: var(--bg-card-hover) !important;
+  }
+  
+  /* Force theme on inputs and form elements */
+  input, textarea, select, button {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  input::placeholder, textarea::placeholder {
+    color: var(--text-tertiary) !important;
+  }
+  
+  .bg-white\/10 {
+    background-color: var(--bg-card) !important;
+  }
+  
+  .bg-white\/5 {
+    background-color: var(--bg-card) !important;
+    opacity: 0.8;
   }
 
   :root {
@@ -175,6 +209,17 @@
     }
   }
 
+  /* Light mode adjustments for Google Maps */
+  .light-mode .gm-style .gm-control-container,
+  [data-theme="light"] .gm-style .gm-control-container {
+    @apply invert-0 contrast-100 hue-rotate-0;
+  }
+
+  .light-mode .gm-style img:not([src*="svg"]),
+  [data-theme="light"] .gm-style img:not([src*="svg"]) {
+    @apply invert-0 contrast-100 hue-rotate-0 brightness-100;
+  }
+
   .gm-fullscreen-control,
   .gm-svpc,
   .gmnoprint {
@@ -183,22 +228,28 @@
 
   /* Autocomplete styling */
   .pac-container {
-    @apply mt-1 bg-black/90 backdrop-blur-sm border border-white/10 rounded-lg z-[100] p-2 !important;
+    @apply mt-1 backdrop-blur-sm border rounded-lg z-[100] p-2 !important;
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
   }
 
   .pac-item {
-    @apply px-2 py-1.5 text-white bg-transparent border-t border-white/10 !important;
+    @apply px-2 py-1.5 bg-transparent border-t !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
     &:first-child { @apply border-t-0 !important; }
-    &:hover { @apply bg-white/10 !important; }
+    &:hover { 
+      background-color: var(--bg-card-hover) !important; 
+    }
   }
 
   .pac-item-query {
-    @apply text-white !important;
+    color: var(--text-primary) !important;
   }
 
   .pac-matched {
-    @apply text-blue-400 !important;
+    color: var(--accent-color) !important;
   }
 
   /* Mobile specific fixes */
@@ -223,15 +274,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-background;
+    background-color: var(--bg-main);
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-foreground/20 rounded-full;
+    background-color: var(--text-tertiary);
+    @apply rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-foreground/30;
+    background-color: var(--text-secondary);
   }
 }
 

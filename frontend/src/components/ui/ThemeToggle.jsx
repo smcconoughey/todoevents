@@ -20,6 +20,29 @@ const ThemeToggle = () => {
     // Show visual feedback during toggle
     setIsToggling(true);
     
+    // Determine the new theme
+    const newTheme = theme === THEME_DARK ? THEME_LIGHT : THEME_DARK;
+    console.log('ThemeToggle: switching to new theme:', newTheme);
+    
+    // Directly manipulate DOM in addition to context update for immediate visual feedback
+    document.documentElement.setAttribute('data-theme', newTheme);
+    
+    // Add/remove the theme classes
+    if (newTheme === THEME_LIGHT) {
+      document.documentElement.classList.add('light-mode');
+      document.documentElement.classList.remove('dark-mode');
+      document.body.classList.add('light-mode');
+      document.body.classList.remove('dark-mode');
+    } else {
+      document.documentElement.classList.add('dark-mode');
+      document.documentElement.classList.remove('light-mode');
+      document.body.classList.add('dark-mode');
+      document.body.classList.remove('light-mode');
+    }
+    
+    // Persist the setting in localStorage for a more consistent experience
+    localStorage.setItem('theme', newTheme);
+    
     // Call context toggle function
     toggleTheme();
     
