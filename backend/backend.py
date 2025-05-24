@@ -1026,16 +1026,44 @@ async def list_events(
             # Order by date and time
             query += " ORDER BY date, time"
             
-            # Execute query
-            c.execute(query, params)
-            events = c.fetchall()
-            
-            # Convert to list of dictionaries
-            return [dict(event) for event in events]
-            
+            try:
+                # Execute query with timeout handling
+                logger.info(f"Executing list_events query: {query} with params: {params}")
+                c.execute(query, params)
+                events = c.fetchall()
+                logger.info(f"Successfully fetched {len(events) if events else 0} events")
+                
+                # Convert to list of dictionaries
+                result = []
+                for event in events:
+                    try:
+                        event_dict = dict(event)
+                        result.append(event_dict)
+                    except Exception as e:
+                        logger.error(f"Error converting event to dict: {str(e)}")
+                        # Skip this event but continue with others
+                        continue
+                
+                return result
+            except Exception as query_error:
+                logger.error(f"Database query error in list_events: {str(query_error)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Database error: {str(query_error)[:200]}"
+                )
+    except HTTPException as http_ex:
+        # Re-raise HTTP exceptions
+        raise http_ex
     except Exception as e:
-        logger.error(f"Error retrieving events: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving events")
+        error_msg = str(e)
+        logger.error(f"Error retrieving events: {error_msg}")
+        
+        if "timeout" in error_msg.lower():
+            raise HTTPException(status_code=504, detail="Database query timed out")
+        elif "connection" in error_msg.lower():
+            raise HTTPException(status_code=503, detail="Database connection issues")
+        else:
+            raise HTTPException(status_code=500, detail="Error retrieving events")
 
 @app.get("/events/{event_id}", response_model=EventResponse)
 async def read_event(event_id: int):

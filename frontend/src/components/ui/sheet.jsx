@@ -43,8 +43,9 @@ const sheetVariants = cva(
 )
 
 const SheetContent = React.forwardRef(({ side = "right", className, children, ...props }, ref) => {
-  // Generate a unique ID for accessibility
-  const [descriptionId] = React.useState(() => `sheet-desc-${Math.random().toString(36).substring(2, 9)}`);
+  // Generate a unique ID for accessibility using useId
+  const descId = React.useId();
+  const descriptionId = props["aria-describedby"] || `sheet-desc-${descId}`;
   
   return (
     <SheetPortal>
@@ -59,7 +60,9 @@ const SheetContent = React.forwardRef(({ side = "right", className, children, ..
         {...props}
       >
         {children}
-        <span id={descriptionId} className="sr-only">Sheet content</span>
+        {!props["aria-describedby"] && (
+          <span id={descriptionId} className="sr-only">Sheet content</span>
+        )}
       </SheetPrimitive.Content>
     </SheetPortal>
   );

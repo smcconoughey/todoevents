@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 
 export const Dialog = ({ open, onOpenChange, children }) => {
   const dialogRef = useRef(null);
@@ -34,18 +34,19 @@ export const Dialog = ({ open, onOpenChange, children }) => {
 };
 
 export const DialogContent = ({ children, className = "", "aria-describedby": ariaDescribedby = "" }) => {
-  // Generate a unique ID if not provided
-  const [descId] = useState(() => ariaDescribedby || `dialog-desc-${Math.random().toString(36).substring(2, 9)}`);
+  // Generate a unique ID using useId
+  const descId = React.useId();
+  const descriptionId = ariaDescribedby || `dialog-desc-${descId}`;
 
   return (
     <div 
       className={`bg-neutral-900 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto w-[90vw] max-w-[500px] ${className}`}
       role="dialog"
       aria-modal="true"
-      aria-describedby={descId}
+      aria-describedby={descriptionId}
     >
       {children}
-      {!ariaDescribedby && <span id={descId} className="sr-only">Dialog content</span>}
+      {!ariaDescribedby && <span id={descriptionId} className="sr-only">Dialog content</span>}
     </div>
   );
 };
