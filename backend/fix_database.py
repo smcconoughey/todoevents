@@ -8,10 +8,17 @@ import time
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Get the database URL from environment or use the provided URL
-DB_URL = os.getenv("DATABASE_URL", "postgresql://todoevents_user:todoevents@localhost/todoevents")
+# Get the database URL from environment or command line
+DB_URL = os.getenv("DATABASE_URL")
 if len(sys.argv) > 1:
     DB_URL = sys.argv[1]
+
+# Check if DB_URL is set
+if not DB_URL:
+    print("❌ No DATABASE_URL provided!")
+    print("Please set DATABASE_URL environment variable or provide it as an argument:")
+    print("python fix_database.py \"your-database-url\"")
+    sys.exit(1)
 
 # Check tables required for the app
 REQUIRED_TABLES = ["users", "events", "activity_logs"]
@@ -19,7 +26,16 @@ REQUIRED_TABLES = ["users", "events", "activity_logs"]
 def check_connection():
     """Test basic connectivity to the database"""
     print(f"Testing connection to database...")
-    print(f"Database URL: {DB_URL[:20]}{'*' * 20}")
+    if DB_URL.startswith("postgresql://"):
+        # Only show first part for security
+        parts = DB_URL.split("@")
+        if len(parts) > 1:
+            masked_url = f"{parts[0].split('://')[0]}://****@{parts[1]}"
+            print(f"Database URL: {masked_url}")
+        else:
+            print(f"Database URL: {DB_URL[:20]}{'*' * 20}")
+    else:
+        print(f"Database URL: {DB_URL[:20]}{'*' * 20}")
     
     start_time = time.time()
     
@@ -28,7 +44,7 @@ def check_connection():
         conn = psycopg2.connect(
             DB_URL,
             cursor_factory=RealDictCursor,
-            connect_timeout=10
+            connect_timeout=15  # Increased timeout for slow connections
         )
         
         # Test a simple query
@@ -54,6 +70,20 @@ def check_connection():
         print(f"\n❌ Connection failed!")
         print(f"Error: {str(e)}")
         print(f"Time elapsed: {duration:.2f} seconds")
+        
+        # Specific guidance based on error
+        if "password authentication" in str(e).lower():
+            print("\nTIP: This appears to be an authentication error. Check your username and password.")
+        elif "timeout" in str(e).lower():
+            print("\nTIP: Connection is timing out. This could be because:")
+            print("  - The database is on a private network")
+            print("  - Firewall rules are blocking the connection")
+            print("  - The server is overloaded or not running")
+        elif "not known" in str(e).lower():
+            print("\nTIP: Hostname cannot be resolved. Check:")
+            print("  - Is the hostname spelled correctly?")
+            print("  - Does the host exist?")
+            print("  - Is DNS working properly?")
         
         return False
 
