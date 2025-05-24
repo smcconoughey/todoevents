@@ -32,6 +32,7 @@ import {
   SheetTitle,
   SheetClose
 } from "@/components/ui/sheet";
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import CreateEventForm from './CreateEventForm';
 import MapContainer from './MapContainer';
 import categories, { getCategory } from './categoryConfig';
@@ -408,14 +409,17 @@ const EventMap = ({ mapsLoaded = false }) => {
             <Menu className="h-6 w-6" />
           </Button>
           <h1 className="text-lg font-bold text-white">Events</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
-            className="text-white hover:bg-white/10"
-          >
-            {activeView === 'map' ? <Filter className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
-          </Button>
+          <div className="flex items-center">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
+              className="text-white hover:bg-white/10 ml-1"
+            >
+              {activeView === 'map' ? <Filter className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -430,29 +434,35 @@ const EventMap = ({ mapsLoaded = false }) => {
           {!isSidebarCollapsed && (
             <div className="flex items-center justify-between flex-1 mr-2">
               <h2 className="text-xl font-bold text-white">Events</h2>
-              {user ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white/70 hover:text-white hover:bg-white/10"
-                  onClick={logout}
-                >
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white/70 hover:text-white hover:bg-white/10"
-                  onClick={() => {
-                    setLoginMode('login');
-                    setShowLoginDialog(true);
-                  }}
-                >
-                  <User className="w-4 h-4" />
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                {user ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10"
+                    onClick={logout}
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10"
+                    onClick={() => {
+                      setLoginMode('login');
+                      setShowLoginDialog(true);
+                    }}
+                  >
+                    <User className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
+          )}
+          {isSidebarCollapsed && (
+            <ThemeToggle />
           )}
           <Button
             variant="ghost"
@@ -590,6 +600,7 @@ const EventMap = ({ mapsLoaded = false }) => {
               <div className="flex items-center justify-between">
                 <SheetTitle className="text-white">Events</SheetTitle>
                 <div className="flex items-center gap-2">
+                  <ThemeToggle />
                   {user ? (
                     <Button
                       variant="ghost"

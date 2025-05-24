@@ -3,7 +3,83 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Common variables */
+  --transition-speed: 0.3s;
+  
+  /* Default theme (dark) */
+  --bg-main: #0a0a0a;
+  --bg-card: rgba(23, 23, 23, 0.95);
+  --bg-card-hover: rgba(38, 38, 38, 0.95);
+  --bg-card-active: rgba(64, 64, 64, 0.95);
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-tertiary: rgba(255, 255, 255, 0.4);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-hover: rgba(255, 255, 255, 0.2);
+  --accent-color: #3B82F6;
+  --error-color: #EF4444;
+  --success-color: #22C55E;
+  --warning-color: #F59E0B;
+}
+
+/* Light theme variables */
+[data-theme='light'] {
+  --bg-main: #f8f9f3; /* Soft bamboo/mint background */
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(242, 247, 236, 0.95);
+  --bg-card-active: rgba(226, 235, 213, 0.95);
+  --text-primary: rgba(28, 40, 38, 0.9);
+  --text-secondary: rgba(28, 40, 38, 0.7);
+  --text-tertiary: rgba(28, 40, 38, 0.5);
+  --border-color: rgba(180, 208, 167, 0.3);
+  --border-color-hover: rgba(162, 188, 151, 0.5);
+  --accent-color: #52b788; /* Fresh mint accent */
+  --error-color: #e76f51;
+  --success-color: #2b9348;
+  --warning-color: #e9c46a;
+}
+
+/* Apply theme variables to Tailwind elements */
 @layer base {
+  body {
+    @apply transition-colors duration-300;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+  }
+  
+  .bg-neutral-950 {
+    background-color: var(--bg-main);
+  }
+  
+  .bg-neutral-900\/95 {
+    background-color: var(--bg-card);
+  }
+  
+  .border-white\/10 {
+    border-color: var(--border-color);
+  }
+  
+  .text-white {
+    color: var(--text-primary);
+  }
+  
+  .text-white\/70 {
+    color: var(--text-secondary);
+  }
+  
+  .text-white\/50 {
+    color: var(--text-tertiary);
+  }
+  
+  .hover\:bg-white\/10:hover {
+    background-color: var(--bg-card-hover);
+  }
+  
+  .hover\:bg-white\/15:hover {
+    background-color: var(--bg-card-active);
+  }
+
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
