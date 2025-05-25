@@ -255,13 +255,8 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetchWithTimeout(`${API_URL}/events`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      // fetchWithTimeout already returns parsed JSON data, not a Response object
+      const data = await fetchWithTimeout(`${API_URL}/events`);
       
       if (Array.isArray(data)) {
         // Calculate distances if we have a map center
@@ -334,7 +329,8 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   const handleCreateEvent = async (newEvent) => {
     try {
-      const response = await fetchWithTimeout(`${API_URL}/events`, {
+      // fetchWithTimeout already returns parsed JSON data, not a Response object
+      await fetchWithTimeout(`${API_URL}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -342,10 +338,6 @@ const EventMap = ({ mapsLoaded = false }) => {
         },
         body: JSON.stringify(newEvent)
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
       await fetchEvents();
       setIsCreateFormOpen(false);
@@ -365,16 +357,13 @@ const EventMap = ({ mapsLoaded = false }) => {
     }
 
     try {
-      const response = await fetchWithTimeout(`${API_URL}/events/${eventId}`, {
+      // fetchWithTimeout already returns parsed JSON data, not a Response object
+      await fetchWithTimeout(`${API_URL}/events/${eventId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
       await fetchEvents();
       setSelectedEvent(null);
