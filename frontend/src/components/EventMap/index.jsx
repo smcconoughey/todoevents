@@ -317,6 +317,17 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   const handleAddressSelect = (data) => {
     if (!data || !data.location) return;
+    
+    // Determine if this is a broader location search (city, state, region)
+    // We'll check if the address appears to be a specific street address
+    const isSpecificAddress = /^\d+\s+\w+/.test(data.address) || 
+                             /\bSuite\b|\bApt\b|\bApartment\b|\bUnit\b|\b#\b/.test(data.address);
+    
+    // Set a larger proximity range for broader searches
+    if (!isSpecificAddress) {
+      setProximityRange(15); // Default to 15-mile radius for cities, states, regions
+    }
+    
     setMapCenter(data.location);
     setSearchValue(data.address);
     setIsMobileMenuOpen(false);

@@ -63,7 +63,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
   // Search for predictions using Places Autocomplete service
   const getPlacePredictions = useRef(
     debounce((input) => {
-      if (!input || input.length < 3 || !window.google?.maps?.places) {
+      if (!input || input.length < 2 || !window.google?.maps?.places) {
         setPredictions([]);
         setIsLoading(false);
         return;
@@ -78,7 +78,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
           
           const requestOptions = {
             input,
-            types: ['address'],
+            types: ['address', 'geocode', '(cities)', '(regions)'],
             componentRestrictions: { country: 'us' },
             fields: ['formatted_address', 'geometry.location'],
           };
@@ -117,7 +117,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
     const newValue = e.target.value;
     onChange(newValue);
     
-    if (newValue.length >= 3) {
+    if (newValue.length >= 2) {
       getPlacePredictions(newValue);
     } else {
       setPredictions([]);
@@ -246,9 +246,9 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
           type="text"
           value={value}
           onChange={handleInputChange}
-          onFocus={() => value.length >= 3 && setPredictions.length > 0 && setShowPredictions(true)}
+          onFocus={() => value.length >= 2 && setPredictions.length > 0 && setShowPredictions(true)}
           className="w-full pl-10 pr-4 py-2 rounded-md bg-white/10 border-0 text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/20 transition-all"
-          placeholder="Enter address (min. 3 characters for search)"
+          placeholder="Enter address (min. 2 characters for search)"
           autoComplete="off"
         />
         <button 
