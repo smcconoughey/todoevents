@@ -1015,6 +1015,9 @@ async def list_events(
             try:
                 cursor = conn.cursor()
                 
+                # Start a read-only transaction
+                cursor.execute("BEGIN")
+                
                 # Build query with parameters
                 query = "SELECT * FROM events WHERE 1=1"
                 params = []
@@ -1056,6 +1059,9 @@ async def list_events(
                         # Skip problematic events rather than failing completely
                         continue
                 
+                # End transaction (just reading, so COMMIT or ROLLBACK both fine)
+                cursor.execute("COMMIT")
+                
                 return result
                 
             except Exception as query_error:
@@ -1065,7 +1071,7 @@ async def list_events(
                 
                 # If transaction is active, try to roll it back
                 try:
-                    conn.rollback()
+                    cursor.execute("ROLLBACK")
                 except Exception as rollback_error:
                     logger.error(f"Rollback failed: {str(rollback_error)}")
                 
@@ -1134,23 +1140,23 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
     try:
         # Use database connection with explicit transaction control
         with get_db() as conn:
-            # Start transaction - autocommit should be off by default
-            conn.autocommit = False
-            
             cursor = conn.cursor()
             
-            # Check for duplicates first
-            duplicate_check = f"""
-                SELECT id FROM events 
-                WHERE title = {placeholder} 
-                AND date = {placeholder} 
-                AND time = {placeholder} 
-                AND lat = {placeholder} 
-                AND lng = {placeholder} 
-                AND category = {placeholder}
-            """
-            
             try:
+                # Start transaction explicitly
+                cursor.execute("BEGIN")
+                
+                # Check for duplicates first
+                duplicate_check = f"""
+                    SELECT id FROM events 
+                    WHERE title = {placeholder} 
+                    AND date = {placeholder} 
+                    AND time = {placeholder} 
+                    AND lat = {placeholder} 
+                    AND lng = {placeholder} 
+                    AND category = {placeholder}
+                """
+                
                 cursor.execute(duplicate_check, (
                     event.title, 
                     event.date, 
@@ -1162,7 +1168,8 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 
                 duplicate = cursor.fetchone()
                 if duplicate:
-                    # No need for rollback since we haven't modified anything
+                    # No need for explicit rollback if we're just checking
+                    cursor.execute("ROLLBACK")
                     raise HTTPException(
                         status_code=400, 
                         detail="An event with these exact details already exists"
@@ -1208,7 +1215,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 
                 if not event_id:
                     # Roll back if we couldn't get the event ID
-                    conn.rollback()
+                    cursor.execute("ROLLBACK")
                     raise ValueError("Failed to get ID of created event")
                 
                 # Fetch the created event
@@ -1218,11 +1225,11 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 
                 if not event_data:
                     # Roll back if we couldn't find the created event
-                    conn.rollback()
+                    cursor.execute("ROLLBACK")
                     raise ValueError("Created event not found")
                 
                 # Commit the transaction
-                conn.commit()
+                cursor.execute("COMMIT")
                 
                 # Convert to dict and process datetime objects
                 event_dict = dict(event_data)
@@ -1234,12 +1241,18 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 return event_dict
                 
             except HTTPException as http_ex:
+                # Attempt to roll back the transaction
+                try:
+                    cursor.execute("ROLLBACK")
+                except Exception as rollback_error:
+                    logger.error(f"Transaction rollback failed: {str(rollback_error)}")
+                
                 # Pass through HTTP exceptions without modification
                 raise http_ex
             except Exception as e:
                 # Attempt to roll back the transaction
                 try:
-                    conn.rollback()
+                    cursor.execute("ROLLBACK")
                 except Exception as rollback_error:
                     logger.error(f"Transaction rollback failed: {str(rollback_error)}")
                 
