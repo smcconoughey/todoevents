@@ -1312,52 +1312,96 @@ async def update_event(
     Only the event creator or an admin can update the event.
     """
     placeholder = get_placeholder()
+    
     try:
         with get_db() as conn:
-            c = conn.cursor()
-            
-            # First, check if the event exists and who created it
-            c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
-            existing_event = c.fetchone()
-            
-            if not existing_event:
-                raise HTTPException(status_code=404, detail="Event not found")
-            
-            # Check if current user is the creator or an admin
-            if (current_user['id'] != existing_event['created_by'] and 
-                current_user['role'] != UserRole.ADMIN):
-                raise HTTPException(status_code=403, detail="Not authorized to update this event")
-            
-            # Prepare update query
-            query = f"""
-                UPDATE events 
-                SET title={placeholder}, description={placeholder}, date={placeholder}, 
-                    time={placeholder}, category={placeholder}, address={placeholder}, 
-                    lat={placeholder}, lng={placeholder}, recurring={placeholder}, 
-                    frequency={placeholder}, end_date={placeholder}
-                WHERE id={placeholder}
-            """
-            values = (
-                event.title, event.description, event.date, event.time, 
-                event.category, event.address, event.lat, event.lng, 
-                event.recurring, event.frequency, event.end_date, 
-                event_id
-            )
-            
-            c.execute(query, values)
-            conn.commit()
-            
-            # Fetch and return the updated event
-            c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
-            updated_event = c.fetchone()
-            
-            return dict(updated_event)
-            
-    except HTTPException:
-        raise
+            try:
+                cursor = conn.cursor()
+                
+                # Start transaction
+                cursor.execute("BEGIN")
+                
+                # First, check if the event exists and who created it
+                cursor.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
+                existing_event = cursor.fetchone()
+                
+                if not existing_event:
+                    cursor.execute("ROLLBACK")
+                    raise HTTPException(status_code=404, detail="Event not found")
+                
+                # Check if current user is the creator or an admin
+                if (current_user['id'] != existing_event['created_by'] and 
+                    current_user['role'] != UserRole.ADMIN):
+                    cursor.execute("ROLLBACK")
+                    raise HTTPException(status_code=403, detail="Not authorized to update this event")
+                
+                # Prepare update query
+                query = f"""
+                    UPDATE events 
+                    SET title={placeholder}, description={placeholder}, date={placeholder}, 
+                        time={placeholder}, category={placeholder}, address={placeholder}, 
+                        lat={placeholder}, lng={placeholder}, recurring={placeholder}, 
+                        frequency={placeholder}, end_date={placeholder}
+                    WHERE id={placeholder}
+                """
+                values = (
+                    event.title, event.description, event.date, event.time, 
+                    event.category, event.address, event.lat, event.lng, 
+                    event.recurring, event.frequency, event.end_date, 
+                    event_id
+                )
+                
+                cursor.execute(query, values)
+                
+                # Fetch and return the updated event
+                cursor.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
+                updated_event = cursor.fetchone()
+                
+                if not updated_event:
+                    cursor.execute("ROLLBACK")
+                    raise HTTPException(status_code=404, detail="Event not found after update")
+                
+                # Commit the transaction
+                cursor.execute("COMMIT")
+                
+                # Convert to dict and handle datetime objects
+                event_dict = dict(updated_event)
+                
+                # Convert datetime to string for serialization
+                if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
+                    event_dict['created_at'] = event_dict['created_at'].isoformat()
+                
+                return event_dict
+                
+            except HTTPException as http_ex:
+                # Attempt to roll back the transaction
+                try:
+                    cursor.execute("ROLLBACK")
+                except Exception as rollback_error:
+                    logger.error(f"Transaction rollback failed: {str(rollback_error)}")
+                
+                # Re-raise the HTTP exception
+                raise http_ex
+            except Exception as e:
+                # Attempt to roll back the transaction
+                try:
+                    cursor.execute("ROLLBACK")
+                except Exception as rollback_error:
+                    logger.error(f"Transaction rollback failed: {str(rollback_error)}")
+                
+                # Log error and raise HTTP exception
+                error_msg = str(e)
+                logger.error(f"Error updating event {event_id}: {error_msg}")
+                raise HTTPException(status_code=500, detail=f"Error updating event: {error_msg}")
+                
+    except HTTPException as http_ex:
+        # Pass through HTTP exceptions
+        raise http_ex
     except Exception as e:
-        logger.error(f"Error updating event {event_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error updating event")
+        # Handle other exceptions
+        error_msg = str(e)
+        logger.error(f"Error updating event {event_id}: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Error updating event: {error_msg}")
 
 @app.delete("/events/{event_id}")
 async def delete_event(
@@ -1369,33 +1413,66 @@ async def delete_event(
     Only the event creator or an admin can delete the event.
     """
     placeholder = get_placeholder()
+    
     try:
         with get_db() as conn:
-            c = conn.cursor()
-            
-            # First, check if the event exists and who created it
-            c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
-            existing_event = c.fetchone()
-            
-            if not existing_event:
-                raise HTTPException(status_code=404, detail="Event not found")
-            
-            # Check if current user is the creator or an admin
-            if (current_user['id'] != existing_event['created_by'] and 
-                current_user['role'] != UserRole.ADMIN):
-                raise HTTPException(status_code=403, detail="Not authorized to delete this event")
-            
-            # Delete the event
-            c.execute(f"DELETE FROM events WHERE id = {placeholder}", (event_id,))
-            conn.commit()
-            
-            return {"detail": "Event successfully deleted"}
-            
-    except HTTPException:
-        raise
+            try:
+                cursor = conn.cursor()
+                
+                # Start transaction
+                cursor.execute("BEGIN")
+                
+                # First, check if the event exists and who created it
+                cursor.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
+                existing_event = cursor.fetchone()
+                
+                if not existing_event:
+                    cursor.execute("ROLLBACK")
+                    raise HTTPException(status_code=404, detail="Event not found")
+                
+                # Check if current user is the creator or an admin
+                if (current_user['id'] != existing_event['created_by'] and 
+                    current_user['role'] != UserRole.ADMIN):
+                    cursor.execute("ROLLBACK")
+                    raise HTTPException(status_code=403, detail="Not authorized to delete this event")
+                
+                # Delete the event
+                cursor.execute(f"DELETE FROM events WHERE id = {placeholder}", (event_id,))
+                
+                # Commit the transaction
+                cursor.execute("COMMIT")
+                
+                return {"detail": "Event successfully deleted"}
+                
+            except HTTPException as http_ex:
+                # Attempt to roll back the transaction
+                try:
+                    cursor.execute("ROLLBACK")
+                except Exception as rollback_error:
+                    logger.error(f"Transaction rollback failed: {str(rollback_error)}")
+                
+                # Re-raise the HTTP exception
+                raise http_ex
+            except Exception as e:
+                # Attempt to roll back the transaction
+                try:
+                    cursor.execute("ROLLBACK")
+                except Exception as rollback_error:
+                    logger.error(f"Transaction rollback failed: {str(rollback_error)}")
+                
+                # Log error and raise HTTP exception
+                error_msg = str(e)
+                logger.error(f"Error deleting event {event_id}: {error_msg}")
+                raise HTTPException(status_code=500, detail=f"Error deleting event: {error_msg}")
+                
+    except HTTPException as http_ex:
+        # Pass through HTTP exceptions
+        raise http_ex
     except Exception as e:
-        logger.error(f"Error deleting event {event_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error deleting event")
+        # Handle other exceptions
+        error_msg = str(e)
+        logger.error(f"Error deleting event {event_id}: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Error deleting event: {error_msg}")
 
 # Optional: Admin endpoint to get all users (for admin dashboard)
 @app.get("/admin/users", response_model=List[UserResponse])
