@@ -340,15 +340,18 @@ const MapContainer = React.forwardRef(({
                 index === self.findIndex(c => c.id === cat.id)
               );
             
+            // Create a cluster marker with visible label
+            const clusterIcon = createClusterIcon(count, markerCategories, theme);
+            
             return new google.maps.Marker({
               position,
-              label: count > 9 ? {
+              label: {
                 text: String(count),
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: '600'
-              } : null,
-              icon: createClusterIcon(count, markerCategories, theme),
+                color: 'black',
+                fontSize: '13px',
+                fontWeight: 'bold'
+              },
+              icon: clusterIcon,
               zIndex: Number.MAX_SAFE_INTEGER,
             });
           },

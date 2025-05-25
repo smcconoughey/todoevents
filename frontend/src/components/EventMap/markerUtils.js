@@ -56,44 +56,20 @@ export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DAR
     };
   }
 
-  try {
-    // Get the pre-defined SVG path for this category's icon
-    const iconSvgContent = getIconPathFromCategory(category);
-    
-    // Create a map pin marker with the category icon
-    const svgString = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" width="48" height="64">
-        <!-- Pin body -->
-        <path d="M24 0C14.6 0 7 7.6 7 17c0 7.6 5.9 17.8 17 31.5 11.1-13.7 17-23.9 17-31.5C41 7.6 33.4 0 24 0z" 
-              fill="${category.markerColor}" 
-              stroke="${strokeColor}" 
-              stroke-width="2" />
-              
-        <!-- Icon - using pre-defined SVG paths -->
-        <g transform="translate(12, 10)">
-          ${iconSvgContent}
-        </g>
-      </svg>
-    `;
-
-    return {
-      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgString),
-      scaledSize: new google.maps.Size(36, 48), // Adjusted size for pin
-      anchor: new google.maps.Point(18, 48), // Bottom center of the pin
-      labelOrigin: new google.maps.Point(18, 17) // Position for optional labels
-    };
-  } catch (error) {
-    console.error('Error creating detailed marker:', error);
-    // Fallback to simple circle if detailed icon fails
-    return {
-      path: google.maps.SymbolPath.CIRCLE,
-      fillColor: category.markerColor,
-      fillOpacity: 1,
-      strokeWeight: 2,
-      strokeColor: strokeColor,
-      scale: 6,
-    };
-  }
+  // Use a simple drop pin shape with the category color
+  return {
+    // Use a simple filled circle with a downward pointing "tail"
+    path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+    fillColor: category.markerColor,
+    fillOpacity: 1,
+    strokeColor: strokeColor,
+    strokeWeight: 2,
+    scale: 1.2,
+    // SVG path anchor should be at the bottom center
+    anchor: new google.maps.Point(0, 0),
+    // Make pins bounce when they're added
+    animation: google.maps.Animation.DROP
+  };
 };
 
 // Function to create custom cluster icons that show the category colors
@@ -101,7 +77,7 @@ export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
   const strokeColor = isDarkMode ? '#FFFFFF' : '#52B788';
   
-  // If we have no categories or only one, use simple cluster
+  // If we have no categories or only one, use a simple colored circle
   if (!categories || categories.length <= 1) {
     const backgroundColor = categories && categories.length === 1 
       ? categories[0].markerColor 
@@ -113,71 +89,28 @@ export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
       fillOpacity: 0.9,
       strokeColor: strokeColor,
       strokeWeight: 2,
-      scale: Math.min(10 + Math.log2(count) * 2, 22),
+      scale: Math.min(14 + Math.log2(count) * 2.5, 30),
+      labelOrigin: new google.maps.Point(0, 0)
     };
   }
   
-  // For multiple categories, create a pie chart style cluster
+  // For multiple categories, create a pie-like appearance using multiple symbols
   try {
-    // Limit to max 5 categories for clarity
-    const limitedCategories = categories.slice(0, 5);
+    // Get up to 3 dominant categories
+    const dominantCategories = categories.slice(0, 3);
     
-    // Calculate slice angles
-    const slices = limitedCategories.map((category, index) => {
-      const startAngle = (index / limitedCategories.length) * 2 * Math.PI;
-      const endAngle = ((index + 1) / limitedCategories.length) * 2 * Math.PI;
-      
-      return {
-        color: category.markerColor,
-        startAngle,
-        endAngle
-      };
-    });
-    
-    // Size based on count - make clusters larger
-    const radius = Math.min(15 + Math.log2(count) * 3, 28);
-    const textSize = Math.max(radius / 1.5, 12);
-    
-    // Create SVG
-    let svgPaths = '';
-    slices.forEach(slice => {
-      const startX = Math.sin(slice.startAngle) * radius + radius;
-      const startY = -Math.cos(slice.startAngle) * radius + radius;
-      const endX = Math.sin(slice.endAngle) * radius + radius;
-      const endY = -Math.cos(slice.endAngle) * radius + radius;
-      
-      // Create arc path
-      const largeArcFlag = slice.endAngle - slice.startAngle > Math.PI ? 1 : 0;
-      svgPaths += `
-        <path d="M ${radius} ${radius} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z"
-              fill="${slice.color}" stroke="${strokeColor}" stroke-width="1" />
-      `;
-    });
-    
-    // Create a bold text display for the count
-    const svgString = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${radius*2} ${radius*2}" width="${radius*2}" height="${radius*2}">
-        ${svgPaths}
-        <!-- White background circle for the text -->
-        <circle cx="${radius}" cy="${radius}" r="${radius-4}" fill="white" stroke="${strokeColor}" stroke-width="1" />
-        <!-- Black text with count, sized appropriately -->
-        <text 
-          x="${radius}" 
-          y="${radius}" 
-          text-anchor="middle" 
-          dominant-baseline="central"
-          font-family="Arial, sans-serif"
-          font-size="${textSize}px" 
-          font-weight="bold" 
-          fill="black"
-        >${count}</text>
-      </svg>
-    `;
+    // Create a pie-chart-like appearance using the built-in symbol functionality
+    // This is more reliable than custom SVG
+    const pieSize = Math.min(18 + Math.log2(count) * 2, 34);
     
     return {
-      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgString),
-      scaledSize: new google.maps.Size(radius*2, radius*2),
-      anchor: new google.maps.Point(radius, radius)
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: dominantCategories[0].markerColor,
+      fillOpacity: 0.85,
+      strokeColor: strokeColor,
+      strokeWeight: 3,
+      scale: pieSize,
+      labelOrigin: new google.maps.Point(0, 0)
     };
   } catch (error) {
     console.error('Error creating cluster icon:', error);
@@ -189,6 +122,7 @@ export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
       strokeColor: strokeColor,
       strokeWeight: 2,
       scale: Math.min(10 + Math.log2(count) * 2, 22),
+      labelOrigin: new google.maps.Point(0, 0)
     };
   }
 };
