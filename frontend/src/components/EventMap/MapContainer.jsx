@@ -4,7 +4,7 @@ import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import categories from './categoryConfig';
 import { initGoogleMaps } from '@/googleMapsLoader';
 import { ThemeContext, THEME_DARK, THEME_LIGHT } from '@/components/ThemeContext';
-import { createMarkerIcon } from './markerUtils';
+import { createMarkerIcon, createClusterIcon } from './markerUtils';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
@@ -290,17 +290,37 @@ const MapContainer = React.forwardRef(({
       return categoryMatch && dateMatch && hasValidLocation;
     });
 
+    // Group events by category for the cluster renderer
+    const eventsByCategory = {};
+    validEvents.forEach(event => {
+      const categoryId = event.category || 'all';
+      if (!eventsByCategory[categoryId]) {
+        eventsByCategory[categoryId] = [];
+      }
+      eventsByCategory[categoryId].push(event);
+    });
+
     const markers = validEvents.map(event => {
+      // Find the category for this event
+      const eventCategory = categories.find(cat => cat.id === event.category) || categories[0];
+      
       const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
         map: mapInstanceRef.current,
-        icon: createMarkerIcon(categories.find(cat => cat.id === event.category) || categories[0], true, theme),
-        optimized: true
+        icon: createMarkerIcon(eventCategory, true, theme),
+        optimized: true,
+        title: event.title, // Add hover title for better UX
+        animation: google.maps.Animation.DROP, // Add drop animation for visual interest
+        zIndex: event.id // Use event ID for z-index to prioritize newer events
       });
 
+      // Add click listener to show event details
       marker.addListener('click', () => {
         onEventClick?.(event);
       });
+
+      // Store event category with marker for cluster rendering
+      marker.category = eventCategory;
 
       return marker;
     });
@@ -308,30 +328,27 @@ const MapContainer = React.forwardRef(({
     markersRef.current = markers;
 
     if (markers.length > 0) {
-      // Use theme-appropriate colors for clusters
-      const clusterColor = isDarkMode ? 'rgba(25, 118, 210, 0.9)' : 'rgba(82, 183, 136, 0.9)';
-
+      // Use our custom cluster renderer with category-based colors
       clustererRef.current = new MarkerClusterer({
         map: mapInstanceRef.current,
         markers: markers,
         renderer: {
-          render: ({ count, position }) => {
+          render: ({ count, position, markers }) => {
+            // Extract unique categories from the clustered markers
+            const markerCategories = markers.map(marker => marker.category)
+              .filter((cat, index, self) => 
+                index === self.findIndex(c => c.id === cat.id)
+              );
+            
             return new google.maps.Marker({
               position,
-              label: {
+              label: count > 9 ? {
                 text: String(count),
                 color: 'white',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: '600'
-              },
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: clusterColor,
-                fillOpacity: 0.9,
-                strokeColor: isDarkMode ? '#ffffff' : '#ffffff',
-                strokeWeight: 2,
-                scale: Math.min(10 + Math.log2(count) * 2, 22),
-              },
+              } : null,
+              icon: createClusterIcon(count, markerCategories, theme),
               zIndex: Number.MAX_SAFE_INTEGER,
             });
           },
