@@ -79,105 +79,105 @@ const categories = [
     id: 'food-drink',
     name: 'Food & Drink',
     icon: Utensils,
-    color: 'text-orange-400',
-    markerColor: '#F97316',
-    markerSVG: createCategoryMarkerSVG('#F97316', iconPaths.Utensils)
+    color: 'text-vibrant-magenta',
+    markerColor: '#FF5A87',
+    markerSVG: createCategoryMarkerSVG('#FF5A87', iconPaths.Utensils)
   },
   {
     id: 'music',
     name: 'Music',
     icon: Music,
-    color: 'text-purple-400',
-    markerColor: '#A855F7',
-    markerSVG: createCategoryMarkerSVG('#A855F7', iconPaths.Music)
+    color: 'text-pin-blue',
+    markerColor: '#2684FF',
+    markerSVG: createCategoryMarkerSVG('#2684FF', iconPaths.Music)
   },
   {
     id: 'arts',
     name: 'Arts',
     icon: Palette,
-    color: 'text-blue-400',
-    markerColor: '#3B82F6',
-    markerSVG: createCategoryMarkerSVG('#3B82F6', iconPaths.Palette)
+    color: 'text-fresh-teal',
+    markerColor: '#38D6C0',
+    markerSVG: createCategoryMarkerSVG('#38D6C0', iconPaths.Palette)
   },
   {
     id: 'sports',
     name: 'Sports',
     icon: Trophy,
-    color: 'text-green-400',
-    markerColor: '#22C55E',
-    markerSVG: createCategoryMarkerSVG('#22C55E', iconPaths.Trophy)
+    color: 'text-spark-yellow',
+    markerColor: '#FFEC3A',
+    markerSVG: createCategoryMarkerSVG('#FFEC3A', iconPaths.Trophy)
   },
   {
     id: 'automotive',
     name: 'Automotive',
     icon: Car,
-    color: 'text-red-400',
-    markerColor: '#EF4444',
-    markerSVG: createCategoryMarkerSVG('#EF4444', iconPaths.Car)
+    color: 'text-vibrant-magenta-600',
+    markerColor: '#FF2968',
+    markerSVG: createCategoryMarkerSVG('#FF2968', iconPaths.Car)
   },
   {
     id: 'airshows',
     name: 'Airshows',
     icon: Plane,
-    color: 'text-sky-400',
-    markerColor: '#0EA5E9',
-    markerSVG: createCategoryMarkerSVG('#0EA5E9', iconPaths.Plane)
+    color: 'text-pin-blue-600',
+    markerColor: '#0066FF',
+    markerSVG: createCategoryMarkerSVG('#0066FF', iconPaths.Plane)
   },
   {
     id: 'vehicle-sports',
     name: 'Vehicle Sports',
     icon: Ship,
-    color: 'text-yellow-500',
-    markerColor: '#FACC15',
-    markerSVG: createCategoryMarkerSVG('#FACC15', iconPaths.Ship)
+    color: 'text-spark-yellow-600',
+    markerColor: '#FFE916',
+    markerSVG: createCategoryMarkerSVG('#FFE916', iconPaths.Ship)
   },
   {
     id: 'community',
     name: 'Community',
     icon: Users,
-    color: 'text-yellow-400',
-    markerColor: '#EAB308',
-    markerSVG: createCategoryMarkerSVG('#EAB308', iconPaths.Users)
+    color: 'text-fresh-teal-600',
+    markerColor: '#1BC2A4',
+    markerSVG: createCategoryMarkerSVG('#1BC2A4', iconPaths.Users)
   },
   {
     id: 'religious',
     name: 'Religious',
     icon: Church,
-    color: 'text-indigo-400',
-    markerColor: '#6366F1',
-    markerSVG: createCategoryMarkerSVG('#6366F1', iconPaths.Church)
+    color: 'text-pin-blue-700',
+    markerColor: '#0052CC',
+    markerSVG: createCategoryMarkerSVG('#0052CC', iconPaths.Church)
   },
   {
     id: 'education',
     name: 'Tech & Education',
     icon: BookOpen,
-    color: 'text-teal-400',
-    markerColor: '#14B8A6',
-    markerSVG: createCategoryMarkerSVG('#14B8A6', iconPaths.BookOpen)
+    color: 'text-fresh-teal-700',
+    markerColor: '#159F87',
+    markerSVG: createCategoryMarkerSVG('#159F87', iconPaths.BookOpen)
   },
   {
     id: 'veteran',
     name: 'Veteran',
     icon: Award,
-    color: 'text-blue-600',
-    markerColor: '#2563EB',
-    markerSVG: createCategoryMarkerSVG('#2563EB', iconPaths.Award)
+    color: 'text-pin-blue-800',
+    markerColor: '#003D99',
+    markerSVG: createCategoryMarkerSVG('#003D99', iconPaths.Award)
   },
   {
     id: 'cookout',
     name: 'Cookout',
     icon: Flame,
-    color: 'text-amber-500',
-    markerColor: '#F59E0B',
-    markerSVG: createCategoryMarkerSVG('#F59E0B', iconPaths.Flame)
+    color: 'text-vibrant-magenta-700',
+    markerColor: '#F70049',
+    markerSVG: createCategoryMarkerSVG('#F70049', iconPaths.Flame)
   },
   {
     id: 'graduation',
     name: 'Graduation',
     icon: GraduationCap,
-    color: 'text-emerald-500',
-    markerColor: '#10B981',
-    markerSVG: createCategoryMarkerSVG('#10B981', iconPaths.GraduationCap)
+    color: 'text-spark-yellow-700',
+    markerColor: '#F5D700',
+    markerSVG: createCategoryMarkerSVG('#F5D700', iconPaths.GraduationCap)
   }
 ];
 

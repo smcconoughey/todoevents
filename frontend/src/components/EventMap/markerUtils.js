@@ -43,86 +43,117 @@ const getIconPathFromCategory = (category) => {
 
 export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
-  const strokeColor = isDarkMode ? '#FFFFFF' : '#52B788';
+  
+  // Brand-aware stroke colors
+  const strokeColor = isDarkMode ? '#FFFFFF' : '#1A1A1A';
+  const glowColor = isDarkMode ? '#FFD82E' : '#2684FF'; // Spark Yellow (dark) / Pin Blue (light)
   
   if (!isDetailed) {
     return {
       path: google.maps.SymbolPath.CIRCLE,
       fillColor: category.markerColor,
-      fillOpacity: 1,
+      fillOpacity: 0.9,
       strokeWeight: 2,
       strokeColor: strokeColor,
-      scale: 6,
+      scale: 7,
+      // Add subtle glow effect for brand appeal
+      anchor: new google.maps.Point(0, 0),
     };
   }
 
-  // Use a simple drop pin shape with the category color
+  // Enhanced detailed marker with brand styling
   return {
-    // Use a simple filled circle with a downward pointing "tail"
-    path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+    // Modern teardrop pin shape with better proportions
+    path: 'M 0,0 C -3,-25 -12,-28 -12,-36 A 12,12 0 1,1 12,-36 C 12,-28 3,-25 0,0 z',
     fillColor: category.markerColor,
-    fillOpacity: 1,
+    fillOpacity: 0.95,
     strokeColor: strokeColor,
-    strokeWeight: 2,
-    scale: 1.2,
-    // SVG path anchor should be at the bottom center
+    strokeWeight: 2.5,
+    scale: 1.3,
+    // Anchor at the bottom point of the pin
     anchor: new google.maps.Point(0, 0),
-    // Make pins bounce when they're added
-    animation: google.maps.Animation.DROP
+    // Enhanced drop animation for brand appeal
+    animation: google.maps.Animation.DROP,
+    // Higher z-index for better layering
+    zIndex: 1000,
+    // Add subtle shadow effect
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowSize: new google.maps.Size(20, 20),
+    shadowAnchor: new google.maps.Point(0, 0)
   };
 };
 
-// Function to create custom cluster icons that show the category colors
+// Function to create custom cluster icons with brand colors
 export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
-  const strokeColor = isDarkMode ? '#FFFFFF' : '#52B788';
   
-  // If we have no categories or only one, use a simple colored circle
+  // Brand colors for different themes
+  const brandColors = {
+    primary: isDarkMode ? '#FFD82E' : '#FFEC3A',    // Spark Yellow
+    secondary: isDarkMode ? '#3C92FF' : '#2684FF',   // Pin Blue
+    accent: isDarkMode ? '#E04A73' : '#FF5A87',      // Vibrant Magenta
+    teal: isDarkMode ? '#2FB8A6' : '#38D6C0',        // Fresh Teal
+    stroke: isDarkMode ? '#FFFFFF' : '#1A1A1A',
+    text: isDarkMode ? '#1A1A1A' : '#FFFFFF'
+  };
+  
+  // If we have no categories or only one, use brand colors
   if (!categories || categories.length <= 1) {
     const backgroundColor = categories && categories.length === 1 
       ? categories[0].markerColor 
-      : (isDarkMode ? '#1976D2' : '#52B788');
+      : brandColors.primary;
       
     return {
       path: google.maps.SymbolPath.CIRCLE,
       fillColor: backgroundColor,
-      fillOpacity: 0.9,
-      strokeColor: strokeColor,
-      strokeWeight: 2,
-      scale: Math.min(14 + Math.log2(count) * 2.5, 30),
-      labelOrigin: new google.maps.Point(0, 0)
+      fillOpacity: 0.95,
+      strokeColor: brandColors.stroke,
+      strokeWeight: 3,
+      scale: Math.min(16 + Math.log2(count) * 3, 35),
+      labelOrigin: new google.maps.Point(0, 0),
+      // Add subtle glow for brand appeal
+      anchor: new google.maps.Point(0, 0),
+      zIndex: 2000
     };
   }
   
-  // For multiple categories, create a pie-like appearance using multiple symbols
+  // For multiple categories, create a vibrant cluster with dominant category color
   try {
     // Get up to 3 dominant categories
     const dominantCategories = categories.slice(0, 3);
     
-    // Create a pie-chart-like appearance using the built-in symbol functionality
-    // This is more reliable than custom SVG
-    const pieSize = Math.min(18 + Math.log2(count) * 2, 34);
+    // Use the most common category's color as base, with brand accent
+    const baseColor = dominantCategories[0].markerColor;
+    const pieSize = Math.min(20 + Math.log2(count) * 2.5, 40);
     
+    // Create gradient-like effect by using the dominant color with brand styling
     return {
       path: google.maps.SymbolPath.CIRCLE,
-      fillColor: dominantCategories[0].markerColor,
-      fillOpacity: 0.85,
-      strokeColor: strokeColor,
-      strokeWeight: 3,
+      fillColor: baseColor,
+      fillOpacity: 0.9,
+      strokeColor: brandColors.stroke,
+      strokeWeight: 3.5,
       scale: pieSize,
-      labelOrigin: new google.maps.Point(0, 0)
+      labelOrigin: new google.maps.Point(0, 0),
+      // Enhanced visual appeal
+      anchor: new google.maps.Point(0, 0),
+      zIndex: 2000,
+      // Add subtle animation hint
+      animation: google.maps.Animation.DROP
     };
   } catch (error) {
     console.error('Error creating cluster icon:', error);
-    // Fallback
+    // Brand-consistent fallback
     return {
       path: google.maps.SymbolPath.CIRCLE,
-      fillColor: isDarkMode ? '#1976D2' : '#52B788',
+      fillColor: brandColors.primary,
       fillOpacity: 0.9,
-      strokeColor: strokeColor,
-      strokeWeight: 2,
-      scale: Math.min(10 + Math.log2(count) * 2, 22),
-      labelOrigin: new google.maps.Point(0, 0)
+      strokeColor: brandColors.stroke,
+      strokeWeight: 3,
+      scale: Math.min(12 + Math.log2(count) * 2, 28),
+      labelOrigin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(0, 0),
+      zIndex: 2000
     };
   }
 };

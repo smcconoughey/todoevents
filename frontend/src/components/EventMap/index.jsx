@@ -78,59 +78,67 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
   const Icon = category.icon;
 
   return (
-    <div className="absolute right-4 top-4 w-96 bg-neutral-900/95 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden z-20">
-      <div className="p-4 space-y-4">
+    <div className="absolute right-4 top-4 w-96 bg-neutral-900/95 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden z-20 shadow-2xl">
+      <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Icon className={`w-6 h-6 ${category.color}`} />
-            <h2 className="text-lg font-semibold text-white">{event.title}</h2>
+            <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
+              <Icon className={`w-6 h-6 ${category.color}`} />
+            </div>
+            <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+            className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <p className="text-white/90">{event.description}</p>
+        <p className="text-white/90 font-body leading-relaxed">{event.description}</p>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-white/70">
-            <Calendar className="w-4 h-4" />
-            <span>{event.date}</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 text-sm text-white/70">
+            <div className="p-1.5 rounded-md bg-pin-blue/10">
+              <Calendar className="w-4 h-4 text-pin-blue" />
+            </div>
+            <span className="font-data">{event.date}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-white/70">
-            <Clock className="w-4 h-4" />
-            <span>{event.time}</span>
+          <div className="flex items-center gap-3 text-sm text-white/70">
+            <div className="p-1.5 rounded-md bg-fresh-teal/10">
+              <Clock className="w-4 h-4 text-fresh-teal" />
+            </div>
+            <span className="font-data">{event.time}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-white/70">
-            <MapPin className="w-4 h-4" />
-            <span>{event.address}</span>
+          <div className="flex items-center gap-3 text-sm text-white/70">
+            <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
+              <MapPin className="w-4 h-4 text-vibrant-magenta" />
+            </div>
+            <span className="font-body">{event.address}</span>
           </div>
 
           {event.distance !== undefined && (
-            <div className="text-sm text-white/70">
-              {event.distance.toFixed(1)} miles away
+            <div className="text-sm text-white/70 font-data">
+              📍 {event.distance.toFixed(1)} miles away
             </div>
           )}
         </div>
 
         {user && (user.id === event.created_by || user.role === 'admin') && (
-          <div className="pt-4 space-y-2 border-t border-white/10">
+          <div className="pt-4 space-y-3 border-t border-white/10">
             <Button
               variant="ghost"
-              className="w-full bg-white/5 hover:bg-white/10 text-white"
+              className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
               onClick={onEdit}
             >
               Edit Event
             </Button>
             <Button
-              className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500"
+              className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
               onClick={() => onDelete(event.id)}
             >
               Delete Event
@@ -143,17 +151,17 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
 };
 
 const renderEventList = (events, selectedEvent, handleEventClick, user, mapCenter) => (
-  <div className="flex-1 overflow-y-auto p-4 space-y-2">
+  <div className="flex-1 overflow-y-auto p-4 space-y-3">
     {events.map(event => (
       <div
         key={event.id}
         className={`
-          w-full p-4 rounded-lg transition-colors cursor-pointer
+          w-full p-4 rounded-xl transition-all duration-200 cursor-pointer hover:scale-[1.02]
           ${selectedEvent?.id === event.id
-            ? 'bg-white/20 border-white/30'
+            ? 'bg-spark-yellow/20 border-spark-yellow/40 shadow-lg'
             : 'bg-white/5 hover:bg-white/10 border-white/10'
           }
-          border
+          border backdrop-blur-sm
         `}
         onClick={() => handleEventClick(event)}
       >
@@ -161,22 +169,28 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
           {(() => {
             const category = getCategory(event.category);
             const Icon = category.icon;
-            return <Icon className={`w-5 h-5 ${category.color}`} />;
+            return (
+              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                <Icon className={`w-5 h-5 ${category.color}`} />
+              </div>
+            );
           })()}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-white font-medium truncate">{event.title}</h3>
+              <h3 className="text-white font-display font-medium truncate">{event.title}</h3>
               {user && event.created_by === user.id && (
-                <span className="text-xs text-white/50">(Your event)</span>
+                <span className="text-xs text-spark-yellow font-data px-2 py-0.5 bg-spark-yellow/10 rounded-full border border-spark-yellow/20">
+                  Your event
+                </span>
               )}
             </div>
-            <div className="mt-1 flex items-center gap-2 text-sm text-white/60">
+            <div className="mt-2 flex items-center gap-2 text-sm text-white/60">
               <Calendar className="w-4 h-4" />
-              <span>{event.date}</span>
+              <span className="font-data">{event.date}</span>
               {event.distance !== undefined && (
                 <>
                   <span className="text-white/30">•</span>
-                  <span>{event.distance.toFixed(1)} mi</span>
+                  <span className="font-data">{event.distance.toFixed(1)} mi</span>
                 </>
               )}
             </div>
@@ -198,39 +212,36 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [proximityRange, setProximityRange] = useState(15);
-  const [mapCenter, setMapCenter] = useState(null);
-  const [showDesktopList, setShowDesktopList] = useState(true);
+  const [selectedDate, setSelectedDate] = useState({ from: null, to: null });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showDesktopList, setShowDesktopList] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeView, setActiveView] = useState(mapsLoaded ? 'map' : 'list');
+  const [activeView, setActiveView] = useState('map');
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [loginMode, setLoginMode] = useState('login');
-  const [filteredEvents, setFilteredEvents] = useState([]);
-  const [selectedDate, setSelectedDate] = useState({ from: null, to: null });
+  const [editingEvent, setEditingEvent] = useState(null);
+
   const mapRef = useRef(null);
 
   const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
   const DEFAULT_ZOOM = 4;
 
-  const handleResetView = () => {
-    setSearchValue('');
-    setSelectedCategory('all');
-    setMapCenter(null);
-    setFilteredEvents([]);
-    setProximityRange(15);
-    setSelectedLocation(null);
-    setSelectedEvent(null);
-    setSelectedDate({ from: null, to: null }); // Updated this line
+  const mapCenter = selectedLocation ? {
+    lat: selectedLocation.lat,
+    lng: selectedLocation.lng
+  } : null;
 
+  const handleResetView = () => {
+    setSelectedLocation(null);
+    setSearchValue('');
+    setProximityRange(15);
+    setSelectedDate({ from: null, to: null });
+    setSelectedCategory('all');
+    setSelectedEvent(null);
+    
     if (mapRef.current) {
       mapRef.current.resetView();
     }
-
-    if (window.innerWidth < 1536) {
-      setActiveView('map');
-    }
-
-    fetchEvents();
   };
 
   const toggleDesktopList = () => {
@@ -239,149 +250,109 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId);
-    setSelectedLocation(null);
-    setIsMobileMenuOpen(false);
+    setSelectedEvent(null);
   };
 
   const fetchEvents = async () => {
     try {
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const data = await fetchWithTimeout(`${API_URL}/events`, { 
-        method: 'GET',
-        headers 
-      });
+      const response = await fetchWithTimeout(`${API_URL}/events`);
       
-      setEvents(data);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        // Calculate distances if we have a map center
+        const eventsWithDistance = mapCenter ? data.map(event => ({
+          ...event,
+          distance: calculateDistance(
+            mapCenter.lat,
+            mapCenter.lng,
+            event.lat,
+            event.lng
+          )
+        })).filter(event => event.distance <= proximityRange)
+          .sort((a, b) => a.distance - b.distance) : data;
+        
+        setEvents(eventsWithDistance);
+      } else {
+        console.error('Expected array but got:', typeof data);
+        setEvents([]);
+      }
     } catch (error) {
       console.error('Error fetching events:', error);
-      
-      // Show a more user-friendly error or toast notification here if needed
+      setEvents([]);
     }
   };
 
   useEffect(() => {
     fetchEvents();
-    const interval = setInterval(fetchEvents, 300000);
-    return () => clearInterval(interval);
-  }, [token]);
+  }, [mapCenter, proximityRange]);
 
-  // Replace the existing useEffect for filtering with this one
-  useEffect(() => {
-    let filtered = [...events];
-
-    // Apply filters one by one
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(event => event.category === selectedCategory);
-    }
-
-    // Date range filter
-    filtered = filtered.filter(event => isDateInRange(event.date, selectedDate));
-
-    // Location filter
-    if (mapCenter) {
-      filtered = filtered.filter(event => {
-        if (!event.lat || !event.lng) return false;
-        const distance = calculateDistance(mapCenter.lat, mapCenter.lng, event.lat, event.lng);
-        return distance <= proximityRange;
-      });
-
-      filtered = filtered.map(event => ({
-        ...event,
-        distance: calculateDistance(mapCenter.lat, mapCenter.lng, event.lat, event.lng)
-      }));
-
-      filtered.sort((a, b) => a.distance - b.distance);
-    }
-
-    setFilteredEvents(filtered);
-  }, [events, mapCenter, proximityRange, selectedCategory, selectedDate]);
+  const filteredEvents = events.filter(event => {
+    const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
+    const dateMatch = isDateInRange(event.date, selectedDate);
+    return categoryMatch && dateMatch;
+  });
 
   const handleEventClick = (event) => {
-    if (!event) return;
     setSelectedEvent(event);
-    if (event.lat && event.lng) {
-      setMapCenter({ lat: event.lat, lng: event.lng });
-    }
-    if (window.innerWidth < 1536) {
+    
+    if (activeView === 'list') {
       setActiveView('map');
-      setIsMobileMenuOpen(false);
     }
   };
 
   const handleAddressSelect = (data) => {
-    if (!data || !data.location) return;
-    
-    // More comprehensive check for address specificity
-    // If it contains a street number or apartment identifiers, it's likely a specific address
-    const isSpecificAddress = /^\d+\s+\w+/.test(data.address) || 
-                             /\b(Suite|Apt|Apartment|Unit|#)\b/i.test(data.address) ||
-                             /\b\d+\s+[A-Za-z0-9\s]+\b(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Ln|Lane|Dr|Drive|Way|Pl|Place|Ct|Court)\b/i.test(data.address);
-    
-    // If it contains city/state/region indicators, it's likely a broader search
-    const isBroadLocation = /\b[A-Z][a-z]+\s*,\s*[A-Z]{2}\b/.test(data.address) || // City, State format
-                           /\b[A-Z]{2}\b/.test(data.address) || // State abbreviation 
-                           !data.address.includes(','); // No commas often indicates just a city or region
-    
-    // Determine appropriate search radius based on address type
-    if (!isSpecificAddress || isBroadLocation) {
-      // For cities, states, or other broader regions
-      setProximityRange(15); // Default to 15-mile radius for broader searches
-      
-      // For very broad searches (state level), consider an even larger radius
-      if (data.address.split(',').length <= 2) {
-        setProximityRange(30); // Increase radius for state-level searches
-      }
-    }
-    
-    setMapCenter(data.location);
+    setSelectedLocation({
+      lat: data.lat,
+      lng: data.lng,
+      address: data.address
+    });
     setSearchValue(data.address);
-    setIsMobileMenuOpen(false);
+    
+    // Close mobile menu if open
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 3959;
+    const R = 3959; // Radius of the Earth in miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    return distance;
   };
 
   const handleCreateEvent = async (newEvent) => {
-    if (!user) {
-      setShowLoginDialog(true);
-      return;
-    }
-
     try {
-      console.log("Submitting event data:", newEvent);
-      
-      const savedEvent = await fetchWithTimeout(`${API_URL}/events`, {
+      const response = await fetchWithTimeout(`${API_URL}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newEvent),
-      }, 20000); // 20 second timeout
-      
+        body: JSON.stringify(newEvent)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       await fetchEvents();
       setIsCreateFormOpen(false);
       setSelectedLocation(null);
-      setSelectedEvent(null);
+      setSearchValue('');
     } catch (error) {
-      console.error('Error saving event:', error);
-      // Could display an error notification here
+      console.error('Error creating event:', error);
       if (error.message && error.message.includes('401')) {
         setShowLoginDialog(true);
       }
@@ -389,15 +360,21 @@ const EventMap = ({ mapsLoaded = false }) => {
   };
 
   const handleEventDelete = async (eventId) => {
-    if (!user) return;
+    if (!window.confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
 
     try {
-      await fetchWithTimeout(`${API_URL}/events/${eventId}`, {
+      const response = await fetchWithTimeout(`${API_URL}/events/${eventId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       await fetchEvents();
       setSelectedEvent(null);
@@ -425,18 +402,18 @@ const EventMap = ({ mapsLoaded = false }) => {
             variant="ghost"
             size="icon"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="text-white hover:bg-white/10"
+            className="text-white hover:bg-white/10 transition-colors duration-200"
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg font-bold text-white">Events</h1>
+          <h1 className="text-xl font-display font-bold text-white">todo-events</h1>
           <div className="flex items-center">
             <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
-              className="text-white hover:bg-white/10 ml-1"
+              className="text-white hover:bg-white/10 ml-1 transition-colors duration-200"
             >
               {activeView === 'map' ? <Filter className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
             </Button>
@@ -447,21 +424,21 @@ const EventMap = ({ mapsLoaded = false }) => {
       {/* Desktop Sidebar */}
       <div className={`
         hidden sm:flex fixed left-4 top-4 bottom-4 z-20
-        flex-col bg-neutral-900/95 backdrop-blur-sm rounded-lg
-        border border-white/10 transition-all duration-300
+        flex-col bg-neutral-900/95 backdrop-blur-sm rounded-xl
+        border border-white/10 transition-all duration-300 shadow-2xl
         ${isSidebarCollapsed ? 'w-16' : 'w-80'}
       `}>
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           {!isSidebarCollapsed && (
             <div className="flex items-center justify-between flex-1 mr-2">
-              <h2 className="text-xl font-bold text-white">Events</h2>
+              <h2 className="text-xl font-display font-bold text-white">todo-events</h2>
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 {user ? (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                     onClick={logout}
                   >
                     <LogOut className="w-4 h-4" />
@@ -470,7 +447,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                     onClick={() => {
                       setLoginMode('login');
                       setShowLoginDialog(true);
@@ -488,7 +465,7 @@ const EventMap = ({ mapsLoaded = false }) => {
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/70 hover:text-white hover:bg-white/10 flex-shrink-0"
+            className="text-white/70 hover:text-white hover:bg-white/10 flex-shrink-0 transition-all duration-200"
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           >
             {isSidebarCollapsed ? (
@@ -502,28 +479,28 @@ const EventMap = ({ mapsLoaded = false }) => {
         {!isSidebarCollapsed && (
           <>
             <div className="flex-1 overflow-y-auto">
-              <div className="p-4 space-y-4">
+              <div className="p-4 space-y-6">
                 <AddressAutocomplete
                   value={searchValue}
                   onChange={setSearchValue}
                   onSelect={handleAddressSelect}
                   className="w-full"
                 />
-                <div className="space-y-2">
-                  <label className="text-sm text-white/70">Date Filter</label>
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-white/70">Date Filter</label>
                   <CalendarFilter
                     selectedDate={selectedDate}
                     onDateSelect={setSelectedDate}
                     onClear={() => setSelectedDate({ from: null, to: null })}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm text-white/70">Search Radius</label>
+                    <label className="text-sm font-medium text-white/70">Search Radius</label>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-white/50 hover:text-white"
+                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200"
                       onClick={handleResetView}
                     >
                       Reset View
@@ -537,21 +514,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                         onClick={() => setProximityRange(option.value)}
                         variant="outline"
                         className={`
-                            flex flex-col items-center p-2 h-auto
+                            flex flex-col items-center p-3 h-auto rounded-lg transition-all duration-200 hover:scale-[1.02]
                             ${proximityRange === option.value
-                            ? 'bg-white/20 text-white border-white/30'
-                            : 'bg-white/5 text-white/70 border-white/10'
+                            ? 'bg-spark-yellow/20 text-white border-spark-yellow/40 shadow-lg'
+                            : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
                           }
                           `}
                       >
-                        <span className="text-base font-medium">{option.label}</span>
-                        <span className="text-xs opacity-70">{option.description}</span>
+                        <span className="text-base font-data font-medium">{option.label}</span>
+                        <span className="text-xs opacity-70 font-body">{option.description}</span>
                       </Button>
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {categories.map((category) => {
                     const Icon = category.icon;
                     const count = events.filter(e =>
@@ -563,21 +540,23 @@ const EventMap = ({ mapsLoaded = false }) => {
                         key={category.id}
                         onClick={() => handleCategorySelect(category.id)}
                         className={`
-                            w-full flex items-center justify-between px-3 py-2 rounded-lg 
+                            w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 hover:scale-[1.02]
                             ${selectedCategory === category.id
-                            ? 'bg-white/10'
-                            : 'hover:bg-white/5'
+                            ? 'bg-pin-blue/20 border border-pin-blue/40 shadow-lg'
+                            : 'hover:bg-white/5 border border-transparent'
                           }
                           `}
                       >
                         <div className="flex items-center">
-                          <Icon className={`w-5 h-5 mr-3 ${category.color}`} />
-                          <span className="text-white text-sm">{category.name}</span>
+                          <div className="p-1.5 rounded-md bg-white/5 mr-3">
+                            <Icon className={`w-5 h-5 ${category.color}`} />
+                          </div>
+                          <span className="text-white text-sm font-body">{category.name}</span>
                         </div>
                         <span className={`
-                            text-xs px-2 py-0.5 rounded-full
+                            text-xs px-2 py-1 rounded-full font-data
                             ${selectedCategory === category.id
-                            ? 'bg-white/20 text-white'
+                            ? 'bg-pin-blue/30 text-white'
                             : 'bg-white/5 text-white/60'
                           }
                           `}>
@@ -592,7 +571,7 @@ const EventMap = ({ mapsLoaded = false }) => {
 
             <div className="p-4 border-t border-white/10">
               <Button
-                className="w-full bg-white/10 hover:bg-white/15 text-white"
+                className="w-full btn-primary font-display font-semibold text-lg py-3 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
                 onClick={() => {
                   if (!user) {
                     setLoginMode('login');
@@ -602,8 +581,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                   setIsCreateFormOpen(true);
                 }}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                {user ? 'New Event' : 'Sign in to Create Event'}
+                <Plus className="w-5 h-5 mr-2" />
+                {user ? 'Create Event' : 'Sign in to Create'}
               </Button>
             </div>
           </>
@@ -619,14 +598,14 @@ const EventMap = ({ mapsLoaded = false }) => {
           <div className="flex flex-col h-full">
             <SheetHeader className="px-4 py-4 border-b border-white/10">
               <div className="flex items-center justify-between">
-                <SheetTitle className="text-white">Events</SheetTitle>
+                <SheetTitle className="text-white font-display font-bold">todo-events</SheetTitle>
                 <div className="flex items-center gap-2">
                   <ThemeToggle />
                   {user ? (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-white/70 hover:text-white hover:bg-white/10"
+                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                       onClick={() => {
                         logout();
                         setIsMobileMenuOpen(false);
@@ -638,7 +617,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-white/70 hover:text-white hover:bg-white/10"
+                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                       onClick={() => {
                         setLoginMode('login');
                         setShowLoginDialog(true);
@@ -651,7 +630,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <X className="w-4 h-4" />
@@ -661,28 +640,28 @@ const EventMap = ({ mapsLoaded = false }) => {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto">
-              <div className="p-4 space-y-4">
+              <div className="p-4 space-y-6">
                 <AddressAutocomplete
                   value={searchValue}
                   onChange={setSearchValue}
                   onSelect={handleAddressSelect}
                   className="w-full"
                 />
-                <div className="space-y-2">
-                  <label className="text-sm text-white/70">Date Filter</label>
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-white/70">Date Filter</label>
                   <CalendarFilter
                     selectedDate={selectedDate}
                     onDateSelect={setSelectedDate}
                     onClear={() => setSelectedDate(null)}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm text-white/70">Search Radius</label>
+                    <label className="text-sm font-medium text-white/70">Search Radius</label>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-white/50 hover:text-white"
+                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200"
                       onClick={handleResetView}
                     >
                       Reset View
@@ -696,21 +675,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                         onClick={() => setProximityRange(option.value)}
                         variant="outline"
                         className={`
-                            flex flex-col items-center p-2 h-auto
+                            flex flex-col items-center p-3 h-auto rounded-lg transition-all duration-200 hover:scale-[1.02]
                             ${proximityRange === option.value
-                            ? 'bg-white/20 text-white border-white/30'
-                            : 'bg-white/5 text-white/70 border-white/10'
+                            ? 'bg-spark-yellow/20 text-white border-spark-yellow/40 shadow-lg'
+                            : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
                           }
                           `}
                       >
-                        <span className="text-base font-medium">{option.label}</span>
-                        <span className="text-xs opacity-70">{option.description}</span>
+                        <span className="text-base font-data font-medium">{option.label}</span>
+                        <span className="text-xs opacity-70 font-body">{option.description}</span>
                       </Button>
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {categories.map((category) => {
                     const Icon = category.icon;
                     const count = events.filter(e =>
@@ -722,21 +701,23 @@ const EventMap = ({ mapsLoaded = false }) => {
                         key={category.id}
                         onClick={() => handleCategorySelect(category.id)}
                         className={`
-                            w-full flex items-center justify-between px-3 py-2 rounded-lg 
+                            w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 hover:scale-[1.02]
                             ${selectedCategory === category.id
-                            ? 'bg-white/10'
-                            : 'hover:bg-white/5'
+                            ? 'bg-pin-blue/20 border border-pin-blue/40 shadow-lg'
+                            : 'hover:bg-white/5 border border-transparent'
                           }
                           `}
                       >
                         <div className="flex items-center">
-                          <Icon className={`w-5 h-5 mr-3 ${category.color}`} />
-                          <span className="text-white text-sm">{category.name}</span>
+                          <div className="p-1.5 rounded-md bg-white/5 mr-3">
+                            <Icon className={`w-5 h-5 ${category.color}`} />
+                          </div>
+                          <span className="text-white text-sm font-body">{category.name}</span>
                         </div>
                         <span className={`
-                            text-xs px-2 py-0.5 rounded-full
+                            text-xs px-2 py-1 rounded-full font-data
                             ${selectedCategory === category.id
-                            ? 'bg-white/20 text-white'
+                            ? 'bg-pin-blue/30 text-white'
                             : 'bg-white/5 text-white/60'
                           }
                           `}>
@@ -751,7 +732,7 @@ const EventMap = ({ mapsLoaded = false }) => {
 
             <div className="p-4 mt-auto border-t border-white/10">
               <Button
-                className="w-full bg-white/10 hover:bg-white/15 text-white"
+                className="w-full btn-primary font-display font-semibold text-lg py-3 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
                 onClick={() => {
                   if (!user) {
                     setLoginMode('login');
@@ -763,8 +744,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                   setIsMobileMenuOpen(false);
                 }}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                {user ? 'New Event' : 'Sign in to Create Event'}
+                <Plus className="w-5 h-5 mr-2" />
+                {user ? 'Create Event' : 'Sign in to Create'}
               </Button>
             </div>
           </div>
@@ -828,10 +809,10 @@ const EventMap = ({ mapsLoaded = false }) => {
                 onClick={toggleDesktopList}
                 className={`
             absolute -left-10 top-4 
-            text-white/70 hover:text-white
+            text-white/70 hover:text-white hover:bg-pin-blue/10
             bg-neutral-900/95 backdrop-blur-sm
             border border-white/10 rounded-lg
-            transition-transform duration-300
+            transition-all duration-300
             ${showDesktopList ? 'rotate-180' : ''}
           `}
               >
@@ -841,14 +822,14 @@ const EventMap = ({ mapsLoaded = false }) => {
               <div className={`
           h-full w-full
           bg-neutral-900/95 backdrop-blur-sm
-          border border-white/10 rounded-lg 
-          overflow-hidden
+          border border-white/10 rounded-xl 
+          overflow-hidden shadow-2xl
           transition-all duration-300
           ${showDesktopList ? 'opacity-100' : 'opacity-0'}
         `}>
                 <div className="h-full flex flex-col">
                   <div className="p-4 border-b border-white/10">
-                    <h2 className="text-lg font-semibold text-white">
+                    <h2 className="text-lg font-display font-semibold text-white">
                       {mapCenter ? 'Events Nearby' : 'All Events'}
                     </h2>
                   </div>
@@ -892,38 +873,69 @@ const EventMap = ({ mapsLoaded = false }) => {
           rounded-t-xl z-40
           sm:hidden
           transform transition-transform duration-300
-          max-h-[80vh] overflow-y-auto
+          max-h-[80vh] overflow-y-auto shadow-2xl
           ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
         `}>
-          <div className="p-4 space-y-4">
+          <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">{selectedEvent.title}</h2>
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const category = getCategory(selectedEvent.category);
+                  const Icon = category.icon;
+                  return (
+                    <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
+                      <Icon className={`w-5 h-5 ${category.color}`} />
+                    </div>
+                  );
+                })()}
+                <h2 className="text-xl font-display font-semibold text-white">{selectedEvent.title}</h2>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
                 onClick={() => setSelectedEvent(null)}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <MapPin className="w-4 h-4" />
-              <span>{selectedEvent.address}</span>
+            <p className="text-white/90 font-body leading-relaxed">{selectedEvent.description}</p>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-pin-blue/10">
+                  <Calendar className="w-4 h-4 text-pin-blue" />
+                </div>
+                <span className="font-data">{selectedEvent.date}</span>
+              </div>
+
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-fresh-teal/10">
+                  <Clock className="w-4 h-4 text-fresh-teal" />
+                </div>
+                <span className="font-data">{selectedEvent.time}</span>
+              </div>
+
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
+                  <MapPin className="w-4 h-4 text-vibrant-magenta" />
+                </div>
+                <span className="font-body">{selectedEvent.address}</span>
+              </div>
+
+              {selectedEvent.distance !== undefined && (
+                <div className="text-sm text-white/70 font-data">
+                  📍 {selectedEvent.distance.toFixed(1)} miles away
+                </div>
+              )}
             </div>
 
-            {selectedEvent.distance !== undefined && (
-              <div className="text-sm text-white/70">
-                {selectedEvent.distance.toFixed(1)} miles away
-              </div>
-            )}
-
             {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
-              <div className="pt-4 space-y-2">
+              <div className="pt-4 space-y-3 border-t border-white/10">
                 <Button
                   variant="ghost"
-                  className="w-full bg-white/5 hover:bg-white/10 text-white"
+                  className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
                   onClick={() => {
                     setIsCreateFormOpen(true);
                     setSelectedLocation({
@@ -936,7 +948,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   Edit Event
                 </Button>
                 <Button
-                  className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500"
+                  className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
                   onClick={() => handleEventDelete(selectedEvent.id)}
                 >
                   Delete Event

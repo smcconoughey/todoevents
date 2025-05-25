@@ -1,3 +1,6 @@
+/* Import Google Fonts for the new brand typography */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap');
+
 /* Main application styles - critical for the application to render properly */
 @tailwind base;
 @tailwind components;
@@ -5,51 +8,128 @@
 
 :root,
 .dark-mode {
-  /* Common variables */
-  --transition-speed: 0.3s;
+  /* Brand Colors - Dark Mode */
+  --spark-yellow: #FFD82E;      /* Primary - slightly darker for contrast */
+  --pin-blue: #3C92FF;          /* Secondary - +10% lightness */
+  --vibrant-magenta: #E04A73;   /* Support accent - -15% lightness */
+  --fresh-teal: #2FB8A6;        /* Support accent - -15% lightness */
   
-  /* Dark theme (default) */
-  --bg-main: #0a0a0a;
-  --bg-card: rgba(23, 23, 23, 0.95);
-  --bg-card-hover: rgba(38, 38, 38, 0.95);
-  --bg-card-active: rgba(64, 64, 64, 0.95);
-  --text-primary: rgba(255, 255, 255, 0.9);
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-tertiary: rgba(255, 255, 255, 0.4);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-color-hover: rgba(255, 255, 255, 0.2);
-  --accent-color: #3B82F6;
-  --error-color: #EF4444;
-  --success-color: #22C55E;
+  /* Neutrals - Dark Mode */
+  --bg-main: #121212;           /* Dark background */
+  --bg-card: rgba(30, 30, 30, 0.95);
+  --bg-card-hover: rgba(45, 45, 45, 0.95);
+  --bg-card-active: rgba(60, 60, 60, 0.95);
+  --text-primary: #E4E4E4;      /* Light text */
+  --text-secondary: rgba(228, 228, 228, 0.8);
+  --text-tertiary: rgba(228, 228, 228, 0.6);
+  --border-color: rgba(255, 216, 46, 0.2);
+  --border-color-hover: rgba(255, 216, 46, 0.3);
+  
+  /* Semantic Colors - Dark Mode */
+  --accent-color: var(--spark-yellow);
+  --secondary-color: var(--pin-blue);
+  --error-color: var(--vibrant-magenta);
+  --success-color: var(--fresh-teal);
   --warning-color: #F59E0B;
+  
+  /* Animation & Transition */
+  --transition-speed: 0.25s;
+  --bounce-ease: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /* Light theme variables */
 [data-theme='light'],
 .light-mode {
-  --bg-main: #f8f9f3; /* Soft bamboo/mint background */
+  /* Brand Colors - Light Mode */
+  --spark-yellow: #FFEC3A;      /* Primary - Spark Yellow */
+  --pin-blue: #2684FF;          /* Secondary - Pin Blue */
+  --vibrant-magenta: #FF5A87;   /* Support accent - full vibrancy */
+  --fresh-teal: #38D6C0;        /* Support accent - full vibrancy */
+  
+  /* Neutrals - Light Mode */
+  --bg-main: #FFFFFF;           /* White background */
   --bg-card: rgba(255, 255, 255, 0.9);
-  --bg-card-hover: rgba(242, 247, 236, 0.95);
-  --bg-card-active: rgba(226, 235, 213, 0.95);
-  --text-primary: rgba(28, 40, 38, 0.95);
-  --text-secondary: rgba(28, 40, 38, 0.8);
-  --text-tertiary: rgba(28, 40, 38, 0.6);
-  --border-color: rgba(180, 208, 167, 0.5);
-  --border-color-hover: rgba(162, 188, 151, 0.7);
-  --accent-color: #52b788; /* Fresh mint accent */
-  --error-color: #e76f51;
-  --success-color: #2b9348;
-  --warning-color: #e9c46a;
+  --bg-card-hover: rgba(255, 236, 58, 0.1);
+  --bg-card-active: rgba(255, 236, 58, 0.2);
+  --text-primary: #1A1A1A;      /* Dark text */
+  --text-secondary: rgba(26, 26, 26, 0.8);
+  --text-tertiary: rgba(26, 26, 26, 0.6);
+  --border-color: rgba(38, 132, 255, 0.2);
+  --border-color-hover: rgba(38, 132, 255, 0.3);
+  
+  /* Semantic Colors - Light Mode */
+  --accent-color: var(--spark-yellow);
+  --secondary-color: var(--pin-blue);
+  --error-color: var(--vibrant-magenta);
+  --success-color: var(--fresh-teal);
+  --warning-color: #F59E0B;
 }
 
 /* Apply theme variables to Tailwind elements */
 @layer base {
+  /* Typography - Brand fonts */
   body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     @apply transition-colors duration-300;
     background-color: var(--bg-main) !important;
     color: var(--text-primary) !important;
   }
   
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 600;
+  }
+  
+  .font-display {
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  .font-mono, .font-data {
+    font-family: 'Space Grotesk', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  }
+  
+  /* Brand color utilities */
+  .text-spark-yellow { color: var(--spark-yellow) !important; }
+  .text-pin-blue { color: var(--pin-blue) !important; }
+  .text-vibrant-magenta { color: var(--vibrant-magenta) !important; }
+  .text-fresh-teal { color: var(--fresh-teal) !important; }
+  
+  .bg-spark-yellow { background-color: var(--spark-yellow) !important; }
+  .bg-pin-blue { background-color: var(--pin-blue) !important; }
+  .bg-vibrant-magenta { background-color: var(--vibrant-magenta) !important; }
+  .bg-fresh-teal { background-color: var(--fresh-teal) !important; }
+  
+  .border-spark-yellow { border-color: var(--spark-yellow) !important; }
+  .border-pin-blue { border-color: var(--pin-blue) !important; }
+  
+  /* Primary CTA styling */
+  .btn-primary {
+    background-color: var(--spark-yellow) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--spark-yellow) !important;
+    font-weight: 600;
+    transition: all var(--transition-speed) var(--bounce-ease);
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 236, 58, 0.3);
+  }
+  
+  .btn-secondary {
+    background-color: var(--pin-blue) !important;
+    color: white !important;
+    border: 2px solid var(--pin-blue) !important;
+    font-weight: 500;
+    transition: all var(--transition-speed) ease-out;
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--secondary-color) !important;
+    transform: translateY(-1px);
+  }
+  
+  /* Legacy Tailwind overrides for smooth transition */
   .bg-neutral-950 {
     background-color: var(--bg-main) !important;
   }
@@ -99,6 +179,12 @@
     background-color: var(--bg-card) !important;
     color: var(--text-primary) !important;
     border-color: var(--border-color) !important;
+    transition: all var(--transition-speed) ease-out;
+  }
+  
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--pin-blue) !important;
+    box-shadow: 0 0 0 3px rgba(38, 132, 255, 0.1) !important;
   }
   
   input::placeholder, textarea::placeholder {
@@ -114,66 +200,67 @@
     opacity: 0.8;
   }
 
+  /* Shadcn/ui color tokens updated for brand */
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 54 100% 62%;        /* Spark Yellow */
+    --primary-foreground: 0 0% 10%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217 100% 58%;     /* Pin Blue */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 54 100% 62%;         /* Spark Yellow */
+    --accent-foreground: 0 0% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 343 81% 69%;    /* Vibrant Magenta */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 217 100% 58% / 0.2;
+    --input: 217 100% 58% / 0.2;
+    --ring: 54 100% 62%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 89%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 89%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 89%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 54 100% 58%;        /* Spark Yellow - darker */
+    --primary-foreground: 0 0% 10%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 217 100% 63%;     /* Pin Blue - lighter */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 54 100% 58%;         /* Spark Yellow - darker */
+    --accent-foreground: 0 0% 10%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 343 81% 60%;    /* Vibrant Magenta - darker */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 54 100% 58% / 0.2;
+    --input: 54 100% 58% / 0.2;
+    --ring: 54 100% 58%;
   }
 
   /* Core HTML element fixes */
@@ -196,103 +283,111 @@
     will-change: transform;
   }
 
-  /* Google Maps specific fixes */
+  /* Google Maps specific fixes with brand colors */
   .gm-style {
-    @apply font-sans;
-    
+    /* Map controls styling */
     .gm-control-container {
-      @apply invert contrast-[90%] hue-rotate-180;
+      filter: brightness(0.9);
     }
-
+    
     img:not([src*="svg"]) {
-      @apply invert contrast-[85%] hue-rotate-180 brightness-90;
+      filter: brightness(0.8) contrast(1.1);
     }
   }
 
-  /* Light mode adjustments for Google Maps */
+  /* Light mode map adjustments */
   .light-mode .gm-style .gm-control-container,
-  [data-theme="light"] .gm-style .gm-control-container {
-    @apply invert-0 contrast-100 hue-rotate-0;
+  .light-mode .gm-style .gm-control-container * {
+    filter: brightness(1) !important;
   }
-
+  
   .light-mode .gm-style img:not([src*="svg"]),
-  [data-theme="light"] .gm-style img:not([src*="svg"]) {
-    @apply invert-0 contrast-100 hue-rotate-0 brightness-100;
+  .light-mode .gm-style img:not([src*="svg"]) * {
+    filter: brightness(1) contrast(1) !important;
   }
 
+  /* Hide unwanted Google Maps controls */
   .gm-fullscreen-control,
   .gm-svpc,
-  .gmnoprint {
-    @apply scale-90 sm:scale-100;
+  .gm-control-container .gm-style-cc {
+    display: none !important;
   }
 
-  /* Autocomplete styling */
+  /* Google Places Autocomplete styling with brand colors */
   .pac-container {
-    @apply mt-1 backdrop-blur-sm border rounded-lg z-[100] p-2 !important;
     background-color: var(--bg-card) !important;
-    border-color: var(--border-color) !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 0.75rem !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
   }
 
   .pac-item {
-    @apply px-2 py-1.5 bg-transparent border-t !important;
     color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
+    border-top: 1px solid var(--border-color) !important;
+    padding: 12px 16px !important;
+    
     &:first-child { @apply border-t-0 !important; }
     &:hover { 
-      background-color: var(--bg-card-hover) !important; 
+      background-color: var(--bg-card-hover) !important;
+      border-left: 3px solid var(--pin-blue) !important;
     }
   }
 
   .pac-item-query {
     color: var(--text-primary) !important;
+    font-weight: 500 !important;
   }
 
   .pac-matched {
-    color: var(--accent-color) !important;
+    color: var(--pin-blue) !important;
+    font-weight: 600 !important;
   }
 
-  /* Mobile specific fixes */
+  /* Mobile optimizations */
   @media (max-width: 640px) {
     body {
-      @apply overflow-hidden;
+      font-size: 14px;
     }
-
+    
     .map-container {
-      @apply h-[calc(100dvh-4rem)];
+      height: calc(100dvh - 3rem) !important;
     }
   }
 
-  /* Radix UI fixes */
+  /* Radix UI overrides */
   [data-radix-popper-content-wrapper] {
-    @apply z-[100] !important;
+    z-index: 9999 !important;
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar with brand colors */
   ::-webkit-scrollbar {
-    @apply w-2;
+    width: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    background-color: var(--bg-main);
+    background: var(--bg-card);
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: var(--text-tertiary);
-    @apply rounded-full;
+    background: var(--pin-blue);
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--text-secondary);
+    background: var(--spark-yellow);
   }
 }
 
-@layer components {
-  /* Custom components can be added here */
-}
-
+/* Brand-specific animations */
 @layer utilities {
-  /* Custom utilities can be added here */
+  .bounce-in {
+    animation: bounceIn 0.25s var(--bounce-ease);
+  }
+  
+  .pulse-yellow {
+    animation: pulseYellow 2s infinite;
+  }
+  
   .will-change-transform {
     will-change: transform;
   }
@@ -302,10 +397,37 @@
   }
 
   .backdrop-blur-md {
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
   }
 
   .backdrop-blur-lg {
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
+  }
+}
+
+/* Brand keyframes */
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3) translateY(20px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) translateY(-5px);
+  }
+  70% {
+    transform: scale(0.9) translateY(2px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseYellow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 236, 58, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 236, 58, 0);
   }
 }
