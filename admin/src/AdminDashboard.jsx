@@ -20,6 +20,11 @@ import {
   ChevronDown
 } from 'lucide-react';
 
+// Get API URL from environment variable or fallback to localhost
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Get base path for the admin panel
+const BASE_PATH = import.meta.env.BASE_PATH || '/admin';
+
 // Utility functions for API calls
 const fetchData = async (endpoint, method = 'GET', body = null) => {
   try {
@@ -40,7 +45,7 @@ const fetchData = async (endpoint, method = 'GET', body = null) => {
       ...(body && { body: JSON.stringify(body) })
     };
 
-    const response = await fetch(`http://127.0.0.1:8000${endpoint}`, config);
+    const response = await fetch(`${API_URL}${endpoint}`, config);
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -69,7 +74,7 @@ const LoginForm = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://127.0.0.1:8000/token', {
+      const response = await fetch(`${API_URL}/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
