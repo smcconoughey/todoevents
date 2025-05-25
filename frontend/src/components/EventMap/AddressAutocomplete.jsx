@@ -78,7 +78,8 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
           
           const requestOptions = {
             input,
-            types: ['address', 'geocode', '(cities)', '(regions)'],
+            // Remove specific types restriction to allow all location types
+            // This will allow cities, regions, addresses, etc.
             componentRestrictions: { country: 'us' },
             fields: ['formatted_address', 'geometry.location'],
           };

@@ -318,14 +318,26 @@ const EventMap = ({ mapsLoaded = false }) => {
   const handleAddressSelect = (data) => {
     if (!data || !data.location) return;
     
-    // Determine if this is a broader location search (city, state, region)
-    // We'll check if the address appears to be a specific street address
+    // More comprehensive check for address specificity
+    // If it contains a street number or apartment identifiers, it's likely a specific address
     const isSpecificAddress = /^\d+\s+\w+/.test(data.address) || 
-                             /\bSuite\b|\bApt\b|\bApartment\b|\bUnit\b|\b#\b/.test(data.address);
+                             /\b(Suite|Apt|Apartment|Unit|#)\b/i.test(data.address) ||
+                             /\b\d+\s+[A-Za-z0-9\s]+\b(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Ln|Lane|Dr|Drive|Way|Pl|Place|Ct|Court)\b/i.test(data.address);
     
-    // Set a larger proximity range for broader searches
-    if (!isSpecificAddress) {
-      setProximityRange(15); // Default to 15-mile radius for cities, states, regions
+    // If it contains city/state/region indicators, it's likely a broader search
+    const isBroadLocation = /\b[A-Z][a-z]+\s*,\s*[A-Z]{2}\b/.test(data.address) || // City, State format
+                           /\b[A-Z]{2}\b/.test(data.address) || // State abbreviation 
+                           !data.address.includes(','); // No commas often indicates just a city or region
+    
+    // Determine appropriate search radius based on address type
+    if (!isSpecificAddress || isBroadLocation) {
+      // For cities, states, or other broader regions
+      setProximityRange(15); // Default to 15-mile radius for broader searches
+      
+      // For very broad searches (state level), consider an even larger radius
+      if (data.address.split(',').length <= 2) {
+        setProximityRange(30); // Increase radius for state-level searches
+      }
     }
     
     setMapCenter(data.location);
