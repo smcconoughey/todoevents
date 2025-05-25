@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" width="48" height="64">
+  <!-- Pin body -->
+  <path d="M24 0C14.6 0 7 7.6 7 17c0 7.6 5.9 17.8 17 31.5 11.1-13.7 17-23.9 17-31.5C41 7.6 33.4 0 24 0z" 
+        fill="#1976D2" 
+        stroke="#FFFFFF" 
+        stroke-width="2" />
+        
+  <!-- Checkmark icon -->
+  <path d="M16 17L22 23L32 13" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+</svg> 
