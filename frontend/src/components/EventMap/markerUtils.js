@@ -16,6 +16,57 @@ export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DAR
   }
 
   try {
+    // Create a SVG string with the category icon embedded
+    // Use a more simplified and reliable approach for icon embedding
+    let iconPath = '';
+    
+    // Set default icon paths based on category
+    switch(category.id) {
+      case 'music':
+        iconPath = 'M9 18V5l12-2v13';
+        break;
+      case 'food-drink':
+        iconPath = 'M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2';
+        break;
+      case 'arts':
+        iconPath = 'M12 19l7-7 3 3-7 7-3-3z';
+        break;
+      case 'sports':
+        iconPath = 'M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z';
+        break;
+      case 'automotive':
+        iconPath = 'M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2';
+        break;
+      case 'airshows':
+        iconPath = 'M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z';
+        break;
+      case 'vehicle-sports':
+        iconPath = 'M12 10.189V14 M12 2v3 M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6';
+        break;
+      case 'community':
+        iconPath = 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75';
+        break;
+      case 'religious':
+        iconPath = 'M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22 M10 9h4 M12 7v5';
+        break;
+      case 'education':
+        iconPath = 'M2 10l10-5 10 5-10 5z M6 12v5c0 2 2 3 6 3s6-1 6-3v-5';
+        break;
+      case 'veteran':
+        iconPath = 'M15.477 12.89 17 22l-5-3-5 3 1.523-9.11';
+        break;
+      case 'cookout':
+        iconPath = 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z';
+        break;
+      case 'graduation':
+        iconPath = 'M22 10v6M2 10l10-5 10 5-10 5z';
+        break;
+      case 'all':
+      default:
+        // Default location pin icon
+        iconPath = 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z';
+    }
+
     // Create a map pin marker with the category icon
     const svgString = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" width="48" height="64">
@@ -25,9 +76,9 @@ export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DAR
               stroke="${strokeColor}" 
               stroke-width="2" />
               
-        <!-- Icon container - center the icon in the pin -->
+        <!-- Icon - using simplified path -->
         <g transform="translate(12, 10)" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          ${getIconPath(category.icon)}
+          <path d="${iconPath}" />
         </g>
       </svg>
     `;
@@ -52,7 +103,8 @@ export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DAR
   }
 };
 
-// Helper function to extract the SVG path from Lucide icons
+// Helper function to extract the SVG path from Lucide icons - we're not using this anymore
+// because it was causing issues. Keeping for reference but using hardcoded paths instead.
 const getIconPath = (iconComponent) => {
   try {
     // Try to get SVG paths from the icon component
@@ -85,6 +137,7 @@ const getIconPath = (iconComponent) => {
 export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
   const strokeColor = isDarkMode ? '#FFFFFF' : '#52B788';
+  const textColor = isDarkMode ? '#333333' : '#333333'; // Dark text for better contrast on both themes
   
   // If we have no categories or only one, use simple cluster
   if (!categories || categories.length <= 1) {
@@ -142,7 +195,7 @@ export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${radius*2} ${radius*2}" width="${radius*2}" height="${radius*2}">
         ${svgPaths}
         <circle cx="${radius}" cy="${radius}" r="${radius-6}" fill="white" />
-        <text x="${radius}" y="${radius+5}" text-anchor="middle" font-size="${radius/1.5}" font-weight="bold" fill="#333">${count}</text>
+        <text x="${radius}" y="${radius+5}" text-anchor="middle" font-size="${radius/1.5}" font-weight="bold" fill="${textColor}">${count}</text>
       </svg>
     `;
     
