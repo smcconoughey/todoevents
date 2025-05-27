@@ -7,14 +7,12 @@ services:
     staticPublishPath: ./dist
     routes:
       - type: rewrite
-        source: /admin/*
-        destination: /admin/index.html
+        source: /*
+        destination: /index.html
     envVars:
       - key: NODE_VERSION
         value: 18.x
       - key: VITE_API_URL
         value: https://todoevents-backend.onrender.com
       - key: NODE_ENV
-        value: production
-      - key: BASE_PATH
-        value: /admin 
+        value: production 

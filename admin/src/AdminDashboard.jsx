@@ -20,10 +20,9 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-// Get API URL from environment variable or fallback to localhost
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-// Get base path for the admin panel
-const BASE_PATH = import.meta.env.BASE_PATH || '/admin';
+// Get API URL from environment variable or fallback to production backend
+const API_URL = import.meta.env.VITE_API_URL || 'https://todoevents-backend.onrender.com';
+console.log('Admin Dashboard API URL:', API_URL);
 
 // Utility functions for API calls
 const fetchData = async (endpoint, method = 'GET', body = null) => {
@@ -45,17 +44,27 @@ const fetchData = async (endpoint, method = 'GET', body = null) => {
       ...(body && { body: JSON.stringify(body) })
     };
 
-    const response = await fetch(`${API_URL}${endpoint}`, config);
+    const url = `${API_URL}${endpoint}`;
+    console.log(`Making ${method} request to:`, url);
+
+    const response = await fetch(url, config);
 
     if (!response.ok) {
       if (response.status === 401) {
+        console.error('Authentication failed, removing token');
         localStorage.removeItem('token');
         window.location.reload();
         throw new Error('Unauthorized');
       }
 
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Network response was not ok');
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     return response.json();
@@ -73,8 +82,13 @@ const LoginForm = ({ onLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+    
     try {
-      const response = await fetch(`${API_URL}/token`, {
+      const url = `${API_URL}/token`;
+      console.log('Attempting login to:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -86,14 +100,21 @@ const LoginForm = ({ onLogin }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          throw new Error(`Login failed: HTTP ${response.status}`);
+        }
+        throw new Error(errorData.detail || errorData.message || 'Login failed');
       }
 
       const data = await response.json();
+      console.log('Login successful');
       localStorage.setItem('token', data.access_token);
       onLogin();
     } catch (error) {
+      console.error('Login error:', error);
       setError(error.message);
     }
   };
