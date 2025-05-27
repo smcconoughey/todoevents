@@ -748,10 +748,27 @@ async def create_user(user: UserCreate):
             # Insert user with optimized query - with timeout handling
             try:
                 logger.info(f"Inserting new user into database: {user.email}")
-                c.execute(
-                    f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                    (user.email, hashed_password, user.role)
-                )
+                
+                # Use RETURNING id for PostgreSQL, different approach for SQLite
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL with RETURNING
+                    c.execute(
+                        f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder}) RETURNING id",
+                        (user.email, hashed_password, user.role)
+                    )
+                    result = c.fetchone()
+                    last_id = result['id'] if result else None
+                else:
+                    # SQLite without RETURNING
+                    c.execute(
+                        f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                        (user.email, hashed_password, user.role)
+                    )
+                    last_id = c.lastrowid
+                    
+                if not last_id:
+                    raise ValueError("Failed to get ID of created user")
+                    
                 conn.commit()
                 logger.info(f"User inserted successfully: {user.email}")
             except Exception as e:
@@ -769,17 +786,8 @@ async def create_user(user: UserCreate):
                 else:
                     raise HTTPException(status_code=500, detail="Error creating user")
             
-            # Get the created user ID
+            # Get the created user data
             try:
-                # For PostgreSQL, we need to use a different method to get the last inserted ID
-                if IS_PRODUCTION and DB_URL:
-                    c.execute("SELECT lastval()")
-                    last_id = c.fetchone()
-                    if last_id is None:
-                        raise ValueError("Failed to get last inserted ID")
-                    last_id = last_id[0] if isinstance(last_id, (list, tuple, dict)) else last_id
-                else:
-                    last_id = c.lastrowid
                     
                 logger.info(f"Fetching created user with ID {last_id}")
                 c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (last_id,))
