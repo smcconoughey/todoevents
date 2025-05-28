@@ -1651,6 +1651,61 @@ async def update_user_role(
         logger.error(f"Error updating user role {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error updating user role")
 
+class AdminPasswordReset(BaseModel):
+    new_password: str
+    
+    @validator('new_password')
+    def validate_password(cls, v):
+        # Use the PasswordValidator to get validation results
+        validation = PasswordValidator.validate_password(v)
+        
+        # If not valid, raise a validation error with all feedback
+        if not validation['is_valid']:
+            raise ValueError('\n'.join(validation['feedback']))
+        
+        return v
+
+@app.put("/admin/users/{user_id}/password")
+async def admin_reset_user_password(
+    user_id: int,
+    password_data: AdminPasswordReset,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Reset a user's password (admin-only)
+    """
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user exists
+            c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
+            user = c.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Hash the new password
+            hashed_password = get_password_hash(password_data.new_password)
+            
+            # Update the user's password
+            c.execute(f"UPDATE users SET hashed_password = {placeholder} WHERE id = {placeholder}", (hashed_password, user_id))
+            conn.commit()
+            
+            # Log the activity
+            log_activity(current_user['id'], "admin_password_reset", f"Reset password for user {user['email']}")
+            
+            return {"detail": "Password reset successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting password for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error resetting password")
+
 @app.get("/admin/activity-logs")
 async def get_activity_logs(
     current_user: dict = Depends(get_current_user),

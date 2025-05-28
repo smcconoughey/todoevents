@@ -17,7 +17,13 @@ import {
   MessageSquare,
   Shield,
   Download,
-  ChevronDown
+  ChevronDown,
+  Edit,
+  Key,
+  Save,
+  Plus,
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 
 // Get API URL from environment variable or fallback to production backend
@@ -72,6 +78,34 @@ const fetchData = async (endpoint, method = 'GET', body = null) => {
     console.error('API Error:', error);
     throw error;
   }
+};
+
+// Modal Component
+const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  if (!isOpen) return null;
+
+  const sizeClasses = {
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl'
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto`}>
+        <div className="flex justify-between items-center p-6 border-b">
+          <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="p-6">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // Login Component
@@ -170,6 +204,252 @@ const LoginForm = ({ onLogin }) => {
   );
 };
 
+// User Edit Modal
+const UserEditModal = ({ user, isOpen, onClose, onSave }) => {
+  const [editUser, setEditUser] = useState(user || {});
+  const [newPassword, setNewPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setEditUser(user);
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    try {
+      // Update user role if changed
+      if (editUser.role !== user.role) {
+        await fetchData(`/admin/users/${user.id}/role`, 'PUT', { role: editUser.role });
+      }
+      
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Error updating user: ' + error.message);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!newPassword) {
+      alert('Please enter a new password');
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      await fetchData(`/admin/users/${user.id}/password`, 'PUT', { new_password: newPassword });
+      alert('Password reset successfully');
+      setNewPassword('');
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      alert('Error resetting password: ' + error.message);
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  if (!user) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Edit User: ${user.email}`} size="lg">
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+          <input
+            type="email"
+            value={editUser.email || ''}
+            disabled
+            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+          <select
+            value={editUser.role || 'user'}
+            onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-medium text-gray-800 mb-4">Reset Password</h3>
+          <div className="flex space-x-2">
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handlePasswordReset}
+              disabled={isResettingPassword}
+              className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
+            >
+              {isResettingPassword ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Password must be at least 8 characters with uppercase, lowercase, number, and special character.
+          </p>
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// Event Edit Modal
+const EventEditModal = ({ event, isOpen, onClose, onSave }) => {
+  const [editEvent, setEditEvent] = useState(event || {});
+
+  useEffect(() => {
+    if (event) {
+      setEditEvent(event);
+    }
+  }, [event]);
+
+  const handleSave = async () => {
+    try {
+      await fetchData(`/events/${event.id}`, 'PUT', editEvent);
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert('Error updating event: ' + error.message);
+    }
+  };
+
+  if (!event) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Edit Event: ${event.title}`} size="xl">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+            <input
+              type="text"
+              value={editEvent.title || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <input
+              type="text"
+              value={editEvent.category || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, category: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+            <input
+              type="date"
+              value={editEvent.date || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, date: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+            <input
+              type="time"
+              value={editEvent.time || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, time: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+          <textarea
+            value={editEvent.description || ''}
+            onChange={(e) => setEditEvent({ ...editEvent, description: e.target.value })}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+          <input
+            type="text"
+            value={editEvent.address || ''}
+            onChange={(e) => setEditEvent({ ...editEvent, address: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
+            <input
+              type="number"
+              step="any"
+              value={editEvent.lat || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, lat: parseFloat(e.target.value) })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
+            <input
+              type="number"
+              step="any"
+              value={editEvent.lng || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, lng: parseFloat(e.target.value) })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 // Main Admin Dashboard Component
 const AdminDashboard = () => {
   // State Management
@@ -180,6 +460,10 @@ const AdminDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [userDetails, setUserDetails] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
+
+  // Modal States
+  const [editingUser, setEditingUser] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   // Search and Filter States
   const [userSearch, setUserSearch] = useState('');
@@ -268,6 +552,40 @@ const AdminDashboard = () => {
     setUserDetails(null);
   };
 
+  // Refresh data function
+  const refreshData = async () => {
+    try {
+      const [usersData, eventsData] = await Promise.all([
+        fetchData('/admin/users'),
+        fetchData('/events')
+      ]);
+
+      setUsers(usersData);
+      setEvents(eventsData);
+
+      // Recompute analytics
+      const userRoleDistribution = usersData.reduce((acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      }, {});
+
+      const eventCategoryDistribution = eventsData.reduce((acc, event) => {
+        acc[event.category] = (acc[event.category] || 0) + 1;
+        return acc;
+      }, {});
+
+      setAnalytics({
+        userRoleDistribution,
+        eventCategoryDistribution,
+        totalUsers: usersData.length,
+        totalEvents: eventsData.length,
+        recentActivity: []
+      });
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   // Filtered Users
   const filteredUsers = useMemo(() => {
     return users.filter(user =>
@@ -284,33 +602,49 @@ const AdminDashboard = () => {
     );
   }, [events, eventSearch, eventFilterCategory]);
 
+  // Delete user function
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await fetchData(`/admin/users/${userId}`, 'DELETE');
+      await refreshData();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  // Delete event function
+  const handleDeleteEvent = async (eventId) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await fetchData(`/events/${eventId}`, 'DELETE');
+      await refreshData();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   // Bulk User Actions
   const handleBulkUserAction = async (action) => {
     try {
       switch (action) {
         case 'delete':
+          if (!confirm(`Are you sure you want to delete ${selectedUsers.length} users? This action cannot be undone.`)) {
+            return;
+          }
           await Promise.all(
             selectedUsers.map(userId =>
               fetchData(`/admin/users/${userId}`, 'DELETE')
             )
           );
-          setUsers(users.filter(user => !selectedUsers.includes(user.id)));
           setSelectedUsers([]);
-          break;
-        case 'changeRole':
-          await Promise.all(
-            selectedUsers.map(userId =>
-              fetchData(`/admin/users/${userId}/role`, 'PUT', {
-                role: userFilterRole === 'admin' ? 'user' : 'admin'
-              })
-            )
-          );
-          setUsers(users.map(user =>
-            selectedUsers.includes(user.id)
-              ? { ...user, role: userFilterRole === 'admin' ? 'user' : 'admin' }
-              : user
-          ));
-          setSelectedUsers([]);
+          await refreshData();
           break;
       }
     } catch (error) {
@@ -323,13 +657,16 @@ const AdminDashboard = () => {
     try {
       switch (action) {
         case 'delete':
+          if (!confirm(`Are you sure you want to delete ${selectedEvents.length} events? This action cannot be undone.`)) {
+            return;
+          }
           await Promise.all(
             selectedEvents.map(eventId =>
               fetchData(`/events/${eventId}`, 'DELETE')
             )
           );
-          setEvents(events.filter(event => !selectedEvents.includes(event.id)));
           setSelectedEvents([]);
+          await refreshData();
           break;
       }
     } catch (error) {
@@ -509,6 +846,7 @@ const AdminDashboard = () => {
       </div>
     );
   };
+
   // User Management Component
   const UserManagement = () => {
     return (
@@ -530,12 +868,6 @@ const AdminDashboard = () => {
                   className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
                 >
                   Delete Selected
-                </button>
-                <button
-                  onClick={() => handleBulkUserAction('changeRole')}
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                >
-                  Change Role
                 </button>
               </div>
             )}
@@ -620,13 +952,19 @@ const AdminDashboard = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => {
-                        // Implement user details/edit modal
-                        setError('User edit functionality not implemented yet');
+                        setEditingUser(user);
                       }}
                       className="text-blue-500 hover:text-blue-700"
                       title="Edit User"
                     >
-                      <Users className="w-5 h-5" />
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="text-red-500 hover:text-red-700"
+                      title="Delete User"
+                    >
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </td>
@@ -694,7 +1032,7 @@ const AdminDashboard = () => {
               <th className="p-3 text-left">
                 <input
                   type="checkbox"
-                  checked={selectedEvents.length === filteredEvents.length}
+                  checked={selectedEvents.length === filteredEvents.length && filteredEvents.length > 0}
                   onChange={(e) =>
                     setSelectedEvents(
                       e.target.checked
@@ -708,6 +1046,7 @@ const AdminDashboard = () => {
               <th className="p-3 text-left">Title</th>
               <th className="p-3 text-left">Date</th>
               <th className="p-3 text-left">Category</th>
+              <th className="p-3 text-left">Created By</th>
               <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
@@ -727,8 +1066,15 @@ const AdminDashboard = () => {
                     }
                   />
                 </td>
-                <td className="p-3">{event.id}</td>
-                <td className="p-3">{event.title}</td>
+                <td className="p-3">
+                  <span className="text-xs text-gray-500 font-mono">#{event.id}</span>
+                </td>
+                <td className="p-3">
+                  <div>
+                    <div className="font-medium">{event.title}</div>
+                    <div className="text-sm text-gray-500 truncate max-w-xs">{event.description}</div>
+                  </div>
+                </td>
                 <td className="p-3">{event.date}</td>
                 <td className="p-3">
                   <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
@@ -736,16 +1082,27 @@ const AdminDashboard = () => {
                   </span>
                 </td>
                 <td className="p-3">
+                  <span className="text-sm text-gray-600">
+                    User #{event.created_by}
+                  </span>
+                </td>
+                <td className="p-3">
                   <div className="flex space-x-2">
                     <button
                       onClick={() => {
-                        // Implement event details/edit modal
-                        setError('Event edit functionality not implemented yet');
+                        setEditingEvent(event);
                       }}
                       className="text-blue-500 hover:text-blue-700"
-                      title="View Event Details"
+                      title="Edit Event"
                     >
-                      <Calendar className="w-5 h-5" />
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEvent(event.id)}
+                      className="text-red-500 hover:text-red-700"
+                      title="Delete Event"
+                    >
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </td>
@@ -891,7 +1248,6 @@ const AdminDashboard = () => {
     );
   };
 
-
   // The rest of the AdminDashboard component continues...
   return (
     <div className="min-h-screen bg-gray-50">
@@ -960,7 +1316,6 @@ const AdminDashboard = () => {
           )}
 
           {/* Content Sections */}
-          {/* Content Sections */}
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'users' && <UserManagement />}
           {activeTab === 'events' && <EventManagement />}
@@ -968,6 +1323,30 @@ const AdminDashboard = () => {
           {activeTab === 'moderation' && <ModerationTools />}
         </div>
       </div>
+
+      {/* User Edit Modal */}
+      {editingUser && (
+        <UserEditModal
+          user={editingUser}
+          isOpen={!!editingUser}
+          onClose={() => setEditingUser(null)}
+          onSave={() => {
+            refreshData();
+          }}
+        />
+      )}
+
+      {/* Event Edit Modal */}
+      {editingEvent && (
+        <EventEditModal
+          event={editingEvent}
+          isOpen={!!editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSave={() => {
+            refreshData();
+          }}
+        />
+      )}
     </div>
   );
 };

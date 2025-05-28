@@ -85,7 +85,10 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
             <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
               <Icon className={`w-6 h-6 ${category.color}`} />
             </div>
-            <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
+            <div className="flex flex-col">
+              <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
+              <span className="text-xs text-white/40 font-mono">ID: {event.id}</span>
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -178,6 +181,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-white font-display font-medium truncate">{event.title}</h3>
+              <span className="text-xs text-white/30 font-mono">#{event.id}</span>
               {user && event.created_by === user.id && (
                 <span className="text-xs text-spark-yellow font-data px-2 py-0.5 bg-spark-yellow/10 rounded-full border border-spark-yellow/20">
                   Your event
@@ -877,7 +881,10 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </div>
                   );
                 })()}
-                <h2 className="text-xl font-display font-semibold text-white">{selectedEvent.title}</h2>
+                <div className="flex flex-col">
+                  <h2 className="text-xl font-display font-semibold text-white">{selectedEvent.title}</h2>
+                  <span className="text-xs text-white/40 font-mono">ID: {selectedEvent.id}</span>
+                </div>
               </div>
               <Button
                 variant="ghost"
