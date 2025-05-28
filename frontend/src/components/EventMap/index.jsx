@@ -40,6 +40,8 @@ import AddressAutocomplete from './AddressAutocomplete';
 import { AuthContext } from './AuthContext';
 import LoginForm from './LoginForm';
 import CalendarFilter from './CalendarFilter';
+import ShareCard from './ShareCard';
+import * as htmlToImage from 'html-to-image';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -72,10 +74,44 @@ const isDateInRange = (dateStr, range) => {
 
 
 const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
+  const [activeTab, setActiveTab] = React.useState('details');
+  const shareCardRef = React.useRef();
+  const [downloadStatus, setDownloadStatus] = React.useState('');
+
   if (!event) return null;
 
   const category = getCategory(event.category);
   const Icon = category.icon;
+
+  // Download ShareCard as image
+  const handleDownload = async () => {
+    setDownloadStatus('');
+    try {
+      const node = shareCardRef.current;
+      const dataUrl = await htmlToImage.toPng(node);
+      const link = document.createElement('a');
+      link.download = `event-${event.id}-share.png`;
+      link.href = dataUrl;
+      link.click();
+      setDownloadStatus('Downloaded!');
+    } catch (err) {
+      setDownloadStatus('Error exporting image');
+    }
+  };
+
+  // Copy event link
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/?event=${event.id}`;
+    navigator.clipboard.writeText(url);
+    setDownloadStatus('Link copied!');
+    setTimeout(() => setDownloadStatus(''), 1500);
+  };
+
+  // Facebook share
+  const handleFacebookShare = () => {
+    const url = encodeURIComponent(`${window.location.origin}/?event=${event.id}`);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+  };
 
   return (
     <div className="absolute right-4 top-4 w-96 bg-neutral-900/95 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden z-20 shadow-2xl">
@@ -99,53 +135,75 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
             <X className="h-4 w-4" />
           </Button>
         </div>
-
-        <p className="text-white/90 font-body leading-relaxed">{event.description}</p>
-
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 text-sm text-white/70">
-            <div className="p-1.5 rounded-md bg-pin-blue/10">
-              <Calendar className="w-4 h-4 text-pin-blue" />
-            </div>
-            <span className="font-data">{event.date}</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-sm text-white/70">
-            <div className="p-1.5 rounded-md bg-fresh-teal/10">
-              <Clock className="w-4 h-4 text-fresh-teal" />
-            </div>
-            <span className="font-data">{event.time}</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-sm text-white/70">
-            <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
-              <MapPin className="w-4 h-4 text-vibrant-magenta" />
-            </div>
-            <span className="font-body">{event.address}</span>
-          </div>
-
-          {event.distance !== undefined && (
-            <div className="text-sm text-white/70 font-data">
-              📍 {event.distance.toFixed(1)} miles away
-            </div>
-          )}
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-white/10 mb-2">
+          <button
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+            onClick={() => setActiveTab('details')}
+          >Details</button>
+          <button
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+            onClick={() => setActiveTab('share')}
+          >Share</button>
         </div>
-
-        {user && (user.id === event.created_by || user.role === 'admin') && (
-          <div className="pt-4 space-y-3 border-t border-white/10">
-            <Button
-              variant="ghost"
-              className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
-              onClick={onEdit}
-            >
-              Edit Event
-            </Button>
-            <Button
-              className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
-              onClick={() => onDelete(event.id)}
-            >
-              Delete Event
-            </Button>
+        {activeTab === 'details' ? (
+          <>
+            <p className="text-white/90 font-body leading-relaxed">{event.description}</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-pin-blue/10">
+                  <Calendar className="w-4 h-4 text-pin-blue" />
+                </div>
+                <span className="font-data">{event.date}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-fresh-teal/10">
+                  <Clock className="w-4 h-4 text-fresh-teal" />
+                </div>
+                <span className="font-data">{event.time}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
+                  <MapPin className="w-4 h-4 text-vibrant-magenta" />
+                </div>
+                <span className="font-body">{event.address}</span>
+              </div>
+              {event.distance !== undefined && (
+                <div className="text-sm text-white/70 font-data">
+                  📍 {event.distance.toFixed(1)} miles away
+                </div>
+              )}
+            </div>
+            {user && (user.id === event.created_by || user.role === 'admin') && (
+              <div className="pt-4 space-y-3 border-t border-white/10">
+                <Button
+                  variant="ghost"
+                  className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={onEdit}
+                >
+                  Edit Event
+                </Button>
+                <Button
+                  className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={() => onDelete(event.id)}
+                >
+                  Delete Event
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div ref={shareCardRef} className="my-2">
+              <ShareCard event={event} />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Button onClick={handleDownload} className="bg-spark-yellow text-neutral-900 font-bold">Download Image</Button>
+              <Button onClick={handleCopyLink} variant="secondary">Copy Link</Button>
+              <Button onClick={handleFacebookShare} variant="secondary">Share to Facebook</Button>
+            </div>
+            {downloadStatus && <div className="text-xs text-white/70 mt-1">{downloadStatus}</div>}
+            <div className="text-xs text-white/40 mt-2">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
           </div>
         )}
       </div>
@@ -224,6 +282,8 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [loginMode, setLoginMode] = useState('login');
   const [editingEvent, setEditingEvent] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
+  const [shareCardRef, setShareCardRef] = useState(null);
 
   const mapRef = useRef(null);
 
@@ -895,60 +955,82 @@ const EventMap = ({ mapsLoaded = false }) => {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-
-            <p className="text-white/90 font-body leading-relaxed">{selectedEvent.description}</p>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm text-white/70">
-                <div className="p-1.5 rounded-md bg-pin-blue/10">
-                  <Calendar className="w-4 h-4 text-pin-blue" />
-                </div>
-                <span className="font-data">{selectedEvent.date}</span>
-              </div>
-
-              <div className="flex items-center gap-3 text-sm text-white/70">
-                <div className="p-1.5 rounded-md bg-fresh-teal/10">
-                  <Clock className="w-4 h-4 text-fresh-teal" />
-                </div>
-                <span className="font-data">{selectedEvent.time}</span>
-              </div>
-
-              <div className="flex items-center gap-3 text-sm text-white/70">
-                <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
-                  <MapPin className="w-4 h-4 text-vibrant-magenta" />
-                </div>
-                <span className="font-body">{selectedEvent.address}</span>
-              </div>
-
-              {selectedEvent.distance !== undefined && (
-                <div className="text-sm text-white/70 font-data">
-                  📍 {selectedEvent.distance.toFixed(1)} miles away
-                </div>
-              )}
+            {/* Tabs for mobile */}
+            <div className="flex gap-2 border-b border-white/10 mb-2">
+              <button
+                className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+                onClick={() => setActiveTab('details')}
+              >Details</button>
+              <button
+                className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+                onClick={() => setActiveTab('share')}
+              >Share</button>
             </div>
-
-            {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
-              <div className="pt-4 space-y-3 border-t border-white/10">
-                <Button
-                  variant="ghost"
-                  className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
-                  onClick={() => {
-                    setIsCreateFormOpen(true);
-                    setSelectedLocation({
-                      lat: selectedEvent.lat,
-                      lng: selectedEvent.lng,
-                      address: selectedEvent.address
-                    });
-                  }}
-                >
-                  Edit Event
-                </Button>
-                <Button
-                  className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
-                  onClick={() => handleEventDelete(selectedEvent.id)}
-                >
-                  Delete Event
-                </Button>
+            {activeTab === 'details' ? (
+              <>
+                <p className="text-white/90 font-body leading-relaxed">{selectedEvent.description}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-pin-blue/10">
+                      <Calendar className="w-4 h-4 text-pin-blue" />
+                    </div>
+                    <span className="font-data">{selectedEvent.date}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-fresh-teal/10">
+                      <Clock className="w-4 h-4 text-fresh-teal" />
+                    </div>
+                    <span className="font-data">{selectedEvent.time}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
+                      <MapPin className="w-4 h-4 text-vibrant-magenta" />
+                    </div>
+                    <span className="font-body">{selectedEvent.address}</span>
+                  </div>
+                  {selectedEvent.distance !== undefined && (
+                    <div className="text-sm text-white/70 font-data">
+                      📍 {selectedEvent.distance.toFixed(1)} miles away
+                    </div>
+                  )}
+                </div>
+                {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
+                  <div className="pt-4 space-y-3 border-t border-white/10">
+                    <Button
+                      variant="ghost"
+                      className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
+                      onClick={() => {
+                        setIsCreateFormOpen(true);
+                        setSelectedLocation({
+                          lat: selectedEvent.lat,
+                          lng: selectedEvent.lng,
+                          address: selectedEvent.address
+                        });
+                      }}
+                    >
+                      Edit Event
+                    </Button>
+                    <Button
+                      className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
+                      onClick={() => handleEventDelete(selectedEvent.id)}
+                    >
+                      Delete Event
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <div ref={shareCardRef} className="my-2">
+                  <ShareCard event={selectedEvent} />
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button onClick={handleDownload} className="bg-spark-yellow text-neutral-900 font-bold">Download Image</Button>
+                  <Button onClick={handleCopyLink} variant="secondary">Copy Link</Button>
+                  <Button onClick={handleFacebookShare} variant="secondary">Share to Facebook</Button>
+                </div>
+                {downloadStatus && <div className="text-xs text-white/70 mt-1">{downloadStatus}</div>}
+                <div className="text-xs text-white/40 mt-2">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
               </div>
             )}
           </div>
