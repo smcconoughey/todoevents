@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import { ThemeContext } from "../ThemeContext";
 import { getCategory } from "./categoryConfig";
-import pinLogo from "../../public/images/pin-logo.png"; // Adjust path if needed
 
 // Helper to format date/time
 function formatDate(dateStr, timeStr) {
@@ -32,7 +31,7 @@ const ShareCard = ({ event }) => {
     >
       {/* Branding/logo */}
       <img
-        src={pinLogo}
+        src="/images/pin-logo.png"
         alt="Site Logo"
         className="absolute top-4 right-4 w-12 h-12 opacity-80"
         style={{ filter: theme === "dark" ? "invert(1)" : "none" }}
@@ -42,7 +41,7 @@ const ShareCard = ({ event }) => {
         <div className="w-16 h-16 mb-2">
           {/* You can use an SVG or image for the pin, or render your custom marker here */}
           <img
-            src={pinLogo}
+            src="/images/pin-logo.png"
             alt="Event Pin"
             className="w-full h-full object-contain"
             style={{ filter: theme === "dark" ? "invert(1)" : "none" }}
