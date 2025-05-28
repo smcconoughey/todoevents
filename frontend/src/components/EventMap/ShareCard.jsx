@@ -40,7 +40,7 @@ const ShareCard = ({ event }) => {
   const secondaryTextColor = theme === "dark" ? "#d4d4d4" : "#525252";
   const borderColor = theme === "dark" ? "#404040" : "#e5e5e5";
 
-  // Generate Google Maps Static API URL with a pin and circle
+  // Generate Google Maps Static API URL with a custom marker and circle
   useEffect(() => {
     if (event?.lat && event?.lng) {
       // Create a URL for a static map with the event location
@@ -52,22 +52,64 @@ const ShareCard = ({ event }) => {
       const zoom = 13;
       const size = "400x200";
       const scale = 2; // For higher resolution
-      const mapType = theme === "dark" ? "roadmap" : "roadmap";
+      const mapType = "roadmap";
       
-      // Custom marker for the event location
-      const markerColor = encodeURIComponent(category.color?.replace('#', '') || "FF4444");
-      const marker = `markers=color:${markerColor}%7C${center}`;
+      // Use custom SVG marker based on category
+      // Base64 encode an SVG that matches the category color
+      const categoryColor = category.color?.replace('#', '') || "FFEC3A";
+      const svgMarker = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${categoryColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+      `;
+      
+      // Base64 encode the SVG for the URL
+      const base64Marker = btoa(svgMarker);
+      const marker = `markers=icon:data:image/svg+xml;base64,${base64Marker}%7C${center}`;
       
       // Circle showing 5-mile radius
-      // API uses path=fillcolor:0xAARRGGBB|strokecolor:0xAARRGGBB|weight:N|enc:encoded_polyline
-      // We'll use a simple circle around the center point
       const radiusInMeters = 8047; // 5 miles ≈ 8047 meters
-      const circleParams = `path=fillcolor:0x0000AA20|strokecolor:0x0000AA80|weight:2|${center}|circle:${radiusInMeters}`;
+      const circleParams = `path=fillcolor:0x${categoryColor}20|strokecolor:0x${categoryColor}80|weight:2|${center}|circle:${radiusInMeters}`;
       
-      // Style parameter for dark mode
-      const mapStyle = theme === "dark" 
-        ? "&style=element:geometry%7Ccolor:0x212121&style=element:labels.icon%7Cvisibility:off&style=element:labels.text.fill%7Ccolor:0x757575&style=element:labels.text.stroke%7Ccolor:0x212121&style=feature:administrative%7Celement:geometry%7Ccolor:0x757575&style=feature:administrative.country%7Celement:labels.text.fill%7Ccolor:0x9e9e9e&style=feature:administrative.land_parcel%7Cvisibility:off&style=feature:administrative.locality%7Celement:labels.text.fill%7Ccolor:0xbdbdbd&style=feature:administrative.neighborhood%7Cvisibility:off&style=feature:poi%7Celement:labels.text%7Cvisibility:off&style=feature:poi%7Celement:labels.text.fill%7Ccolor:0x757575&style=feature:poi.business%7Cvisibility:off&style=feature:poi.park%7Celement:geometry%7Ccolor:0x181818&style=feature:poi.park%7Celement:labels.text.fill%7Ccolor:0x616161&style=feature:poi.park%7Celement:labels.text.stroke%7Ccolor:0x1b1b1b&style=feature:road%7Celement:geometry.fill%7Ccolor:0x2c2c2c&style=feature:road%7Celement:labels%7Cvisibility:off&style=feature:road%7Celement:labels.text.fill%7Ccolor:0x8a8a8a&style=feature:road.arterial%7Celement:geometry%7Ccolor:0x373737&style=feature:road.highway%7Celement:geometry%7Ccolor:0x3c3c3c&style=feature:road.highway.controlled_access%7Celement:geometry%7Ccolor:0x4e4e4e&style=feature:road.local%7Celement:labels.text.fill%7Ccolor:0x616161&style=feature:transit%7Celement:labels.text.fill%7Ccolor:0x757575&style=feature:water%7Celement:geometry%7Ccolor:0x000000&style=feature:water%7Celement:labels.text%7Cvisibility:off&style=feature:water%7Celement:labels.text.fill%7Ccolor:0x3d3d3d"
-        : "";
+      // Improved style parameters to hide business names and POIs
+      const baseStyles = [
+        // Hide all POI labels
+        "feature:poi|element:labels|visibility:off",
+        // Hide business names
+        "feature:poi.business|visibility:off",
+        // Hide transit stations
+        "feature:transit|element:labels|visibility:off",
+        // Simplify road labels
+        "feature:road|element:labels|visibility:simplified",
+        // Remove neighborhood labels
+        "feature:administrative.neighborhood|visibility:off"
+      ];
+      
+      // Dark mode specific styles
+      const darkStyles = [
+        "element:geometry|color:0x212121",
+        "element:labels.text.fill|color:0x757575",
+        "element:labels.text.stroke|color:0x212121",
+        "feature:administrative|element:geometry|color:0x757575",
+        "feature:road|element:geometry.fill|color:0x2c2c2c",
+        "feature:road.arterial|element:geometry|color:0x373737",
+        "feature:road.highway|element:geometry|color:0x3c3c3c",
+        "feature:water|element:geometry|color:0x000000"
+      ];
+      
+      // Light mode specific styles
+      const lightStyles = [
+        "feature:water|element:geometry|color:0xdee8f1",
+        "feature:landscape|element:geometry.fill|color:0xf1f1f1",
+        "feature:road|element:geometry|color:0xffffff"
+      ];
+      
+      // Combine styles based on theme
+      const combinedStyles = [...baseStyles, ...(theme === "dark" ? darkStyles : lightStyles)];
+      
+      // Create style parameters string
+      const mapStyle = combinedStyles.map(style => `&style=${style}`).join('');
       
       // Construct the full URL
       const url = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=${mapType}&${marker}&${circleParams}${mapStyle}&key=${apiKey}`;
@@ -115,8 +157,16 @@ const ShareCard = ({ event }) => {
         
         {/* Category badge overlaid on map */}
         <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full flex items-center gap-2" 
-             style={{ backgroundColor: bgColor, borderColor: borderColor, border: '1px solid' }}>
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color || "#FFEC3A" }}></span>
+             style={{ backgroundColor: `${bgColor}dd`, borderColor: borderColor, border: '1px solid' }}>
+          {(() => {
+            // Use the actual category icon component if available
+            const Icon = category.icon;
+            return Icon ? (
+              <Icon className="w-4 h-4" style={{ color: category.color || "#FFEC3A" }} />
+            ) : (
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color || "#FFEC3A" }}></span>
+            );
+          })()}
           <span className="font-semibold text-sm">{category.label || event.category}</span>
         </div>
       </div>
