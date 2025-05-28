@@ -60,9 +60,15 @@ An event management application with enhanced user authentication, password rese
    npm run dev
    ```
 
-5. Access the application:
+5. Start the admin dashboard (optional):
+   ```bash
+   cd admin
+   npm run dev
+   ```
+
+6. Access the application:
    - Main application: http://localhost:5173
-   - Admin dashboard: http://localhost:5173/admin
+   - Admin dashboard: http://localhost:5174 (if running separately)
    
 ### Default Admin Account
 
@@ -72,7 +78,17 @@ When the application first starts, it creates a default admin user:
 
 ## Deployment
 
-The application is configured for deployment on Render.com. See `render.yaml` for configuration details.
+The application is configured for deployment on Render.com:
+
+### Frontend and Backend
+- Main application: See `render.yaml` for configuration details
+- Backend API: Deployed separately at `https://todoevents-backend.onrender.com`
+
+### Admin Dashboard (Standalone)
+The admin dashboard can be deployed separately:
+- See `admin/README.md` for detailed deployment instructions
+- Supports Render.com, Vercel, and Netlify
+- Configured to connect to the production backend automatically
 
 ## Password Requirements
 
