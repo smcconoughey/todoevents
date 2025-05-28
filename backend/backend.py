@@ -417,39 +417,48 @@ class PasswordValidator:
             "strength": "weak"
         }
         
-        # Check length
-        if len(password) < 8:
+        # Check length - reduced requirement
+        if len(password) < 6:
             validation_result["is_valid"] = False
             validation_result["feedback"].append(
-                "Password must be at least 8 characters long"
+                "Password must be at least 6 characters long"
             )
+        
+        # Count character types present
+        character_types = 0
+        character_type_messages = []
         
         # Check for uppercase letters
-        if not re.search(r'[A-Z]', password):
-            validation_result["is_valid"] = False
-            validation_result["feedback"].append(
-                "Password must contain at least one uppercase letter"
-            )
+        if re.search(r'[A-Z]', password):
+            character_types += 1
+        else:
+            character_type_messages.append("uppercase letter")
         
         # Check for lowercase letters
-        if not re.search(r'[a-z]', password):
-            validation_result["is_valid"] = False
-            validation_result["feedback"].append(
-                "Password must contain at least one lowercase letter"
-            )
+        if re.search(r'[a-z]', password):
+            character_types += 1
+        else:
+            character_type_messages.append("lowercase letter")
         
         # Check for numbers
-        if not re.search(r'\d', password):
-            validation_result["is_valid"] = False
-            validation_result["feedback"].append(
-                "Password must contain at least one number"
-            )
+        if re.search(r'\d', password):
+            character_types += 1
+        else:
+            character_type_messages.append("number")
         
         # Check for special characters
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        if re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            character_types += 1
+        else:
+            character_type_messages.append("special character (!@#$%^&*(),.?\":{}|<>)")
+        
+        # Require at least 3 out of 4 character types (more flexible)
+        if character_types < 3:
             validation_result["is_valid"] = False
+            missing_types = 4 - character_types
             validation_result["feedback"].append(
-                "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)"
+                f"Password must contain at least 3 different character types. "
+                f"Missing {missing_types} types from: {', '.join(character_type_messages)}"
             )
         
         # Check for common weak passwords
@@ -463,20 +472,17 @@ class PasswordValidator:
                 "Password is too common and easily guessable"
             )
         
-        # Determine strength
+        # Determine strength based on length and character variety
         strength_criteria = 0
+        if len(password) >= 8:
+            strength_criteria += 1
         if len(password) >= 12:
             strength_criteria += 1
-        if re.search(r'[A-Z]', password) and re.search(r'[a-z]', password):
-            strength_criteria += 1
-        if re.search(r'\d', password):
-            strength_criteria += 1
-        if re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            strength_criteria += 1
+        strength_criteria += character_types
         
-        if strength_criteria <= 1:
+        if strength_criteria <= 2:
             validation_result["strength"] = "weak"
-        elif strength_criteria <= 3:
+        elif strength_criteria <= 4:
             validation_result["strength"] = "medium"
         else:
             validation_result["strength"] = "strong"

@@ -296,7 +296,7 @@ const UserEditModal = ({ user, isOpen, onClose, onSave }) => {
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Password must be at least 8 characters with uppercase, lowercase, number, and special character.
+            Password must be at least 6 characters with at least 3 different character types (uppercase, lowercase, number, special character).
           </p>
         </div>
 
