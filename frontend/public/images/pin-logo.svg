@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFEC3A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFD700;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main circle background -->
+  <circle cx="100" cy="100" r="90" fill="url(#pinGradient)" stroke="#1F2937" stroke-width="8"/>
+  
+  <!-- Location pin -->
+  <path d="M100 30C70.2 30 45 55.2 45 85C45 125 100 170 100 170C100 170 155 125 155 85C155 55.2 129.8 30 100 30ZM100 115C83.4 115 70 101.6 70 85C70 68.4 83.4 55 100 55C116.6 55 130 68.4 130 85C130 101.6 116.6 115 100 115Z" 
+        fill="#1F2937"/>
+  
+  <!-- Center dot -->
+  <circle cx="100" cy="85" r="18" fill="#FFEC3A" stroke="#1F2937" stroke-width="3"/>
+  
+  <!-- Checkmark -->
+  <path d="M88 85L98 95L112 75" stroke="#1F2937" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Text -->
+  <text x="100" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#1F2937">TODO-EVENTS</text>
+</svg> 
