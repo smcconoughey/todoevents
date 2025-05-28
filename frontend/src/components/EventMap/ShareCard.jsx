@@ -15,6 +15,10 @@ function formatDate(dateStr, timeStr) {
   }
 }
 
+// Add a Base64 SVG for the pin/logo
+const pinLogoBase64 =
+  "data:image/svg+xml;utf8,<svg width='64' height='64' viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'><circle cx='32' cy='32' r='32' fill='%23FFEC3A'/><path d='M32 12C24.268 12 18 18.268 18 26C18 36.5 32 52 32 52C32 52 46 36.5 46 26C46 18.268 39.732 12 32 12ZM32 32C29.2386 32 27 29.7614 27 27C27 24.2386 29.2386 22 32 22C34.7614 22 37 24.2386 37 27C37 29.7614 34.7614 32 32 32Z' fill='%23E11D48'/></svg>";
+
 const ShareCard = ({ event }) => {
   const { theme } = useContext(ThemeContext);
   const category = getCategory(event.category);
@@ -31,7 +35,7 @@ const ShareCard = ({ event }) => {
     >
       {/* Branding/logo */}
       <img
-        src="/images/pin-logo.png"
+        src={pinLogoBase64}
         alt="Site Logo"
         className="absolute top-4 right-4 w-12 h-12 opacity-80"
         style={{ filter: theme === "dark" ? "invert(1)" : "none" }}
@@ -39,9 +43,9 @@ const ShareCard = ({ event }) => {
       {/* Map Pin */}
       <div className="flex flex-col items-center mt-4">
         <div className="w-16 h-16 mb-2">
-          {/* You can use an SVG or image for the pin, or render your custom marker here */}
+          {/* Use the Base64 SVG for the pin */}
           <img
-            src="/images/pin-logo.png"
+            src={pinLogoBase64}
             alt="Event Pin"
             className="w-full h-full object-contain"
             style={{ filter: theme === "dark" ? "invert(1)" : "none" }}
