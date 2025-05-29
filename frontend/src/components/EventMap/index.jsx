@@ -510,75 +510,129 @@ const EventMap = ({ mapsLoaded = false }) => {
 
       // Ensure we're on the share tab
       if (activeTab !== 'share') {
+        console.log('Switching to share tab...');
         setActiveTab('share');
         // Wait for tab to switch and component to render
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
 
       const node = shareCardRef.current;
       if (!node) {
-        throw new Error('Share card not found');
+        throw new Error('Share card ref not found - please ensure you are on the Share tab');
       }
 
-      // Log initial state for debugging
-      console.log('Starting download process...');
+      console.log('=== Download Debug Info ===');
       console.log('Theme:', theme);
       console.log('Selected event:', selectedEvent.title);
       console.log('Active tab:', activeTab);
+      console.log('Node element:', node);
+      console.log('Node tagName:', node.tagName);
+      console.log('Node children count:', node.children.length);
       
       // Wait for component to fully render and fonts to load
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
-      // Check if node has proper dimensions after waiting
-      console.log('Node dimensions:', node.offsetWidth, 'x', node.offsetHeight);
+      // Get comprehensive style information
+      const computedStyle = window.getComputedStyle(node);
+      console.log('=== Style Debug ===');
+      console.log('Node offsetWidth:', node.offsetWidth);
+      console.log('Node offsetHeight:', node.offsetHeight);
+      console.log('Node clientWidth:', node.clientWidth);
+      console.log('Node clientHeight:', node.clientHeight);
+      console.log('Node scrollWidth:', node.scrollWidth);
+      console.log('Node scrollHeight:', node.scrollHeight);
+      console.log('Display:', computedStyle.display);
+      console.log('Visibility:', computedStyle.visibility);
+      console.log('Position:', computedStyle.position);
+      console.log('Opacity:', computedStyle.opacity);
+      console.log('Transform:', computedStyle.transform);
+
+      // Check if the actual ShareCard element exists within the ref
+      const shareCardElement = node.querySelector('#share-card-root') || node.querySelector('[id*="share"]') || node;
+      if (shareCardElement && shareCardElement !== node) {
+        console.log('Found nested share card element:', shareCardElement);
+        console.log('ShareCard dimensions:', shareCardElement.offsetWidth, 'x', shareCardElement.offsetHeight);
+      }
+
+      // Try to force visibility and dimensions
       if (node.offsetWidth === 0 || node.offsetHeight === 0) {
-        // If still no dimensions, try to make the element visible
-        const style = window.getComputedStyle(node);
-        console.log('Node display:', style.display);
-        console.log('Node visibility:', style.visibility);
+        console.log('Attempting to force visibility...');
         
-        // Force visibility and try again
-        if (style.display === 'none' || style.visibility === 'hidden') {
-          node.style.position = 'absolute';
-          node.style.left = '-9999px';
-          node.style.top = '0';
-          node.style.display = 'block';
-          node.style.visibility = 'visible';
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
+        // Store original styles
+        const originalStyles = {
+          position: node.style.position,
+          left: node.style.left,
+          top: node.style.top,
+          display: node.style.display,
+          visibility: node.style.visibility,
+          opacity: node.style.opacity,
+          transform: node.style.transform,
+          width: node.style.width,
+          height: node.style.height
+        };
+        
+        // Force visibility with fixed dimensions
+        node.style.position = 'fixed';
+        node.style.left = '-9999px';
+        node.style.top = '0px';
+        node.style.display = 'block';
+        node.style.visibility = 'visible';
+        node.style.opacity = '1';
+        node.style.transform = 'none';
+        node.style.width = 'auto';
+        node.style.height = 'auto';
+        
+        // Force a reflow
+        node.offsetHeight;
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('After forcing visibility - dimensions:', node.offsetWidth, 'x', node.offsetHeight);
         
         if (node.offsetWidth === 0 || node.offsetHeight === 0) {
-          throw new Error('Share card has no dimensions. Please ensure the Share tab is active.');
+          // Restore original styles
+          Object.keys(originalStyles).forEach(key => {
+            node.style[key] = originalStyles[key];
+          });
+          throw new Error('Share card still has no dimensions after forcing visibility. The ShareCard component may not be rendering properly.');
         }
       }
 
       let dataUrl = null;
       let lastError = null;
 
-      // Method 1: Try with minimal configuration
+      // Method 1: Try with basic html-to-image
       try {
-        console.log('Trying method 1: Minimal configuration');
-        const minimalOptions = {
+        console.log('Trying method 1: Basic html-to-image...');
+        
+        const targetElement = shareCardElement && shareCardElement.offsetWidth > 0 ? shareCardElement : node;
+        console.log('Using target element:', targetElement, 'with dimensions:', targetElement.offsetWidth, 'x', targetElement.offsetHeight);
+        
+        const options = {
           backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
-          width: node.offsetWidth,
-          height: node.offsetHeight,
+          width: targetElement.offsetWidth,
+          height: targetElement.offsetHeight,
+          pixelRatio: 2,
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: true,
           style: {
             transform: 'scale(1)',
             transformOrigin: 'top left'
           }
         };
         
-        dataUrl = await htmlToImage.toPng(node, minimalOptions);
-        console.log('Method 1 successful');
+        dataUrl = await htmlToImage.toPng(targetElement, options);
+        console.log('Method 1 successful - data URL length:', dataUrl.length);
       } catch (error) {
         lastError = error;
         console.warn('Method 1 failed:', error.message);
       }
 
-      // Method 2: Try with canvas fallback if first method fails
+      // Method 2: Canvas fallback if first method fails
       if (!dataUrl || dataUrl.length < 100) {
         try {
-          console.log('Trying method 2: Canvas fallback');
+          console.log('Trying method 2: Canvas fallback...');
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           
@@ -597,7 +651,8 @@ const EventMap = ({ mapsLoaded = false }) => {
           
           // Draw event title
           const title = selectedEvent.title;
-          ctx.fillText(title.length > 30 ? title.substring(0, 30) + "..." : title, canvas.width/2, 100);
+          const wrappedTitle = title.length > 30 ? title.substring(0, 30) + "..." : title;
+          ctx.fillText(wrappedTitle, canvas.width/2, 100);
           
           // Draw event details
           ctx.font = "20px Arial, sans-serif";
@@ -606,7 +661,8 @@ const EventMap = ({ mapsLoaded = false }) => {
           // Draw location
           ctx.font = "16px Arial, sans-serif";
           const address = selectedEvent.address;
-          ctx.fillText(address.length > 50 ? address.substring(0, 50) + "..." : address, canvas.width/2, 250);
+          const wrappedAddress = address.length > 50 ? address.substring(0, 50) + "..." : address;
+          ctx.fillText(wrappedAddress, canvas.width/2, 250);
           
           // Draw category
           ctx.fillStyle = "#FFEC3A";
@@ -619,7 +675,7 @@ const EventMap = ({ mapsLoaded = false }) => {
           ctx.fillText("todo-events.com", canvas.width/2, 500);
           
           dataUrl = canvas.toDataURL('image/png');
-          console.log('Method 2 successful - Canvas fallback generated');
+          console.log('Method 2 successful - Canvas fallback generated, data URL length:', dataUrl.length);
         } catch (error) {
           lastError = error;
           console.warn('Method 2 failed:', error.message);
@@ -629,7 +685,7 @@ const EventMap = ({ mapsLoaded = false }) => {
       // Check if we have a valid data URL
       if (!dataUrl || dataUrl.length < 100) {
         console.error('All methods failed. Last error:', lastError);
-        throw new Error(`Failed to generate image. Last error: ${lastError?.message || 'Unknown error'}`);
+        throw new Error(`Failed to generate image. ${lastError?.message || 'Unknown error occurred'}`);
       }
 
       // Create and trigger download
@@ -650,17 +706,8 @@ const EventMap = ({ mapsLoaded = false }) => {
       console.error('Download error:', err);
       console.error('Error stack:', err.stack);
       
-      // Provide more specific error messages
-      let errorMessage = 'Error exporting image. ';
-      if (err.message.includes('Share tab')) {
-        errorMessage += 'Please ensure you are on the Share tab. ';
-      } else if (err.message.includes('dimensions')) {
-        errorMessage += 'Card not visible. Please ensure the share tab is open. ';
-      }
-      errorMessage += 'Please try again.';
-      
-      setDownloadStatus(errorMessage);
-      setTimeout(() => setDownloadStatus(''), 4000);
+      setDownloadStatus(`Error: ${err.message}`);
+      setTimeout(() => setDownloadStatus(''), 6000);
     }
   };
 
