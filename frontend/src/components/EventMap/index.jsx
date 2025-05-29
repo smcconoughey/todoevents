@@ -536,161 +536,191 @@ const EventMap = ({ mapsLoaded = false }) => {
       console.log('Wrapper node dimensions:', node.offsetWidth, 'x', node.offsetHeight);
       console.log('ShareCard element dimensions:', shareCardElement.offsetWidth, 'x', shareCardElement.offsetHeight);
       
-      // Force proper dimensions on the ShareCard element
-      let needsRestore = false;
-      let originalStyles = {};
+      // Create a temporary wrapper div with fixed dimensions
+      let tempWrapper = null;
+      let originalParent = null;
+      let originalNextSibling = null;
       
-      if (shareCardElement.offsetWidth === 0 || shareCardElement.offsetHeight === 0) {
-        console.log('Forcing ShareCard dimensions...');
-        needsRestore = true;
+      try {
+        // Create temporary wrapper with fixed dimensions
+        tempWrapper = document.createElement('div');
+        tempWrapper.style.cssText = `
+          position: fixed !important;
+          left: -9999px !important;
+          top: 0px !important;
+          width: 380px !important;
+          height: auto !important;
+          visibility: visible !important;
+          display: block !important;
+          z-index: -1 !important;
+          background: transparent !important;
+        `;
         
-        // Store original styles
-        originalStyles = {
-          width: shareCardElement.style.width,
-          minWidth: shareCardElement.style.minWidth,
-          maxWidth: shareCardElement.style.maxWidth,
-          height: shareCardElement.style.height,
-          position: shareCardElement.style.position,
-          left: shareCardElement.style.left,
-          top: shareCardElement.style.top,
-          visibility: shareCardElement.style.visibility,
-          display: shareCardElement.style.display
-        };
+        // Store original position info
+        originalParent = shareCardElement.parentNode;
+        originalNextSibling = shareCardElement.nextSibling;
         
-        // Force fixed dimensions - typical mobile-friendly card size
-        shareCardElement.style.width = '360px';
-        shareCardElement.style.minWidth = '360px';
-        shareCardElement.style.maxWidth = '360px';
-        shareCardElement.style.height = 'auto';
-        shareCardElement.style.position = 'fixed';
-        shareCardElement.style.left = '-9999px';
-        shareCardElement.style.top = '0px';
-        shareCardElement.style.visibility = 'visible';
-        shareCardElement.style.display = 'flex';
+        // Move ShareCard to temporary wrapper
+        tempWrapper.appendChild(shareCardElement);
+        document.body.appendChild(tempWrapper);
         
-        // Force a reflow
+        // Force ShareCard to have proper dimensions
+        shareCardElement.style.cssText = `
+          width: 380px !important;
+          max-width: 380px !important;
+          min-width: 380px !important;
+          height: auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          visibility: visible !important;
+          position: relative !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        `;
+        
+        // Force a reflow and wait for layout
         shareCardElement.offsetHeight;
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Wait for layout to settle
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log('After forcing dimensions:', shareCardElement.offsetWidth, 'x', shareCardElement.offsetHeight);
+        console.log('=== After Repositioning ===');
+        console.log('TempWrapper dimensions:', tempWrapper.offsetWidth, 'x', tempWrapper.offsetHeight);
+        console.log('ShareCard dimensions:', shareCardElement.offsetWidth, 'x', shareCardElement.offsetHeight);
         
         if (shareCardElement.offsetWidth === 0 || shareCardElement.offsetHeight === 0) {
-          throw new Error('ShareCard still has no dimensions after forcing. Component may have rendering issues.');
+          throw new Error('ShareCard still has no dimensions. Component structure may be problematic.');
         }
-      }
 
-      let dataUrl = null;
-      let lastError = null;
+        let dataUrl = null;
+        let lastError = null;
 
-      // Method 1: Try with html-to-image on the properly sized element
-      try {
-        console.log('Trying method 1: html-to-image capture...');
-        
-        const options = {
-          backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
-          width: shareCardElement.offsetWidth,
-          height: shareCardElement.offsetHeight,
-          pixelRatio: 1, // Reduce pixel ratio for better compatibility
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: true,
-          skipFonts: false,
-          style: {
-            transform: 'scale(1)',
-            transformOrigin: 'top left'
-          }
-        };
-        
-        console.log('Capture options:', options);
-        dataUrl = await htmlToImage.toPng(shareCardElement, options);
-        console.log('Method 1 successful - data URL length:', dataUrl.length);
-      } catch (error) {
-        lastError = error;
-        console.warn('Method 1 failed:', error.message);
-      }
-
-      // Restore original styles if we modified them
-      if (needsRestore) {
-        console.log('Restoring original styles...');
-        Object.keys(originalStyles).forEach(key => {
-          shareCardElement.style[key] = originalStyles[key];
-        });
-      }
-
-      // Method 2: Canvas fallback if html-to-image fails
-      if (!dataUrl || dataUrl.length < 100) {
+        // Method 1: Try with html-to-image on the properly positioned element
         try {
-          console.log('Trying method 2: Canvas fallback...');
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
+          console.log('Trying method 1: html-to-image capture...');
           
-          // Set canvas size
-          canvas.width = 800;
-          canvas.height = 600;
+          const options = {
+            backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
+            width: shareCardElement.offsetWidth,
+            height: shareCardElement.offsetHeight,
+            pixelRatio: 1,
+            useCORS: true,
+            allowTaint: true,
+            foreignObjectRendering: true,
+            skipFonts: false,
+            cacheBust: true,
+            style: {
+              transform: 'scale(1)',
+              transformOrigin: 'top left'
+            }
+          };
           
-          // Fill background
-          ctx.fillStyle = theme === "dark" ? "#0f0f0f" : "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // Set text properties
-          ctx.fillStyle = theme === "dark" ? "#ffffff" : "#000000";
-          ctx.font = "bold 32px Arial, sans-serif";
-          ctx.textAlign = "center";
-          
-          // Draw event title
-          const title = selectedEvent.title;
-          const wrappedTitle = title.length > 30 ? title.substring(0, 30) + "..." : title;
-          ctx.fillText(wrappedTitle, canvas.width/2, 100);
-          
-          // Draw event details
-          ctx.font = "20px Arial, sans-serif";
-          ctx.fillText(`${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, 200);
-          
-          // Draw location
-          ctx.font = "16px Arial, sans-serif";
-          const address = selectedEvent.address;
-          const wrappedAddress = address.length > 50 ? address.substring(0, 50) + "..." : address;
-          ctx.fillText(wrappedAddress, canvas.width/2, 250);
-          
-          // Draw category
-          ctx.fillStyle = "#FFEC3A";
-          ctx.font = "18px Arial, sans-serif";
-          ctx.fillText(getCategory(selectedEvent.category).label, canvas.width/2, 300);
-          
-          // Draw branding
-          ctx.fillStyle = "#FFEC3A";
-          ctx.font = "bold 24px Arial, sans-serif";
-          ctx.fillText("todo-events.com", canvas.width/2, 500);
-          
-          dataUrl = canvas.toDataURL('image/png');
-          console.log('Method 2 successful - Canvas fallback generated, data URL length:', dataUrl.length);
+          console.log('Capture options:', options);
+          dataUrl = await htmlToImage.toPng(shareCardElement, options);
+          console.log('Method 1 successful - data URL length:', dataUrl.length);
         } catch (error) {
           lastError = error;
-          console.warn('Method 2 failed:', error.message);
+          console.warn('Method 1 failed:', error.message);
+        }
+
+        // Method 2: Canvas fallback if html-to-image fails
+        if (!dataUrl || dataUrl.length < 100) {
+          try {
+            console.log('Trying method 2: Canvas fallback...');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = 800;
+            canvas.height = 600;
+            
+            // Fill background
+            ctx.fillStyle = theme === "dark" ? "#0f0f0f" : "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Set text properties
+            ctx.fillStyle = theme === "dark" ? "#ffffff" : "#000000";
+            ctx.font = "bold 32px Arial, sans-serif";
+            ctx.textAlign = "center";
+            
+            // Draw event title
+            const title = selectedEvent.title;
+            const wrappedTitle = title.length > 30 ? title.substring(0, 30) + "..." : title;
+            ctx.fillText(wrappedTitle, canvas.width/2, 100);
+            
+            // Draw event details
+            ctx.font = "20px Arial, sans-serif";
+            ctx.fillText(`${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, 200);
+            
+            // Draw location
+            ctx.font = "16px Arial, sans-serif";
+            const address = selectedEvent.address;
+            const wrappedAddress = address.length > 50 ? address.substring(0, 50) + "..." : address;
+            ctx.fillText(wrappedAddress, canvas.width/2, 250);
+            
+            // Draw category
+            ctx.fillStyle = "#FFEC3A";
+            ctx.font = "18px Arial, sans-serif";
+            ctx.fillText(getCategory(selectedEvent.category).label, canvas.width/2, 300);
+            
+            // Draw branding
+            ctx.fillStyle = "#FFEC3A";
+            ctx.font = "bold 24px Arial, sans-serif";
+            ctx.fillText("todo-events.com", canvas.width/2, 500);
+            
+            dataUrl = canvas.toDataURL('image/png');
+            console.log('Method 2 successful - Canvas fallback generated, data URL length:', dataUrl.length);
+          } catch (error) {
+            lastError = error;
+            console.warn('Method 2 failed:', error.message);
+          }
+        }
+
+        // Check if we have a valid data URL
+        if (!dataUrl || dataUrl.length < 100) {
+          console.error('All methods failed. Last error:', lastError);
+          throw new Error(`Failed to generate image. ${lastError?.message || 'Unknown error occurred'}`);
+        }
+
+        // Create and trigger download
+        const link = document.createElement('a');
+        link.download = `event-${selectedEvent.id}-share.png`;
+        link.href = dataUrl;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('Download completed successfully');
+        setDownloadStatus('Downloaded!');
+        setTimeout(() => setDownloadStatus(''), 2000);
+        
+      } finally {
+        // Cleanup: restore ShareCard to original position
+        if (originalParent && shareCardElement) {
+          try {
+            // Remove forced styles
+            shareCardElement.style.cssText = '';
+            
+            // Restore to original position
+            if (originalNextSibling) {
+              originalParent.insertBefore(shareCardElement, originalNextSibling);
+            } else {
+              originalParent.appendChild(shareCardElement);
+            }
+          } catch (restoreError) {
+            console.warn('Error restoring ShareCard position:', restoreError);
+          }
+        }
+        
+        // Remove temporary wrapper
+        if (tempWrapper && tempWrapper.parentNode) {
+          try {
+            tempWrapper.parentNode.removeChild(tempWrapper);
+          } catch (cleanupError) {
+            console.warn('Error removing temp wrapper:', cleanupError);
+          }
         }
       }
-
-      // Check if we have a valid data URL
-      if (!dataUrl || dataUrl.length < 100) {
-        console.error('All methods failed. Last error:', lastError);
-        throw new Error(`Failed to generate image. ${lastError?.message || 'Unknown error occurred'}`);
-      }
-
-      // Create and trigger download
-      const link = document.createElement('a');
-      link.download = `event-${selectedEvent.id}-share.png`;
-      link.href = dataUrl;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      console.log('Download completed successfully');
-      setDownloadStatus('Downloaded!');
-      setTimeout(() => setDownloadStatus(''), 2000);
       
     } catch (err) {
       console.error('Download error:', err);
