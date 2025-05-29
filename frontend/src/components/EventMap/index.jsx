@@ -72,6 +72,64 @@ const isDateInRange = (dateStr, range) => {
   return true;
 };
 
+// Add this function before the EventDetailsPanel component
+const generateEventSchema = (event) => {
+  if (!event) return null;
+  
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": event.title,
+    "startDate": `${event.date}T${event.time}:00`,
+    "location": {
+      "@type": "Place",
+      "name": event.address,
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": event.address
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": event.lat,
+        "longitude": event.lng
+      }
+    },
+    "description": event.description || `${event.category} event at ${event.address}`,
+    "eventStatus": "https://schema.org/EventScheduled",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "organizer": {
+      "@type": "Organization",
+      "name": "todo-events",
+      "url": "https://todoevents.onrender.com"
+    },
+    "url": `https://todoevents.onrender.com/event/${event.id}`,
+    "image": event.shareImage || "https://todoevents.onrender.com/images/pin-logo.svg",
+    "offers": {
+      "@type": "Offer",
+      "availability": "https://schema.org/InStock",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  };
+};
+
+// Add this function to inject schema into the document head
+const injectEventSchema = (event) => {
+  // Remove any existing event schema
+  const existingSchema = document.querySelector('script[data-event-schema]');
+  if (existingSchema) {
+    existingSchema.remove();
+  }
+  
+  if (!event) return;
+  
+  // Create new schema script
+  const script = document.createElement('script');
+  script.type = 'application/ld+json';
+  script.setAttribute('data-event-schema', 'true');
+  script.textContent = JSON.stringify(generateEventSchema(event));
+  document.head.appendChild(script);
+};
 
 const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
   const [activeTab, setActiveTab] = React.useState('details');
@@ -82,6 +140,33 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
 
   const category = getCategory(event.category);
   const Icon = category.icon;
+
+  // Inject schema data when event is displayed
+  useEffect(() => {
+    if (event) {
+      injectEventSchema(event);
+      
+      // Update page title and meta description for this event
+      const originalTitle = document.title;
+      const originalDescription = document.querySelector('meta[name="description"]')?.content;
+      
+      document.title = `${event.title} | todo-events - Local Event Discovery`;
+      
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.content = `${event.title} - ${event.description || `${event.category} event`} at ${event.address}. Find this and more local events on todo-events.`;
+      }
+      
+      // Cleanup function to restore original meta data
+      return () => {
+        document.title = originalTitle;
+        if (metaDescription && originalDescription) {
+          metaDescription.content = originalDescription;
+        }
+        injectEventSchema(null); // Remove schema when panel closes
+      };
+    }
+  }, [event]);
 
   // Download ShareCard as image
   const handleDownload = async () => {

@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Block private/admin areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
+
+# Allow important directories
+Allow: /images/
+Allow: /favicon.ico
+Allow: /sitemap.xml
+
+# Sitemap location
+Sitemap: https://todoevents.onrender.com/sitemap.xml
+
+# Crawl delay (be respectful)
+Crawl-delay: 1 
