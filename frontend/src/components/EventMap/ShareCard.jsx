@@ -10,18 +10,35 @@ const TodoEventsLogo = ({ theme, className = "" }) => {
       <svg width="48" height="48" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: "#FFEC3A", stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: "#FFD700", stopOpacity: 1 }} />
+            <stop offset="0%" style={{ stopColor: "#4F9BED", stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: "#3B82F6", stopOpacity: 1 }} />
           </linearGradient>
           <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="rgba(0,0,0,0.3)" />
+            <feDropShadow dx="2" dy="4" stdDeviation="4" floodColor="rgba(0,0,0,0.25)" />
           </filter>
         </defs>
-        <circle cx="100" cy="100" r="88" fill="url(#logoGradient)" stroke="#1F2937" strokeWidth="8" filter="url(#shadow)" />
-        <path d="M100 35C75.2 35 55 55.2 55 80C55 115 100 165 100 165C100 165 145 115 145 80C145 55.2 124.8 35 100 35ZM100 105C86.2 105 75 93.8 75 80C75 66.2 86.2 55 100 55C113.8 55 125 66.2 125 80C125 93.8 113.8 105 100 105Z" 
-          fill="#1F2937" />
-        <circle cx="100" cy="80" r="18" fill="#FFEC3A" stroke="#1F2937" strokeWidth="3" />
-        <path d="M88 80L96 88L112 68" stroke="#1F2937" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Main pin shape */}
+        <path 
+          d="M100 20C75 20 55 40 55 65C55 90 100 180 100 180C100 180 145 90 145 65C145 40 125 20 100 20Z" 
+          fill="url(#logoGradient)" 
+          filter="url(#shadow)"
+        />
+        {/* Inner circle for checkmark */}
+        <circle 
+          cx="100" 
+          cy="65" 
+          r="25" 
+          fill="rgba(255,255,255,0.95)"
+        />
+        {/* Checkmark */}
+        <path 
+          d="M88 65L96 73L112 57" 
+          stroke="#3B82F6" 
+          strokeWidth="4" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          fill="none"
+        />
       </svg>
     </div>
   );

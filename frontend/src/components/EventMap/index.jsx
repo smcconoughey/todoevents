@@ -429,6 +429,45 @@ const EventMap = ({ mapsLoaded = false }) => {
     fetchEvents();
   }, [mapCenter, proximityRange]);
 
+  // Handle URL parameters for event deep linking
+  useEffect(() => {
+    const handleUrlParams = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const eventId = urlParams.get('event');
+      
+      if (eventId && events.length > 0) {
+        const targetEvent = events.find(event => event.id.toString() === eventId.toString());
+        
+        if (targetEvent) {
+          console.log('Found event from URL parameter:', targetEvent.title);
+          setSelectedEvent(targetEvent);
+          setActiveTab('details'); // Start with details tab
+          
+          // Update URL without the event parameter to clean it up
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('event');
+          window.history.replaceState({}, '', newUrl.pathname + newUrl.search);
+          
+          // If the event has coordinates, center the map on it
+          if (targetEvent.lat && targetEvent.lng) {
+            setSelectedLocation({
+              lat: targetEvent.lat,
+              lng: targetEvent.lng,
+              address: targetEvent.address
+            });
+          }
+        } else {
+          console.warn(`Event with ID ${eventId} not found in current events list`);
+        }
+      }
+    };
+
+    // Only run after events are loaded
+    if (events.length > 0) {
+      handleUrlParams();
+    }
+  }, [events]); // Run when events change
+
   const filteredEvents = events.filter(event => {
     const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
     const dateMatch = isDateInRange(event.date, selectedDate);
@@ -758,9 +797,136 @@ const EventMap = ({ mapsLoaded = false }) => {
   };
 
   // Facebook share
-  const handleFacebookShare = () => {
-    const url = encodeURIComponent(`${window.location.origin}/?event=${selectedEvent.id}`);
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+  const handleFacebookShare = async () => {
+    try {
+      setDownloadStatus('Preparing image for Facebook...');
+      
+      // First generate the image using the same logic as download
+      const shareCardElement = shareCardRef.current?.querySelector('#share-card-root');
+      if (!shareCardElement) {
+        throw new Error('ShareCard element not found');
+      }
+
+      // Create temporary wrapper for proper sizing
+      const tempWrapper = document.createElement('div');
+      tempWrapper.style.cssText = `
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        width: 380px !important;
+        height: auto !important;
+        overflow: visible;
+        z-index: -1;
+      `;
+      document.body.appendChild(tempWrapper);
+
+      try {
+        // Move ShareCard to temp wrapper
+        const originalParent = shareCardElement.parentNode;
+        const originalNextSibling = shareCardElement.nextSibling;
+        tempWrapper.appendChild(shareCardElement);
+
+        // Force proper dimensions
+        shareCardElement.style.cssText = `
+          width: 380px !important;
+          max-width: 380px !important;
+          min-width: 380px !important;
+          height: auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          visibility: visible !important;
+          position: relative !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        `;
+
+        // Wait for layout
+        shareCardElement.offsetHeight;
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Generate image
+        const options = {
+          backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
+          width: shareCardElement.offsetWidth,
+          height: shareCardElement.offsetHeight,
+          pixelRatio: 3,
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: true,
+          skipFonts: false,
+          cacheBust: true,
+          style: {
+            transform: 'scale(1)',
+            transformOrigin: 'top left'
+          }
+        };
+
+        const dataUrl = await htmlToImage.toPng(shareCardElement, options);
+
+        // Restore ShareCard to original position
+        if (originalNextSibling) {
+          originalParent.insertBefore(shareCardElement, originalNextSibling);
+        } else {
+          originalParent.appendChild(shareCardElement);
+        }
+
+        // Clean up temp wrapper
+        document.body.removeChild(tempWrapper);
+
+        // For now, we'll open Facebook with the event URL and copy the image to clipboard
+        // Note: Facebook doesn't allow direct image uploads from web browsers for security
+        const eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
+        const encodedUrl = encodeURIComponent(eventUrl);
+        const shareText = encodeURIComponent(`Check out this event: ${selectedEvent.title}!`);
+        
+        // Copy image to clipboard for user to paste
+        const img = new Image();
+        img.onload = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            canvas.toBlob(async (blob) => {
+              try {
+                await navigator.clipboard.write([
+                  new ClipboardItem({ 'image/png': blob })
+                ]);
+                setDownloadStatus('Image copied to clipboard! Paste it in your Facebook post.');
+                setTimeout(() => setDownloadStatus(''), 4000);
+              } catch (e) {
+                setDownloadStatus('Opening Facebook... Download the image separately to post it.');
+                setTimeout(() => setDownloadStatus(''), 4000);
+              }
+            });
+          } catch (e) {
+            setDownloadStatus('Opening Facebook... Download the image separately to post it.');
+            setTimeout(() => setDownloadStatus(''), 4000);
+          }
+        };
+        img.src = dataUrl;
+
+        // Open Facebook sharing
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${shareText}`, '_blank');
+
+      } catch (error) {
+        // Clean up on error
+        if (tempWrapper.parentNode) {
+          document.body.removeChild(tempWrapper);
+        }
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('Facebook share error:', error);
+      // Fallback to simple URL sharing
+      const url = encodeURIComponent(`${window.location.origin}/?event=${selectedEvent.id}`);
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+      setDownloadStatus('Opened Facebook sharing. Download the image separately to include it.');
+      setTimeout(() => setDownloadStatus(''), 3000);
+    }
   };
 
   const proximityOptions = [
