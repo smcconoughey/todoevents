@@ -1,28 +1,15 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { ThemeContext } from './ThemeContext';
-import { CategoryIcon } from './EventMap/CategoryIcons';
-import { X, MapPin, Calendar, Users, Share2, Search, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const WelcomePopup = () => {
-  const [isVisible, setIsVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const { theme } = useContext(ThemeContext);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if user has seen the welcome popup before
     const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-    
     if (!hasSeenWelcome) {
-      // Different delay for development vs production
-      const isDevelopment = import.meta.env.DEV;
-      const delay = isDevelopment ? 8000 : 1500; // 8s in dev, 1.5s in prod
-      
-      // Show popup after a delay
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, delay);
-      
-      return () => clearTimeout(timer);
+      setTimeout(() => setIsVisible(true), 1000);
     }
   }, []);
 
@@ -30,6 +17,42 @@ const WelcomePopup = () => {
     setIsVisible(false);
     localStorage.setItem('hasSeenWelcome', 'true');
   };
+
+  const steps = [
+    {
+      title: "Welcome to todo-events! 🎉",
+      content: "Your Ultimate Local Event Discovery Platform",
+      description: "Discover amazing local events in your community! From food festivals and concerts to art shows and sports events - find what's happening around you.",
+      features: [
+        "📍 Find events by location and category",
+        "🔍 Discover hidden gems in your neighborhood", 
+        "🤝 Connect with your local community",
+        "📅 Share and create your own events"
+      ]
+    },
+    {
+      title: "How it works",
+      content: "Getting started is easy!",
+      description: "Browse events on the interactive map, filter by category or date, and discover what's happening near you.",
+      features: [
+        "🗺️ Interactive map view",
+        "🔍 Smart search and filters",
+        "💾 Save your favorite events",
+        "🎯 Get personalized recommendations"
+      ]
+    },
+    {
+      title: "Ready to explore?",
+      content: "Start discovering local events today!",
+      description: "Join thousands of people who use todo-events to stay connected with their community and never miss out on amazing local experiences.",
+      features: [
+        "🆓 Completely free to use",
+        "📱 Works on all devices",
+        "🌟 No spam or unwanted notifications",
+        "🚀 New events added daily"
+      ]
+    }
+  ];
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -45,249 +68,108 @@ const WelcomePopup = () => {
     }
   };
 
-  const bgColor = theme === 'dark' ? '#0f0f0f' : '#ffffff';
-  const cardBgColor = theme === 'dark' ? '#171717' : '#fafafa';
-  const textColor = theme === 'dark' ? '#ffffff' : '#0f0f0f';
-  const secondaryTextColor = theme === 'dark' ? '#a3a3a3' : '#525252';
-  const borderColor = theme === 'dark' ? '#262626' : '#e5e5e5';
-
-  const steps = [
-    {
-      title: "Welcome to todo-events! 🎉",
-      subtitle: "Your Ultimate Local Event Discovery Platform",
-      content: (
-        <div className="space-y-4">
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" 
-                 style={{ backgroundColor: '#FFEC3A20' }}>
-              <MapPin className="w-10 h-10" style={{ color: '#FFEC3A' }} />
-            </div>
-            <p className="text-lg leading-relaxed" style={{ color: textColor }}>
-              Discover amazing <strong>local events</strong> in your community! From food festivals 
-              and concerts to art shows and sports events - find what's happening around you.
-            </p>
-          </div>
-          
-          <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-4 border" 
-               style={{ borderColor: borderColor }}>
-            <h4 className="font-semibold mb-2" style={{ color: textColor }}>Why todo-events?</h4>
-            <ul className="space-y-1 text-sm" style={{ color: secondaryTextColor }}>
-              <li>• Find events by location and category</li>
-              <li>• Discover hidden gems in your neighborhood</li>
-              <li>• Connect with your local community</li>
-              <li>• Share and create your own events</li>
-            </ul>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "Explore by Category 🎭",
-      subtitle: "Find Events That Match Your Interests",
-      content: (
-        <div className="space-y-4">
-          <p style={{ color: textColor }}>
-            Browse through different <strong>event categories</strong> to find exactly what you're looking for:
-          </p>
-          
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { id: 'food-drink', name: 'Food & Drink', desc: 'Festivals, tastings, food trucks' },
-              { id: 'music', name: 'Music', desc: 'Concerts, live bands, open mics' },
-              { id: 'arts', name: 'Arts', desc: 'Gallery shows, workshops, fairs' },
-              { id: 'sports', name: 'Sports', desc: 'Games, tournaments, fitness' },
-            ].map((category) => (
-              <div key={category.id} 
-                   className="p-3 rounded-lg border" 
-                   style={{ backgroundColor: cardBgColor, borderColor: borderColor }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <CategoryIcon category={category.id} className="w-4 h-4" />
-                  <span className="font-medium text-sm" style={{ color: textColor }}>
-                    {category.name}
-                  </span>
-                </div>
-                <p className="text-xs" style={{ color: secondaryTextColor }}>
-                  {category.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center p-3 rounded-lg" style={{ backgroundColor: '#FFEC3A20' }}>
-            <p className="text-sm font-medium" style={{ color: textColor }}>
-              💡 Tip: Use the sidebar filters to narrow down events by category, date, and distance!
-            </p>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "Interactive Map View 🗺️",
-      subtitle: "Visualize Events Around You",
-      content: (
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center" 
-                 style={{ backgroundColor: '#3b82f620' }}>
-              <MapPin className="w-6 h-6" style={{ color: '#3b82f6' }} />
-            </div>
-            <div>
-              <h4 className="font-semibold mb-1" style={{ color: textColor }}>Location-Based Discovery</h4>
-              <p className="text-sm" style={{ color: secondaryTextColor }}>
-                See all events on an <strong>interactive map</strong>. Click any pin to view event details, 
-                get directions, and see what's happening nearby.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center" 
-                 style={{ backgroundColor: '#10b98120' }}>
-              <Search className="w-6 h-6" style={{ color: '#10b981' }} />
-            </div>
-            <div>
-              <h4 className="font-semibold mb-1" style={{ color: textColor }}>Smart Search</h4>
-              <p className="text-sm" style={{ color: secondaryTextColor }}>
-                Enter any address to explore events in that area. Perfect for planning outings 
-                when visiting new neighborhoods or cities.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center" 
-                 style={{ backgroundColor: '#f59e0b20' }}>
-              <Calendar className="w-6 h-6" style={{ color: '#f59e0b' }} />
-            </div>
-            <div>
-              <h4 className="font-semibold mb-1" style={{ color: textColor }}>Date Filtering</h4>
-              <p className="text-sm" style={{ color: secondaryTextColor }}>
-                Filter events by specific dates or date ranges to plan your week, weekend, or 
-                special occasions perfectly.
-              </p>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "Create & Share Events 📢",
-      subtitle: "Build Your Community",
-      content: (
-        <div className="space-y-4">
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center" 
-                 style={{ backgroundColor: '#ec489920' }}>
-              <Plus className="w-8 h-8" style={{ color: '#ec4899' }} />
-            </div>
-            <p style={{ color: textColor }}>
-              Join our <strong>community of event organizers</strong>! Share your events and help others 
-              discover amazing local experiences.
-            </p>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: cardBgColor }}>
-              <Users className="w-5 h-5" style={{ color: '#3b82f6' }} />
-              <span className="text-sm" style={{ color: textColor }}>
-                <strong>Sign up</strong> to create and manage your events
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: cardBgColor }}>
-              <Share2 className="w-5 h-5" style={{ color: '#10b981' }} />
-              <span className="text-sm" style={{ color: textColor }}>
-                <strong>Share events</strong> on social media with beautiful cards
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: cardBgColor }}>
-              <Calendar className="w-5 h-5" style={{ color: '#f59e0b' }} />
-              <span className="text-sm" style={{ color: textColor }}>
-                <strong>Promote</strong> your business or community events
-              </span>
-            </div>
-          </div>
-          
-          <div className="text-center p-4 rounded-lg border" style={{ borderColor: '#FFEC3A', backgroundColor: '#FFEC3A10' }}>
-            <p className="text-sm font-medium" style={{ color: textColor }}>
-              Ready to explore? Click "Get Started" to begin discovering events in your area! 🚀
-            </p>
-          </div>
-        </div>
-      )
-    }
-  ];
-
   if (!isVisible) return null;
 
+  const currentStepData = steps[currentStep];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" 
-         style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
-      <div className="relative w-full max-w-md mx-auto rounded-2xl shadow-2xl border overflow-hidden"
-           style={{ backgroundColor: bgColor, borderColor: borderColor }}>
-        
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-neutral-900/95 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl w-full max-w-md mx-auto max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: borderColor }}>
-          <div>
-            <h2 className="text-xl font-bold" style={{ color: textColor }}>
-              {steps[currentStep].title}
-            </h2>
-            <p className="text-sm mt-1" style={{ color: secondaryTextColor }}>
-              {steps[currentStep].subtitle}
+        <div className="relative p-6 border-b border-white/10">
+          <button
+            onClick={handleClose}
+            className="absolute right-4 top-4 text-white/70 hover:text-white hover:bg-white/10 rounded-full p-2 transition-all duration-200"
+            aria-label="Close welcome popup"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          
+          <div className="text-center">
+            <h1 className="text-2xl font-display font-bold text-white mb-2 pr-8">
+              {currentStepData.title}
+            </h1>
+            <p className="text-lg font-medium text-spark-yellow">
+              {currentStepData.content}
             </p>
           </div>
-          <button 
-            onClick={handleClose}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <X className="w-5 h-5" style={{ color: secondaryTextColor }} />
-          </button>
         </div>
-        
+
         {/* Content */}
-        <div className="p-6">
-          {steps[currentStep].content}
-        </div>
-        
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t" style={{ borderColor: borderColor }}>
-          <div className="flex space-x-1">
+        <div className="p-6 space-y-6">
+          {/* Logo/Icon */}
+          <div className="flex justify-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-spark-yellow to-pin-blue flex items-center justify-center">
+              <svg className="w-10 h-10 text-neutral-900" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Description */}
+          <p className="text-white/90 text-base leading-relaxed text-center">
+            {currentStepData.description}
+          </p>
+
+          {/* Features */}
+          <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+            <h3 className="font-semibold text-white mb-4 text-lg">
+              {currentStep === 0 && "Why todo-events?"}
+              {currentStep === 1 && "Key Features"}
+              {currentStep === 2 && "What makes us special?"}
+            </h3>
+            <ul className="space-y-3">
+              {currentStepData.features.map((feature, index) => (
+                <li key={index} className="text-white/80 text-sm leading-relaxed">
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Progress Indicators */}
+          <div className="flex justify-center gap-2">
             {steps.map((_, index) => (
               <div
                 key={index}
-                className="w-2 h-2 rounded-full transition-colors"
-                style={{ 
-                  backgroundColor: index === currentStep ? '#FFEC3A' : (theme === 'dark' ? '#404040' : '#d1d5db')
-                }}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  index === currentStep 
+                    ? 'bg-spark-yellow' 
+                    : index < currentStep 
+                      ? 'bg-pin-blue' 
+                      : 'bg-white/20'
+                }`}
               />
             ))}
           </div>
-          
-          <div className="flex gap-3">
-            {currentStep > 0 && (
-              <button
-                onClick={handlePrevious}
-                className="px-4 py-2 rounded-lg border transition-colors"
-                style={{ 
-                  borderColor: borderColor,
-                  color: textColor,
-                  backgroundColor: 'transparent'
-                }}
-              >
-                Previous
-              </button>
-            )}
-            <button
-              onClick={handleNext}
-              className="px-4 py-2 rounded-lg font-medium transition-colors"
-              style={{ 
-                backgroundColor: '#FFEC3A',
-                color: '#1F2937'
-              }}
+
+          {/* Navigation */}
+          <div className="flex justify-between items-center pt-4">
+            <Button
+              variant="ghost"
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+              className={`text-white/70 hover:text-white hover:bg-white/10 min-h-[44px] ${
+                currentStep === 0 ? 'invisible' : 'visible'
+              }`}
             >
-              {currentStep === steps.length - 1 ? 'Get Started' : 'Next'}
-            </button>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+
+            <Button
+              onClick={handleNext}
+              className="bg-spark-yellow text-neutral-900 hover:bg-spark-yellow/90 font-semibold min-h-[44px] px-6"
+            >
+              {currentStep === steps.length - 1 ? (
+                "Get Started!"
+              ) : (
+                <>
+                  Next
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>

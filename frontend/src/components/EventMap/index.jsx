@@ -533,23 +533,23 @@ const EventMap = ({ mapsLoaded = false }) => {
     <div className="h-screen w-full relative bg-neutral-950">
       {/* Mobile Header */}
       <div className="sm:hidden fixed top-0 left-0 right-0 z-30 bg-neutral-900/95 backdrop-blur-sm border-b border-white/10">
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-4 min-h-[64px]">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="text-white hover:bg-white/10 transition-colors duration-200"
+            className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[44px] min-w-[44px]"
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <h1 className="text-xl font-display font-bold text-white">todo-events</h1>
-          <div className="flex items-center">
+          <h1 className="text-xl font-display font-bold text-white truncate px-4">todo-events</h1>
+          <div className="flex items-center gap-2">
             <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
-              className="text-white hover:bg-white/10 ml-1 transition-colors duration-200"
+              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[44px] min-w-[44px]"
             >
               {activeView === 'map' ? <Filter className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
             </Button>
@@ -1016,79 +1016,93 @@ const EventMap = ({ mapsLoaded = false }) => {
           rounded-t-xl z-40
           sm:hidden
           transform transition-transform duration-300
-          max-h-[80vh] overflow-y-auto shadow-2xl
+          max-h-[85vh] overflow-y-auto shadow-2xl
           ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
         `}>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+          <div className="p-6 space-y-6 pb-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4 flex-1 min-w-0">
                 {(() => {
                   const category = getCategory(selectedEvent.category);
                   const Icon = category.icon;
                   return (
-                    <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
-                      <Icon className={`w-5 h-5 ${category.color}`} />
+                    <div className="p-3 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20 flex-shrink-0">
+                      <Icon className={`w-6 h-6 ${category.color}`} />
                     </div>
                   );
                 })()}
-                <div className="flex flex-col">
-                  <h2 className="text-xl font-display font-semibold text-white">{selectedEvent.title}</h2>
-                  <span className="text-xs text-white/40 font-mono">ID: {selectedEvent.id}</span>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h2 className="text-xl font-display font-semibold text-white break-words leading-tight">{selectedEvent.title}</h2>
+                  <span className="text-xs text-white/40 font-mono mt-1">ID: {selectedEvent.id}</span>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
+                className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0"
                 onClick={() => setSelectedEvent(null)}
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
-            {/* Tabs for mobile */}
-            <div className="flex gap-2 border-b border-white/10 mb-2">
+            
+            {/* Mobile Tabs */}
+            <div className="flex gap-1 border-b border-white/10 -mx-6 px-6">
               <button
-                className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+                className={`px-4 py-3 font-medium rounded-t-lg text-sm min-h-[44px] ${
+                  activeTab === 'details' 
+                    ? 'bg-white/10 text-white border-b-2 border-spark-yellow' 
+                    : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+                }`}
                 onClick={() => setActiveTab('details')}
-              >Details</button>
+              >
+                Details
+              </button>
               <button
-                className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+                className={`px-4 py-3 font-medium rounded-t-lg text-sm min-h-[44px] ${
+                  activeTab === 'share' 
+                    ? 'bg-white/10 text-white border-b-2 border-spark-yellow' 
+                    : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+                }`}
                 onClick={() => setActiveTab('share')}
-              >Share</button>
+              >
+                Share
+              </button>
             </div>
+            
             {activeTab === 'details' ? (
-              <>
-                <p className="text-white/90 font-body leading-relaxed">{selectedEvent.description}</p>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-pin-blue/10">
-                      <Calendar className="w-4 h-4 text-pin-blue" />
+              <div className="space-y-6">
+                <p className="text-white/90 font-body leading-relaxed text-base">{selectedEvent.description}</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 text-base text-white/70">
+                    <div className="p-2 rounded-md bg-pin-blue/10 flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-pin-blue" />
                     </div>
                     <span className="font-data">{selectedEvent.date}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-fresh-teal/10">
-                      <Clock className="w-4 h-4 text-fresh-teal" />
+                  <div className="flex items-center gap-4 text-base text-white/70">
+                    <div className="p-2 rounded-md bg-fresh-teal/10 flex-shrink-0">
+                      <Clock className="w-5 h-5 text-fresh-teal" />
                     </div>
                     <span className="font-data">{selectedEvent.time}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
-                      <MapPin className="w-4 h-4 text-vibrant-magenta" />
+                  <div className="flex items-start gap-4 text-base text-white/70">
+                    <div className="p-2 rounded-md bg-vibrant-magenta/10 flex-shrink-0 mt-0.5">
+                      <MapPin className="w-5 h-5 text-vibrant-magenta" />
                     </div>
-                    <span className="font-body">{selectedEvent.address}</span>
+                    <span className="font-body break-words leading-relaxed">{selectedEvent.address}</span>
                   </div>
                   {selectedEvent.distance !== undefined && (
-                    <div className="text-sm text-white/70 font-data">
+                    <div className="text-base text-white/70 font-data ml-12">
                       📍 {selectedEvent.distance.toFixed(1)} miles away
                     </div>
                   )}
                 </div>
                 {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
-                  <div className="pt-4 space-y-3 border-t border-white/10">
+                  <div className="pt-6 space-y-4 border-t border-white/10">
                     <Button
                       variant="ghost"
-                      className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
+                      className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02] min-h-[48px] text-base"
                       onClick={() => {
                         setIsCreateFormOpen(true);
                         setSelectedLocation({
@@ -1101,26 +1115,47 @@ const EventMap = ({ mapsLoaded = false }) => {
                       Edit Event
                     </Button>
                     <Button
-                      className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
+                      className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02] min-h-[48px] text-base"
                       onClick={() => handleEventDelete(selectedEvent.id)}
                     >
                       Delete Event
                     </Button>
                   </div>
                 )}
-              </>
+              </div>
             ) : (
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-6">
                 <div ref={shareCardRef} className="my-2">
                   <ShareCard event={selectedEvent} />
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <Button onClick={handleDownload} className="bg-spark-yellow text-neutral-900 font-bold">Download Image</Button>
-                  <Button onClick={handleCopyLink} variant="secondary">Copy Link</Button>
-                  <Button onClick={handleFacebookShare} variant="secondary">Share to Facebook</Button>
+                <div className="flex flex-col gap-3 w-full">
+                  <Button 
+                    onClick={handleDownload} 
+                    className="w-full bg-spark-yellow text-neutral-900 font-bold min-h-[48px] text-base"
+                  >
+                    Download Image
+                  </Button>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={handleCopyLink} 
+                      variant="secondary" 
+                      className="flex-1 min-h-[48px] text-base"
+                    >
+                      Copy Link
+                    </Button>
+                    <Button 
+                      onClick={handleFacebookShare} 
+                      variant="secondary" 
+                      className="flex-1 min-h-[48px] text-base"
+                    >
+                      Share to Facebook
+                    </Button>
+                  </div>
                 </div>
-                {downloadStatus && <div className="text-xs text-white/70 mt-1">{downloadStatus}</div>}
-                <div className="text-xs text-white/40 mt-2">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
+                {downloadStatus && <div className="text-sm text-white/70 mt-2 text-center">{downloadStatus}</div>}
+                <div className="text-sm text-white/40 mt-2 text-center leading-relaxed">
+                  Instagram does not allow direct web sharing. Download and upload the image to your story or feed!
+                </div>
               </div>
             )}
           </div>

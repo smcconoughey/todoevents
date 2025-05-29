@@ -347,10 +347,80 @@
   @media (max-width: 640px) {
     body {
       font-size: 14px;
+      line-height: 1.4;
     }
     
     .map-container {
       height: calc(100dvh - 3rem) !important;
+    }
+    
+    /* Improve text sizing on mobile */
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    h3 { font-size: 1.125rem; }
+    
+    /* Better button sizing on mobile */
+    .btn-primary, .btn-secondary {
+      min-height: 44px;
+      padding: 12px 16px;
+      font-size: 16px;
+    }
+    
+    /* Dialog improvements for mobile */
+    [role="dialog"] {
+      max-width: calc(100vw - 2rem) !important;
+      max-height: calc(100vh - 2rem) !important;
+      margin: 1rem;
+    }
+    
+    /* Mobile sheet improvements */
+    .mobile-sheet {
+      max-height: 85vh;
+    }
+    
+    /* Improve tap targets */
+    button, .clickable {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Better text readability */
+    .text-xs { font-size: 0.875rem; }
+    .text-sm { font-size: 1rem; }
+    
+    /* Improved spacing */
+    .p-2 { padding: 0.75rem; }
+    .p-4 { padding: 1rem; }
+    .p-6 { padding: 1.5rem; }
+    
+    /* Better mobile event card sizing */
+    .event-card {
+      min-height: 120px;
+      padding: 1rem;
+    }
+    
+    /* Mobile navigation improvements */
+    .mobile-nav {
+      padding: 0.75rem 1rem;
+    }
+    
+    /* Form element improvements */
+    input, textarea, select {
+      min-height: 44px;
+      font-size: 16px; /* Prevents zoom on iOS */
+      padding: 12px 16px;
+    }
+  }
+  
+  /* Tablet optimizations */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .map-container {
+      height: calc(100vh - 2rem) !important;
+    }
+    
+    /* Better sidebar sizing on tablets */
+    .sidebar {
+      width: 320px;
     }
   }
 
