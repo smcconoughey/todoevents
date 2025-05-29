@@ -82,39 +82,39 @@ const isDateInRange = (dateStr, range) => {
 const generateEventSchema = (event) => {
   if (!event) return null;
   
+  const startDate = `${event.date}T${event.start_time}:00`;
+  const endDate = event.end_date && event.end_time 
+    ? `${event.end_date}T${event.end_time}:00`
+    : event.end_time 
+      ? `${event.date}T${event.end_time}:00`
+      : startDate;
+
   return {
-    "@context": "https://schema.org",
-    "@type": "Event",
-    "name": event.title,
-    "startDate": `${event.date}T${event.time}:00`,
-    "location": {
-      "@type": "Place",
-      "name": event.address,
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": event.address
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: event.title,
+    description: event.description,
+    startDate: startDate,
+    endDate: endDate,
+    location: {
+      '@type': 'Place',
+      name: event.address,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: event.address
       },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": event.lat,
-        "longitude": event.lng
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: event.lat,
+        longitude: event.lng
       }
     },
-    "description": event.description || `${event.category} event at ${event.address}`,
-    "eventStatus": "https://schema.org/EventScheduled",
-    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
-    "organizer": {
-      "@type": "Organization",
-      "name": "todo-events",
-      "url": "https://todo-events.com"
-    },
-    "url": `https://todo-events.com/event/${event.id}`,
-    "image": event.shareImage || "https://todo-events.com/images/pin-logo.svg",
-    "offers": {
-      "@type": "Offer",
-      "availability": "https://schema.org/InStock",
-      "price": "0",
-      "priceCurrency": "USD"
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    organizer: {
+      '@type': 'Organization',
+      name: 'todo-events',
+      url: 'https://todo-events.com'
     }
   };
 };
@@ -212,13 +212,19 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 <div className="p-1.5 rounded-md bg-pin-blue/10">
                   <Calendar className="w-4 h-4 text-pin-blue" />
                 </div>
-                <span className="font-data">{event.date}</span>
+                <span className="font-data">
+                  {event.date}
+                  {event.end_date && event.end_date !== event.date && ` - ${event.end_date}`}
+                </span>
               </div>
               <div className="flex items-center gap-3 text-sm text-white/70">
                 <div className="p-1.5 rounded-md bg-fresh-teal/10">
                   <Clock className="w-4 h-4 text-fresh-teal" />
                 </div>
-                <span className="font-data">{event.time}</span>
+                <span className="font-data">
+                  {event.start_time}
+                  {event.end_time && ` - ${event.end_time}`}
+                </span>
               </div>
               <div className="flex items-center gap-3 text-sm text-white/70">
                 <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
@@ -327,8 +333,18 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
               )}
             </div>
             <div className="mt-2 flex items-center gap-2 text-sm text-white/60">
-              <Calendar className="w-4 h-4" />
-              <span className="font-data">{event.date}</span>
+              <div className="text-xs text-white/60 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                <span>
+                  {event.date}
+                  {event.end_date && event.end_date !== event.date && ` - ${event.end_date}`}
+                </span>
+                <Clock className="w-3 h-3 ml-2" />
+                <span>
+                  {event.start_time}
+                  {event.end_time && ` - ${event.end_time}`}
+                </span>
+              </div>
               {event.distance !== undefined && (
                 <>
                   <span className="text-white/30">•</span>
@@ -1622,15 +1638,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <div className="p-1.5 rounded-md bg-pin-blue/10 flex-shrink-0">
                       <Calendar className="w-4 h-4 text-pin-blue" />
                     </div>
-                    <span className="font-data">{selectedEvent.date}</span>
+                    <span className="font-data">
+                      {selectedEvent.date}
+                      {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.date && ` - ${selectedEvent.end_date}`}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-fresh-teal/10 flex-shrink-0">
+                    <div className="p-1.5 rounded-md bg-fresh-teal/10">
                       <Clock className="w-4 h-4 text-fresh-teal" />
                     </div>
-                    <span className="font-data">{selectedEvent.time}</span>
+                    <span className="font-data">
+                      {selectedEvent.start_time}
+                      {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
+                    </span>
                   </div>
-                  <div className="flex items-start gap-3 text-sm text-white/70">
+                  <div className="flex items-center gap-3 text-sm text-white/70">
                     <div className="p-1.5 rounded-md bg-vibrant-magenta/10 flex-shrink-0 mt-0.5">
                       <MapPin className="w-4 h-4 text-vibrant-magenta" />
                     </div>

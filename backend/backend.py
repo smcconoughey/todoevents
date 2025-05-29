@@ -297,19 +297,44 @@ def init_db():
                         title TEXT NOT NULL,
                         description TEXT NOT NULL,
                         date TEXT NOT NULL,
-                        time TEXT NOT NULL,
+                        start_time TEXT NOT NULL,
+                        end_time TEXT,
+                        end_date TEXT,
                         category TEXT NOT NULL,
                         address TEXT NOT NULL,
                         lat REAL NOT NULL,
                         lng REAL NOT NULL,
                         recurring BOOLEAN NOT NULL DEFAULT FALSE,
                         frequency TEXT,
-                        end_date TEXT,
                         created_by INTEGER,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(created_by) REFERENCES users(id)
                     )
                 ''')
+                
+                # Add migration for existing events to have start_time and end_time
+                try:
+                    # Check if we need to migrate old 'time' column to 'start_time'
+                    c.execute("""
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name = 'events' AND column_name = 'time'
+                    """)
+                    if c.fetchone():
+                        # Migrate old 'time' column to 'start_time'
+                        c.execute('ALTER TABLE events RENAME COLUMN time TO start_time')
+                        logger.info("Migrated 'time' column to 'start_time'")
+                        
+                    # Add end_time column if it doesn't exist
+                    c.execute("""
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name = 'events' AND column_name = 'end_time'
+                    """)
+                    if not c.fetchone():
+                        c.execute('ALTER TABLE events ADD COLUMN end_time TEXT')
+                        logger.info("Added 'end_time' column")
+                        
+                except Exception as migration_error:
+                    logger.info(f"Migration step skipped (likely already done): {migration_error}")
                 
                 # Create activity_logs table
                 c.execute('''
@@ -332,23 +357,50 @@ def init_db():
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )''')
                 
-                c.execute('''CREATE TABLE IF NOT EXISTS events (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            title TEXT NOT NULL,
-                            description TEXT NOT NULL,
-                            date TEXT NOT NULL,
-                            time TEXT NOT NULL,
-                            category TEXT NOT NULL,
-                            address TEXT NOT NULL,
-                            lat REAL NOT NULL,
-                            lng REAL NOT NULL,
-                            recurring BOOLEAN NOT NULL DEFAULT 0,
-                            frequency TEXT,
-                            end_date TEXT,
-                            created_by INTEGER,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY(created_by) REFERENCES users(id)
-                        )''')
+                # Check if events table exists and needs migration
+                c.execute('''PRAGMA table_info(events)''')
+                columns = [column[1] for column in c.fetchall()]
+                
+                if 'events' not in [table[0] for table in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]:
+                    # Create new table with updated schema
+                    c.execute('''CREATE TABLE events (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title TEXT NOT NULL,
+                                description TEXT NOT NULL,
+                                date TEXT NOT NULL,
+                                start_time TEXT NOT NULL,
+                                end_time TEXT,
+                                end_date TEXT,
+                                category TEXT NOT NULL,
+                                address TEXT NOT NULL,
+                                lat REAL NOT NULL,
+                                lng REAL NOT NULL,
+                                recurring BOOLEAN NOT NULL DEFAULT 0,
+                                frequency TEXT,
+                                created_by INTEGER,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(created_by) REFERENCES users(id)
+                            )''')
+                else:
+                    # Migrate existing table
+                    if 'time' in columns and 'start_time' not in columns:
+                        # Rename time to start_time
+                        c.execute('''ALTER TABLE events RENAME COLUMN time TO start_time''')
+                        logger.info("Migrated 'time' column to 'start_time'")
+                    
+                    if 'start_time' not in columns:
+                        # Add start_time column with default value from time column if it exists
+                        if 'time' in columns:
+                            c.execute('''ALTER TABLE events ADD COLUMN start_time TEXT''')
+                            c.execute('''UPDATE events SET start_time = time WHERE start_time IS NULL''')
+                            logger.info("Added start_time column and migrated from time")
+                        else:
+                            c.execute('''ALTER TABLE events ADD COLUMN start_time TEXT DEFAULT "12:00"''')
+                            logger.info("Added start_time column with default value")
+                    
+                    if 'end_time' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN end_time TEXT''')
+                        logger.info("Added end_time column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -540,20 +592,20 @@ class AutomatedTaskManager:
                 if IS_PRODUCTION and DB_URL:
                     # PostgreSQL
                     c.execute("""
-                        SELECT id, title, description, date, time, category, 
+                        SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at
                         FROM events 
                         WHERE date >= CURRENT_DATE
-                        ORDER BY date, time
+                        ORDER BY date, start_time
                     """)
                 else:
                     # SQLite
                     c.execute("""
-                        SELECT id, title, description, date, time, category, 
+                        SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at
                         FROM events 
                         WHERE date >= date('now')
-                        ORDER BY date, time
+                        ORDER BY date, start_time
                     """)
                 return [dict(row) for row in c.fetchall()]
         except Exception as e:
@@ -842,6 +894,14 @@ if IS_PRODUCTION:
 else:
     logger.info("🔧 AI sync automation disabled in development mode")
 
+# Create default admin user now that all functions are available
+try:
+    with get_db() as conn:
+        create_default_admin_user(conn)
+        logger.info("✅ Default admin user initialization completed")
+except Exception as e:
+    logger.error(f"❌ Error creating default admin user during startup: {str(e)}")
+
 # Password Validation System
 class PasswordValidator:
     """
@@ -941,14 +1001,15 @@ class EventBase(BaseModel):
     title: str
     description: str
     date: str
-    time: str
+    start_time: str
+    end_time: Optional[str] = None
+    end_date: Optional[str] = None
     category: str
     address: str
     lat: float
     lng: float
     recurring: bool = False
     frequency: Optional[str] = None
-    end_date: Optional[str] = None
 
     @validator('date')
     def validate_date(cls, v):
@@ -959,14 +1020,36 @@ class EventBase(BaseModel):
         except ValueError:
             raise ValueError('Date must be in YYYY-MM-DD format')
 
-    @validator('time')
-    def validate_time(cls, v):
+    @validator('start_time')
+    def validate_start_time(cls, v):
         try:
-            # Try parsing the time to ensure it's in a valid format
+            # Try parsing the start_time to ensure it's in a valid format
             datetime.strptime(v, '%H:%M')
             return v
         except ValueError:
-            raise ValueError('Time must be in HH:MM 24-hour format')
+            raise ValueError('Start time must be in HH:MM 24-hour format')
+
+    @validator('end_time')
+    def validate_end_time(cls, v):
+        if v is None or v == "":
+            return v
+        try:
+            # Try parsing the end_time to ensure it's in a valid format
+            datetime.strptime(v, '%H:%M')
+            return v
+        except ValueError:
+            raise ValueError('End time must be in HH:MM 24-hour format')
+
+    @validator('end_date')
+    def validate_end_date(cls, v):
+        if v is None or v == "":
+            return v
+        try:
+            # Try parsing the date to ensure it's in a valid format
+            datetime.strptime(v, '%Y-%m-%d')
+            return v
+        except ValueError:
+            raise ValueError('End date must be in YYYY-MM-DD format')
 
 class EventCreate(EventBase):
     pass
@@ -1493,7 +1576,7 @@ async def list_events(
                     params.append(date)
                 
                 # Order by date and time
-                query += " ORDER BY date, time"
+                query += " ORDER BY date, start_time"
                 
                 # Log and execute the query
                 logger.info(f"Executing list_events query: {query} with params: {params}")
@@ -1612,7 +1695,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     SELECT id FROM events 
                     WHERE title = {placeholder} 
                     AND date = {placeholder} 
-                    AND time = {placeholder} 
+                    AND start_time = {placeholder} 
                     AND lat = {placeholder} 
                     AND lng = {placeholder} 
                     AND category = {placeholder}
@@ -1621,7 +1704,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 cursor.execute(duplicate_check, (
                     event.title, 
                     event.date, 
-                    event.time, 
+                    event.start_time, 
                     event.lat, 
                     event.lng, 
                     event.category
@@ -1639,11 +1722,11 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Insert the new event
                 insert_query = f"""
                     INSERT INTO events (
-                        title, description, date, time, category,
+                        title, description, date, start_time, end_time, end_date, category,
                         address, lat, lng, recurring, frequency,
-                        end_date, created_by
+                        created_by
                     ) VALUES (
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}
                     ) RETURNING id
@@ -1653,14 +1736,15 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     event.title, 
                     event.description, 
                     event.date,
-                    event.time, 
+                    event.start_time, 
+                    event.end_time, 
+                    event.end_date, 
                     event.category, 
                     event.address,
                     event.lat, 
                     event.lng, 
                     event.recurring,
                     event.frequency, 
-                    event.end_date,
                     current_user["id"]
                 )
                 
@@ -1751,7 +1835,7 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
             c = conn.cursor()
             
             # Query events created by the current user
-            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, time"
+            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
@@ -1800,15 +1884,15 @@ async def update_event(
                 query = f"""
                     UPDATE events 
                     SET title={placeholder}, description={placeholder}, date={placeholder}, 
-                        time={placeholder}, category={placeholder}, address={placeholder}, 
-                        lat={placeholder}, lng={placeholder}, recurring={placeholder}, 
-                        frequency={placeholder}, end_date={placeholder}
+                        start_time={placeholder}, end_time={placeholder}, end_date={placeholder}, 
+                        category={placeholder}, address={placeholder}, lat={placeholder}, lng={placeholder}, 
+                        recurring={placeholder}, frequency={placeholder}
                     WHERE id={placeholder}
                 """
                 values = (
-                    event.title, event.description, event.date, event.time, 
-                    event.category, event.address, event.lat, event.lng, 
-                    event.recurring, event.frequency, event.end_date, 
+                    event.title, event.description, event.date, event.start_time, 
+                    event.end_time, event.end_date, event.category, event.address, 
+                    event.lat, event.lng, event.recurring, event.frequency, 
                     event_id
                 )
                 
@@ -2251,6 +2335,53 @@ def log_activity(user_id: int, action: str, details: str = None):
     except Exception as e:
         logger.error(f"Error logging activity: {str(e)}")
 
+# Helper functions for AI event processing
+def _generate_ai_summary(event_dict):
+    """Generate AI-friendly summary with proper time handling"""
+    start_time = event_dict['start_time']
+    end_time = event_dict.get('end_time')
+    end_date = event_dict.get('end_date')
+    
+    # Build time string
+    if end_time:
+        time_str = f"from {start_time} to {end_time}"
+    else:
+        time_str = f"at {start_time}"
+        
+    # Build date string
+    if end_date and end_date != event_dict['date']:
+        date_str = f"from {event_dict['date']} to {end_date}"
+    else:
+        date_str = f"on {event_dict['date']}"
+        
+    description = event_dict['description'][:200]
+    if len(event_dict['description']) > 200:
+        description += "..."
+        
+    return f"{event_dict['title']} - {event_dict['category']} event {date_str} {time_str} in {event_dict['address']}. {description}"
+
+def _generate_structured_data(event_dict):
+    """Generate structured data with proper date/time handling"""
+    start_datetime = f"{event_dict['date']}T{event_dict['start_time']}:00"
+    
+    # Calculate end datetime
+    end_date = event_dict.get('end_date') or event_dict['date']
+    end_time = event_dict.get('end_time') or event_dict['start_time']
+    end_datetime = f"{end_date}T{end_time}:00"
+    
+    return {
+        "@type": "Event",
+        "name": event_dict['title'],
+        "startDate": start_datetime,
+        "endDate": end_datetime,
+        "location": {
+            "@type": "Place",
+            "address": event_dict['address']
+        },
+        "description": event_dict['description'],
+        "eventStatus": "EventScheduled"
+    }
+
 # AI Search API Endpoints
 @app.get("/api/v1/local-events")
 async def get_local_events_for_ai(
@@ -2274,7 +2405,7 @@ async def get_local_events_for_ai(
             
             # Build base query
             query = """
-                SELECT id, title, description, date, time, category, 
+                SELECT id, title, description, date, start_time, end_time, end_date, category, 
                        address, lat, lng, created_at
                 FROM events 
                 WHERE date >= date('now')
@@ -2301,7 +2432,7 @@ async def get_local_events_for_ai(
                 params.extend([lat, lng, lat, radius])
             
             # Order by date and limit results
-            query += f" ORDER BY date, time LIMIT {placeholder}"
+            query += f" ORDER BY date, start_time LIMIT {placeholder}"
             params.append(limit)
             
             c.execute(query, params)
@@ -2367,7 +2498,9 @@ async def get_local_events_for_ai(
                     "title": event_dict['title'],
                     "description": event_dict['description'],
                     "date": event_dict['date'],
-                    "time": event_dict['time'],
+                    "start_time": event_dict['start_time'],
+                    "end_time": event_dict['end_time'],
+                    "end_date": event_dict['end_date'],
                     "category": event_dict['category'],
                     "location": {
                         "address": event_dict['address'],
@@ -2378,18 +2511,8 @@ async def get_local_events_for_ai(
                         "distance_miles": distance
                     },
                     "url": f"https://todo-events.com/?event={event_dict['id']}",
-                    "ai_summary": f"{event_dict['title']} - {event_dict['category']} event on {event_dict['date']} at {event_dict['time']} in {event_dict['address']}. {event_dict['description'][:200]}{'...' if len(event_dict['description']) > 200 else ''}",
-                    "structured_data": {
-                        "@type": "Event",
-                        "name": event_dict['title'],
-                        "startDate": f"{event_dict['date']}T{event_dict['time']}:00",
-                        "location": {
-                            "@type": "Place",
-                            "address": event_dict['address']
-                        },
-                        "description": event_dict['description'],
-                        "eventStatus": "EventScheduled"
-                    }
+                    "ai_summary": _generate_ai_summary(event_dict),
+                    "structured_data": _generate_structured_data(event_dict)
                 }
                 
                 ai_response["events"].append(ai_event)

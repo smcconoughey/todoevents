@@ -39,13 +39,12 @@ const CreateEventForm = ({
     title: '',
     description: '',
     date: '',
-    time: '',
-    category: '',
+    start_time: '',
+    end_time: '',
+    end_date: '',
+    category: 'community',
     address: '',
-    location: null,
-    recurring: false,
-    frequency: 'none',
-    endDate: ''
+    location: null
   });
 
   // Reset form when initialEvent changes
@@ -55,17 +54,16 @@ const CreateEventForm = ({
         title: initialEvent?.title || '',
         description: initialEvent?.description || '',
         date: initialEvent?.date || '',
-        time: initialEvent?.time || '',
-        category: initialEvent?.category || '',
+        start_time: initialEvent?.start_time || '',
+        end_time: initialEvent?.end_time || '',
+        end_date: initialEvent?.end_date || '',
+        category: initialEvent?.category || 'community',
         address: initialEvent?.address || '',
         location: initialEvent ? {
           lat: initialEvent.lat,
           lng: initialEvent.lng,
           address: initialEvent.address
-        } : null,
-        recurring: initialEvent?.recurring || false,
-        frequency: initialEvent?.frequency || 'none',
-        endDate: initialEvent?.end_date || ''
+        } : null
       });
       setError(null);
       setConnectionError(false);
@@ -131,7 +129,7 @@ const CreateEventForm = ({
 
   const validateForm = () => {
     const now = new Date();
-    const selectedDate = new Date(formData.date + 'T' + formData.time);
+    const selectedDate = new Date(formData.date + 'T' + formData.start_time);
 
     if (!formData.title.trim()) {
       setError('Please enter an event title');
@@ -145,8 +143,8 @@ const CreateEventForm = ({
       setError('Please select an event date');
       return false;
     }
-    if (!formData.time) {
-      setError('Please select an event time');
+    if (!formData.start_time) {
+      setError('Please select an event start time');
       return false;
     }
     if (selectedDate < now) {
@@ -161,11 +159,7 @@ const CreateEventForm = ({
       setError('Please select a location for the event');
       return false;
     }
-    if (formData.recurring && !formData.endDate) {
-      setError('Please select an end date for recurring event');
-      return false;
-    }
-    if (formData.recurring && new Date(formData.endDate) <= selectedDate) {
+    if (formData.end_date && new Date(formData.end_date) <= selectedDate) {
       setError('End date must be after the event start date');
       return false;
     }
@@ -203,14 +197,15 @@ const CreateEventForm = ({
         title: formData.title,
         description: formData.description,
         date: formData.date,
-        time: formData.time,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        end_date: formData.end_date,
         category: formData.category,
         address: formData.address,
         lat: formData.location.lat,
         lng: formData.location.lng,
-        recurring: formData.recurring,
-        frequency: formData.recurring ? formData.frequency : null,
-        end_date: formData.recurring ? formData.endDate : null
+        recurring: false,
+        frequency: null
       };
 
       const url = initialEvent
@@ -309,11 +304,11 @@ const CreateEventForm = ({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/70">Time</label>
+              <label className="text-sm text-white/70">Start Time</label>
               <Input
                 type="time"
-                value={formData.time}
-                onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                value={formData.start_time}
+                onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
               />
             </div>
           </div>
@@ -375,59 +370,24 @@ const CreateEventForm = ({
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="recurring"
-                checked={formData.recurring}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  recurring: e.target.checked,
-                  frequency: e.target.checked ? 'weekly' : 'none'
-                }))}
-                className="rounded border-white/20 bg-white/10 text-white"
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">End Time</label>
+              <Input
+                type="time"
+                value={formData.end_time}
+                onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
               />
-              <label htmlFor="recurring" className="text-sm text-white/70">
-                Recurring Event
-              </label>
             </div>
 
-            {formData.recurring && (
-              <div className="space-y-4 pl-6">
-                <div className="space-y-2">
-                  <label className="text-sm text-white/70">Frequency</label>
-                  <Select
-                    value={formData.frequency}
-                    onValueChange={(value) => setFormData(prev => ({
-                      ...prev,
-                      frequency: value
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select frequency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm text-white/70">End Date</label>
-                  <Input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      endDate: e.target.value
-                    }))}
-                    min={formData.date}
-                  />
-                </div>
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className="text-sm text-white/70">End Date</label>
+              <Input
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                min={formData.date}
+              />
+            </div>
           </div>
 
           <button 
