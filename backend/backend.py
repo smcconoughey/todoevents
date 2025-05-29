@@ -322,7 +322,19 @@ def init_db():
                     if c.fetchone():
                         # Migrate old 'time' column to 'start_time'
                         c.execute('ALTER TABLE events RENAME COLUMN time TO start_time')
-                        logger.info("Migrated 'time' column to 'start_time'")
+                        logger.info("✅ Migrated 'time' column to 'start_time'")
+                        conn.commit()
+                        
+                    # Check if start_time column exists (in case we need to add it)
+                    c.execute("""
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name = 'events' AND column_name = 'start_time'
+                    """)
+                    if not c.fetchone():
+                        # Add start_time column if it doesn't exist
+                        c.execute('ALTER TABLE events ADD COLUMN start_time TEXT DEFAULT \'12:00\'')
+                        logger.info("✅ Added 'start_time' column")
+                        conn.commit()
                         
                     # Add end_time column if it doesn't exist
                     c.execute("""
@@ -331,10 +343,26 @@ def init_db():
                     """)
                     if not c.fetchone():
                         c.execute('ALTER TABLE events ADD COLUMN end_time TEXT')
-                        logger.info("Added 'end_time' column")
+                        logger.info("✅ Added 'end_time' column")
+                        conn.commit()
+                        
+                    # Add end_date column if it doesn't exist
+                    c.execute("""
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name = 'events' AND column_name = 'end_date'
+                    """)
+                    if not c.fetchone():
+                        c.execute('ALTER TABLE events ADD COLUMN end_date TEXT')
+                        logger.info("✅ Added 'end_date' column")
+                        conn.commit()
                         
                 except Exception as migration_error:
-                    logger.info(f"Migration step skipped (likely already done): {migration_error}")
+                    logger.error(f"❌ Migration error: {migration_error}")
+                    # Don't fail the entire initialization, just log the error
+                    try:
+                        conn.rollback()
+                    except:
+                        pass
                 
                 # Create activity_logs table
                 c.execute('''
