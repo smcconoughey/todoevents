@@ -5,36 +5,23 @@ import { CategoryIcon } from "./CategoryIcons";
 
 // Custom logo component - Replace with your actual logo
 const TodoEventsLogo = ({ theme, className = "" }) => {
-  const [useStaticLogo, setUseStaticLogo] = useState(false);
-  
-  if (useStaticLogo) {
-    return (
-      <div className={`flex items-center justify-center ${className}`}>
-        <img 
-          src="/images/pin-logo.svg" 
-          alt="todo-events logo" 
-          width="40" 
-          height="40"
-          onError={() => setUseStaticLogo(false)}
-        />
-      </div>
-    );
-  }
-  
   return (
     <div className={`flex items-center justify-center ${className}`}>
-      <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <svg width="48" height="48" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style={{ stopColor: "#FFEC3A", stopOpacity: 1 }} />
             <stop offset="100%" style={{ stopColor: "#FFD700", stopOpacity: 1 }} />
           </linearGradient>
+          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="rgba(0,0,0,0.3)" />
+          </filter>
         </defs>
-        <circle cx="100" cy="100" r="85" fill="url(#logoGradient)" stroke="#1F2937" strokeWidth="6" />
+        <circle cx="100" cy="100" r="88" fill="url(#logoGradient)" stroke="#1F2937" strokeWidth="8" filter="url(#shadow)" />
         <path d="M100 35C75.2 35 55 55.2 55 80C55 115 100 165 100 165C100 165 145 115 145 80C145 55.2 124.8 35 100 35ZM100 105C86.2 105 75 93.8 75 80C75 66.2 86.2 55 100 55C113.8 55 125 66.2 125 80C125 93.8 113.8 105 100 105Z" 
           fill="#1F2937" />
-        <circle cx="100" cy="80" r="15" fill="#FFEC3A" stroke="#1F2937" strokeWidth="2" />
-        <path d="M90 80L98 88L110 70" stroke="#1F2937" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="100" cy="80" r="18" fill="#FFEC3A" stroke="#1F2937" strokeWidth="3" />
+        <path d="M88 80L96 88L112 68" stroke="#1F2937" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </div>
   );
@@ -120,28 +107,53 @@ const ShareCard = ({ event }) => {
       }
       
       const center = `${event.lat},${event.lng}`;
-      const zoom = 14;
-      const size = "400x200"; // Smaller size for mobile
+      const zoom = 15; // Increased zoom for better detail
+      const size = "800x400"; // Higher resolution for better quality when scaled
       const scale = 2;
       
-      // Use a simple colored marker instead of complex SVG
+      // Enhanced marker styling
       const markerColor = category.color?.replace('#', '') || "red";
       const marker = `markers=color:${markerColor}%7Csize:large%7C${center}`;
       
-      // Simplified map styles for better readability
+      // Enhanced map styles for better readability
       const baseStyles = [
-        "feature:poi|element:labels|visibility:off",
-        "feature:road.local|element:labels|visibility:simplified"
+        "feature:poi.business|visibility:off", // Hide business POIs for cleaner look
+        "feature:poi.medical|visibility:off",
+        "feature:poi.school|visibility:off", 
+        "feature:transit|visibility:simplified",
+        "feature:road.arterial|element:labels|visibility:on",
+        "feature:road.highway|element:labels|visibility:on",
+        "feature:administrative.locality|element:labels|visibility:on",
+        "feature:administrative.neighborhood|element:labels|visibility:simplified"
       ];
       
-      const darkStyles = theme === "dark" ? [
-        "element:geometry|color:0x1a1a1a",
-        "element:labels.text.fill|color:0x8a8a8a",
-        "feature:road|element:geometry|color:0x2c2c2c",
-        "feature:water|element:geometry|color:0x0f0f0f"
+      const lightStyles = theme === "light" ? [
+        "element:geometry|color:0xf5f5f5",
+        "element:labels.text.fill|color:0x2c2c2c",
+        "element:labels.text.stroke|color:0xffffff|weight:3",
+        "feature:road|element:geometry|color:0xe8e8e8",
+        "feature:road.highway|element:geometry|color:0xd4d4d4",
+        "feature:road.arterial|element:geometry|color:0xe0e0e0",
+        "feature:water|element:geometry|color:0x93c5fd",
+        "feature:park|element:geometry|color:0xd1fae5",
+        "feature:landscape.natural|element:geometry|color:0xf0fdf4",
+        "feature:administrative|element:geometry.stroke|color:0xc0c0c0|weight:1"
       ] : [];
       
-      const allStyles = [...baseStyles, ...darkStyles];
+      const darkStyles = theme === "dark" ? [
+        "element:geometry|color:0x242424",
+        "element:labels.text.fill|color:0xe5e5e5",
+        "element:labels.text.stroke|color:0x1a1a1a|weight:3",
+        "feature:road|element:geometry|color:0x3a3a3a",
+        "feature:road.highway|element:geometry|color:0x4a4a4a",
+        "feature:road.arterial|element:geometry|color:0x404040",
+        "feature:water|element:geometry|color:0x1e3a8a",
+        "feature:park|element:geometry|color:0x1f2937",
+        "feature:landscape.natural|element:geometry|color:0x1f2937",
+        "feature:administrative|element:geometry.stroke|color:0x404040|weight:1"
+      ] : [];
+      
+      const allStyles = [...baseStyles, ...(theme === "dark" ? darkStyles : lightStyles)];
       const styleParam = allStyles.map(style => `&style=${encodeURIComponent(style)}`).join('');
       
       const url = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=roadmap&${marker}${styleParam}&key=${apiKey}`;

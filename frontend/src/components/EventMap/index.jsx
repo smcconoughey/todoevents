@@ -601,7 +601,7 @@ const EventMap = ({ mapsLoaded = false }) => {
             backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
             width: shareCardElement.offsetWidth,
             height: shareCardElement.offsetHeight,
-            pixelRatio: 1,
+            pixelRatio: 3,
             useCORS: true,
             allowTaint: true,
             foreignObjectRendering: true,
@@ -629,8 +629,8 @@ const EventMap = ({ mapsLoaded = false }) => {
             const ctx = canvas.getContext('2d');
             
             // Set canvas size
-            canvas.width = 800;
-            canvas.height = 600;
+            canvas.width = 1200;
+            canvas.height = 900;
             
             // Fill background
             ctx.fillStyle = theme === "dark" ? "#0f0f0f" : "#ffffff";
