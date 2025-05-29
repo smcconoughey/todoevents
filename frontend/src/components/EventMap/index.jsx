@@ -255,13 +255,32 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             <div ref={shareCardRef} className="my-2">
               <ShareCard event={event} />
             </div>
-            <div className="flex gap-2 mt-2">
-              <Button onClick={handleDownload} className="bg-spark-yellow text-neutral-900 font-bold">Download Image</Button>
-              <Button onClick={handleCopyLink} variant="secondary">Copy Link</Button>
-              <Button onClick={handleFacebookShare} variant="secondary">Share to Facebook</Button>
+            <div className="flex flex-col gap-3 w-full">
+              <Button 
+                onClick={handleDownload} 
+                className="w-full bg-spark-yellow text-neutral-900 font-bold min-h-[44px]"
+              >
+                Download Image
+              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleCopyLink} 
+                  variant="secondary" 
+                  className="flex-1 min-h-[40px]"
+                >
+                  Copy Link
+                </Button>
+                <Button 
+                  onClick={handleFacebookShare} 
+                  variant="secondary" 
+                  className="flex-1 min-h-[40px]"
+                >
+                  Share to Facebook
+                </Button>
+              </div>
             </div>
-            {downloadStatus && <div className="text-xs text-white/70 mt-1">{downloadStatus}</div>}
-            <div className="text-xs text-white/40 mt-2">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
+            {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
+            <div className="text-xs text-white/40 mt-1 text-center">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
           </div>
         )}
       </div>
@@ -1376,10 +1395,10 @@ const EventMap = ({ mapsLoaded = false }) => {
                 <div ref={shareCardRef} className="my-1">
                   <ShareCard event={selectedEvent} />
                 </div>
-                <div className="flex flex-col gap-2 w-full">
+                <div className="flex flex-col gap-3 w-full">
                   <Button 
                     onClick={handleDownload} 
-                    className="w-full bg-spark-yellow text-neutral-900 font-bold min-h-[40px] text-sm"
+                    className="w-full bg-spark-yellow text-neutral-900 font-bold min-h-[44px]"
                   >
                     Download Image
                   </Button>
@@ -1387,23 +1406,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <Button 
                       onClick={handleCopyLink} 
                       variant="secondary" 
-                      className="flex-1 min-h-[40px] text-sm"
+                      className="flex-1 min-h-[40px]"
                     >
                       Copy Link
                     </Button>
                     <Button 
                       onClick={handleFacebookShare} 
                       variant="secondary" 
-                      className="flex-1 min-h-[40px] text-sm"
+                      className="flex-1 min-h-[40px]"
                     >
                       Share to Facebook
                     </Button>
                   </div>
                 </div>
                 {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-                <div className="text-xs text-white/40 mt-1 text-center leading-relaxed">
-                  Instagram does not allow direct web sharing. Download and upload the image to your story or feed!
-                </div>
+                <div className="text-xs text-white/40 mt-1 text-center">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
               </div>
             )}
           </div>
