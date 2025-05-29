@@ -12,7 +12,7 @@ Allow: /favicon.ico
 Allow: /sitemap.xml
 
 # Sitemap location
-Sitemap: https://todoevents.onrender.com/sitemap.xml
+Sitemap: https://todo-events.com/sitemap.xml
 
 # Crawl delay (be respectful)
 Crawl-delay: 1 

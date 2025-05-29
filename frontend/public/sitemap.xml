@@ -1,51 +1,360 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  
-  <!-- Homepage -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Homepage - Primary landing page -->
   <url>
-    <loc>https://todoevents.onrender.com/</loc>
-    <lastmod>2025-01-15</lastmod>
+    <loc>https://todo-events.com/</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://todo-events.com/images/pin-logo.svg</image:loc>
+      <image:caption>todo-events logo - Local event discovery platform</image:caption>
+    </image:image>
   </url>
-  
-  <!-- Category Pages -->
+
+  <!-- Main Category Pages -->
   <url>
-    <loc>https://todoevents.onrender.com/?category=food-drink</loc>
-    <lastmod>2025-01-15</lastmod>
+    <loc>https://todo-events.com/?category=food-drink</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=music</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=arts</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=sports</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=community</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Alternative Category Page Formats for SEO -->
+  <url>
+    <loc>https://todo-events.com/events/food-drink</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  
   <url>
-    <loc>https://todoevents.onrender.com/?category=music</loc>
-    <lastmod>2025-01-15</lastmod>
+    <loc>https://todo-events.com/events/music</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  
   <url>
-    <loc>https://todoevents.onrender.com/?category=arts</loc>
-    <lastmod>2025-01-15</lastmod>
+    <loc>https://todo-events.com/events/arts</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  
   <url>
-    <loc>https://todoevents.onrender.com/?category=sports</loc>
-    <lastmod>2025-01-15</lastmod>
+    <loc>https://todo-events.com/events/sports</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  
   <url>
-    <loc>https://todoevents.onrender.com/?category=community</loc>
-    <lastmod>2025-01-15</lastmod>
+    <loc>https://todo-events.com/events/community</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  
-  <!-- Note: Individual event URLs would be dynamically generated in production -->
-  <!-- This sitemap should ideally be generated server-side with current events -->
-  
-</urlset> 
+
+  <!-- Location-based pages (major cities for SEO) -->
+  <url>
+    <loc>https://todo-events.com/?location=new-york-ny</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=los-angeles-ca</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=chicago-il</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=san-francisco-ca</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=miami-fl</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=austin-tx</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=seattle-wa</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=denver-co</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=atlanta-ga</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=boston-ma</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=portland-or</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=nashville-tn</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=philadelphia-pa</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=phoenix-az</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=san-diego-ca</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=minneapolis-mn</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=detroit-mi</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Time-based event pages -->
+  <url>
+    <loc>https://todo-events.com/?date=today</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?date=tomorrow</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?date=this-weekend</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?date=this-week</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?date=next-week</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?date=this-month</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Popular event combinations for long-tail SEO -->
+  <url>
+    <loc>https://todo-events.com/?category=food-drink&date=today</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=music&date=this-weekend</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=arts&date=this-week</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=sports&date=this-weekend</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?category=community&date=this-week</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- City + Category combinations for better local SEO -->
+  <url>
+    <loc>https://todo-events.com/?location=new-york-ny&category=food-drink</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=los-angeles-ca&category=music</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=chicago-il&category=arts</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=san-francisco-ca&category=community</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=miami-fl&category=food-drink</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=austin-tx&category=music</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=seattle-wa&category=arts</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/?location=boston-ma&category=sports</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Static informational pages (for future expansion) -->
+  <url>
+    <loc>https://todo-events.com/about</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/how-it-works</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/create-event</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/contact</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/privacy</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>quarterly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/terms</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>quarterly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- Event discovery landing pages -->
+  <url>
+    <loc>https://todo-events.com/discover</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/near-me</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Note: This sitemap was automatically generated on 2025-05-29 -->
+  <!-- Individual event URLs are dynamically generated when events are available -->
+
+</urlset>

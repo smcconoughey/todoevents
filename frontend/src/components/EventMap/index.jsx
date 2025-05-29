@@ -100,10 +100,10 @@ const generateEventSchema = (event) => {
     "organizer": {
       "@type": "Organization",
       "name": "todo-events",
-      "url": "https://todoevents.onrender.com"
+      "url": "https://todo-events.com"
     },
-    "url": `https://todoevents.onrender.com/event/${event.id}`,
-    "image": event.shareImage || "https://todoevents.onrender.com/images/pin-logo.svg",
+    "url": `https://todo-events.com/event/${event.id}`,
+    "image": event.shareImage || "https://todo-events.com/images/pin-logo.svg",
     "offers": {
       "@type": "Offer",
       "availability": "https://schema.org/InStock",
@@ -131,10 +131,7 @@ const injectEventSchema = (event) => {
   document.head.appendChild(script);
 };
 
-const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
-  const [activeTab, setActiveTab] = React.useState('details');
-  const shareCardRef = React.useRef();
-  const [downloadStatus, setDownloadStatus] = React.useState('');
+const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, setActiveTab, shareCardRef, downloadStatus, handleDownload, handleCopyLink, handleFacebookShare }) => {
 
   if (!event) return null;
 
@@ -167,36 +164,6 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete }) => {
       };
     }
   }, [event]);
-
-  // Download ShareCard as image
-  const handleDownload = async () => {
-    setDownloadStatus('');
-    try {
-      const node = shareCardRef.current;
-      const dataUrl = await htmlToImage.toPng(node);
-      const link = document.createElement('a');
-      link.download = `event-${event.id}-share.png`;
-      link.href = dataUrl;
-      link.click();
-      setDownloadStatus('Downloaded!');
-    } catch (err) {
-      setDownloadStatus('Error exporting image');
-    }
-  };
-
-  // Copy event link
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/?event=${event.id}`;
-    navigator.clipboard.writeText(url);
-    setDownloadStatus('Link copied!');
-    setTimeout(() => setDownloadStatus(''), 1500);
-  };
-
-  // Facebook share
-  const handleFacebookShare = () => {
-    const url = encodeURIComponent(`${window.location.origin}/?event=${event.id}`);
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
-  };
 
   return (
     <div className="absolute right-4 top-4 w-96 bg-neutral-900/95 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden z-20 shadow-2xl">
@@ -368,9 +335,10 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [loginMode, setLoginMode] = useState('login');
   const [editingEvent, setEditingEvent] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
-  const [shareCardRef, setShareCardRef] = useState(null);
+  const [downloadStatus, setDownloadStatus] = useState('');
 
   const mapRef = useRef(null);
+  const shareCardRef = useRef();
 
   const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
   const DEFAULT_ZOOM = 4;
@@ -522,6 +490,36 @@ const EventMap = ({ mapsLoaded = false }) => {
         setShowLoginDialog(true);
       }
     }
+  };
+
+  // Download ShareCard as image
+  const handleDownload = async () => {
+    setDownloadStatus('');
+    try {
+      const node = shareCardRef.current;
+      const dataUrl = await htmlToImage.toPng(node);
+      const link = document.createElement('a');
+      link.download = `event-${selectedEvent.id}-share.png`;
+      link.href = dataUrl;
+      link.click();
+      setDownloadStatus('Downloaded!');
+    } catch (err) {
+      setDownloadStatus('Error exporting image');
+    }
+  };
+
+  // Copy event link
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/?event=${selectedEvent.id}`;
+    navigator.clipboard.writeText(url);
+    setDownloadStatus('Link copied!');
+    setTimeout(() => setDownloadStatus(''), 1500);
+  };
+
+  // Facebook share
+  const handleFacebookShare = () => {
+    const url = encodeURIComponent(`${window.location.origin}/?event=${selectedEvent.id}`);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
   };
 
   const proximityOptions = [
@@ -931,6 +929,13 @@ const EventMap = ({ mapsLoaded = false }) => {
                     });
                   }}
                   onDelete={handleEventDelete}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  shareCardRef={shareCardRef}
+                  downloadStatus={downloadStatus}
+                  handleDownload={handleDownload}
+                  handleCopyLink={handleCopyLink}
+                  handleFacebookShare={handleFacebookShare}
                 />
               </div>
             </div>
