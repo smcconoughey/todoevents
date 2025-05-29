@@ -8,7 +8,6 @@ import MapContainer from "./MapContainer";
 import ShareCard from "./ShareCard";
 import { getCategory } from "./categoryConfig";
 import { CategoryIcon } from "./CategoryIcons";
-import { getUserLocation } from "./locationUtils";
 import * as htmlToImage from 'html-to-image';
 import { 
   Dialog,
