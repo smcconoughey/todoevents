@@ -495,97 +495,189 @@ const EventMap = ({ mapsLoaded = false }) => {
   // Download ShareCard as image
   const handleDownload = async () => {
     setDownloadStatus('Generating...');
+    
     try {
       const node = shareCardRef.current;
       if (!node) {
         throw new Error('Share card not found');
       }
 
-      // Wait a moment for the component to fully render
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Log initial state for debugging
+      console.log('Starting download process...');
+      console.log('Node dimensions:', node.offsetWidth, 'x', node.offsetHeight);
+      
+      // Wait for component to fully render and fonts to load
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Configure options for better image quality and CORS handling
-      const options = {
-        quality: 0.95,
-        backgroundColor: '#000000',
-        pixelRatio: 2,
-        skipAutoScale: true,
-        useCORS: false, // Disable CORS to avoid external CSS issues
-        allowTaint: false, // Don't allow tainted canvas
-        skipFonts: true, // Skip font loading to avoid Google Fonts CORS issues
-        ignoreElements: (element) => {
-          // Skip any Google Maps related elements that might cause issues
-          return element.classList?.contains('gm-style') || 
-                 element.tagName === 'LINK' ||
-                 element.tagName === 'STYLE' && element.innerHTML.includes('googleapis');
-        },
-        filter: (node) => {
-          // Filter out problematic nodes
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const element = node;
-            // Skip external stylesheets
-            if (element.tagName === 'LINK' && element.rel === 'stylesheet') {
-              return false;
-            }
-            // Skip Google Fonts related styles
-            if (element.tagName === 'STYLE' && element.innerHTML.includes('googleapis')) {
-              return false;
-            }
+      // Create a simplified inline-styled clone for image generation
+      const createSimplifiedClone = () => {
+        const clone = node.cloneNode(true);
+        
+        // Remove all classes and apply inline styles
+        const applyInlineStyles = (element) => {
+          if (element.nodeType === Node.ELEMENT_NODE) {
+            // Remove external dependencies
+            element.removeAttribute('class');
+            
+            // Apply basic styling
+            const styles = {
+              fontFamily: '"Segoe UI", "Roboto", sans-serif',
+              boxSizing: 'border-box',
+              margin: '0',
+              padding: '0'
+            };
+            
+            // Apply styles as inline CSS
+            Object.assign(element.style, styles);
+            
+            // Process children recursively
+            Array.from(element.children).forEach(child => applyInlineStyles(child));
           }
-          return true;
-        },
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left',
-          // Add fallback fonts to avoid Google Fonts dependency
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
-        }
+        };
+        
+        applyInlineStyles(clone);
+        return clone;
       };
 
-      // Try multiple methods in order of preference
-      let dataUrl;
-      
+      let dataUrl = null;
+      let lastError = null;
+
+      // Method 1: Try with minimal configuration
       try {
-        // First try: Standard PNG generation with CORS handling
-        dataUrl = await htmlToImage.toPng(node, options);
-      } catch (corsError) {
-        console.warn('Standard PNG generation failed, trying alternative method:', corsError);
+        console.log('Trying method 1: Minimal configuration');
+        const minimalOptions = {
+          backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
+          width: node.offsetWidth,
+          height: node.offsetHeight,
+          style: {
+            transform: 'scale(1)',
+            transformOrigin: 'top left'
+          }
+        };
         
+        dataUrl = await htmlToImage.toPng(node, minimalOptions);
+        console.log('Method 1 successful');
+      } catch (error) {
+        lastError = error;
+        console.warn('Method 1 failed:', error.message);
+      }
+
+      // Method 2: Try with simplified clone
+      if (!dataUrl || dataUrl.length < 100) {
         try {
-          // Second try: Use foreignObjectRendering if available
-          const alternativeOptions = {
-            ...options,
-            preferredFontFormat: 'woff2',
-            skipFonts: false,
-            fontEmbedCSS: '', // Empty to avoid external fonts
-            cacheBust: true
-          };
-          dataUrl = await htmlToImage.toPng(node, alternativeOptions);
-        } catch (altError) {
-          console.warn('Alternative PNG generation failed, trying JPEG:', altError);
+          console.log('Trying method 2: Simplified clone');
+          const clone = createSimplifiedClone();
+          document.body.appendChild(clone);
           
-          // Third try: Fall back to JPEG which is more forgiving
-          const jpegOptions = {
-            quality: 0.9,
-            backgroundColor: '#000000',
-            pixelRatio: 1, // Lower pixel ratio for compatibility
+          const cloneOptions = {
+            backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
+            width: clone.offsetWidth,
+            height: clone.offsetHeight,
             useCORS: false,
-            allowTaint: false,
-            skipFonts: true,
-            filter: options.filter,
-            style: options.style
+            allowTaint: false
           };
-          dataUrl = await htmlToImage.toJpeg(node, jpegOptions);
+          
+          dataUrl = await htmlToImage.toPng(clone, cloneOptions);
+          document.body.removeChild(clone);
+          console.log('Method 2 successful');
+        } catch (error) {
+          lastError = error;
+          console.warn('Method 2 failed:', error.message);
+          // Clean up clone if still in DOM
+          try {
+            if (clone && clone.parentNode) {
+              document.body.removeChild(clone);
+            }
+          } catch (cleanupError) {
+            console.warn('Cleanup error:', cleanupError);
+          }
         }
       }
-      
+
+      // Method 3: Try with SVG approach
       if (!dataUrl || dataUrl.length < 100) {
-        throw new Error('Failed to generate image data');
+        try {
+          console.log('Trying method 3: SVG approach');
+          dataUrl = await htmlToImage.toSvg(node, {
+            backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
+            width: node.offsetWidth,
+            height: node.offsetHeight
+          });
+          console.log('Method 3 successful');
+        } catch (error) {
+          lastError = error;
+          console.warn('Method 3 failed:', error.message);
+        }
+      }
+
+      // Method 4: Canvas fallback - create a basic text-based image
+      if (!dataUrl || dataUrl.length < 100) {
+        try {
+          console.log('Trying method 4: Canvas fallback');
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Set canvas size
+          canvas.width = 800;
+          canvas.height = 600;
+          
+          // Fill background
+          ctx.fillStyle = theme === "dark" ? "#0f0f0f" : "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Set text properties
+          ctx.fillStyle = theme === "dark" ? "#ffffff" : "#000000";
+          ctx.font = "bold 32px Arial, sans-serif";
+          ctx.textAlign = "center";
+          
+          // Draw event title
+          const title = selectedEvent.title;
+          ctx.fillText(title.length > 30 ? title.substring(0, 30) + "..." : title, canvas.width/2, 100);
+          
+          // Draw event details
+          ctx.font = "20px Arial, sans-serif";
+          ctx.fillText(`${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, 200);
+          
+          // Draw location
+          ctx.font = "16px Arial, sans-serif";
+          const address = selectedEvent.address;
+          ctx.fillText(address.length > 50 ? address.substring(0, 50) + "..." : address, canvas.width/2, 250);
+          
+          // Draw category
+          ctx.fillStyle = "#FFEC3A";
+          ctx.font = "18px Arial, sans-serif";
+          ctx.fillText(getCategory(selectedEvent.category).label, canvas.width/2, 300);
+          
+          // Draw branding
+          ctx.fillStyle = "#FFEC3A";
+          ctx.font = "bold 24px Arial, sans-serif";
+          ctx.fillText("todo-events.com", canvas.width/2, 500);
+          
+          dataUrl = canvas.toDataURL('image/png');
+          console.log('Method 4 successful - Canvas fallback generated');
+        } catch (error) {
+          lastError = error;
+          console.warn('Method 4 failed:', error.message);
+        }
+      }
+
+      // Check if we have a valid data URL
+      if (!dataUrl || dataUrl.length < 100) {
+        console.error('All methods failed. Last error:', lastError);
+        throw new Error(`Failed to generate image. Last error: ${lastError?.message || 'Unknown error'}`);
+      }
+
+      // Determine file extension
+      let extension = 'png';
+      if (dataUrl.startsWith('data:image/svg')) {
+        extension = 'svg';
+      } else if (dataUrl.startsWith('data:image/jpeg')) {
+        extension = 'jpg';
       }
 
       // Create and trigger download
       const link = document.createElement('a');
-      link.download = `event-${selectedEvent.id}-share.${dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}`;
+      link.download = `event-${selectedEvent.id}-share.${extension}`;
       link.href = dataUrl;
       
       // Trigger download
@@ -593,12 +685,27 @@ const EventMap = ({ mapsLoaded = false }) => {
       link.click();
       document.body.removeChild(link);
       
+      console.log('Download completed successfully');
       setDownloadStatus('Downloaded!');
       setTimeout(() => setDownloadStatus(''), 2000);
+      
     } catch (err) {
       console.error('Download error:', err);
-      setDownloadStatus('Error exporting image. Please try again.');
-      setTimeout(() => setDownloadStatus(''), 3000);
+      console.error('Error stack:', err.stack);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Error exporting image. ';
+      if (err.message.includes('CORS')) {
+        errorMessage += 'CORS issue detected. ';
+      } else if (err.message.includes('network')) {
+        errorMessage += 'Network issue detected. ';
+      } else if (err.message.includes('timeout')) {
+        errorMessage += 'Request timed out. ';
+      }
+      errorMessage += 'Please try again.';
+      
+      setDownloadStatus(errorMessage);
+      setTimeout(() => setDownloadStatus(''), 4000);
     }
   };
 

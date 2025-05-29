@@ -150,143 +150,189 @@ const ShareCard = ({ event }) => {
     }
   }, [event?.lat, event?.lng, theme, category]);
 
+  // Simplified inline styles for better image generation compatibility
+  const containerStyle = {
+    backgroundColor: bgColor,
+    color: textColor,
+    border: `1px solid ${borderColor}`,
+    fontFamily: 'Arial, sans-serif', // Use more basic font
+    width: '100%',
+    maxWidth: '380px',
+    minWidth: '280px',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+    display: 'flex',
+    flexDirection: 'column'
+  };
+
+  const headerStyle = {
+    backgroundColor: cardBg,
+    borderBottom: `1px solid ${borderColor}`,
+    padding: '12px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  };
+
+  const titleStyle = {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    lineHeight: '1.2',
+    color: textColor,
+    margin: '0',
+    marginRight: '12px'
+  };
+
+  const categoryStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginTop: '4px'
+  };
+
+  const categoryTextStyle = {
+    fontSize: '12px',
+    fontWeight: '500',
+    color: category.color || "#FFEC3A"
+  };
+
+  const mapContainerStyle = {
+    position: 'relative',
+    height: '180px'
+  };
+
+  const mapImageStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    backgroundColor: theme === "dark" ? "#262626" : "#f5f5f5"
+  };
+
+  const detailsStyle = {
+    backgroundColor: cardBg,
+    padding: '12px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+  };
+
+  const detailRowStyle = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px'
+  };
+
+  const iconContainerStyle = {
+    padding: '8px',
+    borderRadius: '50%',
+    marginTop: '2px'
+  };
+
+  const detailTextStyle = {
+    fontSize: '14px',
+    lineHeight: '1.4',
+    color: textColor,
+    margin: '0'
+  };
+
+  const descriptionStyle = {
+    fontSize: '12px',
+    lineHeight: '1.4',
+    color: secondaryTextColor,
+    margin: '0',
+    paddingTop: '4px'
+  };
+
+  const footerStyle = {
+    padding: '12px 16px',
+    textAlign: 'center',
+    borderTop: `1px solid ${borderColor}`,
+    backgroundColor: bgColor
+  };
+
+  const footerTextStyle = {
+    fontSize: '10px',
+    color: secondaryTextColor,
+    margin: '0 0 4px 0'
+  };
+
+  const brandingStyle = {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: "#FFEC3A",
+    margin: '0'
+  };
+
+  const eventIdStyle = {
+    fontSize: '10px',
+    color: secondaryTextColor,
+    margin: '8px 0 0 0'
+  };
+
   return (
-    <div
-      className="overflow-hidden rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl flex flex-col"
-      style={{ 
-        backgroundColor: bgColor,
-        color: textColor,
-        border: `1px solid ${borderColor}`,
-        fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-        width: '100%',
-        maxWidth: '380px', // More mobile-friendly max width
-        minWidth: '280px'
-      }}
-      id="share-card-root"
-      data-html2canvas-ignore-elements="link,style" // Help html-to-image ignore problematic elements
-    >
+    <div style={containerStyle} id="share-card-root">
       {/* Header with title and logo */}
-      <div 
-        className="flex items-center justify-between p-3 sm:p-4"
-        style={{ backgroundColor: cardBg, borderBottom: `1px solid ${borderColor}` }}
-      >
-        <div className="flex-1 mr-3">
-          <h1 
-            className="text-base sm:text-lg font-bold leading-tight" 
-            style={{ 
-              color: textColor,
-              fontFamily: 'inherit',
-              fontWeight: '700'
-            }}
-          >
+      <div style={headerStyle}>
+        <div style={{ flex: 1 }}>
+          <h1 style={titleStyle}>
             {event.title}
           </h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div style={categoryStyle}>
             <CategoryIcon 
               category={event.category} 
-              className="w-4 h-4" 
-              style={{ color: category.color || "#FFEC3A" }}
+              style={{ width: '16px', height: '16px', color: category.color || "#FFEC3A" }}
             />
-            <span 
-              className="text-xs font-medium" 
-              style={{ 
-                color: category.color || "#FFEC3A",
-                fontFamily: 'inherit',
-                fontWeight: '500'
-              }}
-            >
+            <span style={categoryTextStyle}>
               {category.label || event.category}
             </span>
           </div>
         </div>
-        <TodoEventsLogo theme={theme} className="flex-shrink-0" />
+        <TodoEventsLogo theme={theme} />
       </div>
       
       {/* Map section */}
-      <div className="relative">
+      <div style={mapContainerStyle}>
         {mapUrl ? (
           <img 
             src={mapUrl} 
             alt="Event location map"
-            className="w-full h-32 sm:h-48 object-cover"
-            style={{ backgroundColor: theme === "dark" ? "#262626" : "#f5f5f5" }}
+            style={mapImageStyle}
             onError={() => setMapUrl("")}
             loading="eager"
             crossOrigin="anonymous"
-            data-html2canvas-ignore="false" // Explicitly allow this image
           />
         ) : (
-          <div className="h-32 sm:h-48">
-            <FallbackMap event={event} category={category} theme={theme} />
-          </div>
-        )}
-        
-        {/* Floating location badge - only show with real map */}
-        {mapUrl && (
-          <div 
-            className="absolute bottom-2 left-2 px-2 py-1 rounded-full shadow-lg backdrop-blur-sm"
-            style={{ 
-              backgroundColor: `${bgColor}f0`, 
-              border: `1px solid ${borderColor}`,
-              backdropFilter: 'blur(8px)',
-              fontFamily: 'inherit'
-            }}
-          >
-            <div className="flex items-center gap-1">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
-                  stroke="#ef4444" strokeWidth="2"/>
-                <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
-                  stroke="#ef4444" strokeWidth="2"/>
-              </svg>
-              <span 
-                className="text-xs font-medium" 
-                style={{ 
-                  color: textColor,
-                  fontFamily: 'inherit',
-                  fontWeight: '500'
-                }}
-              >
-                5mi radius
-              </span>
-            </div>
-          </div>
+          <FallbackMap event={event} category={category} theme={theme} />
         )}
       </div>
       
       {/* Event details */}
-      <div className="p-3 sm:p-4 space-y-3" style={{ backgroundColor: cardBg }}>
+      <div style={detailsStyle}>
         {/* Date and time */}
-        <div className="flex items-start gap-2">
-          <div 
-            className="p-2 rounded-full mt-0.5"
-            style={{ backgroundColor: theme === "dark" ? "#1e40af20" : "#dbeafe" }}
-          >
+        <div style={detailRowStyle}>
+          <div style={{
+            ...iconContainerStyle,
+            backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
+          }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
                 stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <div>
-            <p 
-              className="text-sm sm:text-base font-semibold leading-tight" 
-              style={{ 
-                color: textColor,
-                fontFamily: 'inherit',
-                fontWeight: '600'
-              }}
-            >
+            <p style={detailTextStyle}>
               {formatDate(event.date, event.time)}
             </p>
           </div>
         </div>
         
         {/* Location */}
-        <div className="flex items-start gap-2">
-          <div 
-            className="p-2 rounded-full mt-0.5"
-            style={{ backgroundColor: theme === "dark" ? "#dc262620" : "#fee2e2" }}
-          >
+        <div style={detailRowStyle}>
+          <div style={{
+            ...iconContainerStyle,
+            backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
+          }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
                 stroke="#dc2626" strokeWidth="2"/>
@@ -294,15 +340,8 @@ const ShareCard = ({ event }) => {
                 stroke="#dc2626" strokeWidth="2"/>
             </svg>
           </div>
-          <div className="min-w-0 flex-1">
-            <p 
-              className="text-xs sm:text-sm leading-relaxed break-words" 
-              style={{ 
-                color: textColor,
-                fontFamily: 'inherit',
-                fontWeight: '400'
-              }}
-            >
+          <div style={{ flex: 1 }}>
+            <p style={detailTextStyle}>
               {event.address}
             </p>
           </div>
@@ -310,54 +349,23 @@ const ShareCard = ({ event }) => {
         
         {/* Description */}
         {event.description && (
-          <div className="pt-1">
-            <p 
-              className="text-xs sm:text-sm leading-relaxed line-clamp-2" 
-              style={{ 
-                color: secondaryTextColor,
-                fontFamily: 'inherit',
-                fontWeight: '400'
-              }}
-            >
-              {event.description}
+          <div>
+            <p style={descriptionStyle}>
+              {event.description.length > 150 ? event.description.substring(0, 150) + "..." : event.description}
             </p>
           </div>
         )}
       </div>
       
       {/* Footer with branding */}
-      <div 
-        className="px-3 sm:px-4 py-3 text-center border-t"
-        style={{ borderColor: borderColor, backgroundColor: bgColor }}
-      >
-        <p 
-          className="text-xs mb-1" 
-          style={{ 
-            color: secondaryTextColor,
-            fontFamily: 'inherit',
-            fontWeight: '400'
-          }}
-        >
+      <div style={footerStyle}>
+        <p style={footerTextStyle}>
           Discover more local events at
         </p>
-        <p 
-          className="text-base sm:text-lg font-bold" 
-          style={{ 
-            color: "#FFEC3A",
-            fontFamily: 'inherit',
-            fontWeight: '700'
-          }}
-        >
+        <p style={brandingStyle}>
           todo-events.com
         </p>
-        <p 
-          className="text-xs mt-2" 
-          style={{ 
-            color: secondaryTextColor,
-            fontFamily: 'inherit',
-            fontWeight: '400'
-          }}
-        >
+        <p style={eventIdStyle}>
           Event ID: {event.id} • 5-mile radius highlighted
         </p>
       </div>
