@@ -504,28 +504,88 @@ const EventMap = ({ mapsLoaded = false }) => {
       // Wait a moment for the component to fully render
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Configure options for better image quality
+      // Configure options for better image quality and CORS handling
       const options = {
         quality: 0.95,
         backgroundColor: '#000000',
         pixelRatio: 2,
         skipAutoScale: true,
-        useCORS: true,
-        allowTaint: true,
+        useCORS: false, // Disable CORS to avoid external CSS issues
+        allowTaint: false, // Don't allow tainted canvas
+        skipFonts: true, // Skip font loading to avoid Google Fonts CORS issues
+        ignoreElements: (element) => {
+          // Skip any Google Maps related elements that might cause issues
+          return element.classList?.contains('gm-style') || 
+                 element.tagName === 'LINK' ||
+                 element.tagName === 'STYLE' && element.innerHTML.includes('googleapis');
+        },
+        filter: (node) => {
+          // Filter out problematic nodes
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node;
+            // Skip external stylesheets
+            if (element.tagName === 'LINK' && element.rel === 'stylesheet') {
+              return false;
+            }
+            // Skip Google Fonts related styles
+            if (element.tagName === 'STYLE' && element.innerHTML.includes('googleapis')) {
+              return false;
+            }
+          }
+          return true;
+        },
         style: {
           transform: 'scale(1)',
-          transformOrigin: 'top left'
+          transformOrigin: 'top left',
+          // Add fallback fonts to avoid Google Fonts dependency
+          fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
         }
       };
 
-      const dataUrl = await htmlToImage.toPng(node, options);
+      // Try multiple methods in order of preference
+      let dataUrl;
+      
+      try {
+        // First try: Standard PNG generation with CORS handling
+        dataUrl = await htmlToImage.toPng(node, options);
+      } catch (corsError) {
+        console.warn('Standard PNG generation failed, trying alternative method:', corsError);
+        
+        try {
+          // Second try: Use foreignObjectRendering if available
+          const alternativeOptions = {
+            ...options,
+            preferredFontFormat: 'woff2',
+            skipFonts: false,
+            fontEmbedCSS: '', // Empty to avoid external fonts
+            cacheBust: true
+          };
+          dataUrl = await htmlToImage.toPng(node, alternativeOptions);
+        } catch (altError) {
+          console.warn('Alternative PNG generation failed, trying JPEG:', altError);
+          
+          // Third try: Fall back to JPEG which is more forgiving
+          const jpegOptions = {
+            quality: 0.9,
+            backgroundColor: '#000000',
+            pixelRatio: 1, // Lower pixel ratio for compatibility
+            useCORS: false,
+            allowTaint: false,
+            skipFonts: true,
+            filter: options.filter,
+            style: options.style
+          };
+          dataUrl = await htmlToImage.toJpeg(node, jpegOptions);
+        }
+      }
       
       if (!dataUrl || dataUrl.length < 100) {
         throw new Error('Failed to generate image data');
       }
 
+      // Create and trigger download
       const link = document.createElement('a');
-      link.download = `event-${selectedEvent.id}-share.png`;
+      link.download = `event-${selectedEvent.id}-share.${dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}`;
       link.href = dataUrl;
       
       // Trigger download
@@ -537,7 +597,7 @@ const EventMap = ({ mapsLoaded = false }) => {
       setTimeout(() => setDownloadStatus(''), 2000);
     } catch (err) {
       console.error('Download error:', err);
-      setDownloadStatus('Error exporting image');
+      setDownloadStatus('Error exporting image. Please try again.');
       setTimeout(() => setDownloadStatus(''), 3000);
     }
   };

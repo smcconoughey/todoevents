@@ -157,12 +157,13 @@ const ShareCard = ({ event }) => {
         backgroundColor: bgColor,
         color: textColor,
         border: `1px solid ${borderColor}`,
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         width: '100%',
         maxWidth: '380px', // More mobile-friendly max width
         minWidth: '280px'
       }}
       id="share-card-root"
+      data-html2canvas-ignore-elements="link,style" // Help html-to-image ignore problematic elements
     >
       {/* Header with title and logo */}
       <div 
@@ -170,7 +171,14 @@ const ShareCard = ({ event }) => {
         style={{ backgroundColor: cardBg, borderBottom: `1px solid ${borderColor}` }}
       >
         <div className="flex-1 mr-3">
-          <h1 className="text-base sm:text-lg font-bold leading-tight" style={{ color: textColor }}>
+          <h1 
+            className="text-base sm:text-lg font-bold leading-tight" 
+            style={{ 
+              color: textColor,
+              fontFamily: 'inherit',
+              fontWeight: '700'
+            }}
+          >
             {event.title}
           </h1>
           <div className="flex items-center gap-2 mt-1">
@@ -179,7 +187,14 @@ const ShareCard = ({ event }) => {
               className="w-4 h-4" 
               style={{ color: category.color || "#FFEC3A" }}
             />
-            <span className="text-xs font-medium" style={{ color: category.color || "#FFEC3A" }}>
+            <span 
+              className="text-xs font-medium" 
+              style={{ 
+                color: category.color || "#FFEC3A",
+                fontFamily: 'inherit',
+                fontWeight: '500'
+              }}
+            >
               {category.label || event.category}
             </span>
           </div>
@@ -198,6 +213,7 @@ const ShareCard = ({ event }) => {
             onError={() => setMapUrl("")}
             loading="eager"
             crossOrigin="anonymous"
+            data-html2canvas-ignore="false" // Explicitly allow this image
           />
         ) : (
           <div className="h-32 sm:h-48">
@@ -212,7 +228,8 @@ const ShareCard = ({ event }) => {
             style={{ 
               backgroundColor: `${bgColor}f0`, 
               border: `1px solid ${borderColor}`,
-              backdropFilter: 'blur(8px)'
+              backdropFilter: 'blur(8px)',
+              fontFamily: 'inherit'
             }}
           >
             <div className="flex items-center gap-1">
@@ -222,7 +239,16 @@ const ShareCard = ({ event }) => {
                 <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
                   stroke="#ef4444" strokeWidth="2"/>
               </svg>
-              <span className="text-xs font-medium" style={{ color: textColor }}>5mi radius</span>
+              <span 
+                className="text-xs font-medium" 
+                style={{ 
+                  color: textColor,
+                  fontFamily: 'inherit',
+                  fontWeight: '500'
+                }}
+              >
+                5mi radius
+              </span>
             </div>
           </div>
         )}
@@ -242,7 +268,14 @@ const ShareCard = ({ event }) => {
             </svg>
           </div>
           <div>
-            <p className="text-sm sm:text-base font-semibold leading-tight" style={{ color: textColor }}>
+            <p 
+              className="text-sm sm:text-base font-semibold leading-tight" 
+              style={{ 
+                color: textColor,
+                fontFamily: 'inherit',
+                fontWeight: '600'
+              }}
+            >
               {formatDate(event.date, event.time)}
             </p>
           </div>
@@ -262,7 +295,14 @@ const ShareCard = ({ event }) => {
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm leading-relaxed break-words" style={{ color: textColor }}>
+            <p 
+              className="text-xs sm:text-sm leading-relaxed break-words" 
+              style={{ 
+                color: textColor,
+                fontFamily: 'inherit',
+                fontWeight: '400'
+              }}
+            >
               {event.address}
             </p>
           </div>
@@ -271,7 +311,14 @@ const ShareCard = ({ event }) => {
         {/* Description */}
         {event.description && (
           <div className="pt-1">
-            <p className="text-xs sm:text-sm leading-relaxed line-clamp-2" style={{ color: secondaryTextColor }}>
+            <p 
+              className="text-xs sm:text-sm leading-relaxed line-clamp-2" 
+              style={{ 
+                color: secondaryTextColor,
+                fontFamily: 'inherit',
+                fontWeight: '400'
+              }}
+            >
               {event.description}
             </p>
           </div>
@@ -283,13 +330,34 @@ const ShareCard = ({ event }) => {
         className="px-3 sm:px-4 py-3 text-center border-t"
         style={{ borderColor: borderColor, backgroundColor: bgColor }}
       >
-        <p className="text-xs mb-1" style={{ color: secondaryTextColor }}>
+        <p 
+          className="text-xs mb-1" 
+          style={{ 
+            color: secondaryTextColor,
+            fontFamily: 'inherit',
+            fontWeight: '400'
+          }}
+        >
           Discover more local events at
         </p>
-        <p className="text-base sm:text-lg font-bold" style={{ color: "#FFEC3A" }}>
+        <p 
+          className="text-base sm:text-lg font-bold" 
+          style={{ 
+            color: "#FFEC3A",
+            fontFamily: 'inherit',
+            fontWeight: '700'
+          }}
+        >
           todo-events.com
         </p>
-        <p className="text-xs mt-2" style={{ color: secondaryTextColor }}>
+        <p 
+          className="text-xs mt-2" 
+          style={{ 
+            color: secondaryTextColor,
+            fontFamily: 'inherit',
+            fontWeight: '400'
+          }}
+        >
           Event ID: {event.id} • 5-mile radius highlighted
         </p>
       </div>
