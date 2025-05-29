@@ -525,111 +525,101 @@ const EventMap = ({ mapsLoaded = false }) => {
       console.log('Theme:', theme);
       console.log('Selected event:', selectedEvent.title);
       console.log('Active tab:', activeTab);
-      console.log('Node element:', node);
-      console.log('Node tagName:', node.tagName);
-      console.log('Node children count:', node.children.length);
       
       // Wait for component to fully render and fonts to load
       await new Promise(resolve => setTimeout(resolve, 1200));
 
-      // Get comprehensive style information
-      const computedStyle = window.getComputedStyle(node);
-      console.log('=== Style Debug ===');
-      console.log('Node offsetWidth:', node.offsetWidth);
-      console.log('Node offsetHeight:', node.offsetHeight);
-      console.log('Node clientWidth:', node.clientWidth);
-      console.log('Node clientHeight:', node.clientHeight);
-      console.log('Node scrollWidth:', node.scrollWidth);
-      console.log('Node scrollHeight:', node.scrollHeight);
-      console.log('Display:', computedStyle.display);
-      console.log('Visibility:', computedStyle.visibility);
-      console.log('Position:', computedStyle.position);
-      console.log('Opacity:', computedStyle.opacity);
-      console.log('Transform:', computedStyle.transform);
-
-      // Check if the actual ShareCard element exists within the ref
+      // Find the actual ShareCard element
       const shareCardElement = node.querySelector('#share-card-root') || node.querySelector('[id*="share"]') || node;
-      if (shareCardElement && shareCardElement !== node) {
-        console.log('Found nested share card element:', shareCardElement);
-        console.log('ShareCard dimensions:', shareCardElement.offsetWidth, 'x', shareCardElement.offsetHeight);
-      }
-
-      // Try to force visibility and dimensions
-      if (node.offsetWidth === 0 || node.offsetHeight === 0) {
-        console.log('Attempting to force visibility...');
+      
+      console.log('=== Element Debug ===');
+      console.log('Wrapper node dimensions:', node.offsetWidth, 'x', node.offsetHeight);
+      console.log('ShareCard element dimensions:', shareCardElement.offsetWidth, 'x', shareCardElement.offsetHeight);
+      
+      // Force proper dimensions on the ShareCard element
+      let needsRestore = false;
+      let originalStyles = {};
+      
+      if (shareCardElement.offsetWidth === 0 || shareCardElement.offsetHeight === 0) {
+        console.log('Forcing ShareCard dimensions...');
+        needsRestore = true;
         
         // Store original styles
-        const originalStyles = {
-          position: node.style.position,
-          left: node.style.left,
-          top: node.style.top,
-          display: node.style.display,
-          visibility: node.style.visibility,
-          opacity: node.style.opacity,
-          transform: node.style.transform,
-          width: node.style.width,
-          height: node.style.height
+        originalStyles = {
+          width: shareCardElement.style.width,
+          minWidth: shareCardElement.style.minWidth,
+          maxWidth: shareCardElement.style.maxWidth,
+          height: shareCardElement.style.height,
+          position: shareCardElement.style.position,
+          left: shareCardElement.style.left,
+          top: shareCardElement.style.top,
+          visibility: shareCardElement.style.visibility,
+          display: shareCardElement.style.display
         };
         
-        // Force visibility with fixed dimensions
-        node.style.position = 'fixed';
-        node.style.left = '-9999px';
-        node.style.top = '0px';
-        node.style.display = 'block';
-        node.style.visibility = 'visible';
-        node.style.opacity = '1';
-        node.style.transform = 'none';
-        node.style.width = 'auto';
-        node.style.height = 'auto';
+        // Force fixed dimensions - typical mobile-friendly card size
+        shareCardElement.style.width = '360px';
+        shareCardElement.style.minWidth = '360px';
+        shareCardElement.style.maxWidth = '360px';
+        shareCardElement.style.height = 'auto';
+        shareCardElement.style.position = 'fixed';
+        shareCardElement.style.left = '-9999px';
+        shareCardElement.style.top = '0px';
+        shareCardElement.style.visibility = 'visible';
+        shareCardElement.style.display = 'flex';
         
         // Force a reflow
-        node.offsetHeight;
+        shareCardElement.offsetHeight;
         
+        // Wait for layout to settle
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        console.log('After forcing visibility - dimensions:', node.offsetWidth, 'x', node.offsetHeight);
+        console.log('After forcing dimensions:', shareCardElement.offsetWidth, 'x', shareCardElement.offsetHeight);
         
-        if (node.offsetWidth === 0 || node.offsetHeight === 0) {
-          // Restore original styles
-          Object.keys(originalStyles).forEach(key => {
-            node.style[key] = originalStyles[key];
-          });
-          throw new Error('Share card still has no dimensions after forcing visibility. The ShareCard component may not be rendering properly.');
+        if (shareCardElement.offsetWidth === 0 || shareCardElement.offsetHeight === 0) {
+          throw new Error('ShareCard still has no dimensions after forcing. Component may have rendering issues.');
         }
       }
 
       let dataUrl = null;
       let lastError = null;
 
-      // Method 1: Try with basic html-to-image
+      // Method 1: Try with html-to-image on the properly sized element
       try {
-        console.log('Trying method 1: Basic html-to-image...');
-        
-        const targetElement = shareCardElement && shareCardElement.offsetWidth > 0 ? shareCardElement : node;
-        console.log('Using target element:', targetElement, 'with dimensions:', targetElement.offsetWidth, 'x', targetElement.offsetHeight);
+        console.log('Trying method 1: html-to-image capture...');
         
         const options = {
           backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
-          width: targetElement.offsetWidth,
-          height: targetElement.offsetHeight,
-          pixelRatio: 2,
+          width: shareCardElement.offsetWidth,
+          height: shareCardElement.offsetHeight,
+          pixelRatio: 1, // Reduce pixel ratio for better compatibility
           useCORS: true,
           allowTaint: true,
           foreignObjectRendering: true,
+          skipFonts: false,
           style: {
             transform: 'scale(1)',
             transformOrigin: 'top left'
           }
         };
         
-        dataUrl = await htmlToImage.toPng(targetElement, options);
+        console.log('Capture options:', options);
+        dataUrl = await htmlToImage.toPng(shareCardElement, options);
         console.log('Method 1 successful - data URL length:', dataUrl.length);
       } catch (error) {
         lastError = error;
         console.warn('Method 1 failed:', error.message);
       }
 
-      // Method 2: Canvas fallback if first method fails
+      // Restore original styles if we modified them
+      if (needsRestore) {
+        console.log('Restoring original styles...');
+        Object.keys(originalStyles).forEach(key => {
+          shareCardElement.style[key] = originalStyles[key];
+        });
+      }
+
+      // Method 2: Canvas fallback if html-to-image fails
       if (!dataUrl || dataUrl.length < 100) {
         try {
           console.log('Trying method 2: Canvas fallback...');
@@ -704,7 +694,6 @@ const EventMap = ({ mapsLoaded = false }) => {
       
     } catch (err) {
       console.error('Download error:', err);
-      console.error('Error stack:', err.stack);
       
       setDownloadStatus(`Error: ${err.message}`);
       setTimeout(() => setDownloadStatus(''), 6000);
