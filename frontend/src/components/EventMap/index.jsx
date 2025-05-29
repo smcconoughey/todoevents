@@ -438,7 +438,7 @@ const EventMap = ({ mapsLoaded = false }) => {
       const urlParams = new URLSearchParams(window.location.search);
       const eventId = urlParams.get('event');
       
-      if (eventId && events.length > 0) {
+      if (eventId && events.length > 0 && !selectedEvent) {
         const targetEvent = events.find(event => event.id.toString() === eventId.toString());
         
         if (targetEvent) {
@@ -465,11 +465,11 @@ const EventMap = ({ mapsLoaded = false }) => {
       }
     };
 
-    // Only run after events are loaded
+    // Only run after events are loaded and we don't already have a selected event
     if (events.length > 0) {
       handleUrlParams();
     }
-  }, [events]); // Run when events change
+  }, [events.length]); // Only depend on events.length, not the entire events array
 
   const filteredEvents = events.filter(event => {
     const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
@@ -663,14 +663,26 @@ const EventMap = ({ mapsLoaded = false }) => {
             width: shareCardElement.offsetWidth,
             height: shareCardElement.offsetHeight,
             pixelRatio: 3,
-            useCORS: true,
-            allowTaint: true,
-            foreignObjectRendering: true,
-            skipFonts: false,
+            useCORS: false,
+            allowTaint: false,
+            foreignObjectRendering: false,
+            skipFonts: true,
             cacheBust: true,
-            style: {
-              transform: 'scale(1)',
-              transformOrigin: 'top left'
+            filter: (node) => {
+              // Skip external stylesheets and Google Fonts
+              if (node.tagName === 'LINK' && node.href && 
+                  (node.href.includes('fonts.googleapis.com') || 
+                   node.href.includes('fonts.gstatic.com') ||
+                   node.href.includes('maps.googleapis.com'))) {
+                return false;
+              }
+              // Skip style elements that might contain external CSS
+              if (node.tagName === 'STYLE' && node.textContent && 
+                  (node.textContent.includes('googleapis.com') || 
+                   node.textContent.includes('gstatic.com'))) {
+                return false;
+              }
+              return true;
             }
           };
           
@@ -845,22 +857,110 @@ const EventMap = ({ mapsLoaded = false }) => {
 
         // Wait for layout
         shareCardElement.offsetHeight;
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Generate image
-        const options = {
-          backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
-          width: shareCardElement.offsetWidth,
-          height: shareCardElement.offsetHeight,
-          pixelRatio: 3,
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: true,
-          skipFonts: false,
-          cacheBust: true
-        };
+        let dataUrl = null;
+        let method = '';
 
-        const dataUrl = await htmlToImage.toPng(shareCardElement, options);
+        // Try multiple methods with better error handling
+        try {
+          // Method 1: Safe mode with Google Fonts filtering
+          console.log('Trying Facebook share method 1: Safe mode...');
+          const safeOptions = {
+            backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
+            width: shareCardElement.offsetWidth,
+            height: shareCardElement.offsetHeight,
+            pixelRatio: 2, // Lower quality for more reliability
+            useCORS: false,
+            allowTaint: false,
+            foreignObjectRendering: false,
+            skipFonts: true,
+            cacheBust: true,
+            filter: (node) => {
+              // Skip external stylesheets and Google Fonts
+              if (node.tagName === 'LINK' && node.href && 
+                  (node.href.includes('fonts.googleapis.com') || 
+                   node.href.includes('fonts.gstatic.com') ||
+                   node.href.includes('maps.googleapis.com'))) {
+                return false;
+              }
+              // Skip style elements that might contain external CSS
+              if (node.tagName === 'STYLE' && node.textContent && 
+                  (node.textContent.includes('googleapis.com') || 
+                   node.textContent.includes('gstatic.com'))) {
+                return false;
+              }
+              return true;
+            }
+          };
+
+          dataUrl = await htmlToImage.toPng(shareCardElement, safeOptions);
+          method = 'Safe mode';
+        } catch (safeError) {
+          console.log('Safe mode failed, trying method 2:', safeError.message);
+          
+          // Method 2: Canvas fallback - create basic image
+          try {
+            console.log('Trying Facebook share method 2: Canvas fallback...');
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 900;
+            const ctx = canvas.getContext('2d');
+            
+            // Fill background
+            ctx.fillStyle = theme === "dark" ? "#0f0f0f" : "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add event info as text
+            ctx.fillStyle = theme === "dark" ? "#ffffff" : "#000000";
+            ctx.font = 'bold 48px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            
+            const wrapText = (text, x, y, maxWidth, lineHeight) => {
+              const words = text.split(' ');
+              let line = '';
+              let currentY = y;
+              
+              for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                
+                if (testWidth > maxWidth && n > 0) {
+                  ctx.fillText(line, x, currentY);
+                  line = words[n] + ' ';
+                  currentY += lineHeight;
+                } else {
+                  line = testLine;
+                }
+              }
+              ctx.fillText(line, x, currentY);
+              return currentY + lineHeight;
+            };
+            
+            // Draw event details
+            let currentY = 150;
+            currentY = wrapText(selectedEvent.title, canvas.width/2, currentY, 1000, 60) + 40;
+            
+            ctx.font = '32px Arial, sans-serif';
+            currentY = wrapText(`📅 ${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, currentY, 1000, 40) + 20;
+            currentY = wrapText(`📍 ${selectedEvent.address}`, canvas.width/2, currentY, 1000, 40) + 40;
+            
+            ctx.font = '24px Arial, sans-serif';
+            currentY = wrapText(selectedEvent.description || '', canvas.width/2, currentY, 1000, 35) + 60;
+            
+            // Add branding
+            ctx.font = 'bold 28px Arial, sans-serif';
+            ctx.fillStyle = '#3B82F6';
+            ctx.fillText('Find more events at todo-events.com', canvas.width/2, canvas.height - 100);
+            
+            dataUrl = canvas.toDataURL('image/png');
+            method = 'Canvas fallback';
+          } catch (canvasError) {
+            console.error('Canvas fallback failed:', canvasError);
+            throw new Error('All image generation methods failed');
+          }
+        }
 
         // Restore ShareCard to original position
         if (originalNextSibling) {
@@ -871,6 +971,8 @@ const EventMap = ({ mapsLoaded = false }) => {
 
         // Clean up temp wrapper
         document.body.removeChild(tempWrapper);
+
+        console.log(`Facebook share image generated using: ${method}`);
 
         // Automatically download the image
         const link = document.createElement('a');
@@ -915,7 +1017,7 @@ const EventMap = ({ mapsLoaded = false }) => {
         setTimeout(() => {
           window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${shareText}`, '_blank');
           
-          setDownloadStatus('✅ Image downloaded! Upload it to your Facebook post.');
+          setDownloadStatus(`✅ Image downloaded (${method})! Upload it to your Facebook post.`);
           setTimeout(() => setDownloadStatus(''), 5000);
         }, 500);
 
