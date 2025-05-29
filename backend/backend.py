@@ -382,7 +382,7 @@ def init_db():
                 ''')
             
             # Check for default admin user and create if needed
-            create_default_admin_user(conn)
+            # create_default_admin_user(conn)  # Moved to after security functions are defined
             
     except Exception as e:
         logger.error(f"Error initializing database: {str(e)}")
@@ -535,13 +535,26 @@ class AutomatedTaskManager:
         try:
             with get_db() as conn:
                 c = conn.cursor()
-                c.execute("""
-                    SELECT id, title, description, date, time, category, 
-                           address, lat, lng, created_at
-                    FROM events 
-                    WHERE date >= date('now')
-                    ORDER BY date, time
-                """)
+                
+                # Use proper date comparison for both PostgreSQL and SQLite
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL
+                    c.execute("""
+                        SELECT id, title, description, date, time, category, 
+                               address, lat, lng, created_at
+                        FROM events 
+                        WHERE date >= CURRENT_DATE
+                        ORDER BY date, time
+                    """)
+                else:
+                    # SQLite
+                    c.execute("""
+                        SELECT id, title, description, date, time, category, 
+                               address, lat, lng, created_at
+                        FROM events 
+                        WHERE date >= date('now')
+                        ORDER BY date, time
+                    """)
                 return [dict(row) for row in c.fetchall()]
         except Exception as e:
             logger.error(f"Error fetching events for sitemap: {str(e)}")
@@ -644,8 +657,9 @@ class AutomatedTaskManager:
             with get_db() as conn:
                 c = conn.cursor()
                 cutoff_date = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
+                placeholder = get_placeholder()
                 
-                c.execute(f"DELETE FROM events WHERE date < ?", (cutoff_date,))
+                c.execute(f"DELETE FROM events WHERE date < {placeholder}", (cutoff_date,))
                 deleted_count = c.rowcount
                 conn.commit()
                 
@@ -706,9 +720,55 @@ class AutomatedTaskManager:
         try:
             # Schedule tasks every 6 hours (aligned with AI tool update patterns)
             
+            # Create wrapper functions for async tasks
+            def run_sitemap_generation():
+                """Synchronous wrapper for sitemap generation"""
+                try:
+                    # Create new event loop if none exists
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    # Run the async function
+                    loop.run_until_complete(self.generate_sitemap_automatically())
+                except Exception as e:
+                    logger.error(f"Error in sitemap generation wrapper: {str(e)}")
+
+            def run_event_refresh():
+                """Synchronous wrapper for event data refresh"""
+                try:
+                    # Create new event loop if none exists
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    # Run the async function
+                    loop.run_until_complete(self.refresh_event_data())
+                except Exception as e:
+                    logger.error(f"Error in event refresh wrapper: {str(e)}")
+
+            def run_ai_sync():
+                """Synchronous wrapper for AI sync"""
+                try:
+                    # Create new event loop if none exists
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    # Run the async function
+                    loop.run_until_complete(self.sync_with_ai_tools())
+                except Exception as e:
+                    logger.error(f"Error in AI sync wrapper: {str(e)}")
+            
             # Sitemap generation - every 6 hours
             self.scheduler.add_job(
-                func=lambda: asyncio.create_task(self.generate_sitemap_automatically()),
+                func=run_sitemap_generation,
                 trigger=IntervalTrigger(hours=6),
                 id='sitemap_generation',
                 name='Automated Sitemap Generation',
@@ -717,7 +777,7 @@ class AutomatedTaskManager:
             
             # Event data refresh - every 6 hours (offset by 2 hours)
             self.scheduler.add_job(
-                func=lambda: asyncio.create_task(self.refresh_event_data()),
+                func=run_event_refresh,
                 trigger=IntervalTrigger(hours=6, start_date=datetime.utcnow() + timedelta(hours=2)),
                 id='event_refresh',
                 name='Event Data Refresh',
@@ -726,7 +786,7 @@ class AutomatedTaskManager:
             
             # AI sync - every 6 hours (offset by 4 hours)
             self.scheduler.add_job(
-                func=lambda: asyncio.create_task(self.sync_with_ai_tools()),
+                func=run_ai_sync,
                 trigger=IntervalTrigger(hours=6, start_date=datetime.utcnow() + timedelta(hours=4)),
                 id='ai_sync',
                 name='AI Tools Synchronization',
