@@ -110,6 +110,8 @@ async def cors_handler(request, call_next):
                 logger.warning(f"Unrecognized origin, but allowing: {origin}")
                 allowed_origin = origin
         
+        logger.info(f"OPTIONS response for origin {origin} with allowed_origin: {allowed_origin}")
+        
         # Return proper preflight response
         return Response(
             status_code=200,
@@ -170,14 +172,15 @@ async def cors_handler(request, call_next):
         return error_response
 
 # CORS middleware with dynamic origins (as fallback)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=get_cors_origins(),
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    max_age=86400,  # Cache preflight requests for 24 hours
-)
+# Commenting out the built-in CORS middleware since we have custom CORS handling
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=get_cors_origins(),
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+#     allow_headers=["*"],
+#     max_age=86400,  # Cache preflight requests for 24 hours
+# )
 
 # Database file for SQLite (development only)
 DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
