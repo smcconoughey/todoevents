@@ -222,31 +222,31 @@
 
   <!-- Popular event combinations for long-tail SEO -->
   <url>
-    <loc>https://todo-events.com/?category=food-drink&date=today</loc>
+    <loc>https://todo-events.com/?category=food-drink&amp;date=today</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?category=music&date=this-weekend</loc>
+    <loc>https://todo-events.com/?category=music&amp;date=this-weekend</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?category=arts&date=this-week</loc>
+    <loc>https://todo-events.com/?category=arts&amp;date=this-week</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?category=sports&date=this-weekend</loc>
+    <loc>https://todo-events.com/?category=sports&amp;date=this-weekend</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?category=community&date=this-week</loc>
+    <loc>https://todo-events.com/?category=community&amp;date=this-week</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
@@ -254,49 +254,49 @@
 
   <!-- City + Category combinations for better local SEO -->
   <url>
-    <loc>https://todo-events.com/?location=new-york-ny&category=food-drink</loc>
+    <loc>https://todo-events.com/?location=new-york-ny&amp;category=food-drink</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?location=los-angeles-ca&category=music</loc>
+    <loc>https://todo-events.com/?location=los-angeles-ca&amp;category=music</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?location=chicago-il&category=arts</loc>
+    <loc>https://todo-events.com/?location=chicago-il&amp;category=arts</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?location=san-francisco-ca&category=community</loc>
+    <loc>https://todo-events.com/?location=san-francisco-ca&amp;category=community</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?location=miami-fl&category=food-drink</loc>
+    <loc>https://todo-events.com/?location=miami-fl&amp;category=food-drink</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?location=austin-tx&category=music</loc>
+    <loc>https://todo-events.com/?location=austin-tx&amp;category=music</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?location=seattle-wa&category=arts</loc>
+    <loc>https://todo-events.com/?location=seattle-wa&amp;category=arts</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/?location=boston-ma&category=sports</loc>
+    <loc>https://todo-events.com/?location=boston-ma&amp;category=sports</loc>
     <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>

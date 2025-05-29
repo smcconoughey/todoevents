@@ -151,7 +151,7 @@ ${createUrlEntry(`/?date=${timeFilter}`, currentDate, changefreq, priority)}`;
   
   popularCombos.forEach(([category, date]) => {
     sitemap += `
-${createUrlEntry(`/?category=${category}&date=${date}`, currentDate, 'daily', '0.7')}`;
+${createUrlEntry(`/?category=${category}&amp;date=${date}`, currentDate, 'daily', '0.7')}`;
   });
 
   sitemap += `
@@ -172,7 +172,7 @@ ${createUrlEntry(`/?category=${category}&date=${date}`, currentDate, 'daily', '0
   
   cityCategories.forEach(([city, category]) => {
     sitemap += `
-${createUrlEntry(`/?location=${city}&category=${category}`, currentDate, 'daily', '0.6')}`;
+${createUrlEntry(`/?location=${city}&amp;category=${category}`, currentDate, 'daily', '0.6')}`;
   });
 
   // Add individual event pages if events are available
