@@ -12,6 +12,22 @@ const debounce = (func, delay) => {
   };
 };
 
+// Helper function to validate coordinates
+const isValidCoordinate = (lat, lng) => {
+  return (
+    typeof lat === 'number' && 
+    typeof lng === 'number' && 
+    isFinite(lat) && 
+    isFinite(lng) && 
+    !isNaN(lat) && 
+    !isNaN(lng) &&
+    lat >= -90 && 
+    lat <= 90 && 
+    lng >= -180 && 
+    lng <= 180
+  );
+};
+
 const AddressAutocomplete = ({ onSelect, value, onChange }) => {
   const [predictions, setPredictions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -152,33 +168,98 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       
       placesService.getDetails(requestOptions, (place, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-          const locationData = {
-            address: place.formatted_address,
-            location: {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng()
+          try {
+            // Extract coordinates safely
+            let lat, lng;
+            
+            if (place.geometry && place.geometry.location) {
+              // Handle both function calls and direct properties
+              if (typeof place.geometry.location.lat === 'function') {
+                lat = place.geometry.location.lat();
+                lng = place.geometry.location.lng();
+              } else {
+                lat = place.geometry.location.lat;
+                lng = place.geometry.location.lng;
+              }
+              
+              // Validate coordinates before proceeding
+              if (isValidCoordinate(lat, lng)) {
+                const locationData = {
+                  address: place.formatted_address,
+                  lat: lat,
+                  lng: lng
+                };
+                
+                console.log('Valid location data:', locationData);
+                onChange(place.formatted_address);
+                onSelect(locationData);
+              } else {
+                console.error('Invalid coordinates received:', { lat, lng });
+                // Fallback to center of US
+                const locationData = {
+                  address: place.formatted_address,
+                  lat: 39.8283,
+                  lng: -98.5795
+                };
+                onChange(place.formatted_address);
+                onSelect(locationData);
+              }
+            } else {
+              console.error('No geometry data available for this place');
+              // Fallback to center of US
+              const locationData = {
+                address: place.formatted_address || prediction.description,
+                lat: 39.8283,
+                lng: -98.5795
+              };
+              onChange(place.formatted_address || prediction.description);
+              onSelect(locationData);
             }
-          };
-          
-          onChange(place.formatted_address);
-          onSelect(locationData);
-          
-          // Generate a new session token after getting place details
-          if (window.google?.maps?.places?.AutocompleteSessionToken) {
-            try {
-              sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
-            } catch (error) {
-              console.warn("Error creating new session token:", error);
+            
+            // Generate a new session token after getting place details
+            if (window.google?.maps?.places?.AutocompleteSessionToken) {
+              try {
+                sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+              } catch (error) {
+                console.warn("Error creating new session token:", error);
+              }
             }
+          } catch (coordError) {
+            console.error("Error processing coordinates:", coordError);
+            // Fallback to center of US
+            const locationData = {
+              address: place.formatted_address || prediction.description,
+              lat: 39.8283,
+              lng: -98.5795
+            };
+            onChange(place.formatted_address || prediction.description);
+            onSelect(locationData);
           }
         } else {
           console.warn("Error getting place details:", status);
+          // Fallback with just the prediction description
+          const locationData = {
+            address: prediction.description,
+            lat: 39.8283,
+            lng: -98.5795
+          };
+          onChange(prediction.description);
+          onSelect(locationData);
         }
       });
       
       setShowPredictions(false);
     } catch (error) {
       console.error("Error handling place selection:", error);
+      // Final fallback
+      const locationData = {
+        address: prediction.description,
+        lat: 39.8283,
+        lng: -98.5795
+      };
+      onChange(prediction.description);
+      onSelect(locationData);
+      setShowPredictions(false);
     }
   };
 
@@ -194,10 +275,16 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       lng: -98.5795
     };
     
-    // You can customize this with different default coordinates if needed
+    // Use manual location if set and valid, otherwise use default
+    let finalLocation = defaultLocation;
+    if (manualLocation && isValidCoordinate(manualLocation.lat, manualLocation.lng)) {
+      finalLocation = manualLocation;
+    }
+    
     const locationData = {
       address: value,
-      location: manualLocation || defaultLocation
+      lat: finalLocation.lat,
+      lng: finalLocation.lng
     };
     
     // Call the onSelect callback with our location data
@@ -219,8 +306,8 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
     try {
       const [lat, lng] = latLngString.split(',').map(coord => parseFloat(coord.trim()));
       
-      if (isNaN(lat) || isNaN(lng)) {
-        alert("Invalid coordinates format. Use format: latitude,longitude");
+      if (!isValidCoordinate(lat, lng)) {
+        alert("Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.");
         return;
       }
       
@@ -230,7 +317,8 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       if (value.trim()) {
         onSelect({
           address: value,
-          location: { lat, lng }
+          lat: lat,
+          lng: lng
         });
       }
     } catch (err) {
@@ -247,7 +335,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
           type="text"
           value={value}
           onChange={handleInputChange}
-          onFocus={() => value.length >= 2 && setPredictions.length > 0 && setShowPredictions(true)}
+          onFocus={() => value.length >= 2 && predictions.length > 0 && setShowPredictions(true)}
           className="w-full pl-10 pr-4 py-2 rounded-md bg-white/10 border-0 text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/20 transition-all"
           placeholder="Enter address (min. 2 characters for search)"
           autoComplete="off"

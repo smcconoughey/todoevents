@@ -105,16 +105,19 @@ const CreateEventForm = ({
   }, [isOpen]);
 
   const handleAddressSelect = (data) => {
-    if (!data?.location) return;
+    console.log('Address selected:', data);
+    
+    // Handle the updated data structure from AddressAutocomplete
+    const location = data.location ? data.location : { lat: data.lat, lng: data.lng };
     
     setFormData(prev => ({
       ...prev,
       address: data.address,
-      location: data.location
+      location: location
     }));
     
-    onLocationSelect?.(data.location);
-    setError(null);
+    // Also call the parent callback if provided
+    onLocationSelect?.(location);
   };
 
   const handleClearLocation = () => {
@@ -173,7 +176,12 @@ const CreateEventForm = ({
     e.preventDefault();
     setError(null);
 
-    if (isSubmitting) return;
+    // Prevent double submission
+    if (isSubmitting) {
+      console.log('Form already submitting, ignoring duplicate submission');
+      return;
+    }
+
     if (!user) {
       setError('You must be logged in to create events');
       return;
@@ -183,6 +191,7 @@ const CreateEventForm = ({
       return;
     }
 
+    // Set submitting state immediately to prevent double clicks
     setIsSubmitting(true);
 
     try {
@@ -223,15 +232,20 @@ const CreateEventForm = ({
         body: JSON.stringify(eventData)
       }, 20000); // 20 second timeout for event creation
 
+      console.log('Event saved successfully:', savedEvent);
+
       // Complete form submission
       if (onSubmit) {
         await onSubmit(savedEvent);
       }
+      
+      // Close the form only after successful submission
       onClose();
     } catch (error) {
       console.error('Error saving event:', error);
       setError(error.message || 'Failed to save event. Please try again.');
     } finally {
+      // Always reset submitting state
       setIsSubmitting(false);
     }
   };
@@ -418,14 +432,21 @@ const CreateEventForm = ({
 
           <button 
             type="submit" 
-            className={`w-full px-4 py-2 rounded-md font-medium transition-colors
+            className={`w-full px-4 py-2 rounded-md font-medium transition-colors flex items-center justify-center gap-2
               ${isSubmitting || !formData.location || connectionError || !user
-                ? 'bg-white/30 cursor-not-allowed'
+                ? 'bg-white/30 text-white/50 cursor-not-allowed'
                 : 'bg-white text-black hover:bg-white/90'
               }`}
             disabled={isSubmitting || !formData.location || connectionError || !user}
           >
-            {initialEvent ? 'Update Event' : 'Create Event'}
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                {initialEvent ? 'Updating...' : 'Creating...'}
+              </>
+            ) : (
+              initialEvent ? 'Update Event' : 'Create Event'
+            )}
           </button>
         </form>
       </DialogContent>
