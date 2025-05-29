@@ -280,7 +280,10 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
               </div>
             </div>
             {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-            <div className="text-xs text-white/40 mt-1 text-center">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
+            <div className="text-xs text-white/40 mt-1 text-center">
+              <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
+              <strong>Instagram:</strong> Download and upload the image to your story or feed!
+            </div>
           </div>
         )}
       </div>
@@ -799,15 +802,15 @@ const EventMap = ({ mapsLoaded = false }) => {
   // Facebook share
   const handleFacebookShare = async () => {
     try {
-      setDownloadStatus('Preparing image for Facebook...');
+      setDownloadStatus('Preparing for Facebook sharing...');
       
-      // First generate the image using the same logic as download
+      // First generate and download the image automatically
       const shareCardElement = shareCardRef.current?.querySelector('#share-card-root');
       if (!shareCardElement) {
         throw new Error('ShareCard element not found');
       }
 
-      // Create temporary wrapper for proper sizing
+      // Create temporary wrapper for proper sizing (same as download function)
       const tempWrapper = document.createElement('div');
       tempWrapper.style.cssText = `
         position: fixed;
@@ -854,11 +857,7 @@ const EventMap = ({ mapsLoaded = false }) => {
           allowTaint: true,
           foreignObjectRendering: true,
           skipFonts: false,
-          cacheBust: true,
-          style: {
-            transform: 'scale(1)',
-            transformOrigin: 'top left'
-          }
+          cacheBust: true
         };
 
         const dataUrl = await htmlToImage.toPng(shareCardElement, options);
@@ -873,16 +872,18 @@ const EventMap = ({ mapsLoaded = false }) => {
         // Clean up temp wrapper
         document.body.removeChild(tempWrapper);
 
-        // For now, we'll open Facebook with the event URL and copy the image to clipboard
-        // Note: Facebook doesn't allow direct image uploads from web browsers for security
-        const eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
-        const encodedUrl = encodeURIComponent(eventUrl);
-        const shareText = encodeURIComponent(`Check out this event: ${selectedEvent.title}!`);
-        
-        // Copy image to clipboard for user to paste
-        const img = new Image();
-        img.onload = async () => {
-          try {
+        // Automatically download the image
+        const link = document.createElement('a');
+        link.download = `${selectedEvent.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_event.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Also try to copy to clipboard as backup
+        try {
+          const img = new Image();
+          img.onload = async () => {
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
@@ -894,22 +895,29 @@ const EventMap = ({ mapsLoaded = false }) => {
                 await navigator.clipboard.write([
                   new ClipboardItem({ 'image/png': blob })
                 ]);
-                setDownloadStatus('Image copied to clipboard! Paste it in your Facebook post.');
-                setTimeout(() => setDownloadStatus(''), 4000);
+                console.log('Image also copied to clipboard');
               } catch (e) {
-                setDownloadStatus('Opening Facebook... Download the image separately to post it.');
-                setTimeout(() => setDownloadStatus(''), 4000);
+                console.log('Clipboard copy failed, but download succeeded');
               }
             });
-          } catch (e) {
-            setDownloadStatus('Opening Facebook... Download the image separately to post it.');
-            setTimeout(() => setDownloadStatus(''), 4000);
-          }
-        };
-        img.src = dataUrl;
+          };
+          img.src = dataUrl;
+        } catch (e) {
+          console.log('Clipboard backup failed, but download succeeded');
+        }
 
-        // Open Facebook sharing
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${shareText}`, '_blank');
+        // Open Facebook with event URL and helpful text
+        const eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
+        const encodedUrl = encodeURIComponent(eventUrl);
+        const shareText = encodeURIComponent(`Check out this amazing event: ${selectedEvent.title}!\n\n📅 ${selectedEvent.date} at ${selectedEvent.time}\n📍 ${selectedEvent.address}\n\n${selectedEvent.description}\n\nFind more local events at todo-events.com`);
+        
+        // Small delay to let download start
+        setTimeout(() => {
+          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${shareText}`, '_blank');
+          
+          setDownloadStatus('✅ Image downloaded! Upload it to your Facebook post.');
+          setTimeout(() => setDownloadStatus(''), 5000);
+        }, 500);
 
       } catch (error) {
         // Clean up on error
@@ -923,9 +931,10 @@ const EventMap = ({ mapsLoaded = false }) => {
       console.error('Facebook share error:', error);
       // Fallback to simple URL sharing
       const url = encodeURIComponent(`${window.location.origin}/?event=${selectedEvent.id}`);
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
-      setDownloadStatus('Opened Facebook sharing. Download the image separately to include it.');
-      setTimeout(() => setDownloadStatus(''), 3000);
+      const shareText = encodeURIComponent(`Check out this event: ${selectedEvent.title}!`);
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${shareText}`, '_blank');
+      setDownloadStatus('❌ Facebook opened. Use "Download Image" button to get the image separately.');
+      setTimeout(() => setDownloadStatus(''), 4000);
     }
   };
 
@@ -1586,7 +1595,10 @@ const EventMap = ({ mapsLoaded = false }) => {
                   </div>
                 </div>
                 {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-                <div className="text-xs text-white/40 mt-1 text-center">Instagram does not allow direct web sharing. Download and upload the image to your story or feed!</div>
+                <div className="text-xs text-white/40 mt-1 text-center">
+                  <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
+                  <strong>Instagram:</strong> Download and upload the image to your story or feed!
+                </div>
               </div>
             )}
           </div>
