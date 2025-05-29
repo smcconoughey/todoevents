@@ -90,16 +90,29 @@ async def cors_handler(request, call_next):
     if request.method == "OPTIONS":
         logger.info(f"Handling preflight request from origin: {origin}")
         
-        # For any origin, send proper preflight response
-        allowed_origin = origin if origin else "*"
+        # Determine allowed origin
+        allowed_origin = "*"  # Default fallback
         
-        if ("localhost" in origin or "127.0.0.1" in origin) or \
-           (IS_PRODUCTION and ".onrender.com" in origin):
-            logger.info(f"Allowing origin: {origin}")
-        else:
-            logger.warning(f"Unrecognized origin in preflight but allowing for debugging: {origin}")
-            
+        if origin:
+            # Allow localhost and 127.0.0.1 for development
+            if ("localhost" in origin or "127.0.0.1" in origin):
+                allowed_origin = origin
+                logger.info(f"Allowing localhost origin: {origin}")
+            # Allow Render.com domains for production
+            elif ".onrender.com" in origin:
+                allowed_origin = origin
+                logger.info(f"Allowing Render.com origin: {origin}")
+            # Allow the actual domain
+            elif "todo-events.com" in origin:
+                allowed_origin = origin
+                logger.info(f"Allowing main domain: {origin}")
+            else:
+                logger.warning(f"Unrecognized origin, but allowing: {origin}")
+                allowed_origin = origin
+        
+        # Return proper preflight response
         return Response(
+            status_code=200,
             headers={
                 "Access-Control-Allow-Origin": allowed_origin,
                 "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -115,8 +128,16 @@ async def cors_handler(request, call_next):
         
         # Add CORS headers to successful responses
         if origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
+            # Determine allowed origin for response
+            allowed_origin = "*"
+            if ("localhost" in origin or "127.0.0.1" in origin or 
+                ".onrender.com" in origin or "todo-events.com" in origin):
+                allowed_origin = origin
+            
+            response.headers["Access-Control-Allow-Origin"] = allowed_origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
             logger.info(f"Added CORS headers for successful response to origin: {origin}")
         
         return response
@@ -137,7 +158,12 @@ async def cors_handler(request, call_next):
         
         # Add CORS headers to error response
         if origin:
-            error_response.headers["Access-Control-Allow-Origin"] = origin
+            allowed_origin = "*"
+            if ("localhost" in origin or "127.0.0.1" in origin or 
+                ".onrender.com" in origin or "todo-events.com" in origin):
+                allowed_origin = origin
+                
+            error_response.headers["Access-Control-Allow-Origin"] = allowed_origin
             error_response.headers["Access-Control-Allow-Credentials"] = "true"
             logger.info(f"Added CORS headers for error response to origin: {origin}")
             
