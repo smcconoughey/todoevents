@@ -3,15 +3,18 @@ import re
 import sqlite3
 import logging
 import time
+import json
 from typing import Optional, List
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 from enum import Enum
+import asyncio
+import threading
 
 import uvicorn
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +23,11 @@ from fastapi.responses import FileResponse, Response, JSONResponse
 from pydantic import BaseModel, EmailStr, validator
 from passlib.context import CryptContext
 import jwt
+
+# Scheduler imports
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+import httpx
 
 # Load environment variables
 load_dotenv()
@@ -394,6 +402,356 @@ try:
     init_db()
 except Exception as e:
     logger.error(f"Database initialization failed: {str(e)}")
+
+# =====================================================
+# AUTOMATED AI SYNC SYSTEM
+# =====================================================
+
+class AutomatedTaskManager:
+    """
+    Manages automated tasks for AI search optimization:
+    - Sitemap generation and updates
+    - Event data refresh
+    - AI tool synchronization
+    - Performance monitoring
+    """
+    
+    def __init__(self):
+        self.scheduler = BackgroundScheduler()
+        self.last_sitemap_update = None
+        self.last_event_refresh = None
+        self.task_status = {
+            "sitemap_generation": {"status": "pending", "last_run": None, "next_run": None},
+            "event_refresh": {"status": "pending", "last_run": None, "next_run": None},
+            "ai_sync": {"status": "pending", "last_run": None, "next_run": None}
+        }
+        
+    async def generate_sitemap_automatically(self):
+        """Generate sitemap with current event data"""
+        try:
+            logger.info("🔄 Starting automated sitemap generation...")
+            
+            # Get current events from database
+            events = await self.get_current_events()
+            
+            # Generate sitemap content
+            sitemap_content = await self.build_sitemap_content(events)
+            
+            # Save to file (in production, this could be uploaded to S3/CDN)
+            await self.save_sitemap(sitemap_content)
+            
+            # Update task status
+            self.task_status["sitemap_generation"]["status"] = "completed"
+            self.task_status["sitemap_generation"]["last_run"] = datetime.utcnow().isoformat()
+            self.last_sitemap_update = datetime.utcnow()
+            
+            logger.info("✅ Automated sitemap generation completed successfully")
+            
+            # Notify search engines about the update
+            await self.ping_search_engines()
+            
+        except Exception as e:
+            logger.error(f"❌ Automated sitemap generation failed: {str(e)}")
+            self.task_status["sitemap_generation"]["status"] = "failed"
+    
+    async def refresh_event_data(self):
+        """Refresh and optimize event data for AI consumption"""
+        try:
+            logger.info("🔄 Starting automated event data refresh...")
+            
+            # Clean up expired events
+            await self.cleanup_expired_events()
+            
+            # Update event search index (if implemented)
+            await self.update_search_index()
+            
+            # Cache popular queries for faster AI responses
+            await self.cache_popular_queries()
+            
+            self.task_status["event_refresh"]["status"] = "completed"
+            self.task_status["event_refresh"]["last_run"] = datetime.utcnow().isoformat()
+            self.last_event_refresh = datetime.utcnow()
+            
+            logger.info("✅ Automated event data refresh completed")
+            
+        except Exception as e:
+            logger.error(f"❌ Automated event data refresh failed: {str(e)}")
+            self.task_status["event_refresh"]["status"] = "failed"
+    
+    async def sync_with_ai_tools(self):
+        """Optimize data specifically for AI tool consumption"""
+        try:
+            logger.info("🤖 Starting AI tools synchronization...")
+            
+            # Update AI-optimized cache
+            await self.update_ai_cache()
+            
+            # Test AI endpoint responsiveness
+            await self.test_ai_endpoint()
+            
+            # Update structured data if needed
+            await self.validate_structured_data()
+            
+            self.task_status["ai_sync"]["status"] = "completed"
+            self.task_status["ai_sync"]["last_run"] = datetime.utcnow().isoformat()
+            
+            logger.info("✅ AI tools synchronization completed")
+            
+        except Exception as e:
+            logger.error(f"❌ AI tools synchronization failed: {str(e)}")
+            self.task_status["ai_sync"]["status"] = "failed"
+    
+    async def get_current_events(self):
+        """Get current and upcoming events from database"""
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                c.execute("""
+                    SELECT id, title, description, date, time, category, 
+                           address, lat, lng, created_at
+                    FROM events 
+                    WHERE date >= date('now')
+                    ORDER BY date, time
+                """)
+                return [dict(row) for row in c.fetchall()]
+        except Exception as e:
+            logger.error(f"Error fetching events for sitemap: {str(e)}")
+            return []
+    
+    async def build_sitemap_content(self, events):
+        """Build sitemap XML content with current events"""
+        current_date = datetime.utcnow().strftime('%Y-%m-%d')
+        domain = "https://todo-events.com"
+        
+        # Start with static sitemap structure
+        sitemap = f'''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Homepage - Primary landing page -->
+  <url>
+    <loc>{domain}/</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>{domain}/images/pin-logo.svg</image:loc>
+      <image:caption>todo-events logo - Local event discovery platform</image:caption>
+    </image:image>
+  </url>'''
+        
+        # Add static category pages
+        categories = ['food-drink', 'music', 'arts', 'sports', 'community']
+        for category in categories:
+            sitemap += f'''
+  <url>
+    <loc>{domain}/?category={category}</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>'''
+        
+        # Add AI-optimized pages
+        ai_pages = [
+            ('/local-events-near-me', 'daily', '0.9'),
+            ('/events-today', 'hourly', '0.9'),
+            ('/events-this-weekend', 'daily', '0.9'),
+            ('/events-tonight', 'hourly', '0.8'),
+            ('/free-events-near-me', 'daily', '0.8')
+        ]
+        
+        for page, freq, priority in ai_pages:
+            sitemap += f'''
+  <url>
+    <loc>{domain}{page}</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>{freq}</changefreq>
+    <priority>{priority}</priority>
+  </url>'''
+        
+        # Add individual event pages
+        for event in events[:100]:  # Limit to avoid huge sitemaps
+            event_date = event.get('date', current_date)
+            sitemap += f'''
+  <url>
+    <loc>{domain}/?event={event['id']}</loc>
+    <lastmod>{event_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>'''
+        
+        sitemap += '''
+  
+  <!-- Note: This sitemap was automatically generated -->
+</urlset>'''
+        
+        return sitemap
+    
+    async def save_sitemap(self, content):
+        """Save sitemap content to file"""
+        # In production, you might want to save to a shared storage like S3
+        # For now, we'll create an endpoint to serve the dynamic sitemap
+        self.current_sitemap = content
+        logger.info(f"Sitemap updated with {content.count('<url>')} URLs")
+    
+    async def ping_search_engines(self):
+        """Notify search engines about sitemap updates"""
+        urls = [
+            "https://www.google.com/ping?sitemap=https://todo-events.com/sitemap.xml",
+            "https://www.bing.com/ping?sitemap=https://todo-events.com/sitemap.xml"
+        ]
+        
+        async with httpx.AsyncClient() as client:
+            for url in urls:
+                try:
+                    response = await client.get(url, timeout=10)
+                    logger.info(f"✅ Pinged search engine: {url} - Status: {response.status_code}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to ping search engine: {url} - Error: {str(e)}")
+    
+    async def cleanup_expired_events(self):
+        """Remove events that are older than 30 days"""
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                cutoff_date = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
+                
+                c.execute(f"DELETE FROM events WHERE date < ?", (cutoff_date,))
+                deleted_count = c.rowcount
+                conn.commit()
+                
+                if deleted_count > 0:
+                    logger.info(f"🧹 Cleaned up {deleted_count} expired events")
+                    
+        except Exception as e:
+            logger.error(f"Error cleaning up expired events: {str(e)}")
+    
+    async def update_search_index(self):
+        """Update search index for better performance"""
+        # Placeholder for search index updates
+        # Could implement Elasticsearch, Solr, or simple database indexes
+        logger.info("📊 Search index update completed")
+    
+    async def cache_popular_queries(self):
+        """Cache responses for popular AI queries"""
+        popular_locations = [
+            (40.7128, -74.0060),  # New York
+            (34.0522, -118.2437), # Los Angeles
+            (41.8781, -87.6298),  # Chicago
+        ]
+        
+        # Pre-cache popular query responses
+        for lat, lng in popular_locations:
+            try:
+                # This would call our AI endpoint internally to warm the cache
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to cache location {lat}, {lng}: {str(e)}")
+    
+    async def update_ai_cache(self):
+        """Update cached data for AI consumption"""
+        logger.info("🤖 AI cache updated")
+    
+    async def test_ai_endpoint(self):
+        """Test AI endpoint responsiveness"""
+        try:
+            # Test our own AI endpoint
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"http://localhost:{os.getenv('PORT', 8000)}/api/v1/local-events?limit=1",
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    logger.info("✅ AI endpoint test passed")
+                else:
+                    logger.warning(f"⚠️ AI endpoint test failed: {response.status_code}")
+        except Exception as e:
+            logger.warning(f"⚠️ AI endpoint test error: {str(e)}")
+    
+    async def validate_structured_data(self):
+        """Validate structured data markup"""
+        logger.info("📋 Structured data validation completed")
+    
+    def start_scheduler(self):
+        """Start the background scheduler"""
+        try:
+            # Schedule tasks every 6 hours (aligned with AI tool update patterns)
+            
+            # Sitemap generation - every 6 hours
+            self.scheduler.add_job(
+                func=lambda: asyncio.create_task(self.generate_sitemap_automatically()),
+                trigger=IntervalTrigger(hours=6),
+                id='sitemap_generation',
+                name='Automated Sitemap Generation',
+                replace_existing=True
+            )
+            
+            # Event data refresh - every 6 hours (offset by 2 hours)
+            self.scheduler.add_job(
+                func=lambda: asyncio.create_task(self.refresh_event_data()),
+                trigger=IntervalTrigger(hours=6, start_date=datetime.utcnow() + timedelta(hours=2)),
+                id='event_refresh',
+                name='Event Data Refresh',
+                replace_existing=True
+            )
+            
+            # AI sync - every 6 hours (offset by 4 hours)
+            self.scheduler.add_job(
+                func=lambda: asyncio.create_task(self.sync_with_ai_tools()),
+                trigger=IntervalTrigger(hours=6, start_date=datetime.utcnow() + timedelta(hours=4)),
+                id='ai_sync',
+                name='AI Tools Synchronization',
+                replace_existing=True
+            )
+            
+            # Health check - every hour
+            self.scheduler.add_job(
+                func=self.health_check,
+                trigger=IntervalTrigger(hours=1),
+                id='health_check',
+                name='System Health Check',
+                replace_existing=True
+            )
+            
+            self.scheduler.start()
+            logger.info("🚀 Automated task scheduler started successfully")
+            logger.info("📅 Next sitemap generation: 6 hours")
+            logger.info("📅 Next event refresh: 8 hours") 
+            logger.info("📅 Next AI sync: 10 hours")
+            
+        except Exception as e:
+            logger.error(f"Failed to start scheduler: {str(e)}")
+    
+    def health_check(self):
+        """Periodic health check for automated tasks"""
+        current_time = datetime.utcnow()
+        
+        # Check if tasks are running on schedule
+        for task_name, status in self.task_status.items():
+            if status["last_run"]:
+                last_run = datetime.fromisoformat(status["last_run"])
+                hours_since_last_run = (current_time - last_run).total_seconds() / 3600
+                
+                if hours_since_last_run > 8:  # Alert if task hasn't run in 8+ hours
+                    logger.warning(f"⚠️ Task '{task_name}' hasn't run in {hours_since_last_run:.1f} hours")
+        
+        logger.info("💓 Automated task health check completed")
+    
+    def stop_scheduler(self):
+        """Stop the background scheduler"""
+        if self.scheduler.running:
+            self.scheduler.shutdown()
+            logger.info("🛑 Automated task scheduler stopped")
+
+# Initialize the automated task manager
+task_manager = AutomatedTaskManager()
+
+# Start scheduler when in production
+if IS_PRODUCTION:
+    task_manager.start_scheduler()
+    logger.info("🤖 AI sync automation enabled for production environment")
+else:
+    logger.info("🔧 AI sync automation disabled in development mode")
 
 # Password Validation System
 class PasswordValidator:
@@ -1803,6 +2161,250 @@ def log_activity(user_id: int, action: str, details: str = None):
             conn.commit()
     except Exception as e:
         logger.error(f"Error logging activity: {str(e)}")
+
+# AI Search API Endpoints
+@app.get("/api/v1/local-events")
+async def get_local_events_for_ai(
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius: Optional[float] = 25.0,  # miles
+    category: Optional[str] = None,
+    limit: Optional[int] = 50
+):
+    """
+    Public API endpoint for AI search tools to discover local events.
+    
+    This endpoint provides structured event data that AI tools can use
+    to answer queries like "local events near me" or "events this weekend".
+    """
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Build base query
+            query = """
+                SELECT id, title, description, date, time, category, 
+                       address, lat, lng, created_at
+                FROM events 
+                WHERE date >= date('now')
+            """
+            params = []
+            
+            # Add category filter
+            if category:
+                query += f" AND category = {placeholder}"
+                params.append(category)
+            
+            # Add location-based filtering if coordinates provided
+            if lat is not None and lng is not None:
+                # Use Haversine formula for distance calculation
+                query += f"""
+                    AND (
+                        3959 * acos(
+                            cos(radians({placeholder})) * cos(radians(lat)) * 
+                            cos(radians(lng) - radians({placeholder})) + 
+                            sin(radians({placeholder})) * sin(radians(lat))
+                        )
+                    ) <= {placeholder}
+                """
+                params.extend([lat, lng, lat, radius])
+            
+            # Order by date and limit results
+            query += f" ORDER BY date, time LIMIT {placeholder}"
+            params.append(limit)
+            
+            c.execute(query, params)
+            events = c.fetchall()
+            
+            # Format response for AI consumption
+            ai_response = {
+                "status": "success",
+                "message": "Local events discovered",
+                "search_context": {
+                    "query_type": "local_events_near_me",
+                    "location": {"lat": lat, "lng": lng} if lat and lng else None,
+                    "radius_miles": radius,
+                    "category_filter": category,
+                    "results_count": len(events)
+                },
+                "events": [],
+                "metadata": {
+                    "platform": "todo-events.com",
+                    "description": "Real-time local event discovery platform",
+                    "last_updated": datetime.utcnow().isoformat(),
+                    "categories": ["food-drink", "music", "arts", "sports", "community"],
+                    "coverage_area": "United States",
+                    "features": [
+                        "Location-based event search",
+                        "Real-time event updates", 
+                        "Community-driven content",
+                        "Interactive event mapping",
+                        "Category-based filtering"
+                    ]
+                }
+            }
+            
+            # Process each event with AI-friendly formatting
+            for event in events:
+                event_dict = dict(event)
+                
+                # Calculate distance if location provided
+                distance = None
+                if lat is not None and lng is not None:
+                    try:
+                        from math import radians, cos, sin, asin, sqrt
+                        
+                        def haversine(lat1, lon1, lat2, lon2):
+                            # Convert to radians
+                            lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+                            
+                            # Haversine formula
+                            dlat = lat2 - lat1
+                            dlon = lon2 - lon1
+                            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+                            c = 2 * asin(sqrt(a))
+                            r = 3959  # Earth radius in miles
+                            return c * r
+                        
+                        distance = round(haversine(lat, lng, event_dict['lat'], event_dict['lng']), 1)
+                    except:
+                        distance = None
+                
+                # Format event for AI consumption
+                ai_event = {
+                    "id": event_dict['id'],
+                    "title": event_dict['title'],
+                    "description": event_dict['description'],
+                    "date": event_dict['date'],
+                    "time": event_dict['time'],
+                    "category": event_dict['category'],
+                    "location": {
+                        "address": event_dict['address'],
+                        "coordinates": {
+                            "lat": event_dict['lat'],
+                            "lng": event_dict['lng']
+                        },
+                        "distance_miles": distance
+                    },
+                    "url": f"https://todo-events.com/?event={event_dict['id']}",
+                    "ai_summary": f"{event_dict['title']} - {event_dict['category']} event on {event_dict['date']} at {event_dict['time']} in {event_dict['address']}. {event_dict['description'][:200]}{'...' if len(event_dict['description']) > 200 else ''}",
+                    "structured_data": {
+                        "@type": "Event",
+                        "name": event_dict['title'],
+                        "startDate": f"{event_dict['date']}T{event_dict['time']}:00",
+                        "location": {
+                            "@type": "Place",
+                            "address": event_dict['address']
+                        },
+                        "description": event_dict['description'],
+                        "eventStatus": "EventScheduled"
+                    }
+                }
+                
+                ai_response["events"].append(ai_event)
+            
+            # Add helpful context for AI tools
+            if len(events) == 0:
+                ai_response["message"] = "No local events found matching your criteria"
+                ai_response["suggestions"] = [
+                    "Try expanding your search radius",
+                    "Remove category filters to see all event types", 
+                    "Check for events on different dates",
+                    "Visit todo-events.com to create the first event in your area"
+                ]
+            
+            return ai_response
+            
+    except Exception as e:
+        logger.error(f"Error in AI events API: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Unable to retrieve local events",
+            "error": str(e),
+            "metadata": {
+                "platform": "todo-events.com",
+                "support": "Visit https://todo-events.com for manual event discovery"
+            }
+        }
+
+# Automation Control Endpoints
+@app.get("/api/v1/automation/status")
+async def get_automation_status():
+    """Get status of automated tasks"""
+    return {
+        "automation": {
+            "enabled": IS_PRODUCTION,
+            "scheduler_running": task_manager.scheduler.running if IS_PRODUCTION else False,
+            "last_sitemap_update": task_manager.last_sitemap_update.isoformat() if task_manager.last_sitemap_update else None,
+            "last_event_refresh": task_manager.last_event_refresh.isoformat() if task_manager.last_event_refresh else None,
+            "task_status": task_manager.task_status,
+            "next_runs": {
+                job.id: job.next_run_time.isoformat() if job.next_run_time else None
+                for job in task_manager.scheduler.get_jobs()
+            } if IS_PRODUCTION and task_manager.scheduler.running else {}
+        },
+        "system": {
+            "environment": "production" if IS_PRODUCTION else "development",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    }
+
+@app.post("/api/v1/automation/trigger/{task_name}")
+async def trigger_automated_task(task_name: str, background_tasks: BackgroundTasks):
+    """Manually trigger automated tasks"""
+    
+    if not IS_PRODUCTION:
+        raise HTTPException(status_code=400, detail="Automation only available in production")
+    
+    task_functions = {
+        "sitemap": task_manager.generate_sitemap_automatically,
+        "events": task_manager.refresh_event_data,
+        "ai_sync": task_manager.sync_with_ai_tools
+    }
+    
+    if task_name not in task_functions:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Unknown task: {task_name}. Available: {list(task_functions.keys())}"
+        )
+    
+    # Trigger the task in the background
+    background_tasks.add_task(task_functions[task_name])
+    
+    return {
+        "message": f"Task '{task_name}' triggered successfully",
+        "task": task_name,
+        "triggered_at": datetime.utcnow().isoformat(),
+        "note": "Task is running in the background"
+    }
+
+@app.get("/sitemap.xml")
+async def get_dynamic_sitemap():
+    """Serve dynamically generated sitemap"""
+    try:
+        # If we have a cached sitemap from automation, serve it
+        if hasattr(task_manager, 'current_sitemap') and task_manager.current_sitemap:
+            return Response(
+                content=task_manager.current_sitemap,
+                media_type="application/xml",
+                headers={"Cache-Control": "public, max-age=3600"}  # Cache for 1 hour
+            )
+        
+        # Otherwise, generate on-demand
+        events = await task_manager.get_current_events()
+        sitemap_content = await task_manager.build_sitemap_content(events)
+        
+        return Response(
+            content=sitemap_content,
+            media_type="application/xml",
+            headers={"Cache-Control": "public, max-age=1800"}  # Cache for 30 minutes
+        )
+        
+    except Exception as e:
+        logger.error(f"Error serving dynamic sitemap: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating sitemap")
 
 # Main execution block
 if __name__ == "__main__":

@@ -190,6 +190,18 @@ ${createUrlEntry(`/event/${event.id}`, eventDate, 'weekly', '0.6')}`;
 
   sitemap += `
 
+  <!-- AI Search Optimization Pages -->
+${createUrlEntry('/local-events-near-me', currentDate, 'daily', '0.9')}
+${createUrlEntry('/events-today', currentDate, 'hourly', '0.9')}
+${createUrlEntry('/events-this-weekend', currentDate, 'daily', '0.9')}
+${createUrlEntry('/events-tonight', currentDate, 'hourly', '0.8')}
+${createUrlEntry('/free-events-near-me', currentDate, 'daily', '0.8')}
+${createUrlEntry('/outdoor-events', currentDate, 'daily', '0.7')}
+${createUrlEntry('/family-friendly-events', currentDate, 'daily', '0.7')}
+${createUrlEntry('/live-music-near-me', currentDate, 'daily', '0.7')}
+${createUrlEntry('/food-festivals-near-me', currentDate, 'weekly', '0.7')}
+${createUrlEntry('/art-events-near-me', currentDate, 'weekly', '0.7')}
+
   <!-- Static informational pages (for future expansion) -->
 ${createUrlEntry('/about', currentDate, 'monthly', '0.6')}
 ${createUrlEntry('/how-it-works', currentDate, 'monthly', '0.6')}

@@ -21,7 +21,8 @@ import {
   MessageSquare,
   Shield,
   Download,
-  ChevronDown
+  ChevronDown,
+  Bot
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -31,6 +32,8 @@ const AdminDashboard = () => {
   const [accessDenied, setAccessDenied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
+  const [automationStatus, setAutomationStatus] = useState(null);
+  const [automationLoading, setAutomationLoading] = useState(false);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -47,6 +50,8 @@ const AdminDashboard = () => {
         // Verify current user role
         if (user.role === 'admin') {
           setIsAdmin(true);
+          // Load automation status when admin dashboard loads
+          await fetchAutomationStatus();
         } else {
           setAccessDenied(true);
         }
@@ -60,6 +65,49 @@ const AdminDashboard = () => {
 
     checkAdminStatus();
   }, [user, token]);
+
+  // Fetch automation status
+  const fetchAutomationStatus = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/automation/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setAutomationStatus(data);
+      }
+    } catch (error) {
+      console.error('Error fetching automation status:', error);
+    }
+  };
+
+  // Trigger automation task
+  const triggerAutomationTask = async (taskName) => {
+    setAutomationLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/v1/automation/trigger/${taskName}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`Task ${taskName} triggered:`, result);
+        // Refresh automation status after triggering
+        setTimeout(() => fetchAutomationStatus(), 2000);
+      } else {
+        console.error(`Failed to trigger task ${taskName}`);
+      }
+    } catch (error) {
+      console.error(`Error triggering task ${taskName}:`, error);
+    } finally {
+      setAutomationLoading(false);
+    }
+  };
 
   // If user is not an admin, show access denied screen
   if (accessDenied) {
@@ -175,6 +223,14 @@ const AdminDashboard = () => {
               <Server className="h-5 w-5 mr-3" />
               System
             </Button>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start ${activeTab === 'automation' ? 'bg-gray-700' : ''}`}
+              onClick={() => setActiveTab('automation')}
+            >
+              <Bot className="h-5 w-5 mr-3" />
+              AI Automation
+            </Button>
           </nav>
         </div>
 
@@ -186,6 +242,7 @@ const AdminDashboard = () => {
               {activeTab === 'events' && 'Event Management'}
               {activeTab === 'analytics' && 'Analytics Dashboard'}
               {activeTab === 'system' && 'System Settings'}
+              {activeTab === 'automation' && 'AI Automation Status'}
             </h2>
             
             <p className="text-gray-400 mb-4">
@@ -303,6 +360,174 @@ const AdminDashboard = () => {
                   </div>
                   <span className="px-2 py-1 rounded-full bg-green-900 text-green-200 text-xs">Online</span>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'automation' && (
+              <div className="space-y-6">
+                {/* Automation Overview */}
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium flex items-center">
+                      <Bot className="h-5 w-5 mr-2 text-blue-500" />
+                      AI Search Automation
+                    </h3>
+                    <Button 
+                      onClick={fetchAutomationStatus}
+                      variant="outline"
+                      size="sm"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                    >
+                      Refresh Status
+                    </Button>
+                  </div>
+                  
+                  {automationStatus ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Environment:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            automationStatus.system.environment === 'production' 
+                              ? 'bg-green-900 text-green-200' 
+                              : 'bg-yellow-900 text-yellow-200'
+                          }`}>
+                            {automationStatus.system.environment}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Automation:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            automationStatus.automation.enabled 
+                              ? 'bg-green-900 text-green-200' 
+                              : 'bg-red-900 text-red-200'
+                          }`}>
+                            {automationStatus.automation.enabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Scheduler:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            automationStatus.automation.scheduler_running 
+                              ? 'bg-green-900 text-green-200' 
+                              : 'bg-red-900 text-red-200'
+                          }`}>
+                            {automationStatus.automation.scheduler_running ? 'Running' : 'Stopped'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="text-gray-400">Last Sitemap Update:</span>
+                          <div className="text-xs text-gray-300 mt-1">
+                            {automationStatus.automation.last_sitemap_update 
+                              ? new Date(automationStatus.automation.last_sitemap_update).toLocaleString()
+                              : 'Never'
+                            }
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-gray-400">Last Event Refresh:</span>
+                          <div className="text-xs text-gray-300 mt-1">
+                            {automationStatus.automation.last_event_refresh 
+                              ? new Date(automationStatus.automation.last_event_refresh).toLocaleString()
+                              : 'Never'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                      <p className="text-gray-400 text-sm">Loading automation status...</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Task Status */}
+                {automationStatus?.automation.task_status && (
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <h3 className="text-lg font-medium mb-4">Task Status</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {Object.entries(automationStatus.automation.task_status).map(([taskName, status]) => (
+                        <div key={taskName} className="bg-gray-800 p-3 rounded">
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-medium capitalize">
+                              {taskName.replace(/_/g, ' ')}
+                            </h4>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              status.status === 'completed' 
+                                ? 'bg-green-900 text-green-200'
+                                : status.status === 'failed'
+                                ? 'bg-red-900 text-red-200'
+                                : 'bg-yellow-900 text-yellow-200'
+                            }`}>
+                              {status.status}
+                            </span>
+                          </div>
+                          {status.last_run && (
+                            <p className="text-xs text-gray-400">
+                              Last run: {new Date(status.last_run).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual Triggers */}
+                {automationStatus?.automation.enabled && (
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <h3 className="text-lg font-medium mb-4">Manual Triggers</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Button
+                        onClick={() => triggerAutomationTask('sitemap')}
+                        disabled={automationLoading}
+                        className="bg-blue-600 hover:bg-blue-700 w-full"
+                      >
+                        {automationLoading ? 'Triggering...' : 'Update Sitemap'}
+                      </Button>
+                      <Button
+                        onClick={() => triggerAutomationTask('events')}
+                        disabled={automationLoading}
+                        className="bg-green-600 hover:bg-green-700 w-full"
+                      >
+                        {automationLoading ? 'Triggering...' : 'Refresh Events'}
+                      </Button>
+                      <Button
+                        onClick={() => triggerAutomationTask('ai_sync')}
+                        disabled={automationLoading}
+                        className="bg-purple-600 hover:bg-purple-700 w-full"
+                      >
+                        {automationLoading ? 'Triggering...' : 'AI Sync'}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3">
+                      Manual triggers are useful for testing or immediate updates. 
+                      Automated tasks run every 6 hours in production.
+                    </p>
+                  </div>
+                )}
+
+                {/* Next Scheduled Runs */}
+                {automationStatus?.automation.next_runs && Object.keys(automationStatus.automation.next_runs).length > 0 && (
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <h3 className="text-lg font-medium mb-4">Next Scheduled Runs</h3>
+                    <div className="space-y-2">
+                      {Object.entries(automationStatus.automation.next_runs).map(([jobId, nextRun]) => (
+                        <div key={jobId} className="flex justify-between items-center">
+                          <span className="text-sm capitalize">{jobId.replace(/_/g, ' ')}</span>
+                          <span className="text-xs text-gray-400">
+                            {nextRun ? new Date(nextRun).toLocaleString() : 'Not scheduled'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

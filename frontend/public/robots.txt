@@ -1,6 +1,32 @@
 User-agent: *
 Allow: /
 
+# AI Search Tools and Crawlers
+User-agent: GPTBot
+Allow: /
+Allow: /api/v1/local-events
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /api/v1/local-events
+
+User-agent: CCBot
+Allow: /
+Allow: /api/v1/local-events
+
+User-agent: anthropic-ai
+Allow: /
+Allow: /api/v1/local-events
+
+User-agent: Bingbot
+Allow: /
+Allow: /api/v1/local-events
+
+# API Endpoints for AI Tools
+Allow: /api/v1/local-events
+Allow: /events
+Allow: /health
+
 # Block private/admin areas
 Disallow: /admin/
 Disallow: /api/
@@ -14,5 +40,5 @@ Allow: /sitemap.xml
 # Sitemap location
 Sitemap: https://todo-events.com/sitemap.xml
 
-# Crawl delay (be respectful)
+# Crawl-delay for responsible AI crawling
 Crawl-delay: 1 
