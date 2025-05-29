@@ -494,17 +494,51 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   // Download ShareCard as image
   const handleDownload = async () => {
-    setDownloadStatus('');
+    setDownloadStatus('Generating...');
     try {
       const node = shareCardRef.current;
-      const dataUrl = await htmlToImage.toPng(node);
+      if (!node) {
+        throw new Error('Share card not found');
+      }
+
+      // Wait a moment for the component to fully render
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Configure options for better image quality
+      const options = {
+        quality: 0.95,
+        backgroundColor: '#000000',
+        pixelRatio: 2,
+        skipAutoScale: true,
+        useCORS: true,
+        allowTaint: true,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
+        }
+      };
+
+      const dataUrl = await htmlToImage.toPng(node, options);
+      
+      if (!dataUrl || dataUrl.length < 100) {
+        throw new Error('Failed to generate image data');
+      }
+
       const link = document.createElement('a');
       link.download = `event-${selectedEvent.id}-share.png`;
       link.href = dataUrl;
+      
+      // Trigger download
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      
       setDownloadStatus('Downloaded!');
+      setTimeout(() => setDownloadStatus(''), 2000);
     } catch (err) {
+      console.error('Download error:', err);
       setDownloadStatus('Error exporting image');
+      setTimeout(() => setDownloadStatus(''), 3000);
     }
   };
 
@@ -571,14 +605,27 @@ const EventMap = ({ mapsLoaded = false }) => {
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 {user ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                    onClick={logout}
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {user.role === 'admin' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        onClick={() => window.open('/admin', '_blank')}
+                        title="Admin Dashboard"
+                      >
+                        <Shield className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                      onClick={logout}
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </div>
                 ) : (
                   <Button
                     variant="ghost"
@@ -738,17 +785,30 @@ const EventMap = ({ mapsLoaded = false }) => {
                 <div className="flex items-center gap-2">
                   <ThemeToggle />
                   {user ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                      onClick={() => {
-                        logout();
-                        setIsMobileMenuOpen(false);
-                      }}
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {user.role === 'admin' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                          onClick={() => window.open('/admin', '_blank')}
+                          title="Admin Dashboard"
+                        >
+                          <Shield className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        onClick={() => {
+                          logout();
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </Button>
+                    </div>
                   ) : (
                     <Button
                       variant="ghost"
@@ -1209,28 +1269,6 @@ const EventMap = ({ mapsLoaded = false }) => {
           />
         </DialogContent>
       </Dialog>
-
-      {/* User Menu or Account Section */}
-      {user && (
-        <div className="user-menu">
-          {/* Existing menu items */}
-          
-          {/* Add this new admin dashboard link if user is admin */}
-          {user.role === 'admin' && (
-            <a 
-              href="/admin" 
-              className="flex items-center gap-2 p-2 text-sm hover:bg-black/20 rounded-md"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Shield size={16} />
-              Admin Dashboard
-            </a>
-          )}
-          
-          {/* Logout button or other options */}
-        </div>
-      )}
     </div>
   );
 };

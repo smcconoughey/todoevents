@@ -43,33 +43,33 @@ const TodoEventsLogo = ({ theme, className = "" }) => {
 // Fallback map component when Google Maps isn't available
 const FallbackMap = ({ event, category, theme }) => (
   <div 
-    className="w-full h-72 flex items-center justify-center relative"
+    className="w-full h-full flex items-center justify-center relative"
     style={{ 
       backgroundColor: theme === "dark" ? "#1a1a1a" : "#f8f9fa",
       backgroundImage: `radial-gradient(circle at 50% 50%, ${category.color || "#FFEC3A"}20 0%, transparent 50%)`
     }}
   >
     <div className="text-center">
-      <div className="flex items-center justify-center mb-4">
+      <div className="flex items-center justify-center mb-2">
         <div 
-          className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
+          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg"
           style={{ backgroundColor: category.color || "#FFEC3A" }}
         >
           <CategoryIcon 
             category={event.category} 
-            className="w-8 h-8" 
+            className="w-5 h-5 sm:w-6 sm:h-6" 
             style={{ color: "#1F2937" }}
           />
         </div>
       </div>
-      <p className="text-lg font-semibold mb-2" style={{ color: theme === "dark" ? "#ffffff" : "#1F2937" }}>
+      <p className="text-sm sm:text-base font-semibold mb-1" style={{ color: theme === "dark" ? "#ffffff" : "#1F2937" }}>
         {event.title}
       </p>
-      <p className="text-sm" style={{ color: theme === "dark" ? "#a3a3a3" : "#525252" }}>
+      <p className="text-xs leading-tight px-2" style={{ color: theme === "dark" ? "#a3a3a3" : "#525252" }}>
         {event.address}
       </p>
-      <div className="mt-4 flex items-center justify-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <div className="mt-2 flex items-center justify-center gap-1">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke={category.color || "#FFEC3A"} strokeWidth="2" />
           <circle cx="12" cy="12" r="8" stroke={category.color || "#FFEC3A"} strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
         </svg>
@@ -121,7 +121,7 @@ const ShareCard = ({ event }) => {
       
       const center = `${event.lat},${event.lng}`;
       const zoom = 14;
-      const size = "600x300";
+      const size = "400x200"; // Smaller size for mobile
       const scale = 2;
       
       // Use a simple colored marker instead of complex SVG
@@ -152,33 +152,34 @@ const ShareCard = ({ event }) => {
 
   return (
     <div
-      className="overflow-hidden rounded-2xl shadow-2xl flex flex-col"
+      className="overflow-hidden rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl flex flex-col"
       style={{ 
         backgroundColor: bgColor,
         color: textColor,
         border: `1px solid ${borderColor}`,
         fontFamily: 'Inter, system-ui, sans-serif',
-        width: '600px',
-        maxWidth: '100%'
+        width: '100%',
+        maxWidth: '380px', // More mobile-friendly max width
+        minWidth: '280px'
       }}
       id="share-card-root"
     >
       {/* Header with title and logo */}
       <div 
-        className="flex items-center justify-between p-6"
+        className="flex items-center justify-between p-3 sm:p-4"
         style={{ backgroundColor: cardBg, borderBottom: `1px solid ${borderColor}` }}
       >
-        <div className="flex-1 mr-4">
-          <h1 className="text-2xl font-bold leading-tight" style={{ color: textColor }}>
+        <div className="flex-1 mr-3">
+          <h1 className="text-base sm:text-lg font-bold leading-tight" style={{ color: textColor }}>
             {event.title}
           </h1>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-1">
             <CategoryIcon 
               category={event.category} 
-              className="w-5 h-5" 
+              className="w-4 h-4" 
               style={{ color: category.color || "#FFEC3A" }}
             />
-            <span className="text-sm font-medium" style={{ color: category.color || "#FFEC3A" }}>
+            <span className="text-xs font-medium" style={{ color: category.color || "#FFEC3A" }}>
               {category.label || event.category}
             </span>
           </div>
@@ -192,72 +193,76 @@ const ShareCard = ({ event }) => {
           <img 
             src={mapUrl} 
             alt="Event location map"
-            className="w-full h-72 object-cover"
+            className="w-full h-32 sm:h-48 object-cover"
             style={{ backgroundColor: theme === "dark" ? "#262626" : "#f5f5f5" }}
             onError={() => setMapUrl("")}
+            loading="eager"
+            crossOrigin="anonymous"
           />
         ) : (
-          <FallbackMap event={event} category={category} theme={theme} />
+          <div className="h-32 sm:h-48">
+            <FallbackMap event={event} category={category} theme={theme} />
+          </div>
         )}
         
         {/* Floating location badge - only show with real map */}
         {mapUrl && (
           <div 
-            className="absolute bottom-4 left-4 px-4 py-2 rounded-full shadow-lg backdrop-blur-sm"
+            className="absolute bottom-2 left-2 px-2 py-1 rounded-full shadow-lg backdrop-blur-sm"
             style={{ 
               backgroundColor: `${bgColor}f0`, 
               border: `1px solid ${borderColor}`,
               backdropFilter: 'blur(8px)'
             }}
           >
-            <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <div className="flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                 <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
                   stroke="#ef4444" strokeWidth="2"/>
                 <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
                   stroke="#ef4444" strokeWidth="2"/>
               </svg>
-              <span className="text-sm font-medium" style={{ color: textColor }}>5-mile radius</span>
+              <span className="text-xs font-medium" style={{ color: textColor }}>5mi radius</span>
             </div>
           </div>
         )}
       </div>
       
       {/* Event details */}
-      <div className="p-6 space-y-4" style={{ backgroundColor: cardBg }}>
+      <div className="p-3 sm:p-4 space-y-3" style={{ backgroundColor: cardBg }}>
         {/* Date and time */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2">
           <div 
-            className="p-3 rounded-full mt-1"
+            className="p-2 rounded-full mt-0.5"
             style={{ backgroundColor: theme === "dark" ? "#1e40af20" : "#dbeafe" }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
                 stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <div>
-            <p className="text-lg font-semibold" style={{ color: textColor }}>
+            <p className="text-sm sm:text-base font-semibold leading-tight" style={{ color: textColor }}>
               {formatDate(event.date, event.time)}
             </p>
           </div>
         </div>
         
         {/* Location */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2">
           <div 
-            className="p-3 rounded-full mt-1"
+            className="p-2 rounded-full mt-0.5"
             style={{ backgroundColor: theme === "dark" ? "#dc262620" : "#fee2e2" }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
                 stroke="#dc2626" strokeWidth="2"/>
               <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
                 stroke="#dc2626" strokeWidth="2"/>
             </svg>
           </div>
-          <div>
-            <p className="text-base leading-relaxed" style={{ color: textColor }}>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm leading-relaxed break-words" style={{ color: textColor }}>
               {event.address}
             </p>
           </div>
@@ -265,8 +270,8 @@ const ShareCard = ({ event }) => {
         
         {/* Description */}
         {event.description && (
-          <div className="pt-2">
-            <p className="text-base leading-relaxed line-clamp-3" style={{ color: secondaryTextColor }}>
+          <div className="pt-1">
+            <p className="text-xs sm:text-sm leading-relaxed line-clamp-2" style={{ color: secondaryTextColor }}>
               {event.description}
             </p>
           </div>
@@ -275,16 +280,16 @@ const ShareCard = ({ event }) => {
       
       {/* Footer with branding */}
       <div 
-        className="px-6 py-5 text-center border-t"
+        className="px-3 sm:px-4 py-3 text-center border-t"
         style={{ borderColor: borderColor, backgroundColor: bgColor }}
       >
-        <p className="text-sm mb-2" style={{ color: secondaryTextColor }}>
+        <p className="text-xs mb-1" style={{ color: secondaryTextColor }}>
           Discover more local events at
         </p>
-        <p className="text-xl font-bold" style={{ color: "#FFEC3A" }}>
+        <p className="text-base sm:text-lg font-bold" style={{ color: "#FFEC3A" }}>
           todo-events.com
         </p>
-        <p className="text-xs mt-3" style={{ color: secondaryTextColor }}>
+        <p className="text-xs mt-2" style={{ color: secondaryTextColor }}>
           Event ID: {event.id} • 5-mile radius highlighted
         </p>
       </div>
