@@ -6,7 +6,7 @@ import LoginForm from "./LoginForm";
 import CalendarFilter from "./CalendarFilter";
 import MapContainer from "./MapContainer";
 import ShareCard from "./ShareCard";
-import { getCategory } from "./categoryConfig";
+import categories, { getCategory } from "./categoryConfig";
 import { CategoryIcon } from "./CategoryIcons";
 import * as htmlToImage from 'html-to-image';
 import { 
