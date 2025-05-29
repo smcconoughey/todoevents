@@ -504,58 +504,53 @@ const EventMap = ({ mapsLoaded = false }) => {
     setDownloadStatus('Generating...');
     
     try {
+      if (!selectedEvent) {
+        throw new Error('No event selected');
+      }
+
+      // Ensure we're on the share tab
+      if (activeTab !== 'share') {
+        setActiveTab('share');
+        // Wait for tab to switch and component to render
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
       const node = shareCardRef.current;
       if (!node) {
         throw new Error('Share card not found');
       }
 
-      if (!selectedEvent) {
-        throw new Error('No event selected');
-      }
-
       // Log initial state for debugging
       console.log('Starting download process...');
-      console.log('Node dimensions:', node.offsetWidth, 'x', node.offsetHeight);
       console.log('Theme:', theme);
       console.log('Selected event:', selectedEvent.title);
+      console.log('Active tab:', activeTab);
       
       // Wait for component to fully render and fonts to load
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Check if node has proper dimensions after waiting
+      console.log('Node dimensions:', node.offsetWidth, 'x', node.offsetHeight);
       if (node.offsetWidth === 0 || node.offsetHeight === 0) {
-        throw new Error('Share card has no dimensions. Please ensure it is visible.');
+        // If still no dimensions, try to make the element visible
+        const style = window.getComputedStyle(node);
+        console.log('Node display:', style.display);
+        console.log('Node visibility:', style.visibility);
+        
+        // Force visibility and try again
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          node.style.position = 'absolute';
+          node.style.left = '-9999px';
+          node.style.top = '0';
+          node.style.display = 'block';
+          node.style.visibility = 'visible';
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+        if (node.offsetWidth === 0 || node.offsetHeight === 0) {
+          throw new Error('Share card has no dimensions. Please ensure the Share tab is active.');
+        }
       }
-
-      // Create a simplified inline-styled clone for image generation
-      const createSimplifiedClone = () => {
-        const cloneElement = node.cloneNode(true);
-        
-        // Remove all classes and apply inline styles
-        const applyInlineStyles = (element) => {
-          if (element.nodeType === Node.ELEMENT_NODE) {
-            // Remove external dependencies
-            element.removeAttribute('class');
-            
-            // Apply basic styling
-            const styles = {
-              fontFamily: '"Segoe UI", "Roboto", sans-serif',
-              boxSizing: 'border-box',
-              margin: '0',
-              padding: '0'
-            };
-            
-            // Apply styles as inline CSS
-            Object.assign(element.style, styles);
-            
-            // Process children recursively
-            Array.from(element.children).forEach(child => applyInlineStyles(child));
-          }
-        };
-        
-        applyInlineStyles(cloneElement);
-        return cloneElement;
-      };
 
       let dataUrl = null;
       let lastError = null;
@@ -580,59 +575,10 @@ const EventMap = ({ mapsLoaded = false }) => {
         console.warn('Method 1 failed:', error.message);
       }
 
-      // Method 2: Try with simplified clone
-      if (!dataUrl || dataUrl.length < 100) {
-        let cloneElement = null;
-        try {
-          console.log('Trying method 2: Simplified clone');
-          cloneElement = createSimplifiedClone();
-          document.body.appendChild(cloneElement);
-          
-          const cloneOptions = {
-            backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
-            width: cloneElement.offsetWidth,
-            height: cloneElement.offsetHeight,
-            useCORS: false,
-            allowTaint: false
-          };
-          
-          dataUrl = await htmlToImage.toPng(cloneElement, cloneOptions);
-          console.log('Method 2 successful');
-        } catch (error) {
-          lastError = error;
-          console.warn('Method 2 failed:', error.message);
-        } finally {
-          // Clean up clone if still in DOM
-          try {
-            if (cloneElement && cloneElement.parentNode) {
-              document.body.removeChild(cloneElement);
-            }
-          } catch (cleanupError) {
-            console.warn('Cleanup error:', cleanupError);
-          }
-        }
-      }
-
-      // Method 3: Try with SVG approach
+      // Method 2: Try with canvas fallback if first method fails
       if (!dataUrl || dataUrl.length < 100) {
         try {
-          console.log('Trying method 3: SVG approach');
-          dataUrl = await htmlToImage.toSvg(node, {
-            backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
-            width: node.offsetWidth,
-            height: node.offsetHeight
-          });
-          console.log('Method 3 successful');
-        } catch (error) {
-          lastError = error;
-          console.warn('Method 3 failed:', error.message);
-        }
-      }
-
-      // Method 4: Canvas fallback - create a basic text-based image
-      if (!dataUrl || dataUrl.length < 100) {
-        try {
-          console.log('Trying method 4: Canvas fallback');
+          console.log('Trying method 2: Canvas fallback');
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           
@@ -673,10 +619,10 @@ const EventMap = ({ mapsLoaded = false }) => {
           ctx.fillText("todo-events.com", canvas.width/2, 500);
           
           dataUrl = canvas.toDataURL('image/png');
-          console.log('Method 4 successful - Canvas fallback generated');
+          console.log('Method 2 successful - Canvas fallback generated');
         } catch (error) {
           lastError = error;
-          console.warn('Method 4 failed:', error.message);
+          console.warn('Method 2 failed:', error.message);
         }
       }
 
@@ -686,17 +632,9 @@ const EventMap = ({ mapsLoaded = false }) => {
         throw new Error(`Failed to generate image. Last error: ${lastError?.message || 'Unknown error'}`);
       }
 
-      // Determine file extension
-      let extension = 'png';
-      if (dataUrl.startsWith('data:image/svg')) {
-        extension = 'svg';
-      } else if (dataUrl.startsWith('data:image/jpeg')) {
-        extension = 'jpg';
-      }
-
       // Create and trigger download
       const link = document.createElement('a');
-      link.download = `event-${selectedEvent.id}-share.${extension}`;
+      link.download = `event-${selectedEvent.id}-share.png`;
       link.href = dataUrl;
       
       // Trigger download
@@ -714,12 +652,8 @@ const EventMap = ({ mapsLoaded = false }) => {
       
       // Provide more specific error messages
       let errorMessage = 'Error exporting image. ';
-      if (err.message.includes('CORS')) {
-        errorMessage += 'CORS issue detected. ';
-      } else if (err.message.includes('network')) {
-        errorMessage += 'Network issue detected. ';
-      } else if (err.message.includes('timeout')) {
-        errorMessage += 'Request timed out. ';
+      if (err.message.includes('Share tab')) {
+        errorMessage += 'Please ensure you are on the Share tab. ';
       } else if (err.message.includes('dimensions')) {
         errorMessage += 'Card not visible. Please ensure the share tab is open. ';
       }
