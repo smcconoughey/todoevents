@@ -1,4 +1,27 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { ThemeContext } from "../ThemeContext";
+import { AuthContext } from "./AuthContext";
+import CreateEventForm from "./CreateEventForm";
+import LoginForm from "./LoginForm";
+import CalendarFilter from "./CalendarFilter";
+import MapContainer from "./MapContainer";
+import ShareCard from "./ShareCard";
+import { getCategory } from "./categoryConfig";
+import { CategoryIcon } from "./CategoryIcons";
+import { getUserLocation } from "./locationUtils";
+import * as htmlToImage from 'html-to-image';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from "../ui/radix-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "../ui/sheet";
 import {
   Plus,
   ChevronLeft,
@@ -19,29 +42,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription
 } from "@/components/ui/radix-dialog";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
   SheetClose
 } from "@/components/ui/sheet";
 import ThemeToggle from '@/components/ui/ThemeToggle';
-import CreateEventForm from './CreateEventForm';
-import MapContainer from './MapContainer';
-import categories, { getCategory } from './categoryConfig';
 import AddressAutocomplete from './AddressAutocomplete';
-import { AuthContext } from './AuthContext';
-import LoginForm from './LoginForm';
-import CalendarFilter from './CalendarFilter';
-import ShareCard from './ShareCard';
-import * as htmlToImage from 'html-to-image';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -318,6 +325,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
 
 const EventMap = ({ mapsLoaded = false }) => {
   const { user, token, logout } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
 
   const [events, setEvents] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -502,16 +510,27 @@ const EventMap = ({ mapsLoaded = false }) => {
         throw new Error('Share card not found');
       }
 
+      if (!selectedEvent) {
+        throw new Error('No event selected');
+      }
+
       // Log initial state for debugging
       console.log('Starting download process...');
       console.log('Node dimensions:', node.offsetWidth, 'x', node.offsetHeight);
+      console.log('Theme:', theme);
+      console.log('Selected event:', selectedEvent.title);
       
       // Wait for component to fully render and fonts to load
       await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Check if node has proper dimensions after waiting
+      if (node.offsetWidth === 0 || node.offsetHeight === 0) {
+        throw new Error('Share card has no dimensions. Please ensure it is visible.');
+      }
+
       // Create a simplified inline-styled clone for image generation
       const createSimplifiedClone = () => {
-        const clone = node.cloneNode(true);
+        const cloneElement = node.cloneNode(true);
         
         // Remove all classes and apply inline styles
         const applyInlineStyles = (element) => {
@@ -535,8 +554,8 @@ const EventMap = ({ mapsLoaded = false }) => {
           }
         };
         
-        applyInlineStyles(clone);
-        return clone;
+        applyInlineStyles(cloneElement);
+        return cloneElement;
       };
 
       let dataUrl = null;
@@ -564,29 +583,30 @@ const EventMap = ({ mapsLoaded = false }) => {
 
       // Method 2: Try with simplified clone
       if (!dataUrl || dataUrl.length < 100) {
+        let cloneElement = null;
         try {
           console.log('Trying method 2: Simplified clone');
-          const clone = createSimplifiedClone();
-          document.body.appendChild(clone);
+          cloneElement = createSimplifiedClone();
+          document.body.appendChild(cloneElement);
           
           const cloneOptions = {
             backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
-            width: clone.offsetWidth,
-            height: clone.offsetHeight,
+            width: cloneElement.offsetWidth,
+            height: cloneElement.offsetHeight,
             useCORS: false,
             allowTaint: false
           };
           
-          dataUrl = await htmlToImage.toPng(clone, cloneOptions);
-          document.body.removeChild(clone);
+          dataUrl = await htmlToImage.toPng(cloneElement, cloneOptions);
           console.log('Method 2 successful');
         } catch (error) {
           lastError = error;
           console.warn('Method 2 failed:', error.message);
+        } finally {
           // Clean up clone if still in DOM
           try {
-            if (clone && clone.parentNode) {
-              document.body.removeChild(clone);
+            if (cloneElement && cloneElement.parentNode) {
+              document.body.removeChild(cloneElement);
             }
           } catch (cleanupError) {
             console.warn('Cleanup error:', cleanupError);
@@ -701,6 +721,8 @@ const EventMap = ({ mapsLoaded = false }) => {
         errorMessage += 'Network issue detected. ';
       } else if (err.message.includes('timeout')) {
         errorMessage += 'Request timed out. ';
+      } else if (err.message.includes('dimensions')) {
+        errorMessage += 'Card not visible. Please ensure the share tab is open. ';
       }
       errorMessage += 'Please try again.';
       
