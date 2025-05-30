@@ -3025,7 +3025,7 @@ async def toggle_event_interest(
             # Get updated count
             cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             result = cursor.fetchone()
-            interest_count = result[0] if result else 0
+            interest_count = result[0] if result and len(result) > 0 else 0
             
             conn.commit()
             
@@ -3073,7 +3073,7 @@ async def get_event_interest_status(
             if not result:
                 raise HTTPException(status_code=404, detail="Event not found")
             
-            interest_count = result[0]
+            interest_count = result[0] if result and len(result) > 0 else 0
             
             # Check if user is interested
             if user_id:
@@ -3121,17 +3121,16 @@ async def track_event_view_endpoint(
         # Track the view
         view_tracked = await track_event_view(event_id, user_id, browser_fingerprint)
         
-        # Get updated view count
+        # Get updated view count with safety check
         placeholder = get_placeholder()
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute(f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             result = cursor.fetchone()
-            
             if not result:
-                raise HTTPException(status_code=404, detail="Event not found")
+                raise HTTPException(status_code=404, detail="Event not found after view tracking")
             
-            view_count = result[0]
+            view_count = result[0] if result and len(result) > 0 else 0
         
         return {
             "success": True,
