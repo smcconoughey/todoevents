@@ -261,7 +261,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             </div>
             <div className="flex flex-col">
               <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
-              <span className="text-xs text-white/40 font-mono">ID: {event.id}</span>
+              <span className="text-xs event-id-text font-mono">ID: {event.id}</span>
             </div>
           </div>
           <Button
@@ -1439,11 +1439,11 @@ const EventMap = ({ mapsLoaded = false }) => {
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-4">
                 {/* Location Section - Compact */}
-                <div className="space-y-2 p-3 bg-white/5 rounded-lg border border-white/10">
+                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
-                      <label className="text-sm font-medium text-white">📍 Location</label>
+                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
                     </div>
                     <Button
                       variant="ghost"
@@ -1463,7 +1463,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-white/50">Search Radius</label>
+                    <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
                     <div className="grid grid-cols-4 gap-1">
                       {proximityOptions.map(option => (
                         <button
@@ -1471,7 +1471,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
                             proximityRange === option.value
                               ? 'bg-pin-blue text-white border-pin-blue'
-                              : 'bg-white/5 text-white/70 border-white/20 hover:bg-white/10'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                           }`}
                           onClick={() => setProximityRange(option.value)}
                         >
@@ -1484,16 +1484,16 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                 {/* Error Display */}
                 {error && (
-                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 dark:text-red-200 light:text-red-800 text-sm">
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
                         <p className="font-medium">Error</p>
-                        <p className="text-red-200/80 mt-1">{error}</p>
+                        <p className="text-red-200/80 dark:text-red-200/80 light:text-red-700 mt-1">{error}</p>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-200/80 hover:text-red-200 mt-2 h-6 px-2 text-xs"
+                          className="text-red-200/80 dark:text-red-200/80 light:text-red-700 hover:text-red-200 dark:hover:text-red-200 light:hover:text-red-600 mt-2 h-6 px-2 text-xs"
                           onClick={() => setError(null)}
                         >
                           Dismiss
@@ -1504,21 +1504,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Filters Tab Interface */}
-                <div className="space-y-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                <div className="space-y-3 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
-                    <span className="text-sm font-medium text-white">🎯 Search Filters</span>
-                    <div className="text-xs text-white/50 bg-white/10 px-2 py-0.5 rounded-full ml-auto">
+                    <span className="text-sm font-medium text-white dark:text-white light:text-black">🎯 Search Filters</span>
+                    <div className="text-xs text-white/50 dark:text-white/50 light:text-black/60 bg-white/10 dark:bg-white/10 light:bg-black/10 px-2 py-0.5 rounded-full ml-auto">
                       💡 Combine for better results
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1 border border-white/20">
+                  <div className="flex items-center gap-1 bg-white/10 dark:bg-white/10 light:bg-black/10 rounded-lg p-1 border border-white/20 dark:border-white/20 light:border-black/30">
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'date' 
-                          ? 'bg-white/30 text-white shadow-sm' 
-                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
+                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
+                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
@@ -1527,8 +1527,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
-                          ? 'bg-white/30 text-white shadow-sm' 
-                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
+                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
+                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
@@ -1538,7 +1538,7 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Date Filter Tab */}
                   {activeFilterTab === 'date' && (
-                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       {/* Quick Date Presets */}
                       <div className="grid grid-cols-2 gap-1">
                         {[
@@ -1565,7 +1565,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                         ].map(preset => (
                           <button
                             key={preset.label}
-                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 text-white/70 border border-white/20 hover:bg-white/10 transition-all duration-200"
+                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 transition-all duration-200"
                             onClick={() => setSelectedDate(preset.getValue())}
                           >
                             {preset.label}
@@ -1583,8 +1583,8 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
-                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
-                      <div className="text-xs text-white/60 mb-2 px-1">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
                         💡 Tap categories to toggle them on/off. You can select multiple!
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -1647,29 +1647,29 @@ const EventMap = ({ mapsLoaded = false }) => {
                               key={category.id}
                               className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
                                 selectedCategory.includes(category.id)
-                                  ? `bg-white/20 ${getBorderColor(category.id)} text-white shadow-lg transform scale-[1.02]`
-                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30'
+                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
                               }`}
                               onClick={() => handleCategorySelect(category.id)}
                             >
                               {/* Selected indicator */}
                               {selectedCategory.includes(category.id) && (
                                 <div className="absolute top-0.5 right-0.5">
-                                  <div className="w-1.5 h-1.5 bg-white rounded-full opacity-80"></div>
+                                  <div className="w-1.5 h-1.5 bg-white dark:bg-white light:bg-black rounded-full opacity-80"></div>
                                 </div>
                               )}
                               <div className="flex items-center gap-1 mb-0.5">
                                 {React.createElement(category.icon, {
                                   className: `w-3 h-3 transition-colors duration-200 ${
                                     selectedCategory.includes(category.id) 
-                                      ? 'text-white' 
+                                      ? 'text-white dark:text-white light:text-black' 
                                       : category.color
                                   }`
                                 })}
                                 <span className="text-xs font-medium truncate">{category.name}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${
-                                selectedCategory.includes(category.id) ? 'text-white/80' : 'text-white/50'
+                                selectedCategory.includes(category.id) ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
                               }`}>
                                 {eventCount} events
                               </div>
@@ -1683,13 +1683,13 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                 {/* Active Filters Summary */}
                 {(!selectedCategory.includes('all') || selectedDate || proximityRange !== 15 || selectedLocation) && (
-                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <div className="p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-white/70">Active Filters</span>
+                      <span className="text-xs font-medium text-white/70 dark:text-white/70 light:text-black/70">Active Filters</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-xs text-white/50 hover:text-white/70 h-5 px-1"
+                        className="text-xs text-white/50 dark:text-white/50 light:text-black/50 hover:text-white/70 dark:hover:text-white/70 light:hover:text-black/70 h-5 px-1"
                         onClick={() => {
                           setSelectedCategory(['all']);
                           setSelectedDate(null);
@@ -1702,22 +1702,22 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {!selectedCategory.includes('all') && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           {selectedCategory.length} categories selected
                         </span>
                       )}
                       {selectedDate && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           Date filter
                         </span>
                       )}
                       {proximityRange !== 15 && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           {proximityRange}mi radius
                         </span>
                       )}
                       {selectedLocation && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           📍 Location set
                         </span>
                       )}
@@ -1726,7 +1726,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Event Count & Quick Actions */}
-                <div className="flex items-center justify-between text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
                   <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
                 </div>
 
@@ -1883,11 +1883,11 @@ const EventMap = ({ mapsLoaded = false }) => {
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-4">
                 {/* Location Section - Compact */}
-                <div className="space-y-2 p-3 bg-white/5 rounded-lg border border-white/10">
+                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
-                      <label className="text-sm font-medium text-white">📍 Location</label>
+                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
                     </div>
                     <Button
                       variant="ghost"
@@ -1907,7 +1907,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-white/50">Search Radius</label>
+                    <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
                     <div className="grid grid-cols-4 gap-1">
                       {proximityOptions.map(option => (
                         <button
@@ -1915,7 +1915,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
                             proximityRange === option.value
                               ? 'bg-pin-blue text-white border-pin-blue'
-                              : 'bg-white/5 text-white/70 border-white/20 hover:bg-white/10'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                           }`}
                           onClick={() => setProximityRange(option.value)}
                         >
@@ -1928,16 +1928,16 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                 {/* Error Display */}
                 {error && (
-                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 dark:text-red-200 light:text-red-800 text-sm">
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
                         <p className="font-medium">Error</p>
-                        <p className="text-red-200/80 mt-1">{error}</p>
+                        <p className="text-red-200/80 dark:text-red-200/80 light:text-red-700 mt-1">{error}</p>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-200/80 hover:text-red-200 mt-2 h-6 px-2 text-xs"
+                          className="text-red-200/80 dark:text-red-200/80 light:text-red-700 hover:text-red-200 dark:hover:text-red-200 light:hover:text-red-600 mt-2 h-6 px-2 text-xs"
                           onClick={() => setError(null)}
                         >
                           Dismiss
@@ -1948,21 +1948,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Filters Tab Interface */}
-                <div className="space-y-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                <div className="space-y-3 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
-                    <span className="text-sm font-medium text-white">🎯 Search Filters</span>
-                    <div className="text-xs text-white/50 bg-white/10 px-2 py-0.5 rounded-full ml-auto">
+                    <span className="text-sm font-medium text-white dark:text-white light:text-black">🎯 Search Filters</span>
+                    <div className="text-xs text-white/50 dark:text-white/50 light:text-black/60 bg-white/10 dark:bg-white/10 light:bg-black/10 px-2 py-0.5 rounded-full ml-auto">
                       💡 Combine for better results
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1 border border-white/20">
+                  <div className="flex items-center gap-1 bg-white/10 dark:bg-white/10 light:bg-black/10 rounded-lg p-1 border border-white/20 dark:border-white/20 light:border-black/30">
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'date' 
-                          ? 'bg-white/30 text-white shadow-sm' 
-                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
+                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
+                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
@@ -1971,8 +1971,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
-                          ? 'bg-white/30 text-white shadow-sm' 
-                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
+                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
+                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
@@ -1982,7 +1982,7 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Date Filter Tab */}
                   {activeFilterTab === 'date' && (
-                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       {/* Quick Date Presets */}
                       <div className="grid grid-cols-2 gap-1">
                         {[
@@ -2009,7 +2009,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                         ].map(preset => (
                           <button
                             key={preset.label}
-                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 text-white/70 border border-white/20 hover:bg-white/10 transition-all duration-200"
+                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 transition-all duration-200"
                             onClick={() => setSelectedDate(preset.getValue())}
                           >
                             {preset.label}
@@ -2027,8 +2027,8 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
-                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
-                      <div className="text-xs text-white/60 mb-2 px-1">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
                         💡 Tap categories to toggle them on/off. You can select multiple!
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -2091,29 +2091,29 @@ const EventMap = ({ mapsLoaded = false }) => {
                               key={category.id}
                               className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
                                 selectedCategory.includes(category.id)
-                                  ? `bg-white/20 ${getBorderColor(category.id)} text-white shadow-lg transform scale-[1.02]`
-                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30'
+                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
                               }`}
                               onClick={() => handleCategorySelect(category.id)}
                             >
                               {/* Selected indicator */}
                               {selectedCategory.includes(category.id) && (
                                 <div className="absolute top-0.5 right-0.5">
-                                  <div className="w-1.5 h-1.5 bg-white rounded-full opacity-80"></div>
+                                  <div className="w-1.5 h-1.5 bg-white dark:bg-white light:bg-black rounded-full opacity-80"></div>
                                 </div>
                               )}
                               <div className="flex items-center gap-1 mb-0.5">
                                 {React.createElement(category.icon, {
                                   className: `w-3 h-3 transition-colors duration-200 ${
                                     selectedCategory.includes(category.id) 
-                                      ? 'text-white' 
+                                      ? 'text-white dark:text-white light:text-black' 
                                       : category.color
                                   }`
                                 })}
                                 <span className="text-xs font-medium truncate">{category.name}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${
-                                selectedCategory.includes(category.id) ? 'text-white/80' : 'text-white/50'
+                                selectedCategory.includes(category.id) ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
                               }`}>
                                 {eventCount} events
                               </div>
@@ -2127,13 +2127,13 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                 {/* Active Filters Summary */}
                 {(!selectedCategory.includes('all') || selectedDate || proximityRange !== 15 || selectedLocation) && (
-                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <div className="p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-white/70">Active Filters</span>
+                      <span className="text-xs font-medium text-white/70 dark:text-white/70 light:text-black/70">Active Filters</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-xs text-white/50 hover:text-white/70 h-5 px-1"
+                        className="text-xs text-white/50 dark:text-white/50 light:text-black/50 hover:text-white/70 dark:hover:text-white/70 light:hover:text-black/70 h-5 px-1"
                         onClick={() => {
                           setSelectedCategory(['all']);
                           setSelectedDate(null);
@@ -2146,22 +2146,22 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {!selectedCategory.includes('all') && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           {selectedCategory.length} categories selected
                         </span>
                       )}
                       {selectedDate && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           Date filter
                         </span>
                       )}
                       {proximityRange !== 15 && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           {proximityRange}mi radius
                         </span>
                       )}
                       {selectedLocation && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           📍 Location set
                         </span>
                       )}
@@ -2170,7 +2170,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Event Count & Quick Actions */}
-                <div className="flex items-center justify-between text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
                   <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
                 </div>
 
@@ -2355,7 +2355,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 })()}
                 <div className="flex flex-col min-w-0 flex-1">
                   <h2 className="text-lg font-display font-semibold text-white break-words leading-tight">{selectedEvent.title}</h2>
-                  <span className="text-xs text-white/40 font-mono mt-0.5">ID: {selectedEvent.id}</span>
+                  <span className="text-xs event-id-text font-mono mt-0.5">ID: {selectedEvent.id}</span>
                 </div>
               </div>
               <Button

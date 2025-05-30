@@ -559,3 +559,112 @@
     box-shadow: 0 0 0 10px rgba(255, 236, 58, 0);
   }
 }
+
+/* Theme-aware Event ID and text visibility classes */
+.event-id-text {
+  color: var(--text-tertiary) !important;
+}
+
+/* Light mode specific text colors */
+[data-theme='light'] .event-id-text {
+  color: rgba(26, 26, 26, 0.6) !important;
+}
+
+/* Dark mode specific text colors */
+[data-theme='dark'] .event-id-text {
+  color: rgba(228, 228, 228, 0.4) !important;
+}
+
+/* Theme-aware yellow text for better visibility */
+.yellow-text-themed {
+  color: var(--spark-yellow) !important;
+}
+
+[data-theme='light'] .yellow-text-themed {
+  color: #CC8A00 !important; /* Darker yellow for light mode */
+}
+
+/* Theme-aware yellow buttons for better contrast */
+.btn-yellow-themed {
+  background-color: var(--spark-yellow) !important;
+  color: #1A1A1A !important; /* Dark text on yellow background */
+  border: 2px solid var(--spark-yellow) !important;
+  font-weight: 600;
+  transition: all var(--transition-speed) var(--bounce-ease);
+}
+
+[data-theme='light'] .btn-yellow-themed {
+  color: #1A1A1A !important; /* Dark text for light mode */
+}
+
+[data-theme='dark'] .btn-yellow-themed {
+  color: #1A1A1A !important; /* Dark text for dark mode too - yellow bg needs dark text */
+}
+
+.btn-yellow-themed:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 236, 58, 0.3);
+  background-color: var(--spark-yellow) !important;
+  opacity: 0.9;
+}
+
+/* Theme-aware background colors */
+.bg-themed-surface {
+  background-color: var(--bg-card) !important;
+}
+
+.bg-themed-surface-hover:hover {
+  background-color: var(--bg-card-hover) !important;
+}
+
+/* Theme-aware border colors */
+.border-themed {
+  border-color: var(--border-color) !important;
+}
+
+.border-themed-hover:hover {
+  border-color: var(--border-color-hover) !important;
+}
+
+/* Theme-aware text colors */
+.text-themed-primary {
+  color: var(--text-primary) !important;
+}
+
+.text-themed-secondary {
+  color: var(--text-secondary) !important;
+}
+
+.text-themed-tertiary {
+  color: var(--text-tertiary) !important;
+}
+
+/* Active Filters specific styling */
+.active-filters-section {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+.active-filters-text {
+  color: var(--text-secondary) !important;
+}
+
+.active-filters-pill {
+  background-color: var(--bg-card-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Ensure visibility in light mode */
+[data-theme='light'] .active-filters-section {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-theme='light'] .active-filters-text {
+  color: rgba(26, 26, 26, 0.7) !important;
+}
+
+[data-theme='light'] .active-filters-pill {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  color: rgba(26, 26, 26, 0.8) !important;
+}
