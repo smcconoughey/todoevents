@@ -2910,20 +2910,43 @@ async def track_event_view(event_id: int, user_id: int = None, browser_fingerpri
             existing_view = cursor.fetchone()
             
             if not existing_view:
-                # Insert new view
-                cursor.execute(
-                    f"INSERT INTO event_views (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                    (event_id, user_id, browser_fingerprint)
-                )
-                
-                # Update view count
-                cursor.execute(
-                    f"UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = {placeholder}",
-                    (event_id,)
-                )
-                
-                conn.commit()
-                return True
+                # Insert new view with constraint handling
+                try:
+                    cursor.execute(
+                        f"INSERT INTO event_views (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                        (event_id, user_id, browser_fingerprint)
+                    )
+                    
+                    # Update view count
+                    cursor.execute(
+                        f"UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = {placeholder}",
+                        (event_id,)
+                    )
+                    
+                    conn.commit()
+                    return True
+                except Exception as insert_error:
+                    # Handle constraint violations gracefully
+                    logger.warning(f"View insert failed for event {event_id}, likely duplicate: {str(insert_error)}")
+                    # Check if view was created by another request
+                    if user_id:
+                        cursor.execute(
+                            f"SELECT id FROM event_views WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                            (event_id, user_id)
+                        )
+                    else:
+                        cursor.execute(
+                            f"SELECT id FROM event_views WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                            (event_id, browser_fingerprint)
+                        )
+                    
+                    if cursor.fetchone():
+                        # View was created by another request
+                        conn.commit()  # Commit any pending transaction
+                        return False  # View already exists
+                    else:
+                        # Re-raise if it's not a constraint issue
+                        raise insert_error
             return False
             
     except Exception as e:
@@ -2985,9 +3008,9 @@ async def toggle_event_interest(
                         (event_id, browser_fingerprint)
                     )
                 
-                # Update interest count
+                # Update interest count with safety check
                 cursor.execute(
-                    f"UPDATE events SET interest_count = COALESCE(interest_count, 0) - 1 WHERE id = {placeholder}",
+                    f"UPDATE events SET interest_count = GREATEST(COALESCE(interest_count, 0) - 1, 0) WHERE id = {placeholder}",
                     (event_id,)
                 )
                 
@@ -2995,27 +3018,52 @@ async def toggle_event_interest(
                 action = "removed"
             else:
                 # Add interest - always include browser_fingerprint
-                cursor.execute(
-                    f"INSERT INTO event_interests (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                    (event_id, user_id, browser_fingerprint)
-                )
-                
-                # Update interest count
-                cursor.execute(
-                    f"UPDATE events SET interest_count = COALESCE(interest_count, 0) + 1 WHERE id = {placeholder}",
-                    (event_id,)
-                )
+                try:
+                    cursor.execute(
+                        f"INSERT INTO event_interests (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                        (event_id, user_id, browser_fingerprint)
+                    )
+                except Exception as insert_error:
+                    # Handle constraint violations gracefully
+                    logger.warning(f"Interest insert failed for event {event_id}, likely duplicate: {str(insert_error)}")
+                    # Check if it now exists (race condition)
+                    if user_id:
+                        cursor.execute(
+                            f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                            (event_id, user_id)
+                        )
+                    else:
+                        cursor.execute(
+                            f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                            (event_id, browser_fingerprint)
+                        )
+                    
+                    if cursor.fetchone():
+                        # Interest was created by another request, treat as existing
+                        action = "already_exists"
+                    else:
+                        # Re-raise if it's not a constraint issue
+                        raise insert_error
+                else:
+                    # Update interest count
+                    cursor.execute(
+                        f"UPDATE events SET interest_count = COALESCE(interest_count, 0) + 1 WHERE id = {placeholder}",
+                        (event_id,)
+                    )
+                    action = "added"
                 
                 conn.commit()
-                action = "added"
             
             # Get updated count - use COALESCE to handle NULL
             cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
-            updated_count = cursor.fetchone()[0]
+            result = cursor.fetchone()
+            if not result:
+                raise HTTPException(status_code=404, detail="Event not found after operation")
+            updated_count = result[0]
             
             return {
                 "action": action,
-                "interested": action == "added",
+                "interested": action in ["added", "already_exists"],
                 "interest_count": updated_count,
                 "event_id": event_id
             }
@@ -3054,7 +3102,7 @@ async def get_event_interest_status(
             if not event_data:
                 raise HTTPException(status_code=404, detail="Event not found")
             
-            interest_count = event_data[0]
+            interest_count = event_data[0] if event_data[0] is not None else 0
             
             # Check if user is interested
             user_interested = False
@@ -3114,9 +3162,12 @@ async def track_event_view_endpoint(
             # Track the view
             view_tracked = await track_event_view(event_id, user_id, browser_fingerprint)
             
-            # Get updated count
+            # Get updated count with safety check
             cursor.execute(f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
-            updated_count = cursor.fetchone()[0]
+            result = cursor.fetchone()
+            if not result:
+                raise HTTPException(status_code=404, detail="Event not found after view tracking")
+            updated_count = result[0]
             
             return {
                 "view_tracked": view_tracked,
