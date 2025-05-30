@@ -198,29 +198,29 @@ def get_db():
         import psycopg2
         from psycopg2.extras import RealDictCursor
         
-        # Add retry logic for database connections
-        retry_count = 10
+        # Reduced retry count for faster failover
+        retry_count = 3
         conn = None
         
         for attempt in range(retry_count):
             try:
-                # Add connection pooling and extended timeout parameters
+                # Optimized connection parameters for faster connections
                 logger.info(f"Connecting to PostgreSQL (attempt {attempt+1}/{retry_count})")
                 conn = psycopg2.connect(
                     DB_URL,
                     cursor_factory=RealDictCursor,
-                    connect_timeout=15,
+                    connect_timeout=10,  # Reduced from 15
                     keepalives=1,
                     keepalives_idle=30,
-                    keepalives_interval=10,
-                    keepalives_count=5
+                    keepalives_interval=5,  # Reduced from 10
+                    keepalives_count=3,     # Reduced from 5
+                    # Add connection pooling parameters
+                    application_name='todoevents'
                 )
-                # Don't set autocommit=True by default to allow explicit transaction control
-                logger.info("PostgreSQL connection successful")
                 
-                # Test the connection with a simple query
-                cur = conn.cursor()
-                cur.execute("SELECT 1")
+                # Set autocommit for read operations to reduce lock time
+                conn.autocommit = True
+                logger.info("PostgreSQL connection successful")
                 break  # Connection successful, exit retry loop
                 
             except Exception as e:
@@ -235,8 +235,8 @@ def get_db():
                 logger.error(f"Database connection failed (attempt {attempt+1}/{retry_count}): {error_msg}")
                 
                 if attempt < retry_count - 1:
-                    # Exponential backoff with shorter base wait time
-                    wait_time = min(2 ** attempt, 8)  # Cap at 8 seconds
+                    # Faster backoff for production
+                    wait_time = min(1 + attempt, 3)  # Cap at 3 seconds
                     logger.info(f"Waiting {wait_time}s before retry...")
                     time.sleep(wait_time)
                 else:
@@ -255,9 +255,13 @@ def get_db():
                 conn.close()
                 logger.info("PostgreSQL connection closed")
     else:
-        # Local development with SQLite
-        conn = sqlite3.connect(DB_FILE)
+        # Local development with SQLite - optimized
+        conn = sqlite3.connect(DB_FILE, timeout=10)  # Add timeout
         conn.row_factory = sqlite3.Row
+        # Enable WAL mode for better concurrent access
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')  # Faster than FULL
+        conn.execute('PRAGMA cache_size=10000')    # Increase cache
         try:
             yield conn
         finally:
@@ -1785,92 +1789,79 @@ async def list_events(
     """
     Retrieve events with optional filtering by category and date.
     Open to all users, no authentication required.
+    Optimized for performance.
     """
     placeholder = get_placeholder()
     
     try:
-        # Use connection manager
+        # Use connection manager with optimized query
         with get_db() as conn:
-            try:
-                cursor = conn.cursor()
-                
-                # Start a read-only transaction
-                cursor.execute("BEGIN")
-                
-                # Build query with parameters - make sure to handle NULL values for counters
-                query = """SELECT id, title, description, date, start_time, end_time, end_date, 
-                          category, address, lat, lng, recurring, frequency, created_by, created_at,
-                          COALESCE(interest_count, 0) as interest_count,
-                          COALESCE(view_count, 0) as view_count
-                          FROM events WHERE 1=1"""
-                params = []
-                
-                # Add filters if provided
-                if category:
-                    query += f" AND category = {placeholder}"
-                    params.append(category)
-                
-                if date:
-                    query += f" AND date = {placeholder}"
-                    params.append(date)
-                
-                # Order by date and time
-                query += " ORDER BY date, start_time"
-                
-                # Log and execute the query
-                logger.info(f"Executing list_events query: {query} with params: {params}")
-                cursor.execute(query, params)
-                
-                # Fetch all events
-                events = cursor.fetchall()
-                logger.info(f"Successfully fetched {len(events) if events else 0} events")
-                
-                # Process results
-                result = []
-                for event in events:
-                    try:
-                        # Convert row to dict
-                        event_dict = dict(event)
-                        
-                        # Convert datetime to string format
-                        if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
-                            event_dict['created_at'] = event_dict['created_at'].isoformat()
-                        
-                        # Ensure counters are integers (not None)
-                        event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
-                        event_dict['view_count'] = event_dict.get('view_count', 0) or 0
-                        
-                        result.append(event_dict)
-                    except Exception as conversion_error:
-                        logger.error(f"Error converting event to dict: {str(conversion_error)}")
-                        # Skip problematic events rather than failing completely
-                        continue
-                
-                # End transaction (just reading, so COMMIT or ROLLBACK both fine)
-                cursor.execute("COMMIT")
-                
-                return result
-                
-            except Exception as query_error:
-                # Log the error
-                error_msg = str(query_error)
-                logger.error(f"Database error in list_events: {error_msg}")
-                
-                # If transaction is active, try to roll it back
+            cursor = conn.cursor()
+            
+            # Optimized single query without explicit transactions for read operations
+            query = """SELECT id, title, description, date, start_time, end_time, end_date, 
+                      category, address, lat, lng, recurring, frequency, created_by, created_at,
+                      COALESCE(interest_count, 0) as interest_count,
+                      COALESCE(view_count, 0) as view_count
+                      FROM events WHERE 1=1"""
+            params = []
+            
+            # Add filters if provided
+            if category:
+                query += f" AND category = {placeholder}"
+                params.append(category)
+            
+            if date:
+                query += f" AND date = {placeholder}"
+                params.append(date)
+            
+            # Order by date and time with limit for performance
+            query += " ORDER BY date ASC, start_time ASC LIMIT 1000"
+            
+            # Execute the optimized query
+            logger.info(f"Executing optimized list_events query with {len(params)} filters")
+            cursor.execute(query, params)
+            
+            # Fetch all events
+            events = cursor.fetchall()
+            logger.info(f"Successfully fetched {len(events) if events else 0} events")
+            
+            # Process results efficiently
+            result = []
+            for event in events:
                 try:
-                    cursor.execute("ROLLBACK")
-                except Exception as rollback_error:
-                    logger.error(f"Rollback failed: {str(rollback_error)}")
-                
-                # Return appropriate error
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Database error: {error_msg}"
-                ) from None
-                
-    except HTTPException as http_ex:
-        # Pass through HTTP exceptions
-        raise http_ex
+                    # Convert to dict format for consistent handling
+                    if hasattr(event, '_asdict'):
+                        event_dict = event._asdict()
+                    elif isinstance(event, dict):
+                        event_dict = dict(event)
+                    else:
+                        # Handle tuple/list results
+                        event_dict = {
+                            'id': event[0], 'title': event[1], 'description': event[2],
+                            'date': event[3], 'start_time': event[4], 'end_time': event[5],
+                            'end_date': event[6], 'category': event[7], 'address': event[8],
+                            'lat': event[9], 'lng': event[10], 'recurring': event[11],
+                            'frequency': event[12], 'created_by': event[13], 'created_at': event[14],
+                            'interest_count': event[15], 'view_count': event[16]
+                        }
+                    
+                    # Ensure datetime is properly formatted
+                    if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
+                        event_dict['created_at'] = event_dict['created_at'].isoformat()
+                    
+                    # Ensure counters are integers
+                    event_dict['interest_count'] = int(event_dict.get('interest_count', 0) or 0)
+                    event_dict['view_count'] = int(event_dict.get('view_count', 0) or 0)
+                    
+                    result.append(event_dict)
+                    
+                except Exception as event_error:
+                    logger.warning(f"Error processing event {event}: {event_error}")
+                    continue
+            
+            return result
+            
     except Exception as e:
         # Handle any other exceptions
         error_msg = str(e)
@@ -3063,7 +3054,7 @@ async def get_event_interest_status(
     current_user: dict = Depends(get_current_user_optional_no_exception)
 ):
     """
-    Get interest status for an event - simplified endpoint
+    Get interest status for an event - optimized for performance
     """
     try:
         # Get user ID if authenticated
@@ -3079,42 +3070,48 @@ async def get_event_interest_status(
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Check if event exists and get interest count
-            cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
+            # Single optimized query to get both event data and interest status
+            if user_id:
+                query = f"""
+                    SELECT 
+                        e.id,
+                        COALESCE(e.interest_count, 0) as interest_count,
+                        CASE WHEN ei.id IS NOT NULL THEN true ELSE false END as user_interested
+                    FROM events e
+                    LEFT JOIN event_interests ei ON e.id = ei.event_id AND ei.user_id = {placeholder}
+                    WHERE e.id = {placeholder}
+                """
+                params = (user_id, event_id)
+            else:
+                query = f"""
+                    SELECT 
+                        e.id,
+                        COALESCE(e.interest_count, 0) as interest_count,
+                        CASE WHEN ei.id IS NOT NULL THEN true ELSE false END as user_interested
+                    FROM events e
+                    LEFT JOIN event_interests ei ON e.id = ei.event_id AND ei.browser_fingerprint = {placeholder}
+                    WHERE e.id = {placeholder}
+                """
+                params = (browser_fingerprint, event_id)
+            
+            cursor.execute(query, params)
             result = cursor.fetchone()
             
             if not result:
                 raise HTTPException(status_code=404, detail="Event not found")
             
-            # Ultra-robust result handling for different database types
-            try:
-                if isinstance(result, (list, tuple)):
-                    interest_count = result[0] if len(result) > 0 else 0
-                elif hasattr(result, '__getitem__'):
-                    interest_count = result[0]
-                else:
-                    interest_count = int(result) if result is not None else 0
-            except (IndexError, KeyError, TypeError, ValueError):
-                interest_count = 0
-            
-            # Check if user is interested
-            if user_id:
-                cursor.execute(
-                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder} LIMIT 1",
-                    (event_id, user_id)
-                )
+            # Extract results safely
+            if isinstance(result, dict):
+                interest_count = result.get('interest_count', 0) or 0
+                user_interested = result.get('user_interested', False) or False
             else:
-                cursor.execute(
-                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder} LIMIT 1",
-                    (event_id, browser_fingerprint)
-                )
-            
-            user_interested = cursor.fetchone() is not None
+                interest_count = result[1] if len(result) > 1 else 0
+                user_interested = result[2] if len(result) > 2 else False
             
             return {
                 "success": True,
-                "interested": user_interested,
-                "interest_count": interest_count,
+                "interested": bool(user_interested),
+                "interest_count": int(interest_count),
                 "event_id": event_id
             }
         
