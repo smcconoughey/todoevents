@@ -32,7 +32,7 @@ export const useEventInteraction = (eventId) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           } : {})
         }
-      }, 5000);
+      }, 12000); // Increased from 5000 to 12000ms for mobile
 
       // Update both interest and view data from event data
       setInterestData(prev => ({
@@ -65,7 +65,7 @@ export const useEventInteraction = (eventId) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           } : {})
         }
-      }, 5000); // 5 second timeout
+      }, 12000); // Increased from 5000 to 12000ms for mobile
 
       return data;
     } catch (error) {
@@ -100,7 +100,7 @@ export const useEventInteraction = (eventId) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           } : {})
         }
-      }, 5000);
+      }, 15000); // Increased from 5000 to 15000ms for mobile POST requests
 
       // Update with actual server response
       setInterestData(prev => ({
@@ -139,7 +139,7 @@ export const useEventInteraction = (eventId) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           } : {})
         }
-      }, 5000);
+      }, 12000); // Increased from 5000 to 12000ms for mobile
 
       // Update view data with response
       setViewData({
