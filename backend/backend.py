@@ -2927,7 +2927,8 @@ async def track_event_view(event_id: int, user_id: int = None, browser_fingerpri
             return False
             
     except Exception as e:
-        logger.error(f"Error tracking view for event {event_id}: {str(e)}")
+        logger.error(f"Error tracking view for event {event_id}: {type(e).__name__}: {str(e)}")
+        logger.error(f"Exception details: {repr(e)}")
         return False
 
 # Interest and View API Endpoints
@@ -3022,7 +3023,8 @@ async def toggle_event_interest(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error toggling interest for event {event_id}: {str(e)}")
+        logger.error(f"Error toggling interest for event {event_id}: {type(e).__name__}: {str(e)}")
+        logger.error(f"Exception details: {repr(e)}")
         raise HTTPException(status_code=500, detail="Error updating interest")
 
 @app.get("/events/{event_id}/interest")
@@ -3078,7 +3080,8 @@ async def get_event_interest_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting interest status for event {event_id}: {str(e)}")
+        logger.error(f"Error getting interest status for event {event_id}: {type(e).__name__}: {str(e)}")
+        logger.error(f"Exception details: {repr(e)}")
         raise HTTPException(status_code=500, detail="Error checking interest status")
 
 @app.post("/events/{event_id}/view")
@@ -3124,7 +3127,8 @@ async def track_event_view_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error tracking view for event {event_id}: {str(e)}")
+        logger.error(f"Error tracking view for event {event_id}: {type(e).__name__}: {str(e)}")
+        logger.error(f"Exception details: {repr(e)}")
         raise HTTPException(status_code=500, detail="Error tracking view")
 
 # Main execution block
