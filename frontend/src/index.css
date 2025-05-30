@@ -91,13 +91,12 @@
   
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-weight: 500; /* Softer font weight for friendlier look */
+    font-weight: 600;
     color: var(--text-primary) !important;
   }
   
   .font-display {
     font-family: 'Poppins', sans-serif;
-    font-weight: 500; /* Friendlier weight */
   }
   
   .font-mono, .font-data {
@@ -118,39 +117,32 @@
   .border-spark-yellow { border-color: var(--spark-yellow) !important; }
   .border-pin-blue { border-color: var(--pin-blue) !important; }
   
-  /* Primary CTA styling - Friendly and rounded */
+  /* Primary CTA styling */
   .btn-primary {
     background-color: var(--spark-yellow) !important;
     color: var(--btn-yellow-text) !important;
     border: 2px solid var(--spark-yellow) !important;
-    font-weight: 500; /* Less bold, more approachable */
-    border-radius: 16px !important; /* More rounded */
-    padding: 14px 24px !important; /* More generous padding */
-    transition: all var(--transition-speed) ease-out; /* Gentler easing */
-    box-shadow: 0 4px 12px rgba(245, 200, 66, 0.2) !important; /* Soft shadow */
+    font-weight: 600;
+    transition: all var(--transition-speed) var(--bounce-ease);
   }
   
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(245, 200, 66, 0.3) !important; /* Softer shadow */
-    opacity: 0.95;
+    box-shadow: 0 8px 25px rgba(245, 200, 66, 0.3);
+    opacity: 0.9;
   }
   
   .btn-secondary {
     background-color: var(--pin-blue) !important;
     color: var(--btn-blue-text) !important;
     border: 2px solid var(--pin-blue) !important;
-    font-weight: 500; /* Less bold */
-    border-radius: 16px !important; /* More rounded */
-    padding: 14px 24px !important; /* More generous padding */
+    font-weight: 500;
     transition: all var(--transition-speed) ease-out;
-    box-shadow: 0 4px 12px rgba(60, 146, 255, 0.2) !important; /* Soft shadow */
   }
   
   .btn-secondary:hover {
     background-color: var(--pin-blue-muted) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(60, 146, 255, 0.3) !important; /* Softer shadow */
+    transform: translateY(-1px);
   }
   
   /* Legacy Tailwind overrides for smooth transition */
@@ -199,26 +191,22 @@
     color: var(--text-muted) !important;
   }
   
-  /* Background overrides with softer styling */
+  /* Background overrides */
   .bg-white\/10 {
     background-color: var(--bg-card) !important;
-    border-radius: 12px !important; /* Rounded by default */
   }
   
   .bg-white\/5 {
     background-color: var(--bg-card) !important;
-    border-radius: 12px !important; /* Rounded by default */
     opacity: 0.8;
   }
   
   .bg-white\/20 {
     background-color: var(--bg-card-hover) !important;
-    border-radius: 12px !important; /* Rounded by default */
   }
   
   .bg-white\/30 {
     background-color: var(--bg-card-active) !important;
-    border-radius: 12px !important; /* Rounded by default */
   }
   
   .hover\:bg-white\/10:hover {
@@ -242,23 +230,20 @@
     border-color: var(--border-color) !important;
   }
   
-  /* Form element improvements - More friendly */
+  /* Form element improvements */
   input, textarea, select, button {
     font-family: inherit;
     transition: all var(--transition-speed) ease-out;
-    border-radius: 12px !important; /* Friendlier rounded corners */
-    font-weight: 400; /* Normal weight for readability */
+    border-radius: 0.375rem;
   }
   
   input:focus, textarea:focus, select:focus {
     outline: none;
     ring-color: var(--pin-blue);
-    box-shadow: 0 0 0 3px rgba(38, 132, 255, 0.15) !important; /* Softer focus ring */
   }
   
   input::placeholder, textarea::placeholder {
     color: var(--text-muted) !important;
-    font-weight: 400;
   }
   
   .placeholder\:text-white\/50::placeholder {
@@ -368,143 +353,130 @@ body {
   font-weight: 700;
 }
 
-/* Mobile responsive adjustments - Friendly and accessible */
+/* Mobile responsive adjustments */
 @media (max-width: 640px) {
   body {
-    font-size: 16px; /* Larger base font for readability */
-    line-height: 1.5;
+    font-size: 14px;
+    line-height: 1.4;
   }
   
   .map-container {
     height: calc(100vh - 60px);
   }
   
-  h1 { font-size: 1.5rem; line-height: 1.3; font-weight: 500; } /* Larger, softer */
-  h2 { font-size: 1.25rem; line-height: 1.3; font-weight: 500; }
-  h3 { font-size: 1.125rem; line-height: 1.3; font-weight: 500; }
+  h1 { font-size: 1.25rem; line-height: 1.2; }
+  h2 { font-size: 1.125rem; line-height: 1.2; }
+  h3 { font-size: 1rem; line-height: 1.2; }
   
-  /* Better touch targets for middle-aged users */
+  /* Better touch targets */
   .btn-primary, .btn-secondary {
-    min-height: 48px; /* Larger touch targets */
-    padding: 16px 24px; /* More generous padding */
+    min-height: 44px;
+    padding: 12px 16px;
     font-size: 16px;
-    border-radius: 16px; /* More rounded */
-    font-weight: 500; /* Softer weight */
   }
   
-  /* Mobile modal and sheet improvements - Very friendly */
+  /* Mobile modal and sheet improvements */
   [role="dialog"] {
-    max-height: 85vh; /* More space */
-    margin: 16px; /* More margin */
-    border-radius: 20px; /* Very rounded */
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15); /* Soft shadow */
+    max-height: 90vh;
+    margin: 10px;
+    border-radius: 12px;
   }
   
   .mobile-sheet {
-    border-radius: 24px 24px 0 0; /* Very rounded top */
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15); /* Soft shadow */
+    border-radius: 16px 16px 0 0;
   }
   
   /* Better mobile touch targets */
   button, .clickable {
-    min-height: 48px; /* Larger touch targets */
-    min-width: 48px;
-    border-radius: 12px; /* Rounded */
+    min-height: 44px;
+    min-width: 44px;
   }
   
-  /* Mobile typography scale - More readable */
-  .text-xs { font-size: 0.875rem; } /* Larger minimum */
-  .text-sm { font-size: 1rem; }
-  .text-base { font-size: 1rem; }
-  .text-lg { font-size: 1.125rem; }
-  .text-xl { font-size: 1.25rem; }
-  .text-2xl { font-size: 1.5rem; }
+  /* Mobile typography scale */
+  .text-xs { font-size: 0.75rem; }
+  .text-sm { font-size: 0.875rem; }
+  .text-base { font-size: 0.875rem; }
+  .text-lg { font-size: 1rem; }
+  .text-xl { font-size: 1.125rem; }
+  .text-2xl { font-size: 1.25rem; }
   
-  /* Mobile spacing scale - More generous */
-  .p-1 { padding: 0.25rem; }
-  .p-2 { padding: 0.5rem; }
-  .p-3 { padding: 0.75rem; }
-  .p-4 { padding: 1rem; }
-  .p-6 { padding: 1.5rem; }
+  /* Mobile spacing scale */
+  .p-1 { padding: 0.125rem; }
+  .p-2 { padding: 0.375rem; }
+  .p-3 { padding: 0.5rem; }
+  .p-4 { padding: 0.75rem; }
+  .p-6 { padding: 1rem; }
   
-  .m-1 { margin: 0.25rem; }
-  .m-2 { margin: 0.5rem; }
-  .m-3 { margin: 0.75rem; }
-  .m-4 { margin: 1rem; }
-  .m-6 { margin: 1.5rem; }
+  .m-1 { margin: 0.125rem; }
+  .m-2 { margin: 0.375rem; }
+  .m-3 { margin: 0.5rem; }
+  .m-4 { margin: 0.75rem; }
+  .m-6 { margin: 1rem; }
   
-  .gap-1 { gap: 0.25rem; }
-  .gap-2 { gap: 0.5rem; }
-  .gap-3 { gap: 0.75rem; }
-  .gap-4 { gap: 1rem; }
-  .gap-6 { gap: 1.5rem; }
+  .gap-1 { gap: 0.125rem; }
+  .gap-2 { gap: 0.375rem; }
+  .gap-3 { gap: 0.5rem; }
+  .gap-4 { gap: 0.75rem; }
+  .gap-6 { gap: 1rem; }
   
-  .space-y-1 > * + * { margin-top: 0.25rem; }
-  .space-y-2 > * + * { margin-top: 0.5rem; }
-  .space-y-3 > * + * { margin-top: 0.75rem; }
-  .space-y-4 > * + * { margin-top: 1rem; }
-  .space-y-6 > * + * { margin-top: 1.5rem; }
+  .space-y-1 > * + * { margin-top: 0.125rem; }
+  .space-y-2 > * + * { margin-top: 0.375rem; }
+  .space-y-3 > * + * { margin-top: 0.5rem; }
+  .space-y-4 > * + * { margin-top: 0.75rem; }
+  .space-y-6 > * + * { margin-top: 1rem; }
   
-  /* Mobile event card improvements - Very friendly */
+  /* Mobile event card improvements */
   .event-card {
-    padding: 20px; /* More generous padding */
-    margin: 12px; /* More space between cards */
-    border-radius: 16px; /* Very rounded */
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Soft shadow */
-    border: 1px solid var(--border-color); /* Subtle border */
+    padding: 12px;
+    margin: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
   
   .mobile-nav {
-    padding: 12px 16px; /* More padding */
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
+    padding: 8px 12px;
+    border-radius: 8px;
   }
   
-  /* Mobile form elements - Comfortable */
+  /* Mobile form elements */
   input, textarea, select {
-    font-size: 16px; /* Prevent zoom on iOS */
-    padding: 16px 20px; /* More generous padding */
-    border-radius: 12px; /* Rounded */
-    min-height: 48px; /* Better touch targets */
-    border: 1px solid var(--border-color);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    font-size: 16px;
+    padding: 12px;
+    border-radius: 8px;
+    min-height: 44px;
   }
   
-  /* Mobile header adjustments - Friendly */
+  /* Mobile header adjustments */
   .mobile-header {
-    padding: 12px 20px; /* More padding */
-    min-height: 60px; /* Taller for comfort */
-    border-radius: 0 0 16px 16px; /* Rounded bottom */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Soft shadow */
+    padding: 8px 16px;
+    min-height: 52px;
   }
   
-  /* Mobile icon sizing - More visible */
-  .icon-sm { width: 1rem; height: 1rem; }
-  .icon-md { width: 1.25rem; height: 1.25rem; }
-  .icon-lg { width: 1.5rem; height: 1.5rem; }
+  /* Mobile icon sizing */
+  .icon-sm { width: 0.875rem; height: 0.875rem; }
+  .icon-md { width: 1rem; height: 1rem; }
+  .icon-lg { width: 1.25rem; height: 1.25rem; }
   
-  /* Mobile list items - Comfortable */
+  /* Mobile list items */
   .mobile-list-item {
-    padding: 16px 20px; /* More padding */
-    min-height: 60px; /* Taller */
-    border-radius: 12px; /* Rounded */
-    margin-bottom: 8px; /* Space between items */
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    padding: 12px 16px;
+    min-height: 56px;
+    border-radius: 8px;
   }
   
   .border { border-width: 1px; }
-  .rounded-sm { border-radius: 0.5rem; } /* More rounded */
-  .rounded { border-radius: 0.75rem; }
-  .rounded-md { border-radius: 0.75rem; }
-  .rounded-lg { border-radius: 1rem; }
-  .rounded-xl { border-radius: 1.25rem; }
+  .rounded-sm { border-radius: 0.25rem; }
+  .rounded { border-radius: 0.375rem; }
+  .rounded-md { border-radius: 0.375rem; }
+  .rounded-lg { border-radius: 0.5rem; }
+  .rounded-xl { border-radius: 0.75rem; }
   
-  /* Mobile font weights - Softer */
-  .font-light { font-weight: 300; }
+  /* Mobile font weights */
+  .font-light { font-weight: 400; }
   .font-normal { font-weight: 400; }
   .font-medium { font-weight: 500; }
-  .font-semibold { font-weight: 500; } /* Less bold */
-  .font-bold { font-weight: 500; } /* Less bold */
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 600; }
 }
 
 /* Tablet responsive adjustments */
@@ -613,56 +585,42 @@ body {
   background-color: var(--spark-yellow) !important;
   color: var(--btn-yellow-text) !important;
   border: 2px solid var(--spark-yellow) !important;
-  font-weight: 500; /* Friendlier weight */
-  border-radius: 16px !important; /* More rounded */
-  padding: 14px 24px !important; /* More generous padding */
+  font-weight: 600;
   transition: all var(--transition-speed) ease-out;
-  box-shadow: 0 4px 12px rgba(245, 200, 66, 0.2) !important; /* Soft shadow */
 }
 
 .btn-yellow-themed:hover {
   background-color: var(--spark-yellow-muted) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(245, 200, 66, 0.3) !important; /* Softer shadow */
+  transform: translateY(-1px);
 }
 
 .btn-blue-themed {
   background-color: var(--pin-blue) !important;
   color: var(--btn-blue-text) !important;
   border: 2px solid var(--pin-blue) !important;
-  font-weight: 500; /* Friendlier weight */
-  border-radius: 16px !important; /* More rounded */
-  padding: 14px 24px !important; /* More generous padding */
+  font-weight: 500;
   transition: all var(--transition-speed) ease-out;
-  box-shadow: 0 4px 12px rgba(60, 146, 255, 0.2) !important; /* Soft shadow */
 }
 
 .btn-blue-themed:hover {
   background-color: var(--pin-blue-muted) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(60, 146, 255, 0.3) !important; /* Softer shadow */
+  transform: translateY(-1px);
 }
 
 .bg-themed-surface {
   background-color: var(--bg-card) !important;
-  border-radius: 16px !important; /* More rounded */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important; /* Soft shadow */
 }
 
 .bg-themed-surface-hover:hover {
   background-color: var(--bg-card-hover) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important; /* Softer shadow */
 }
 
 .bg-themed-surface-active {
   background-color: var(--bg-card-active) !important;
-  border-radius: 12px !important; /* Rounded */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important; /* Soft shadow */
 }
 
 .border-themed {
   border-color: var(--border-color) !important;
-  border-radius: 12px !important; /* Default rounded */
 }
 
 .border-themed-hover:hover {
@@ -749,37 +707,26 @@ body {
   border: 1px solid var(--border-color) !important;
 }
 
-/* Dialog and modal overrides - Friendly styling */
+/* Dialog and modal overrides */
 .dialog-themed {
   background-color: var(--bg-main) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 20px !important; /* Very rounded for friendliness */
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important; /* Soft, generous shadow */
-  padding: 24px !important; /* More generous padding */
 }
 
 .dialog-title-themed {
   color: var(--text-primary) !important;
-  font-weight: 500 !important; /* Softer weight */
-  font-size: 1.25rem !important; /* Comfortable size */
-  margin-bottom: 16px !important;
 }
 
 .dialog-description-themed {
   color: var(--text-secondary) !important;
-  font-weight: 400 !important;
-  line-height: 1.6 !important; /* Better readability */
 }
 
-/* Yellow warning/notification styling - Softer */
+/* Yellow warning/notification styling */
 .notification-yellow-themed {
   background-color: rgba(245, 200, 66, 0.1) !important;
   border: 1px solid rgba(245, 200, 66, 0.3) !important;
-  border-radius: 16px !important; /* Rounded */
   color: var(--text-primary) !important;
-  padding: 16px 20px !important; /* More generous padding */
-  box-shadow: 0 4px 12px rgba(245, 200, 66, 0.1) !important; /* Soft shadow */
 }
 
 /* Light mode specific adjustments for better visibility */
@@ -789,55 +736,37 @@ body {
   color: var(--text-primary) !important;
 }
 
-/* Input field styling with proper contrast - Friendly */
+/* Input field styling with proper contrast */
 .input-themed {
   background-color: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
   color: var(--text-primary) !important;
-  border-radius: 12px !important; /* Rounded */
-  padding: 12px 16px !important; /* Comfortable padding */
-  font-weight: 400 !important; /* Normal weight */
-  transition: all 0.2s ease-out !important;
 }
 
 .input-themed:focus {
   border-color: var(--pin-blue) !important;
   box-shadow: 0 0 0 3px rgba(38, 132, 255, 0.1) !important;
-  transform: translateY(-1px) !important; /* Subtle lift */
 }
 
 .input-themed::placeholder {
   color: var(--text-tertiary) !important;
-  font-weight: 400 !important;
 }
 
-/* Badge/pill styling - Friendlier */
+/* Badge/pill styling */
 .badge-themed {
   background-color: var(--bg-card-active) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border-color) !important;
-  border-radius: 20px !important; /* Very rounded */
-  padding: 6px 14px !important; /* Comfortable padding */
-  font-weight: 500 !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important; /* Soft shadow */
 }
 
 .badge-yellow-themed {
   background-color: var(--spark-yellow) !important;
   color: var(--btn-yellow-text) !important;
-  border-radius: 20px !important; /* Very rounded */
-  padding: 6px 14px !important;
-  font-weight: 500 !important;
-  box-shadow: 0 2px 6px rgba(245, 200, 66, 0.2) !important; /* Soft shadow */
 }
 
 .badge-blue-themed {
   background-color: var(--pin-blue) !important;
   color: var(--btn-blue-text) !important;
-  border-radius: 20px !important; /* Very rounded */
-  padding: 6px 14px !important;
-  font-weight: 500 !important;
-  box-shadow: 0 2px 6px rgba(60, 146, 255, 0.2) !important; /* Soft shadow */
 }
 
 /* Link styling with proper contrast */
