@@ -3256,6 +3256,11 @@ async def create_tracking_tables():
                         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
                     )''')
             
+            # Fix existing events to have proper counter values
+            logger.info("🔄 Updating existing events with counter values...")
+            c.execute('UPDATE events SET interest_count = 0 WHERE interest_count IS NULL')
+            c.execute('UPDATE events SET view_count = 0 WHERE view_count IS NULL')
+            
             # Commit changes
             conn.commit()
             
@@ -3264,7 +3269,8 @@ async def create_tracking_tables():
             return {
                 "success": True,
                 "message": "Tracking tables created successfully",
-                "tables_created": ["event_interests", "event_views"]
+                "tables_created": ["event_interests", "event_views"],
+                "events_updated": True
             }
             
     except Exception as e:
