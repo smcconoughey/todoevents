@@ -2973,9 +2973,13 @@ async def toggle_event_interest(
     placeholder = get_placeholder()
     
     try:
-        # Get user info or generate browser fingerprint
+        # Get user info and always generate browser fingerprint
         user_id = current_user.get("id") if current_user else None
-        browser_fingerprint = generate_browser_fingerprint(request) if not user_id else None
+        browser_fingerprint = generate_browser_fingerprint(request)
+        
+        # Ensure browser_fingerprint is never None
+        if not browser_fingerprint:
+            browser_fingerprint = f"fallback-{request.client.host if request.client else 'unknown'}"
         
         with get_db() as conn:
             cursor = conn.cursor()
@@ -3021,7 +3025,7 @@ async def toggle_event_interest(
                 conn.commit()
                 action = "removed"
             else:
-                # Add interest
+                # Add interest - always include browser_fingerprint
                 cursor.execute(
                     f"INSERT INTO event_interests (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
                     (event_id, user_id, browser_fingerprint)
@@ -3064,7 +3068,11 @@ async def get_event_interest_status(
     
     try:
         user_id = current_user.get("id") if current_user else None
-        browser_fingerprint = generate_browser_fingerprint(request) if not user_id else None
+        browser_fingerprint = generate_browser_fingerprint(request)
+        
+        # Ensure browser_fingerprint is never None
+        if not browser_fingerprint:
+            browser_fingerprint = f"fallback-{request.client.host if request.client else 'unknown'}"
         
         with get_db() as conn:
             cursor = conn.cursor()
@@ -3116,7 +3124,11 @@ async def track_event_view_endpoint(
     
     try:
         user_id = current_user.get("id") if current_user else None
-        browser_fingerprint = generate_browser_fingerprint(request) if not user_id else None
+        browser_fingerprint = generate_browser_fingerprint(request)
+        
+        # Ensure browser_fingerprint is never None
+        if not browser_fingerprint:
+            browser_fingerprint = f"fallback-{request.client.host if request.client else 'unknown'}"
         
         with get_db() as conn:
             cursor = conn.cursor()
