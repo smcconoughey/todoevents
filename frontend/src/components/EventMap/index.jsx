@@ -628,6 +628,33 @@ const EventMap = ({ mapsLoaded = false }) => {
     }
   }, [events.length]); // Only depend on events.length, not the entire events array
 
+  const handleAddressSelect = (data) => {
+    setSelectedLocation({
+      lat: data.lat,
+      lng: data.lng,
+      address: data.address
+    });
+    setSearchValue(data.address);
+    
+    // Close mobile menu if open
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
+  };
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 3959; // Radius of the Earth in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    return distance;
+  };
+
   const filteredEvents = events.filter(event => {
     // Basic null/validity check
     if (!event || !event.id || event.lat == null || event.lng == null) return false;
@@ -671,33 +698,6 @@ const EventMap = ({ mapsLoaded = false }) => {
     if (activeView === 'list') {
       setActiveView('map');
     }
-  };
-
-  const handleAddressSelect = (data) => {
-    setSelectedLocation({
-      lat: data.lat,
-      lng: data.lng,
-      address: data.address
-    });
-    setSearchValue(data.address);
-    
-    // Close mobile menu if open
-    if (isMobileMenuOpen) {
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 3959; // Radius of the Earth in miles
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = R * c;
-    return distance;
   };
 
   const handleCreateEvent = async (newEvent, skipApiCall = false) => {
