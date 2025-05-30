@@ -4,7 +4,7 @@ import sqlite3
 import logging
 import time
 import json
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 from enum import Enum
@@ -1784,67 +1784,106 @@ async def reset_password(request: PasswordReset):
 @app.get("/events", response_model=List[EventResponse])
 async def list_events(
     category: Optional[str] = None,
-    date: Optional[str] = None
+    date: Optional[str] = None,
+    limit: Optional[int] = 50,  # Add pagination
+    offset: Optional[int] = 0,  # Add pagination
+    lat: Optional[float] = None,  # Add location filtering
+    lng: Optional[float] = None,  # Add location filtering
+    radius: Optional[float] = 25.0  # Add radius filtering (miles)
 ):
     """
     Retrieve events with optional filtering by category and date.
     Open to all users, no authentication required.
-    Optimized for performance.
+    Optimized for performance with pagination, location filtering, and caching.
     """
     placeholder = get_placeholder()
+    
+    # Validate and limit pagination parameters
+    limit = min(max(limit or 50, 1), 100)  # Between 1 and 100
+    offset = max(offset or 0, 0)
+    
+    # Create cache key for this request
+    cache_key = f"events:{category or 'all'}:{date or 'all'}:{limit}:{offset}:{lat}:{lng}:{radius}"
+    
+    # Try to get from cache first (for mobile performance)
+    cached_result = event_cache.get(cache_key)
+    if cached_result is not None:
+        logger.info(f"Returning cached events for key: {cache_key}")
+        return cached_result
     
     try:
         # Use connection manager with optimized query
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Optimized single query without explicit transactions for read operations
-            query = """SELECT id, title, description, date, start_time, end_time, end_date, 
-                      category, address, lat, lng, recurring, frequency, created_by, created_at,
-                      COALESCE(interest_count, 0) as interest_count,
-                      COALESCE(view_count, 0) as view_count
-                      FROM events WHERE 1=1"""
+            # Build optimized query with proper indexing hints
+            where_conditions = []
             params = []
             
-            # Add filters if provided
-            if category:
-                query += f" AND category = {placeholder}"
+            # Category filter
+            if category and category != 'all':
+                where_conditions.append(f"category = {placeholder}")
                 params.append(category)
             
+            # Date filter
             if date:
-                query += f" AND date = {placeholder}"
+                where_conditions.append(f"date = {placeholder}")
                 params.append(date)
             
-            # Order by date and time with limit for performance
-            query += " ORDER BY date ASC, start_time ASC LIMIT 1000"
+            # Location filter (if coordinates provided)
+            location_select = ""
+            if lat is not None and lng is not None:
+                # Add distance calculation for location-based filtering
+                location_select = f"""
+                    , (6371 * acos(cos(radians({lat})) * cos(radians(lat)) * 
+                      cos(radians(lng) - radians({lng})) + sin(radians({lat})) * 
+                      sin(radians(lat)))) * 0.621371 as distance_miles
+                """
             
-            # Execute the optimized query
-            logger.info(f"Executing optimized list_events query with {len(params)} filters")
-            cursor.execute(query, params)
+            # Construct WHERE clause
+            where_clause = ""
+            if where_conditions:
+                where_clause = "WHERE " + " AND ".join(where_conditions)
             
-            # Fetch all events
+            # Optimized query with specific columns and LIMIT
+            base_query = f"""
+                SELECT id, title, description, date, start_time, end_time, end_date, 
+                       category, address, lat, lng, recurring, frequency, created_by, created_at,
+                       COALESCE(interest_count, 0) as interest_count,
+                       COALESCE(view_count, 0) as view_count
+                       {location_select}
+                FROM events 
+                {where_clause}
+                ORDER BY date ASC, start_time ASC
+                LIMIT {placeholder} OFFSET {placeholder}
+            """
+            
+            params.extend([limit, offset])
+            
+            # Execute optimized query
+            cursor.execute(base_query, params)
             events = cursor.fetchall()
-            logger.info(f"Successfully fetched {len(events) if events else 0} events")
             
             # Process results efficiently
             result = []
             for event in events:
                 try:
-                    # Convert to dict format for consistent handling
+                    # Convert to dict efficiently
                     if hasattr(event, '_asdict'):
                         event_dict = event._asdict()
                     elif isinstance(event, dict):
                         event_dict = dict(event)
                     else:
-                        # Handle tuple/list results
-                        event_dict = {
-                            'id': event[0], 'title': event[1], 'description': event[2],
-                            'date': event[3], 'start_time': event[4], 'end_time': event[5],
-                            'end_date': event[6], 'category': event[7], 'address': event[8],
-                            'lat': event[9], 'lng': event[10], 'recurring': event[11],
-                            'frequency': event[12], 'created_by': event[13], 'created_at': event[14],
-                            'interest_count': event[15], 'view_count': event[16]
-                        }
+                        # Handle tuple/list results with known schema
+                        column_names = [
+                            'id', 'title', 'description', 'date', 'start_time', 'end_time',
+                            'end_date', 'category', 'address', 'lat', 'lng', 'recurring',
+                            'frequency', 'created_by', 'created_at', 'interest_count', 'view_count'
+                        ]
+                        if location_select:
+                            column_names.append('distance_miles')
+                        
+                        event_dict = dict(zip(column_names, event))
                     
                     # Ensure datetime is properly formatted
                     if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
@@ -1854,11 +1893,20 @@ async def list_events(
                     event_dict['interest_count'] = int(event_dict.get('interest_count', 0) or 0)
                     event_dict['view_count'] = int(event_dict.get('view_count', 0) or 0)
                     
-                    result.append(event_dict)
+                    # Filter by distance if location provided
+                    if lat is not None and lng is not None and 'distance_miles' in event_dict:
+                        if event_dict['distance_miles'] <= radius:
+                            result.append(event_dict)
+                    else:
+                        result.append(event_dict)
                     
                 except Exception as event_error:
                     logger.warning(f"Error processing event {event}: {event_error}")
                     continue
+            
+            # Cache the result for mobile performance (shorter TTL for real-time updates)
+            event_cache.set(cache_key, result)
+            logger.info(f"Cached {len(result)} events for key: {cache_key}")
             
             return result
             
@@ -2026,6 +2074,10 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                     event_dict['created_at'] = event_dict['created_at'].isoformat()
                 
+                # Clear event cache since a new event was created
+                event_cache.clear()
+                logger.info("Cleared event cache after creating new event")
+                
                 return event_dict
                 
             except HTTPException as http_ex:
@@ -2159,6 +2211,10 @@ async def update_event(
                 if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                     event_dict['created_at'] = event_dict['created_at'].isoformat()
                 
+                # Clear event cache since an event was updated
+                event_cache.clear()
+                logger.info("Cleared event cache after updating event")
+                
                 return event_dict
                 
             except HTTPException as http_ex:
@@ -2229,6 +2285,10 @@ async def delete_event(
                 
                 # Commit the transaction
                 cursor.execute("COMMIT")
+                
+                # Clear event cache since an event was deleted
+                event_cache.clear()
+                logger.info("Cleared event cache after deleting event")
                 
                 return {"detail": "Event successfully deleted"}
                 
@@ -3054,7 +3114,7 @@ async def get_event_interest_status(
     current_user: dict = Depends(get_current_user_optional_no_exception)
 ):
     """
-    Get interest status for an event - optimized for performance
+    Get interest status for an event - optimized for mobile performance
     """
     try:
         # Get user ID if authenticated
@@ -3072,54 +3132,69 @@ async def get_event_interest_status(
             
             # Single optimized query to get both event data and interest status
             if user_id:
+                # For authenticated users, check both user and fingerprint
                 query = f"""
                     SELECT 
                         e.id,
                         COALESCE(e.interest_count, 0) as interest_count,
-                        CASE WHEN ei.id IS NOT NULL THEN true ELSE false END as user_interested
+                        COALESCE(e.view_count, 0) as view_count,
+                        CASE WHEN ei.id IS NOT NULL THEN true ELSE false END as interested
                     FROM events e
-                    LEFT JOIN event_interests ei ON e.id = ei.event_id AND ei.user_id = {placeholder}
+                    LEFT JOIN event_interests ei ON (
+                        e.id = ei.event_id AND 
+                        (ei.user_id = {placeholder} OR ei.browser_fingerprint = {placeholder})
+                    )
                     WHERE e.id = {placeholder}
+                    LIMIT 1
                 """
-                params = (user_id, event_id)
+                cursor.execute(query, (user_id, browser_fingerprint, event_id))
             else:
+                # For anonymous users, check only fingerprint
                 query = f"""
                     SELECT 
                         e.id,
                         COALESCE(e.interest_count, 0) as interest_count,
-                        CASE WHEN ei.id IS NOT NULL THEN true ELSE false END as user_interested
+                        COALESCE(e.view_count, 0) as view_count,
+                        CASE WHEN ei.id IS NOT NULL THEN true ELSE false END as interested
                     FROM events e
-                    LEFT JOIN event_interests ei ON e.id = ei.event_id AND ei.browser_fingerprint = {placeholder}
+                    LEFT JOIN event_interests ei ON (
+                        e.id = ei.event_id AND ei.browser_fingerprint = {placeholder}
+                    )
                     WHERE e.id = {placeholder}
+                    LIMIT 1
                 """
-                params = (browser_fingerprint, event_id)
+                cursor.execute(query, (browser_fingerprint, event_id))
             
-            cursor.execute(query, params)
             result = cursor.fetchone()
             
             if not result:
                 raise HTTPException(status_code=404, detail="Event not found")
             
-            # Extract results safely
-            if isinstance(result, dict):
-                interest_count = result.get('interest_count', 0) or 0
-                user_interested = result.get('user_interested', False) or False
+            # Convert to dict and ensure proper types
+            if hasattr(result, '_asdict'):
+                data = result._asdict()
+            elif isinstance(result, dict):
+                data = dict(result)
             else:
-                interest_count = result[1] if len(result) > 1 else 0
-                user_interested = result[2] if len(result) > 2 else False
+                data = {
+                    'id': result[0],
+                    'interest_count': result[1],
+                    'view_count': result[2],
+                    'interested': result[3]
+                }
             
+            # Ensure proper types
             return {
-                "success": True,
-                "interested": bool(user_interested),
-                "interest_count": int(interest_count),
-                "event_id": event_id
+                'interested': bool(data['interested']),
+                'interest_count': int(data['interest_count'] or 0),
+                'view_count': int(data['view_count'] or 0)
             }
-        
+            
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in interest status endpoint for event {event_id}: {type(e).__name__}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error checking interest status")
+        logger.error(f"Error getting interest status for event {event_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get interest status")
 
 @app.post("/events/{event_id}/view")
 async def track_event_view_endpoint(
@@ -3394,3 +3469,37 @@ async def debug_test_tracking(event_id: int):
             "error": str(e),
             "error_type": type(e).__name__
         }
+
+# Simple memory cache for frequently accessed data
+import time
+from typing import Dict, Any
+
+class SimpleCache:
+    def __init__(self, ttl_seconds: int = 300):  # 5 minute TTL
+        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.ttl = ttl_seconds
+    
+    def get(self, key: str) -> Any:
+        if key in self.cache:
+            data = self.cache[key]
+            if time.time() - data['timestamp'] < self.ttl:
+                return data['value']
+            else:
+                del self.cache[key]
+        return None
+    
+    def set(self, key: str, value: Any) -> None:
+        self.cache[key] = {
+            'value': value,
+            'timestamp': time.time()
+        }
+    
+    def delete(self, key: str) -> None:
+        if key in self.cache:
+            del self.cache[key]
+    
+    def clear(self) -> None:
+        self.cache.clear()
+
+# Global cache instance
+event_cache = SimpleCache(ttl_seconds=180)  # 3 minute cache for mobile

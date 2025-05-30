@@ -28,123 +28,87 @@ def optimize_database():
     try:
         with get_db() as conn:
             cursor = conn.cursor()
-            placeholder = get_placeholder()
             
-            logger.info("📊 Checking current database schema...")
+            # Performance indexes based on query analysis
+            indexes_to_create = [
+                # Most critical indexes for frequent queries
+                ("idx_events_date_starttime", "CREATE INDEX IF NOT EXISTS idx_events_date_starttime ON events(date, start_time)"),
+                ("idx_events_category", "CREATE INDEX IF NOT EXISTS idx_events_category ON events(category)"),
+                ("idx_events_date", "CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)"),
+                ("idx_events_location", "CREATE INDEX IF NOT EXISTS idx_events_location ON events(lat, lng)"),
+                
+                # Indexes for tracking tables
+                ("idx_event_interests_event_id", "CREATE INDEX IF NOT EXISTS idx_event_interests_event_id ON event_interests(event_id)"),
+                ("idx_event_interests_user_fingerprint", "CREATE INDEX IF NOT EXISTS idx_event_interests_user_fingerprint ON event_interests(user_id, browser_fingerprint)"),
+                ("idx_event_views_event_id", "CREATE INDEX IF NOT EXISTS idx_event_views_event_id ON event_views(event_id)"),
+                ("idx_event_views_user_fingerprint", "CREATE INDEX IF NOT EXISTS idx_event_views_user_fingerprint ON event_views(user_id, browser_fingerprint)"),
+                
+                # Composite indexes for common filter combinations
+                ("idx_events_category_date", "CREATE INDEX IF NOT EXISTS idx_events_category_date ON events(category, date, start_time)"),
+                ("idx_events_created_by", "CREATE INDEX IF NOT EXISTS idx_events_created_by ON events(created_by)"),
+            ]
             
-            # Check if we're in production (PostgreSQL) or development (SQLite)
+            logger.info("📊 Creating performance indexes...")
+            for index_name, sql in indexes_to_create:
+                try:
+                    logger.info(f"Creating index: {index_name}")
+                    cursor.execute(sql)
+                    logger.info(f"✅ Index {index_name} created successfully")
+                except Exception as e:
+                    error_msg = str(e)
+                    if "already exists" in error_msg.lower():
+                        logger.info(f"✓ Index {index_name} already exists")
+                    else:
+                        logger.warning(f"⚠️ Failed to create index {index_name}: {error_msg}")
+            
+            # Optimize database settings
+            optimization_queries = []
+            
             if IS_PRODUCTION and DB_URL:
-                logger.info("🐘 Optimizing PostgreSQL production database")
-                
-                # Create indexes for better performance
-                indexes_to_create = [
-                    # Events table indexes
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_date ON events(date)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_category ON events(category)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_lat_lng ON events(lat, lng)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_created_by ON events(created_by)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_date_start_time ON events(date, start_time)",
-                    
-                    # Interest tracking indexes
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_interests_event_id ON event_interests(event_id)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_interests_user_id ON event_interests(user_id)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_interests_fingerprint ON event_interests(browser_fingerprint)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_interests_unique ON event_interests(event_id, user_id, browser_fingerprint)",
-                    
-                    # View tracking indexes  
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_views_event_id ON event_views(event_id)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_views_user_id ON event_views(user_id)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_views_fingerprint ON event_views(browser_fingerprint)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_event_views_timestamp ON event_views(viewed_at)",
-                    
-                    # Users table indexes
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email ON users(email)",
-                    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_role ON users(role)"
+                # PostgreSQL optimizations
+                optimization_queries = [
+                    "SET shared_preload_libraries = 'pg_stat_statements'",
+                    "SET track_activity_query_size = 2048",
+                    "SET log_statement_stats = off",
+                    "SET track_counts = on",
+                    "SET track_functions = all",
                 ]
-                
-                # Analyze queries for better performance
-                analyze_queries = [
-                    "ANALYZE events",
-                    "ANALYZE event_interests", 
-                    "ANALYZE event_views",
-                    "ANALYZE users"
-                ]
-                
             else:
-                logger.info("🗃️ Optimizing SQLite development database")
-                
-                # SQLite indexes (without CONCURRENTLY)
-                indexes_to_create = [
-                    "CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)",
-                    "CREATE INDEX IF NOT EXISTS idx_events_category ON events(category)",
-                    "CREATE INDEX IF NOT EXISTS idx_events_lat_lng ON events(lat, lng)",
-                    "CREATE INDEX IF NOT EXISTS idx_events_created_by ON events(created_by)",
-                    "CREATE INDEX IF NOT EXISTS idx_events_date_start_time ON events(date, start_time)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_interests_event_id ON event_interests(event_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_interests_user_id ON event_interests(user_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_interests_fingerprint ON event_interests(browser_fingerprint)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_views_event_id ON event_views(event_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_views_user_id ON event_views(user_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_views_fingerprint ON event_views(browser_fingerprint)",
-                    "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
-                    "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)"
+                # SQLite optimizations
+                optimization_queries = [
+                    "PRAGMA optimize",
+                    "PRAGMA analysis_limit = 1000",
+                    "PRAGMA mmap_size = 268435456",  # 256MB
+                    "ANALYZE",  # Update table statistics
                 ]
-                
-                analyze_queries = ["ANALYZE"]
             
-            # Create indexes
-            logger.info(f"📈 Creating {len(indexes_to_create)} performance indexes...")
-            for i, index_sql in enumerate(indexes_to_create, 1):
+            logger.info("⚡ Applying database optimizations...")
+            for query in optimization_queries:
                 try:
-                    logger.info(f"  [{i}/{len(indexes_to_create)}] {index_sql.split()[-3]} ON {index_sql.split()[-1]}")
-                    cursor.execute(index_sql)
-                    conn.commit()
+                    cursor.execute(query)
+                    logger.info(f"✅ Applied: {query}")
                 except Exception as e:
-                    logger.warning(f"  ⚠️ Index creation failed (may already exist): {e}")
-                    continue
+                    logger.warning(f"⚠️ Failed to apply {query}: {str(e)}")
             
-            # Run analyze to update statistics
-            logger.info("📊 Updating database statistics...")
-            for analyze_sql in analyze_queries:
-                try:
-                    cursor.execute(analyze_sql)
-                    conn.commit()
-                except Exception as e:
-                    logger.warning(f"  ⚠️ Analyze failed: {e}")
+            # Update table statistics for better query planning
+            try:
+                if IS_PRODUCTION and DB_URL:
+                    cursor.execute("ANALYZE events")
+                    cursor.execute("ANALYZE event_interests") 
+                    cursor.execute("ANALYZE event_views")
+                    cursor.execute("ANALYZE users")
+                else:
+                    cursor.execute("ANALYZE")
+                logger.info("✅ Updated table statistics")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to update statistics: {str(e)}")
             
-            # Check for NULL values that might slow queries
-            logger.info("🔍 Checking for data integrity issues...")
-            
-            cursor.execute("SELECT COUNT(*) FROM events WHERE interest_count IS NULL")
-            null_interests = cursor.fetchone()[0]
-            
-            cursor.execute("SELECT COUNT(*) FROM events WHERE view_count IS NULL")
-            null_views = cursor.fetchone()[0]
-            
-            if null_interests > 0:
-                logger.info(f"🔧 Fixing {null_interests} NULL interest_count values...")
-                cursor.execute("UPDATE events SET interest_count = 0 WHERE interest_count IS NULL")
-                conn.commit()
-            
-            if null_views > 0:
-                logger.info(f"🔧 Fixing {null_views} NULL view_count values...")
-                cursor.execute("UPDATE events SET view_count = 0 WHERE view_count IS NULL")
-                conn.commit()
-            
-            # Vacuum/optimize the database
-            if not IS_PRODUCTION:
-                logger.info("🧹 Optimizing SQLite database...")
-                cursor.execute("VACUUM")
-                conn.commit()
-            else:
-                logger.info("🧹 PostgreSQL optimization complete (VACUUM would be done by auto-vacuum)")
-            
+            conn.commit()
             logger.info("✅ Database optimization completed successfully!")
-            return True
             
     except Exception as e:
-        logger.error(f"❌ Database optimization failed: {e}")
-        return False
+        logger.error(f"❌ Database optimization failed: {str(e)}")
+        raise
 
 def test_performance():
     """Test database query performance after optimization"""
