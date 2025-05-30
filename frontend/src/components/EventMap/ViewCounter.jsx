@@ -1,8 +1,12 @@
 import React from 'react';
 import { Eye } from 'lucide-react';
 
-const ViewCounter = ({ viewCount, size = 'sm', className = '' }) => {
-  if (!viewCount || viewCount === 0) return null;
+const ViewCounter = ({ viewCount, size = 'sm', className = '', alwaysShow = false }) => {
+  // Only hide if viewCount is 0 and alwaysShow is false
+  if (!alwaysShow && (!viewCount || viewCount === 0)) return null;
+  
+  // Default to 0 if viewCount is undefined/null
+  const displayCount = viewCount || 0;
 
   const sizeClasses = {
     xs: 'text-xs',
@@ -20,13 +24,14 @@ const ViewCounter = ({ viewCount, size = 'sm', className = '' }) => {
 
   return (
     <div className={`
-      inline-flex items-center gap-1 text-white/50 
+      inline-flex items-center gap-1.5 px-2 py-1 rounded-md
+      bg-white/5 border border-white/10 text-white/70
       ${sizeClasses[size]} 
       ${className}
     `}>
       <Eye className={`${iconSizes[size]} opacity-60`} />
       <span className="font-medium">
-        {viewCount.toLocaleString()}
+        {displayCount.toLocaleString()} {displayCount === 1 ? 'view' : 'views'}
       </span>
     </div>
   );

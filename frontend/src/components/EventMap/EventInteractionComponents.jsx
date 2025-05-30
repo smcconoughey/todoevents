@@ -21,23 +21,25 @@ const EventInteractionComponents = ({ eventId }) => {
   }, [eventId, trackView]);
 
   return (
-    <div className="flex items-center gap-3 pt-2">
-      <InterestButton
-        interested={interested}
-        interestCount={interestCount}
-        loading={loading}
-        onToggle={toggleInterest}
-        size="md"
-        showCount={true}
-        className="text-white"
-      />
-      {viewCount > 0 && (
+    <div className="space-y-2 pt-3 border-t border-white/10">
+      <div className="text-xs text-white/50 font-medium">Engagement</div>
+      <div className="flex items-center gap-3">
+        <InterestButton
+          interested={interested}
+          interestCount={interestCount}
+          loading={loading}
+          onToggle={toggleInterest}
+          size="md"
+          showCount={true}
+          className="text-white"
+        />
         <ViewCounter 
           viewCount={viewCount} 
-          size="sm" 
+          size="md" 
           className="text-white/70"
+          alwaysShow={true}
         />
-      )}
+      </div>
     </div>
   );
 };

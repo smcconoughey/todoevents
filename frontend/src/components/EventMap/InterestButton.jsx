@@ -50,12 +50,10 @@ const InterestButton = ({
       
       {showCount && (
         <span className="font-medium">
-          {interested ? 'Interested' : 'Interest'} 
-          {interestCount > 0 && (
-            <span className="ml-1 opacity-75">
-              ({interestCount})
-            </span>
-          )}
+          {interested ? 'Interested' : 'Interest'}
+          <span className="ml-1 opacity-75">
+            ({interestCount || 0})
+          </span>
         </span>
       )}
     </button>
