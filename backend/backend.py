@@ -14,7 +14,7 @@ import threading
 import uvicorn
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Request, Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -307,6 +307,8 @@ def init_db():
                         recurring BOOLEAN NOT NULL DEFAULT FALSE,
                         frequency TEXT,
                         created_by INTEGER,
+                        interest_count INTEGER DEFAULT 0,
+                        view_count INTEGER DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(created_by) REFERENCES users(id)
                     )
@@ -355,6 +357,26 @@ def init_db():
                         c.execute('ALTER TABLE events ADD COLUMN end_date TEXT')
                         logger.info("✅ Added 'end_date' column")
                         conn.commit()
+                    
+                    # Add interest_count column if it doesn't exist
+                    c.execute("""
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name = 'events' AND column_name = 'interest_count'
+                    """)
+                    if not c.fetchone():
+                        c.execute('ALTER TABLE events ADD COLUMN interest_count INTEGER DEFAULT 0')
+                        logger.info("✅ Added 'interest_count' column")
+                        conn.commit()
+                    
+                    # Add view_count column if it doesn't exist
+                    c.execute("""
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name = 'events' AND column_name = 'view_count'
+                    """)
+                    if not c.fetchone():
+                        c.execute('ALTER TABLE events ADD COLUMN view_count INTEGER DEFAULT 0')
+                        logger.info("✅ Added 'view_count' column")
+                        conn.commit()
                         
                 except Exception as migration_error:
                     logger.error(f"❌ Migration error: {migration_error}")
@@ -375,6 +397,30 @@ def init_db():
                         FOREIGN KEY(user_id) REFERENCES users(id)
                     )
                 ''')
+                
+                # Create interest tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
+                            id SERIAL PRIMARY KEY,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
+                # Create view tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_views (
+                            id SERIAL PRIMARY KEY,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT,
+                            viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
             else:
                 # SQLite table creation (existing code)
                 c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -406,6 +452,8 @@ def init_db():
                                 recurring BOOLEAN NOT NULL DEFAULT 0,
                                 frequency TEXT,
                                 created_by INTEGER,
+                                interest_count INTEGER DEFAULT 0,
+                                view_count INTEGER DEFAULT 0,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                 FOREIGN KEY(created_by) REFERENCES users(id)
                             )''')
@@ -429,6 +477,15 @@ def init_db():
                     if 'end_time' not in columns:
                         c.execute('''ALTER TABLE events ADD COLUMN end_time TEXT''')
                         logger.info("Added end_time column")
+                    
+                    # Add interest_count and view_count columns if they don't exist
+                    if 'interest_count' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN interest_count INTEGER DEFAULT 0''')
+                        logger.info("Added interest_count column")
+                    
+                    if 'view_count' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN view_count INTEGER DEFAULT 0''')
+                        logger.info("Added view_count column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -439,6 +496,30 @@ def init_db():
                             FOREIGN KEY(user_id) REFERENCES users(id)
                         )''')
                 
+                # Create interest tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
+                # Create view tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_views (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT,
+                            viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+            
             # Ensure password_resets table exists
             if IS_PRODUCTION and DB_URL:
                 c.execute('''
@@ -1138,26 +1219,90 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    if not token:
+        raise credentials_exception
+        
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-    except jwt.JWTError:
+    except jwt.PyJWTError:
         raise credentials_exception
-
-    placeholder = get_placeholder()
+    
     try:
         with get_db() as conn:
             c = conn.cursor()
-            c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (email,))
+            placeholder = get_placeholder()
+            c.execute(f"SELECT id, email, role FROM users WHERE email = {placeholder}", (email,))
             user = c.fetchone()
-            if user is None:
+            
+            if not user:
                 raise credentials_exception
-            return dict(user)
+                
+            return {
+                "id": user[0] if isinstance(user, (tuple, list)) else user["id"],
+                "email": user[1] if isinstance(user, (tuple, list)) else user["email"],
+                "role": user[2] if isinstance(user, (tuple, list)) else user["role"]
+            }
+            
     except Exception as e:
-        logger.error(f"Error fetching user: {str(e)}")
-        raise credentials_exception
+        error_msg = str(e)
+        logger.error(f"Database error during login user lookup: {error_msg}")
+        
+        if "timeout" in error_msg.lower() or "deadlock" in error_msg.lower():
+            raise HTTPException(
+                status_code=408, 
+                detail="Login request timed out. Please try again."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Internal server error during login",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+async def get_current_user_optional(token: str = Depends(oauth2_scheme)):
+    """Optional user dependency - returns None if not authenticated"""
+    try:
+        return await get_current_user(token)
+    except HTTPException:
+        return None
+
+async def get_current_user_optional_no_exception(authorization: str = Header(None)):
+    """Optional user dependency that doesn't raise exceptions"""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+    except jwt.PyJWTError:
+        return None
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            placeholder = get_placeholder()
+            c.execute(f"SELECT id, email, role FROM users WHERE email = {placeholder}", (email,))
+            user = c.fetchone()
+            
+            if not user:
+                return None
+                
+            return {
+                "id": user[0] if isinstance(user, (tuple, list)) else user["id"],
+                "email": user[1] if isinstance(user, (tuple, list)) else user["email"],
+                "role": user[2] if isinstance(user, (tuple, list)) else user["role"]
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in optional user auth: {str(e)}")
+        return None
 
 # Authentication Endpoints
 @app.post("/token")
@@ -2645,6 +2790,251 @@ async def get_dynamic_sitemap():
     except Exception as e:
         logger.error(f"Error serving dynamic sitemap: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating sitemap")
+
+# Utility functions for interests and views
+def generate_browser_fingerprint(request: Request) -> str:
+    """Generate a browser fingerprint for anonymous users"""
+    import hashlib
+    
+    # Get client info
+    user_agent = request.headers.get("user-agent", "")
+    client_ip = request.client.host if request.client else "unknown"
+    accept_language = request.headers.get("accept-language", "")
+    accept_encoding = request.headers.get("accept-encoding", "")
+    
+    # Create fingerprint
+    fingerprint_string = f"{client_ip}:{user_agent}:{accept_language}:{accept_encoding}"
+    fingerprint = hashlib.md5(fingerprint_string.encode()).hexdigest()
+    
+    return fingerprint
+
+async def track_event_view(event_id: int, user_id: int = None, browser_fingerprint: str = None):
+    """Track a view for an event"""
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if this view already exists
+            if user_id:
+                cursor.execute(
+                    f"SELECT id FROM event_views WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                    (event_id, user_id)
+                )
+            else:
+                cursor.execute(
+                    f"SELECT id FROM event_views WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                    (event_id, browser_fingerprint)
+                )
+            
+            existing_view = cursor.fetchone()
+            
+            if not existing_view:
+                # Insert new view
+                cursor.execute(
+                    f"INSERT INTO event_views (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                    (event_id, user_id, browser_fingerprint)
+                )
+                
+                # Update view count
+                cursor.execute(
+                    f"UPDATE events SET view_count = view_count + 1 WHERE id = {placeholder}",
+                    (event_id,)
+                )
+                
+                conn.commit()
+                return True
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error tracking view for event {event_id}: {str(e)}")
+        return False
+
+# Interest and View API Endpoints
+@app.post("/events/{event_id}/interest")
+async def toggle_event_interest(
+    event_id: int, 
+    request: Request,
+    current_user: dict = Depends(get_current_user_optional_no_exception)
+):
+    """Toggle interest in an event for logged-in or anonymous users"""
+    placeholder = get_placeholder()
+    
+    try:
+        # Get user info or generate browser fingerprint
+        user_id = current_user.get("id") if current_user else None
+        browser_fingerprint = generate_browser_fingerprint(request) if not user_id else None
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if event exists
+            cursor.execute(f"SELECT id FROM events WHERE id = {placeholder}", (event_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            # Check if interest already exists
+            if user_id:
+                cursor.execute(
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                    (event_id, user_id)
+                )
+            else:
+                cursor.execute(
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                    (event_id, browser_fingerprint)
+                )
+            
+            existing_interest = cursor.fetchone()
+            
+            if existing_interest:
+                # Remove interest
+                if user_id:
+                    cursor.execute(
+                        f"DELETE FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                        (event_id, user_id)
+                    )
+                else:
+                    cursor.execute(
+                        f"DELETE FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                        (event_id, browser_fingerprint)
+                    )
+                
+                # Update interest count
+                cursor.execute(
+                    f"UPDATE events SET interest_count = interest_count - 1 WHERE id = {placeholder}",
+                    (event_id,)
+                )
+                
+                conn.commit()
+                action = "removed"
+            else:
+                # Add interest
+                cursor.execute(
+                    f"INSERT INTO event_interests (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                    (event_id, user_id, browser_fingerprint)
+                )
+                
+                # Update interest count
+                cursor.execute(
+                    f"UPDATE events SET interest_count = interest_count + 1 WHERE id = {placeholder}",
+                    (event_id,)
+                )
+                
+                conn.commit()
+                action = "added"
+            
+            # Get updated count
+            cursor.execute(f"SELECT interest_count FROM events WHERE id = {placeholder}", (event_id,))
+            updated_count = cursor.fetchone()[0]
+            
+            return {
+                "action": action,
+                "interested": action == "added",
+                "interest_count": updated_count,
+                "event_id": event_id
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling interest for event {event_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating interest")
+
+@app.get("/events/{event_id}/interest")
+async def get_event_interest_status(
+    event_id: int,
+    request: Request,
+    current_user: dict = Depends(get_current_user_optional_no_exception)
+):
+    """Check if user is interested in an event"""
+    placeholder = get_placeholder()
+    
+    try:
+        user_id = current_user.get("id") if current_user else None
+        browser_fingerprint = generate_browser_fingerprint(request) if not user_id else None
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if event exists and get interest count
+            cursor.execute(f"SELECT interest_count FROM events WHERE id = {placeholder}", (event_id,))
+            event_data = cursor.fetchone()
+            
+            if not event_data:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            interest_count = event_data[0]
+            
+            # Check if user is interested
+            user_interested = False
+            if user_id:
+                cursor.execute(
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                    (event_id, user_id)
+                )
+                user_interested = cursor.fetchone() is not None
+            else:
+                cursor.execute(
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                    (event_id, browser_fingerprint)
+                )
+                user_interested = cursor.fetchone() is not None
+            
+            return {
+                "interested": user_interested,
+                "interest_count": interest_count,
+                "event_id": event_id
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting interest status for event {event_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error checking interest status")
+
+@app.post("/events/{event_id}/view")
+async def track_event_view_endpoint(
+    event_id: int,
+    request: Request,
+    current_user: dict = Depends(get_current_user_optional_no_exception)
+):
+    """Track a view for an event"""
+    placeholder = get_placeholder()
+    
+    try:
+        user_id = current_user.get("id") if current_user else None
+        browser_fingerprint = generate_browser_fingerprint(request) if not user_id else None
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if event exists
+            cursor.execute(f"SELECT view_count FROM events WHERE id = {placeholder}", (event_id,))
+            event_data = cursor.fetchone()
+            
+            if not event_data:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            # Track the view
+            view_tracked = await track_event_view(event_id, user_id, browser_fingerprint)
+            
+            # Get updated count
+            cursor.execute(f"SELECT view_count FROM events WHERE id = {placeholder}", (event_id,))
+            updated_count = cursor.fetchone()[0]
+            
+            return {
+                "view_tracked": view_tracked,
+                "view_count": updated_count,
+                "event_id": event_id
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error tracking view for event {event_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error tracking view")
 
 # Main execution block
 if __name__ == "__main__":
