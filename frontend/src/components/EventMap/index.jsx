@@ -375,6 +375,20 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
   );
 };
 
+// Helper function to calculate distance between two coordinates
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 3959; // Radius of the Earth in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c;
+  return distance;
+};
+
 const renderEventList = (events, selectedEvent, handleEventClick, user, mapCenter) => (
   <div className="space-y-2 p-4">
     {events && events.length > 0 ? events.filter(event => 
@@ -468,15 +482,15 @@ const EventMap = ({ mapsLoaded = false }) => {
   const { theme } = useContext(ThemeContext);
 
   const [events, setEvents] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(['all']);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [proximityRange, setProximityRange] = useState(15);
-  const [selectedDate, setSelectedDate] = useState({ from: null, to: null });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showDesktopList, setShowDesktopList] = useState(false);
+  const [showDesktopList, setShowDesktopList] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeView, setActiveView] = useState('map');
   const [showLoginDialog, setShowLoginDialog] = useState(false);
@@ -503,8 +517,8 @@ const EventMap = ({ mapsLoaded = false }) => {
     setSelectedLocation(null);
     setSearchValue('');
     setProximityRange(15);
-    setSelectedDate({ from: null, to: null });
-    setSelectedCategory('all');
+    setSelectedDate(null);
+    setSelectedCategory(['all']);
     setSelectedEvent(null);
     
     if (mapRef.current) {
@@ -517,8 +531,25 @@ const EventMap = ({ mapsLoaded = false }) => {
   };
 
   const handleCategorySelect = (categoryId) => {
-    setSelectedCategory(categoryId);
-    setSelectedEvent(null);
+    if (categoryId === 'all') {
+      // If "All Events" is clicked, select only "all"
+      setSelectedCategory(['all']);
+    } else {
+      setSelectedCategory(prevSelected => {
+        // Remove "all" if it's currently selected
+        const withoutAll = prevSelected.filter(id => id !== 'all');
+        
+        if (withoutAll.includes(categoryId)) {
+          // Category is currently selected, remove it
+          const newSelection = withoutAll.filter(id => id !== categoryId);
+          // If no categories left, default to "all"
+          return newSelection.length === 0 ? ['all'] : newSelection;
+        } else {
+          // Category is not selected, add it
+          return [...withoutAll, categoryId];
+        }
+      });
+    }
   };
 
   const fetchEvents = async () => {
@@ -642,25 +673,12 @@ const EventMap = ({ mapsLoaded = false }) => {
     }
   };
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 3959; // Radius of the Earth in miles
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = R * c;
-    return distance;
-  };
-
   const filteredEvents = events.filter(event => {
     // Basic null/validity check
     if (!event || !event.id || event.lat == null || event.lng == null) return false;
     
     // Category filter
-    const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
+    const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
     if (!categoryMatch) return false;
     
     // Date filter
@@ -1537,7 +1555,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       <CalendarFilter
                         selectedDate={selectedDate}
                         onDateSelect={setSelectedDate}
-                        onClear={() => setSelectedDate({ from: null, to: null })}
+                        onClear={() => setSelectedDate(null)}
                       />
                     </div>
                   )}
@@ -1545,29 +1563,46 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
                     <div className="space-y-2 animate-in fade-in duration-200">
+                      <div className="text-xs text-white/60 mb-2 px-1">
+                        💡 Tap categories to toggle them on/off. You can select multiple!
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         {categories.map(category => {
                           const eventCount = filteredEvents.filter(event => 
-                            category.id === 'all' ? true : event.category === category.id
+                            category.id === 'all' ? true : category.id === category.id
                           ).length;
                           
                           return (
                             <button
                               key={category.id}
-                              className={`p-2 rounded-lg border transition-all duration-200 text-left ${
-                                selectedCategory === category.id
-                                  ? 'bg-white/20 border-white/30 text-white'
-                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10'
+                              className={`p-2 rounded-lg border-2 transition-all duration-200 text-left relative ${
+                                selectedCategory.includes(category.id)
+                                  ? `bg-white/20 border-${category.color.replace('text-', '')} text-white shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30'
                               }`}
                               onClick={() => handleCategorySelect(category.id)}
                             >
+                              {/* Selected indicator */}
+                              {selectedCategory.includes(category.id) && (
+                                <div className="absolute top-1 right-1">
+                                  <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2 mb-1">
                                 {React.createElement(category.icon, {
-                                  className: `w-4 h-4 ${selectedCategory === category.id ? 'text-white' : category.color}`
+                                  className: `w-4 h-4 transition-colors duration-200 ${
+                                    selectedCategory.includes(category.id) 
+                                      ? 'text-white' 
+                                      : category.color
+                                  }`
                                 })}
                                 <span className="text-xs font-medium truncate">{category.name}</span>
                               </div>
-                              <div className="text-xs text-white/50">{eventCount} events</div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedCategory.includes(category.id) ? 'text-white/80' : 'text-white/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
                             </button>
                           );
                         })}
@@ -1577,7 +1612,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 </div>
 
                 {/* Active Filters Summary */}
-                {(selectedCategory !== 'all' || selectedDate?.from || proximityRange !== 15 || selectedLocation) && (
+                {(!selectedCategory.includes('all') || selectedDate || proximityRange !== 15 || selectedLocation) && (
                   <div className="p-2 bg-white/5 rounded-lg border border-white/10">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-white/70">Active Filters</span>
@@ -1586,8 +1621,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                         size="sm"
                         className="text-xs text-white/50 hover:text-white/70 h-5 px-1"
                         onClick={() => {
-                          setSelectedCategory('all');
-                          setSelectedDate({ from: null, to: null });
+                          setSelectedCategory(['all']);
+                          setSelectedDate(null);
                           setProximityRange(15);
                           if (!selectedLocation) setSearchValue('');
                         }}
@@ -1596,12 +1631,12 @@ const EventMap = ({ mapsLoaded = false }) => {
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {selectedCategory !== 'all' && (
+                      {!selectedCategory.includes('all') && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
-                          {getCategory(selectedCategory).name}
+                          {selectedCategory.length} categories selected
                         </span>
                       )}
-                      {selectedDate?.from && (
+                      {selectedDate && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
                           Date filter
                         </span>
@@ -1849,7 +1884,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       <CalendarFilter
                         selectedDate={selectedDate}
                         onDateSelect={setSelectedDate}
-                        onClear={() => setSelectedDate({ from: null, to: null })}
+                        onClear={() => setSelectedDate(null)}
                       />
                     </div>
                   )}
@@ -1857,29 +1892,67 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
                     <div className="space-y-2 animate-in fade-in duration-200">
+                      <div className="text-xs text-white/60 mb-2 px-1">
+                        💡 Tap categories to toggle them on/off. You can select multiple!
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         {categories.map(category => {
-                          const eventCount = filteredEvents.filter(event => 
+                          const eventCount = events.filter(event => 
                             category.id === 'all' ? true : event.category === category.id
                           ).length;
+                          
+                          // Map category colors to border classes
+                          const getBorderColor = (categoryId) => {
+                            const colorMap = {
+                              'all': 'border-gray-400',
+                              'food-drink': 'border-vibrant-magenta',
+                              'music': 'border-pin-blue',
+                              'arts': 'border-fresh-teal',
+                              'sports': 'border-spark-yellow',
+                              'automotive': 'border-vibrant-magenta',
+                              'airshows': 'border-pin-blue',
+                              'vehicle-sports': 'border-spark-yellow',
+                              'community': 'border-fresh-teal',
+                              'religious': 'border-pin-blue',
+                              'education': 'border-fresh-teal',
+                              'veteran': 'border-pin-blue',
+                              'cookout': 'border-vibrant-magenta',
+                              'graduation': 'border-spark-yellow'
+                            };
+                            return colorMap[categoryId] || 'border-gray-400';
+                          };
                           
                           return (
                             <button
                               key={category.id}
-                              className={`p-2 rounded-lg border transition-all duration-200 text-left ${
-                                selectedCategory === category.id
-                                  ? 'bg-white/20 border-white/30 text-white'
-                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10'
+                              className={`p-2 rounded-lg border-2 transition-all duration-200 text-left relative ${
+                                selectedCategory.includes(category.id)
+                                  ? `bg-white/20 ${getBorderColor(category.id)} text-white shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30'
                               }`}
                               onClick={() => handleCategorySelect(category.id)}
                             >
+                              {/* Selected indicator */}
+                              {selectedCategory.includes(category.id) && (
+                                <div className="absolute top-1 right-1">
+                                  <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2 mb-1">
                                 {React.createElement(category.icon, {
-                                  className: `w-4 h-4 ${selectedCategory === category.id ? 'text-white' : category.color}`
+                                  className: `w-4 h-4 transition-colors duration-200 ${
+                                    selectedCategory.includes(category.id) 
+                                      ? 'text-white' 
+                                      : category.color
+                                  }`
                                 })}
                                 <span className="text-xs font-medium truncate">{category.name}</span>
                               </div>
-                              <div className="text-xs text-white/50">{eventCount} events</div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedCategory.includes(category.id) ? 'text-white/80' : 'text-white/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
                             </button>
                           );
                         })}
@@ -1889,7 +1962,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 </div>
 
                 {/* Active Filters Summary */}
-                {(selectedCategory !== 'all' || selectedDate?.from || proximityRange !== 15 || selectedLocation) && (
+                {(!selectedCategory.includes('all') || selectedDate || proximityRange !== 15 || selectedLocation) && (
                   <div className="p-2 bg-white/5 rounded-lg border border-white/10">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-white/70">Active Filters</span>
@@ -1898,8 +1971,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                         size="sm"
                         className="text-xs text-white/50 hover:text-white/70 h-5 px-1"
                         onClick={() => {
-                          setSelectedCategory('all');
-                          setSelectedDate({ from: null, to: null });
+                          setSelectedCategory(['all']);
+                          setSelectedDate(null);
                           setProximityRange(15);
                           if (!selectedLocation) setSearchValue('');
                         }}
@@ -1908,12 +1981,12 @@ const EventMap = ({ mapsLoaded = false }) => {
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {selectedCategory !== 'all' && (
+                      {!selectedCategory.includes('all') && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
-                          {getCategory(selectedCategory).name}
+                          {selectedCategory.length} categories selected
                         </span>
                       )}
-                      {selectedDate?.from && (
+                      {selectedDate && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
                           Date filter
                         </span>
@@ -2059,7 +2132,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   </div>
                   <div className="flex-1 overflow-y-auto">
                     {renderEventList(
-                      filteredEvents.length > 0 || selectedDate || selectedCategory !== 'all' || mapCenter
+                      filteredEvents.length > 0 || selectedDate || !selectedCategory.includes('all') || mapCenter
                         ? filteredEvents
                         : events,
                       selectedEvent,
@@ -2075,7 +2148,7 @@ const EventMap = ({ mapsLoaded = false }) => {
         ) : (
           <div className="h-full overflow-y-auto bg-neutral-950">
             {renderEventList(
-              filteredEvents.length > 0 || selectedDate || selectedCategory !== 'all' || mapCenter
+              filteredEvents.length > 0 || selectedDate || !selectedCategory.includes('all') || mapCenter
                 ? filteredEvents
                 : events,
               selectedEvent,
