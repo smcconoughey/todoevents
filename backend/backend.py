@@ -2294,9 +2294,7 @@ async def list_users(current_user: dict = Depends(get_current_user)):
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    """
-    Enhanced health check endpoint that tests database connectivity
-    """
+    """Health check endpoint - tracking endpoints rebuilt 2025-05-30"""
     health_status = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
