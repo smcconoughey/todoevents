@@ -41,12 +41,12 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 15000) => {
   });
 
   try {
-    // Add mobile-friendly headers
+    // Add mobile-friendly headers (temporarily removed Cache-Control for CORS compatibility)
     const enhancedOptions = {
       ...options,
       headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
+        // 'Cache-Control': 'no-cache',  // Temporarily disabled due to CORS
+        // 'Pragma': 'no-cache',         // Temporarily disabled due to CORS
         ...options.headers
       }
     };
