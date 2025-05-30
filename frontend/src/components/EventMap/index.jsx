@@ -1504,21 +1504,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Filters Tab Interface */}
-                <div className="space-y-3 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                <div className="space-y-3 p-3 bg-themed-surface rounded-lg border border-themed">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
-                    <span className="text-sm font-medium text-white dark:text-white light:text-black">🎯 Search Filters</span>
-                    <div className="text-xs text-white/50 dark:text-white/50 light:text-black/60 bg-white/10 dark:bg-white/10 light:bg-black/10 px-2 py-0.5 rounded-full ml-auto">
+                    <span className="text-sm font-medium text-themed-primary">🎯 Search Filters</span>
+                    <div className="text-xs text-themed-tertiary bg-themed-surface-hover px-2 py-0.5 rounded-full ml-auto">
                       💡 Combine for better results
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-1 bg-white/10 dark:bg-white/10 light:bg-black/10 rounded-lg p-1 border border-white/20 dark:border-white/20 light:border-black/30">
+                  <div className="flex items-center gap-1 bg-themed-surface-hover rounded-lg p-1 border border-themed">
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'date' 
-                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
-                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
@@ -1527,8 +1527,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
-                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
-                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
@@ -1948,21 +1948,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Filters Tab Interface */}
-                <div className="space-y-3 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                <div className="space-y-3 p-3 bg-themed-surface rounded-lg border border-themed">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
-                    <span className="text-sm font-medium text-white dark:text-white light:text-black">🎯 Search Filters</span>
-                    <div className="text-xs text-white/50 dark:text-white/50 light:text-black/60 bg-white/10 dark:bg-white/10 light:bg-black/10 px-2 py-0.5 rounded-full ml-auto">
+                    <span className="text-sm font-medium text-themed-primary">🎯 Search Filters</span>
+                    <div className="text-xs text-themed-tertiary bg-themed-surface-hover px-2 py-0.5 rounded-full ml-auto">
                       💡 Combine for better results
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-1 bg-white/10 dark:bg-white/10 light:bg-black/10 rounded-lg p-1 border border-white/20 dark:border-white/20 light:border-black/30">
+                  <div className="flex items-center gap-1 bg-themed-surface-hover rounded-lg p-1 border border-themed">
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'date' 
-                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
-                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
@@ -1971,8 +1971,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
-                          ? 'bg-white/30 dark:bg-white/30 light:bg-black/20 text-white dark:text-white light:text-black shadow-sm' 
-                          : 'text-white/60 dark:text-white/60 light:text-black/60 hover:text-white/80 dark:hover:text-white/80 light:hover:text-black/80 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
@@ -2373,8 +2373,8 @@ const EventMap = ({ mapsLoaded = false }) => {
               <button
                 className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
                   activeTab === 'details' 
-                    ? 'bg-white/10 text-white border-b-2 border-spark-yellow' 
-                    : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+                    ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
+                    : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
                 }`}
                 onClick={() => setActiveTab('details')}
               >
@@ -2383,8 +2383,8 @@ const EventMap = ({ mapsLoaded = false }) => {
               <button
                 className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
                   activeTab === 'share' 
-                    ? 'bg-white/10 text-white border-b-2 border-spark-yellow' 
-                    : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+                    ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
+                    : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
                 }`}
                 onClick={() => setActiveTab('share')}
               >

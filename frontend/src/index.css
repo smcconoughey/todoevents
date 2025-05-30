@@ -10,7 +10,10 @@
 .dark-mode {
   /* Brand Colors - Dark Mode */
   --spark-yellow: #FFD82E;      /* Primary - slightly darker for contrast */
+  --spark-yellow-muted: #E6C029; /* Muted yellow for better text contrast */
+  --spark-yellow-text: #FFF7B8; /* Light yellow for text on dark backgrounds */
   --pin-blue: #3C92FF;          /* Secondary - +10% lightness */
+  --pin-blue-muted: #2C7DE6;    /* Muted blue for text */
   --vibrant-magenta: #E04A73;   /* Support accent - -15% lightness */
   --fresh-teal: #2FB8A6;        /* Support accent - -15% lightness */
   
@@ -19,11 +22,16 @@
   --bg-card: rgba(30, 30, 30, 0.95);
   --bg-card-hover: rgba(45, 45, 45, 0.95);
   --bg-card-active: rgba(60, 60, 60, 0.95);
-  --text-primary: #E4E4E4;      /* Light text */
-  --text-secondary: rgba(228, 228, 228, 0.8);
-  --text-tertiary: rgba(228, 228, 228, 0.6);
+  --text-primary: #FFFFFF;      /* Pure white for maximum contrast */
+  --text-secondary: rgba(255, 255, 255, 0.85); /* Slightly muted white */
+  --text-tertiary: rgba(255, 255, 255, 0.6);   /* More muted white */
+  --text-muted: rgba(255, 255, 255, 0.4);      /* Very muted white */
   --border-color: rgba(255, 216, 46, 0.2);
   --border-color-hover: rgba(255, 216, 46, 0.3);
+  
+  /* Button Text Colors - Dark Mode */
+  --btn-yellow-text: #1A1A1A;   /* Dark text on yellow background */
+  --btn-blue-text: #FFFFFF;     /* White text on blue background */
   
   /* Semantic Colors - Dark Mode */
   --accent-color: var(--spark-yellow);
@@ -41,28 +49,36 @@
 [data-theme='light'],
 .light-mode {
   /* Brand Colors - Light Mode */
-  --spark-yellow: #FFEC3A;      /* Primary - Spark Yellow */
+  --spark-yellow: #F5C842;      /* Darker yellow for better contrast */
+  --spark-yellow-muted: #D4A017; /* Darker yellow for text */
+  --spark-yellow-text: #B8860B;  /* Dark yellow for text */
   --pin-blue: #2684FF;          /* Secondary - Pin Blue */
-  --vibrant-magenta: #FF5A87;   /* Support accent - full vibrancy */
-  --fresh-teal: #38D6C0;        /* Support accent - full vibrancy */
+  --pin-blue-muted: #1E6BCC;    /* Darker blue for text */
+  --vibrant-magenta: #D63384;   /* Darker magenta for better contrast */
+  --fresh-teal: #20A39E;        /* Darker teal for better contrast */
   
   /* Neutrals - Light Mode */
   --bg-main: #FFFFFF;           /* White background */
-  --bg-card: rgba(255, 255, 255, 0.9);
-  --bg-card-hover: rgba(255, 236, 58, 0.1);
-  --bg-card-active: rgba(255, 236, 58, 0.2);
+  --bg-card: rgba(248, 249, 250, 0.9);
+  --bg-card-hover: rgba(233, 236, 239, 0.9);
+  --bg-card-active: rgba(222, 226, 230, 0.9);
   --text-primary: #1A1A1A;      /* Dark text */
-  --text-secondary: rgba(26, 26, 26, 0.8);
-  --text-tertiary: rgba(26, 26, 26, 0.6);
+  --text-secondary: rgba(26, 26, 26, 0.85); /* Slightly muted dark */
+  --text-tertiary: rgba(26, 26, 26, 0.6);   /* More muted dark */
+  --text-muted: rgba(26, 26, 26, 0.4);      /* Very muted dark */
   --border-color: rgba(38, 132, 255, 0.2);
   --border-color-hover: rgba(38, 132, 255, 0.3);
+  
+  /* Button Text Colors - Light Mode */
+  --btn-yellow-text: #1A1A1A;   /* Dark text on yellow background */
+  --btn-blue-text: #FFFFFF;     /* White text on blue background */
   
   /* Semantic Colors - Light Mode */
   --accent-color: var(--spark-yellow);
   --secondary-color: var(--pin-blue);
   --error-color: var(--vibrant-magenta);
   --success-color: var(--fresh-teal);
-  --warning-color: #F59E0B;
+  --warning-color: #D97706;     /* Darker warning for light mode */
 }
 
 /* Apply theme variables to Tailwind elements */
@@ -78,6 +94,7 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 600;
+    color: var(--text-primary) !important;
   }
   
   .font-display {
@@ -89,8 +106,8 @@
   }
   
   /* Brand color utilities */
-  .text-spark-yellow { color: var(--spark-yellow) !important; }
-  .text-pin-blue { color: var(--pin-blue) !important; }
+  .text-spark-yellow { color: var(--spark-yellow-text) !important; }
+  .text-pin-blue { color: var(--pin-blue-muted) !important; }
   .text-vibrant-magenta { color: var(--vibrant-magenta) !important; }
   .text-fresh-teal { color: var(--fresh-teal) !important; }
   
@@ -105,7 +122,7 @@
   /* Primary CTA styling */
   .btn-primary {
     background-color: var(--spark-yellow) !important;
-    color: var(--text-primary) !important;
+    color: var(--btn-yellow-text) !important;
     border: 2px solid var(--spark-yellow) !important;
     font-weight: 600;
     transition: all var(--transition-speed) var(--bounce-ease);
@@ -113,19 +130,20 @@
   
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 236, 58, 0.3);
+    box-shadow: 0 8px 25px rgba(245, 200, 66, 0.3);
+    opacity: 0.9;
   }
   
   .btn-secondary {
     background-color: var(--pin-blue) !important;
-    color: white !important;
+    color: var(--btn-blue-text) !important;
     border: 2px solid var(--pin-blue) !important;
     font-weight: 500;
     transition: all var(--transition-speed) ease-out;
   }
   
   .btn-secondary:hover {
-    background-color: var(--secondary-color) !important;
+    background-color: var(--pin-blue-muted) !important;
     transform: translateY(-1px);
   }
   
@@ -150,6 +168,7 @@
     border-color: var(--border-color) !important;
   }
   
+  /* Text color overrides with proper contrast */
   .text-white {
     color: var(--text-primary) !important;
   }
@@ -162,6 +181,36 @@
     color: var(--text-tertiary) !important;
   }
   
+  .text-white\/40 {
+    color: var(--text-muted) !important;
+  }
+  
+  .text-white\/30 {
+    color: var(--text-muted) !important;
+  }
+  
+  .text-white\/20 {
+    color: var(--text-muted) !important;
+  }
+  
+  /* Background overrides */
+  .bg-white\/10 {
+    background-color: var(--bg-card) !important;
+  }
+  
+  .bg-white\/5 {
+    background-color: var(--bg-card) !important;
+    opacity: 0.8;
+  }
+  
+  .bg-white\/20 {
+    background-color: var(--bg-card-hover) !important;
+  }
+  
+  .bg-white\/30 {
+    background-color: var(--bg-card-active) !important;
+  }
+  
   .hover\:bg-white\/10:hover {
     background-color: var(--bg-card-hover) !important;
   }
@@ -172,6 +221,15 @@
   
   .hover\:bg-neutral-700:hover {
     background-color: var(--bg-card-hover) !important;
+  }
+  
+  /* Border overrides */
+  .border-white\/20 {
+    border-color: var(--border-color) !important;
+  }
+  
+  .border-white\/10 {
+    border-color: var(--border-color) !important;
   }
   
   /* Force theme on inputs and form elements */
@@ -191,13 +249,9 @@
     color: var(--text-tertiary) !important;
   }
   
-  .bg-white\/10 {
-    background-color: var(--bg-card) !important;
-  }
-  
-  .bg-white\/5 {
-    background-color: var(--bg-card) !important;
-    opacity: 0.8;
+  /* Placeholder override */
+  .placeholder\:text-white\/50::placeholder {
+    color: var(--text-tertiary) !important;
   }
 
   /* Shadcn/ui color tokens updated for brand */
@@ -211,7 +265,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
 
-    --primary: 54 100% 62%;        /* Spark Yellow */
+    --primary: 45 97% 62%;         /* Adjusted yellow for better contrast */
     --primary-foreground: 0 0% 10%;
 
     --secondary: 217 100% 58%;     /* Pin Blue */
@@ -220,28 +274,28 @@
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
 
-    --accent: 54 100% 62%;         /* Spark Yellow */
+    --accent: 45 97% 62%;          /* Adjusted yellow for better contrast */
     --accent-foreground: 0 0% 10%;
 
-    --destructive: 343 81% 69%;    /* Vibrant Magenta */
+    --destructive: 343 81% 60%;    /* Vibrant Magenta */
     --destructive-foreground: 0 0% 100%;
 
     --border: 217 100% 58% / 0.2;
     --input: 217 100% 58% / 0.2;
-    --ring: 54 100% 62%;
+    --ring: 45 97% 62%;
 
     --radius: 0.75rem;
   }
 
   .dark {
     --background: 0 0% 7%;
-    --foreground: 0 0% 89%;
+    --foreground: 0 0% 100%;
 
     --card: 0 0% 12%;
-    --card-foreground: 0 0% 89%;
+    --card-foreground: 0 0% 100%;
 
     --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 89%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 54 100% 58%;        /* Spark Yellow - darker */
     --primary-foreground: 0 0% 10%;
@@ -250,7 +304,7 @@
     --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
+    --muted-foreground: 0 0% 85%;
 
     --accent: 54 100% 58%;         /* Spark Yellow - darker */
     --accent-foreground: 0 0% 10%;
@@ -553,68 +607,68 @@
 
 @keyframes pulseYellow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 236, 58, 0.7);
+    box-shadow: 0 0 0 0 rgba(245, 200, 66, 0.7);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(255, 236, 58, 0);
+    box-shadow: 0 0 0 10px rgba(245, 200, 66, 0);
   }
 }
 
-/* Theme-aware Event ID and text visibility classes */
+/* =================================================================
+   STANDARDIZED THEME-AWARE CLASSES - GUARANTEED CONTRAST
+   ================================================================= */
+
+/* Event ID text - guaranteed visibility in both themes */
 .event-id-text {
-  color: var(--text-tertiary) !important;
+  color: var(--text-muted) !important;
 }
 
-/* Light mode specific text colors */
-[data-theme='light'] .event-id-text {
-  color: rgba(26, 26, 26, 0.6) !important;
-}
-
-/* Dark mode specific text colors */
-[data-theme='dark'] .event-id-text {
-  color: rgba(228, 228, 228, 0.4) !important;
-}
-
-/* Theme-aware yellow text for better visibility */
+/* Theme-aware yellow text with proper contrast */
 .yellow-text-themed {
-  color: var(--spark-yellow) !important;
+  color: var(--spark-yellow-text) !important;
 }
 
-[data-theme='light'] .yellow-text-themed {
-  color: #CC8A00 !important; /* Darker yellow for light mode */
-}
-
-/* Theme-aware yellow buttons for better contrast */
+/* Theme-aware yellow buttons with dark text on yellow background */
 .btn-yellow-themed {
   background-color: var(--spark-yellow) !important;
-  color: #1A1A1A !important; /* Dark text on yellow background */
+  color: var(--btn-yellow-text) !important;
   border: 2px solid var(--spark-yellow) !important;
   font-weight: 600;
   transition: all var(--transition-speed) var(--bounce-ease);
 }
 
-[data-theme='light'] .btn-yellow-themed {
-  color: #1A1A1A !important; /* Dark text for light mode */
-}
-
-[data-theme='dark'] .btn-yellow-themed {
-  color: #1A1A1A !important; /* Dark text for dark mode too - yellow bg needs dark text */
-}
-
 .btn-yellow-themed:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 236, 58, 0.3);
+  box-shadow: 0 8px 25px rgba(245, 200, 66, 0.3);
   background-color: var(--spark-yellow) !important;
   opacity: 0.9;
 }
 
-/* Theme-aware background colors */
+/* Blue button with guaranteed white text */
+.btn-blue-themed {
+  background-color: var(--pin-blue) !important;
+  color: var(--btn-blue-text) !important;
+  border: 2px solid var(--pin-blue) !important;
+  font-weight: 600;
+  transition: all var(--transition-speed) ease-out;
+}
+
+.btn-blue-themed:hover {
+  background-color: var(--pin-blue-muted) !important;
+  transform: translateY(-1px);
+}
+
+/* Theme-aware surface backgrounds */
 .bg-themed-surface {
   background-color: var(--bg-card) !important;
 }
 
 .bg-themed-surface-hover:hover {
   background-color: var(--bg-card-hover) !important;
+}
+
+.bg-themed-surface-active {
+  background-color: var(--bg-card-active) !important;
 }
 
 /* Theme-aware border colors */
@@ -626,7 +680,7 @@
   border-color: var(--border-color-hover) !important;
 }
 
-/* Theme-aware text colors */
+/* Standardized text colors with guaranteed contrast */
 .text-themed-primary {
   color: var(--text-primary) !important;
 }
@@ -639,10 +693,14 @@
   color: var(--text-tertiary) !important;
 }
 
-/* Active Filters specific styling */
+.text-themed-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Active Filters specific styling with guaranteed visibility */
 .active-filters-section {
-  background-color: var(--bg-card) !important;
-  border-color: var(--border-color) !important;
+  background-color: var(--bg-card-hover) !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .active-filters-text {
@@ -650,21 +708,147 @@
 }
 
 .active-filters-pill {
-  background-color: var(--bg-card-hover) !important;
+  background-color: var(--bg-card-active) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Success/Error states with proper contrast */
+.text-success-themed {
+  color: var(--success-color) !important;
+}
+
+.text-error-themed {
+  color: var(--error-color) !important;
+}
+
+.text-warning-themed {
+  color: var(--warning-color) !important;
+}
+
+/* Form validation colors */
+.text-validation-success {
+  color: #22C55E !important; /* Green-500 for both themes */
+}
+
+.text-validation-error {
+  color: #EF4444 !important; /* Red-500 for both themes */
+}
+
+.text-validation-warning {
+  color: var(--warning-color) !important;
+}
+
+/* Calendar specific overrides with proper contrast */
+.calendar-themed {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
   color: var(--text-primary) !important;
 }
 
-/* Ensure visibility in light mode */
-[data-theme='light'] .active-filters-section {
-  background-color: rgba(0, 0, 0, 0.05) !important;
-  border-color: rgba(0, 0, 0, 0.2) !important;
+.calendar-day-themed {
+  color: var(--text-secondary) !important;
 }
 
-[data-theme='light'] .active-filters-text {
-  color: rgba(26, 26, 26, 0.7) !important;
+.calendar-day-selected {
+  background-color: var(--pin-blue) !important;
+  color: var(--btn-blue-text) !important;
 }
 
-[data-theme='light'] .active-filters-pill {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-  color: rgba(26, 26, 26, 0.8) !important;
+.calendar-day-today {
+  background-color: var(--bg-card-active) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
 }
+
+/* Dialog and modal overrides */
+.dialog-themed {
+  background-color: var(--bg-main) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.dialog-title-themed {
+  color: var(--text-primary) !important;
+}
+
+.dialog-description-themed {
+  color: var(--text-secondary) !important;
+}
+
+/* Yellow warning/notification styling */
+.notification-yellow-themed {
+  background-color: rgba(245, 200, 66, 0.1) !important;
+  border: 1px solid rgba(245, 200, 66, 0.3) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Light mode specific adjustments for better visibility */
+[data-theme='light'] .notification-yellow-themed {
+  background-color: rgba(245, 200, 66, 0.15) !important;
+  border: 1px solid rgba(245, 200, 66, 0.4) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Input field styling with proper contrast */
+.input-themed {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.input-themed:focus {
+  border-color: var(--pin-blue) !important;
+  box-shadow: 0 0 0 3px rgba(38, 132, 255, 0.1) !important;
+}
+
+.input-themed::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+/* Badge/pill styling */
+.badge-themed {
+  background-color: var(--bg-card-active) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.badge-yellow-themed {
+  background-color: var(--spark-yellow) !important;
+  color: var(--btn-yellow-text) !important;
+}
+
+.badge-blue-themed {
+  background-color: var(--pin-blue) !important;
+  color: var(--btn-blue-text) !important;
+}
+
+/* Link styling with proper contrast */
+.link-themed {
+  color: var(--pin-blue-muted) !important;
+  text-decoration: underline;
+  transition: all var(--transition-speed) ease-out;
+}
+
+.link-themed:hover {
+  color: var(--pin-blue) !important;
+  opacity: 0.8;
+}
+
+/* Category icon colors with proper contrast */
+.category-icon-themed {
+  color: var(--text-secondary) !important;
+}
+
+.category-icon-food { color: #F59E0B !important; }
+.category-icon-music { color: #8B5CF6 !important; }
+.category-icon-arts { color: #EF4444 !important; }
+.category-icon-sports { color: #10B981 !important; }
+.category-icon-community { color: #F59E0B !important; }
+
+/* Ensure these colors work in both light and dark modes */
+[data-theme='light'] .category-icon-food { color: #D97706 !important; }
+[data-theme='light'] .category-icon-music { color: #7C3AED !important; }
+[data-theme='light'] .category-icon-arts { color: #DC2626 !important; }
+[data-theme='light'] .category-icon-sports { color: #059669 !important; }
+[data-theme='light'] .category-icon-community { color: #D97706 !important; }

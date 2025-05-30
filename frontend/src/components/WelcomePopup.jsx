@@ -107,20 +107,20 @@ const WelcomePopup = () => {
           </div>
 
           {/* Description */}
-          <p className="text-white/90 text-xs sm:text-base leading-relaxed text-center px-1">
+          <p className="text-themed-secondary text-xs sm:text-base leading-relaxed text-center px-1">
             {currentStepData.description}
           </p>
 
           {/* Features */}
-          <div className="bg-white/5 rounded-lg sm:rounded-xl p-3 sm:p-5 border border-white/10">
-            <h3 className="font-semibold text-white mb-2 sm:mb-4 text-sm sm:text-lg">
+          <div className="bg-themed-surface rounded-lg sm:rounded-xl p-3 sm:p-5 border border-themed">
+            <h3 className="font-semibold text-themed-primary mb-2 sm:mb-4 text-sm sm:text-lg">
               {currentStep === 0 && "Why todo-events?"}
               {currentStep === 1 && "Key Features"}
               {currentStep === 2 && "What makes us special?"}
             </h3>
             <ul className="space-y-1.5 sm:space-y-3">
               {currentStepData.features.map((feature, index) => (
-                <li key={index} className="text-white/80 text-xs sm:text-sm leading-relaxed">
+                <li key={index} className="text-themed-secondary text-xs sm:text-sm leading-relaxed">
                   {feature}
                 </li>
               ))}
@@ -149,12 +149,11 @@ const WelcomePopup = () => {
               variant="ghost"
               onClick={handlePrevious}
               disabled={currentStep === 0}
-              className={`text-white/70 hover:text-white hover:bg-white/10 min-h-[36px] sm:min-h-[44px] px-3 sm:px-4 text-xs sm:text-sm ${
-                currentStep === 0 ? 'invisible' : 'visible'
+              className={`text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover min-h-[36px] sm:min-h-[44px] px-3 sm:px-4 text-xs sm:text-sm ${
+                currentStep === 0 ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              Previous
+              ← Previous
             </Button>
 
             <Button

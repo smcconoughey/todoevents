@@ -174,25 +174,25 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
   // Password requirements component
   const PasswordRequirements = () => (
     <div className="mt-2 space-y-1">
-      <p className="text-xs text-white/50">Password requirements:</p>
+      <p className="text-xs text-themed-tertiary">Password requirements:</p>
       <ul className="space-y-1">
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.length ? 'text-green-400' : 'text-white/50'}`}>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.length ? 'text-validation-success' : 'text-themed-tertiary'}`}>
           {validationStatus.length ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
           At least 8 characters
         </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.uppercase ? 'text-green-400' : 'text-white/50'}`}>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.uppercase ? 'text-validation-success' : 'text-themed-tertiary'}`}>
           {validationStatus.uppercase ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
           At least one uppercase letter
         </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.lowercase ? 'text-green-400' : 'text-white/50'}`}>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.lowercase ? 'text-validation-success' : 'text-themed-tertiary'}`}>
           {validationStatus.lowercase ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
           At least one lowercase letter
         </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.number ? 'text-green-400' : 'text-white/50'}`}>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.number ? 'text-validation-success' : 'text-themed-tertiary'}`}>
           {validationStatus.number ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
           At least one number
         </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.special ? 'text-green-400' : 'text-white/50'}`}>
+        <li className={`text-xs flex items-center gap-1 ${validationStatus.special ? 'text-validation-success' : 'text-themed-tertiary'}`}>
           {validationStatus.special ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
           At least one special character
         </li>
@@ -218,7 +218,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           <div className={`rounded-md p-3 flex items-center gap-2
             ${registrationStep === 'creating' ? 'bg-blue-500/20 text-blue-200' : 
               registrationStep === 'success' ? 'bg-green-500/20 text-green-200' : 
-              registrationStep === 'deferred' ? 'bg-yellow-500/20 text-yellow-200' :
+              registrationStep === 'deferred' ? 'notification-yellow-themed' :
               'bg-red-500/20 text-red-200'}`}>
             {registrationStep === 'creating' && (
               <>
@@ -275,14 +275,14 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       
       {/* Fallback Option for Registration */}
       {showFallbackOption && mode === 'register' && (
-        <div className="bg-yellow-500/20 text-yellow-200 p-3 rounded-md mb-3">
+        <div className="notification-yellow-themed p-3 rounded-md mb-3">
           <p className="mb-2">Server appears to be busy. You can:</p>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleSubmit({ preventDefault: () => {} })}
-              className="border-yellow-400/30 text-yellow-200 hover:bg-yellow-400/20"
+              className="btn-yellow-themed"
             >
               Try Again
             </Button>
@@ -290,7 +290,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
               variant="outline"
               size="sm"
               onClick={handleContinueAnyway}
-              className="border-yellow-400/30 text-yellow-200 hover:bg-yellow-400/20"
+              className="btn-yellow-themed"
             >
               Continue As Guest
             </Button>
@@ -300,7 +300,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm text-white/70">Email</label>
+          <label className="text-sm text-themed-secondary">Email</label>
           <Input
             type="email"
             name="email"
@@ -313,7 +313,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         </div>
         
         <div className="space-y-2">
-          <label className="text-sm text-white/70">Password</label>
+          <label className="text-sm text-themed-secondary">Password</label>
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
@@ -327,7 +327,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-themed-tertiary hover:text-themed-primary"
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -339,7 +339,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         
         {mode === 'register' && (
           <div className="space-y-2">
-            <label className="text-sm text-white/70">Confirm Password</label>
+            <label className="text-sm text-themed-secondary">Confirm Password</label>
             <Input
               type="password"
               name="confirmPassword"
@@ -373,7 +373,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
             <button
               type="button"
               onClick={handleForgotPasswordClick}
-              className="text-sm text-white/50 hover:text-white underline"
+              className="text-sm text-themed-tertiary hover:text-themed-primary underline"
             >
               Forgot Password?
             </button>
@@ -382,14 +382,14 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       </form>
       
       <div className="pt-2 text-center">
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-themed-tertiary">
           {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
           <button
             type="button"
+            className="link-themed"
             onClick={toggleMode}
-            className="text-white hover:underline"
           >
-            {mode === 'login' ? 'Create one' : 'Sign in'}
+            {mode === 'login' ? 'Sign up' : 'Sign in'}
           </button>
         </p>
       </div>

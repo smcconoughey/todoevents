@@ -279,14 +279,14 @@ const CreateEventForm = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="bg-neutral-900/95 backdrop-blur-sm border-white/10 max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="dialog-themed max-w-2xl max-h-[90vh] overflow-y-auto"
         aria-describedby="create-event-dialog-description"
       >
         <DialogHeader className="relative pb-4">
-          <DialogTitle className="text-xl font-display font-bold text-white">
+          <DialogTitle className="text-xl font-display font-bold dialog-title-themed">
             {initialEvent ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
-          <DialogDescription id="create-event-dialog-description" className="text-white/60">
+          <DialogDescription id="create-event-dialog-description" className="dialog-description-themed">
             {initialEvent ? 'Edit an existing event' : 'Create a new event with details'}
           </DialogDescription>
         </DialogHeader>
@@ -304,23 +304,23 @@ const CreateEventForm = ({
             {/* Left Column */}
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-white/70">Event Title</label>
+                <label className="text-sm font-medium text-themed-secondary">Event Title</label>
                 <Input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter event title"
-                  className="bg-white/10 border-white/20 text-white h-9"
+                  className="input-themed h-9"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-white/70">Category</label>
+                <label className="text-sm font-medium text-themed-secondary">Category</label>
                 <Select 
                   value={formData.category} 
                   onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                 >
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white h-9">
+                  <SelectTrigger className="input-themed h-9">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -341,12 +341,12 @@ const CreateEventForm = ({
 
             {/* Right Column */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-white/70">Description</label>
+              <label className="text-sm font-medium text-themed-secondary">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Enter event description"
-                className="w-full px-3 py-2 rounded-md bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/20 transition-all resize-none text-sm"
+                className="w-full px-3 py-2 rounded-md input-themed resize-none text-sm"
                 rows="4"
               />
             </div>
@@ -354,7 +354,7 @@ const CreateEventForm = ({
 
           {/* Schedule - Compact Grid Layout */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-white border-b border-white/10 pb-1 flex items-center gap-2">
+            <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               Schedule
             </h3>
@@ -362,22 +362,22 @@ const CreateEventForm = ({
             {/* First Row: Start Date & Time */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-white/70">Start Date</label>
+                <label className="text-xs font-medium text-themed-secondary">Start Date</label>
                 <Input
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   min={new Date().toISOString().split('T')[0]}
-                  className="bg-white/10 border-white/20 text-white h-8 text-sm"
+                  className="input-themed h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-white/70">Start Time</label>
+                <label className="text-xs font-medium text-themed-secondary">Start Time</label>
                 <Input
                   type="time"
                   value={formData.start_time}
                   onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-                  className="bg-white/10 border-white/20 text-white h-8 text-sm"
+                  className="input-themed h-8 text-sm"
                 />
               </div>
             </div>
@@ -389,9 +389,9 @@ const CreateEventForm = ({
                 id="sameDay"
                 checked={isSameDay}
                 onChange={(e) => handleSameDayChange(e.target.checked)}
-                className="w-3 h-3 rounded border-white/20 bg-white/10 text-spark-yellow focus:ring-spark-yellow/50"
+                className="w-3 h-3 rounded border-themed bg-themed-surface text-spark-yellow focus:ring-spark-yellow/50"
               />
-              <label htmlFor="sameDay" className="text-xs font-medium text-white/70">
+              <label htmlFor="sameDay" className="text-xs font-medium text-themed-secondary">
                 Single day event
               </label>
             </div>
@@ -399,8 +399,8 @@ const CreateEventForm = ({
             {/* Second Row: End Date & Time */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-white/70">
-                  End Date {isSameDay && <span className="text-white/40">(disabled)</span>}
+                <label className="text-xs font-medium text-themed-secondary">
+                  End Date {isSameDay && <span className="text-themed-muted">(disabled)</span>}
                 </label>
                 <Input
                   type="date"
@@ -408,18 +408,18 @@ const CreateEventForm = ({
                   onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                   min={formData.date}
                   disabled={isSameDay}
-                  className="bg-white/10 border-white/20 text-white h-8 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="input-themed h-8 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-white/70">
-                  End Time <span className="text-white/40">(optional)</span>
+                <label className="text-xs font-medium text-themed-secondary">
+                  End Time <span className="text-themed-muted">(optional)</span>
                 </label>
                 <Input
                   type="time"
                   value={formData.end_time}
                   onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-                  className="bg-white/10 border-white/20 text-white h-8 text-sm"
+                  className="input-themed h-8 text-sm"
                 />
               </div>
             </div>
@@ -427,7 +427,7 @@ const CreateEventForm = ({
 
           {/* Location - Compact */}
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-white border-b border-white/10 pb-1 flex items-center gap-2">
+            <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
               <MapPin className="w-4 h-4" />
               Location
             </h3>
@@ -440,8 +440,8 @@ const CreateEventForm = ({
               />
               {formData.location && (
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 px-2 py-1 rounded-md bg-white/5 border border-white/10">
-                    <span className="text-xs text-white/70 truncate">
+                  <div className="flex-1 px-2 py-1 rounded-md bg-themed-surface border border-themed">
+                    <span className="text-xs text-themed-secondary truncate">
                       {formData.address || `${formData.location.lat.toFixed(6)}, ${formData.location.lng.toFixed(6)}`}
                     </span>
                   </div>
@@ -449,7 +449,7 @@ const CreateEventForm = ({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-white/70 hover:text-white hover:bg-white/10"
+                    className="h-7 w-7 text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover"
                     onClick={handleClearLocation}
                   >
                     <X className="w-3 h-3" />
@@ -463,14 +463,14 @@ const CreateEventForm = ({
             type="submit" 
             className={`w-full px-4 py-2 rounded-md font-medium transition-all duration-200 flex items-center justify-center gap-2
               ${isSubmitting || !formData.location || connectionError || !user
-                ? 'bg-white/30 text-white/50 cursor-not-allowed'
-                : 'bg-spark-yellow text-neutral-900 hover:bg-spark-yellow/90 hover:scale-[1.02]'
+                ? 'bg-themed-surface text-themed-muted cursor-not-allowed'
+                : 'btn-yellow-themed hover:scale-[1.02]'
               }`}
             disabled={isSubmitting || !formData.location || connectionError || !user}
           >
             {isSubmitting ? (
               <>
-                <div className="w-4 h-4 border-2 border-neutral-900/30 border-t-neutral-900 rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"></div>
                 {initialEvent ? 'Updating...' : 'Creating...'}
               </>
             ) : (

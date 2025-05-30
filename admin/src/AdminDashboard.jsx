@@ -721,7 +721,7 @@ const AdminDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white shadow-md rounded-lg p-8 max-w-md w-full text-center">
-          <AlertTriangle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
+          <AlertTriangle className="w-16 h-16 mx-auto text-orange-500 mb-4" />
           <h2 className="text-2xl font-bold mb-4 text-gray-800">Access Denied</h2>
           <p className="text-gray-600 mb-6">
             You do not have administrator permissions to access this dashboard.
@@ -1217,7 +1217,7 @@ const AdminDashboard = () => {
                 <Trash2 className="mr-2" /> Delete Inappropriate Events
               </button>
               <button
-                className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 flex items-center justify-center"
+                className="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600 flex items-center justify-center"
                 onClick={() => setError('Event review queue not implemented')}
               >
                 <MessageSquare className="mr-2" /> Review Event Reports

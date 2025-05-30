@@ -68,7 +68,7 @@ const ThemeToggle = () => {
         className="absolute inset-0 flex items-center justify-center transition-opacity duration-300" 
         style={{ opacity: isDark ? 1 : 0 }}
       >
-        <Sun size={18} className={`text-yellow-300 ${isDark && isToggling ? 'animate-spin' : ''}`} />
+        <Sun size={18} className={`yellow-text-themed ${isDark && isToggling ? 'animate-spin' : ''}`} />
       </span>
       <span 
         className="absolute inset-0 flex items-center justify-center transition-opacity duration-300" 

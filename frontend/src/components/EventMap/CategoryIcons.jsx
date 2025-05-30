@@ -60,11 +60,11 @@ export const categoryIcons = {
   },
   'Community': {
     icon: Users,
-    color: 'text-yellow-500'
+    color: 'category-icon-community'
   },
   'community': {
     icon: Users,
-    color: 'text-yellow-500'
+    color: 'category-icon-community'
   },
   'Religious': {
     icon: Church,
@@ -111,7 +111,7 @@ export const categories = [
   { id: 'arts', name: 'Arts', icon: Palette, color: 'bg-blue-500' },
   { id: 'sports', name: 'Sports', icon: Trophy, color: 'bg-green-500' },
   { id: 'automotive', name: 'Automotive', icon: Car, color: 'bg-red-500' },
-  { id: 'community', name: 'Community', icon: Users, color: 'bg-yellow-500' },
+  { id: 'community', name: 'Community', icon: Users, color: 'bg-orange-500' },
   { id: 'religious', name: 'Religious', icon: Church, color: 'bg-indigo-500' },
   { id: 'tech-education', name: 'Tech & Education', icon: Book, color: 'bg-indigo-500' }
 ];

@@ -86,19 +86,50 @@ const FallbackMap = ({ event, category, theme }) => (
 );
 
 // Helper to format date/time in a more social-friendly way
-function formatDate(dateStr, timeStr) {
+function formatDate(event) {
   try {
-    const date = new Date(`${dateStr}T${timeStr}`);
-    return date.toLocaleString(undefined, {
+    if (!event?.date || !event?.start_time) {
+      return 'Date and time not specified';
+    }
+
+    const startDate = new Date(event.date);
+    const formattedDate = startDate.toLocaleDateString(undefined, {
       weekday: 'long',
       month: 'long', 
       day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
+      year: 'numeric'
     });
-  } catch {
-    return `${dateStr} at ${timeStr}`;
+
+    // Format time range
+    let timeStr = event.start_time;
+    if (event.end_time) {
+      timeStr += ` - ${event.end_time}`;
+    }
+
+    // Handle multi-day events
+    if (event.end_date && event.end_date !== event.date) {
+      const endDate = new Date(event.end_date);
+      const formattedEndDate = endDate.toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long', 
+        day: 'numeric',
+        year: 'numeric'
+      });
+      return `${formattedDate} - ${formattedEndDate} at ${timeStr}`;
+    }
+
+    return `${formattedDate} at ${timeStr}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    // Fallback formatting
+    let fallback = event.date || 'Date not specified';
+    if (event.start_time) {
+      fallback += ` at ${event.start_time}`;
+      if (event.end_time) {
+        fallback += ` - ${event.end_time}`;
+      }
+    }
+    return fallback;
   }
 }
 
@@ -351,7 +382,7 @@ const ShareCard = ({ event }) => {
           </div>
           <div>
             <p style={detailTextStyle}>
-              {formatDate(event.date, event.time)}
+              {formatDate(event)}
             </p>
           </div>
         </div>
