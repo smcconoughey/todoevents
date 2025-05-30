@@ -9,8 +9,8 @@ const EventInteractionComponents = ({ eventId }) => {
     interested,
     interestCount,
     viewCount,
-    isLoading,
-    handleToggleInterest,
+    loading,
+    toggleInterest,
     refreshData
   } = useEventInteraction(eventId);
   
@@ -94,8 +94,8 @@ const EventInteractionComponents = ({ eventId }) => {
         <InterestButton
           interested={interested}
           interestCount={interestCount}
-          loading={isLoading}
-          onToggle={handleToggleInterest}
+          loading={loading}
+          onToggle={toggleInterest}
           showCount={true}
           className="text-themed-primary"
         />
