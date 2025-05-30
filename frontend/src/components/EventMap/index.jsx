@@ -1048,13 +1048,17 @@ const EventMap = ({ mapsLoaded = false }) => {
             const wrappedAddress = address.length > 50 ? address.substring(0, 50) + "..." : address;
             ctx.fillText(wrappedAddress, canvas.width/2, 250);
             
-            // Draw category
-            ctx.fillStyle = "#FFEC3A";
+            // Draw category with dark text on yellow background
+            ctx.fillStyle = "#F5C842"; // Our themed yellow color
+            ctx.fillRect(canvas.width/2 - 100, 280, 200, 40); // Background rectangle
+            ctx.fillStyle = "#1A1A1A"; // Dark text on yellow background
             ctx.font = "18px Arial, sans-serif";
-            ctx.fillText(getCategory(selectedEvent.category).label, canvas.width/2, 300);
+            ctx.fillText(getCategory(selectedEvent.category).label, canvas.width/2, 305);
             
-            // Draw branding
-            ctx.fillStyle = "#FFEC3A";
+            // Draw branding with dark text on yellow background
+            ctx.fillStyle = "#F5C842"; // Our themed yellow color
+            ctx.fillRect(canvas.width/2 - 120, 470, 240, 50); // Background rectangle
+            ctx.fillStyle = "#1A1A1A"; // Dark text on yellow background
             ctx.font = "bold 24px Arial, sans-serif";
             ctx.fillText("todo-events.com", canvas.width/2, 500);
             

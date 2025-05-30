@@ -104,8 +104,8 @@ const categories = [
     name: 'Sports',
     icon: Trophy,
     color: 'text-spark-yellow',
-    markerColor: '#FFEC3A',
-    markerSVG: createCategoryMarkerSVG('#FFEC3A', iconPaths.Trophy)
+    markerColor: '#F5C842',
+    markerSVG: createCategoryMarkerSVG('#F5C842', iconPaths.Trophy)
   },
   {
     id: 'automotive',

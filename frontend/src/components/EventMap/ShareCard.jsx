@@ -50,14 +50,14 @@ const FallbackMap = ({ event, category, theme }) => (
     className="w-full h-full flex items-center justify-center relative"
     style={{ 
       backgroundColor: theme === "dark" ? "#1a1a1a" : "#f8f9fa",
-      backgroundImage: `radial-gradient(circle at 50% 50%, ${category.color || "#FFEC3A"}20 0%, transparent 50%)`
+      backgroundImage: `radial-gradient(circle at 50% 50%, ${category.color || "#F5C842"}20 0%, transparent 50%)`
     }}
   >
     <div className="text-center">
       <div className="flex items-center justify-center mb-2">
         <div 
           className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg"
-          style={{ backgroundColor: category.color || "#FFEC3A" }}
+          style={{ backgroundColor: category.color || "#F5C842" }}
         >
           <CategoryIcon 
             category={event.category} 
@@ -74,8 +74,8 @@ const FallbackMap = ({ event, category, theme }) => (
       </p>
       <div className="mt-2 flex items-center justify-center gap-1">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="3" stroke={category.color || "#FFEC3A"} strokeWidth="2" />
-          <circle cx="12" cy="12" r="8" stroke={category.color || "#FFEC3A"} strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
+          <circle cx="12" cy="12" r="3" stroke={category.color || "#F5C842"} strokeWidth="2" />
+          <circle cx="12" cy="12" r="8" stroke={category.color || "#F5C842"} strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
         </svg>
         <span className="text-xs" style={{ color: theme === "dark" ? "#a3a3a3" : "#525252" }}>
           5-mile radius area
@@ -254,7 +254,7 @@ const ShareCard = ({ event }) => {
   const categoryTextStyle = {
     fontSize: '12px',
     fontWeight: '500',
-    color: category.color || "#FFEC3A"
+    color: category.color || "#F5C842"
   };
 
   const mapContainerStyle = {
@@ -320,7 +320,7 @@ const ShareCard = ({ event }) => {
   const brandingStyle = {
     fontSize: '16px',
     fontWeight: 'bold',
-    color: "#FFEC3A",
+    color: "#F5C842",
     margin: '0'
   };
 
@@ -341,7 +341,7 @@ const ShareCard = ({ event }) => {
           <div style={categoryStyle}>
             <CategoryIcon 
               category={event.category} 
-              style={{ width: '16px', height: '16px', color: category.color || "#FFEC3A" }}
+              style={{ width: '16px', height: '16px', color: category.color || "#F5C842" }}
             />
             <span style={categoryTextStyle}>
               {category.label || event.category}
