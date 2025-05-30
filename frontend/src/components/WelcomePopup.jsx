@@ -2,20 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { X, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const WelcomePopup = () => {
+const WelcomePopup = ({ onClose, forceShow = false }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-    if (!hasSeenWelcome) {
-      setTimeout(() => setIsVisible(true), 1000);
+    if (forceShow) {
+      setIsVisible(true);
+    } else {
+      const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+      if (!hasSeenWelcome) {
+        setTimeout(() => setIsVisible(true), 1000);
+      }
     }
-  }, []);
+  }, [forceShow]);
 
   const handleClose = () => {
     setIsVisible(false);
-    localStorage.setItem('hasSeenWelcome', 'true');
+    if (!forceShow) {
+      localStorage.setItem('hasSeenWelcome', 'true');
+    }
+    if (onClose) {
+      onClose();
+    }
   };
 
   const steps = [
@@ -31,14 +40,14 @@ const WelcomePopup = () => {
       ]
     },
     {
-      title: "How it works",
-      content: "Getting started is easy!",
-      description: "Browse events on the interactive map, filter by category or date, and discover what's happening near you.",
+      title: "Create & Share Events",
+      content: "Make your events visible to everyone!",
+      description: "Create beautiful event listings and share them instantly. Generate stunning shareable images for social media with just one click.",
       features: [
-        "🗺️ Interactive map view",
-        "🔍 Smart search and filters",
-        "💾 Save your favorite events",
-        "🎯 Get personalized recommendations"
+        "🎨 Auto-generated share cards with event details",
+        "📱 Download images for Instagram & Facebook",
+        "📋 Copy direct links to share anywhere",
+        "🗺️ Interactive map with your exact location"
       ]
     },
     {
@@ -46,7 +55,7 @@ const WelcomePopup = () => {
       content: "Start discovering local events today!",
       description: "Join thousands of people who use todo-events to stay connected with their community and never miss out on amazing local experiences.",
       features: [
-        "🆓 Completely free to use",
+        "🆓 Free for attendees",
         "📱 Works on all devices",
         "🌟 No spam or unwanted notifications",
         "🚀 New events added daily"
@@ -115,7 +124,7 @@ const WelcomePopup = () => {
           <div className="bg-themed-surface rounded-lg sm:rounded-xl p-3 sm:p-5 border border-themed">
             <h3 className="font-semibold text-themed-primary mb-2 sm:mb-4 text-sm sm:text-lg">
               {currentStep === 0 && "Why todo-events?"}
-              {currentStep === 1 && "Key Features"}
+              {currentStep === 1 && "Sharing Made Easy"}
               {currentStep === 2 && "What makes us special?"}
             </h3>
             <ul className="space-y-1.5 sm:space-y-3">

@@ -39,7 +39,8 @@ import {
   Search,
   Shield,
   Navigation,
-  AlertCircle
+  AlertCircle,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,6 +51,7 @@ import {
 } from "@/components/ui/sheet";
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import AddressAutocomplete from './AddressAutocomplete';
+import WelcomePopup from '../WelcomePopup';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -342,7 +344,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             <div className="flex flex-col gap-3 w-full">
               <Button 
                 onClick={handleDownload} 
-                className="w-full bg-spark-yellow text-neutral-900 font-bold min-h-[44px]"
+                className="w-full btn-yellow-themed font-bold min-h-[44px]"
               >
                 Download Image
               </Button>
@@ -514,6 +516,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [activeFilterTab, setActiveFilterTab] = useState('date');
   const [error, setError] = useState(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
@@ -1352,6 +1355,15 @@ const EventMap = ({ mapsLoaded = false }) => {
           </Button>
           <h1 className="text-lg font-display font-bold text-white truncate px-2">todo-events</h1>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowWelcomePopup(true)}
+              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+              title="Help & Tutorial"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
             <Button
               variant="ghost"
@@ -1378,6 +1390,15 @@ const EventMap = ({ mapsLoaded = false }) => {
             <div className="flex items-center justify-between flex-1 mr-2">
               <h2 className="text-xl font-display font-bold text-white">todo-events</h2>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  onClick={() => setShowWelcomePopup(true)}
+                  title="Help & Tutorial"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </Button>
                 <ThemeToggle />
                 {user ? (
                   <div className="flex items-center gap-2">
@@ -1828,6 +1849,15 @@ const EventMap = ({ mapsLoaded = false }) => {
               <div className="flex items-center justify-between">
                 <SheetTitle className="text-white font-display font-bold">todo-events</SheetTitle>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                    onClick={() => setShowWelcomePopup(true)}
+                    title="Help & Tutorial"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </Button>
                   <ThemeToggle />
                   {user ? (
                     <div className="flex items-center gap-2">
@@ -2457,7 +2487,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 <div className="flex flex-col gap-3 w-full">
                   <Button 
                     onClick={handleDownload} 
-                    className="w-full bg-spark-yellow text-neutral-900 font-bold min-h-[44px]"
+                    className="w-full btn-yellow-themed font-bold min-h-[44px]"
                   >
                     Download Image
                   </Button>
@@ -2536,6 +2566,14 @@ const EventMap = ({ mapsLoaded = false }) => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Welcome/Help Popup */}
+      {showWelcomePopup && (
+        <WelcomePopup 
+          onClose={() => setShowWelcomePopup(false)}
+          forceShow={true}
+        />
+      )}
     </div>
   );
 };
