@@ -52,7 +52,6 @@ import {
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import AddressAutocomplete from './AddressAutocomplete';
 import WelcomePopup from '../WelcomePopup';
-import EventInteractionComponents from './EventInteractionComponents';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -336,9 +335,6 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   📍 {event.distance.toFixed(1)} miles away
                 </div>
               )}
-              
-              {/* Interest and View Tracking */}
-              <EventInteractionComponents eventId={event.id} />
             </div>
             {user && (user.id === event.created_by || user.role === 'admin') && (
               <div className="pt-4 space-y-3 border-t border-white/10">
