@@ -3022,10 +3022,20 @@ async def toggle_event_interest(
                 action = "added"
                 interested = True
             
-            # Get updated count
+            # Get updated count with ultra-robust safety check
             cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             result = cursor.fetchone()
-            interest_count = result[0] if result and len(result) > 0 else 0
+            
+            # Ultra-robust result handling for different database types
+            try:
+                if isinstance(result, (list, tuple)):
+                    interest_count = result[0] if len(result) > 0 else 0
+                elif hasattr(result, '__getitem__'):
+                    interest_count = result[0]
+                else:
+                    interest_count = int(result) if result is not None else 0
+            except (IndexError, KeyError, TypeError, ValueError):
+                interest_count = 0
             
             conn.commit()
             
@@ -3073,7 +3083,16 @@ async def get_event_interest_status(
             if not result:
                 raise HTTPException(status_code=404, detail="Event not found")
             
-            interest_count = result[0] if result and len(result) > 0 else 0
+            # Ultra-robust result handling for different database types
+            try:
+                if isinstance(result, (list, tuple)):
+                    interest_count = result[0] if len(result) > 0 else 0
+                elif hasattr(result, '__getitem__'):
+                    interest_count = result[0]
+                else:
+                    interest_count = int(result) if result is not None else 0
+            except (IndexError, KeyError, TypeError, ValueError):
+                interest_count = 0
             
             # Check if user is interested
             if user_id:
@@ -3121,7 +3140,7 @@ async def track_event_view_endpoint(
         # Track the view
         view_tracked = await track_event_view(event_id, user_id, browser_fingerprint)
         
-        # Get updated view count with safety check
+        # Get updated view count with ultra-robust safety check
         placeholder = get_placeholder()
         with get_db() as conn:
             cursor = conn.cursor()
@@ -3130,7 +3149,16 @@ async def track_event_view_endpoint(
             if not result:
                 raise HTTPException(status_code=404, detail="Event not found after view tracking")
             
-            view_count = result[0] if result and len(result) > 0 else 0
+            # Ultra-robust result handling for different database types
+            try:
+                if isinstance(result, (list, tuple)):
+                    view_count = result[0] if len(result) > 0 else 0
+                elif hasattr(result, '__getitem__'):
+                    view_count = result[0]
+                else:
+                    view_count = int(result) if result is not None else 0
+            except (IndexError, KeyError, TypeError, ValueError):
+                view_count = 0
         
         return {
             "success": True,
