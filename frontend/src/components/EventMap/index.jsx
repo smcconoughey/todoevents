@@ -80,7 +80,7 @@ const isDateInRange = (dateStr, range) => {
 
 // Add this function before the EventDetailsPanel component
 const generateEventSchema = (event) => {
-  if (!event) return null;
+  if (!event || !event.date || !event.start_time) return null;
   
   const startDate = `${event.date}T${event.start_time}:00`;
   const endDate = event.end_date && event.end_time 
@@ -92,21 +92,21 @@ const generateEventSchema = (event) => {
   return {
     '@context': 'https://schema.org',
     '@type': 'Event',
-    name: event.title,
-    description: event.description,
+    name: event.title || 'Event',
+    description: event.description || 'Local event',
     startDate: startDate,
     endDate: endDate,
     location: {
       '@type': 'Place',
-      name: event.address,
+      name: event.address || 'Location',
       address: {
         '@type': 'PostalAddress',
-        streetAddress: event.address
+        streetAddress: event.address || 'Address'
       },
       geo: {
         '@type': 'GeoCoordinates',
-        latitude: event.lat,
-        longitude: event.lng
+        latitude: event.lat || 0,
+        longitude: event.lng || 0
       }
     },
     eventStatus: 'https://schema.org/EventScheduled',
@@ -213,7 +213,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   <Calendar className="w-4 h-4 text-pin-blue" />
                 </div>
                 <span className="font-data">
-                  {event.date}
+                  {event.date || 'No date'}
                   {event.end_date && event.end_date !== event.date && ` - ${event.end_date}`}
                 </span>
               </div>
@@ -222,7 +222,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   <Clock className="w-4 h-4 text-fresh-teal" />
                 </div>
                 <span className="font-data">
-                  {event.start_time}
+                  {event.start_time || 'No time specified'}
                   {event.end_time && ` - ${event.end_time}`}
                 </span>
               </div>
@@ -230,7 +230,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
                   <MapPin className="w-4 h-4 text-vibrant-magenta" />
                 </div>
-                <span className="font-body">{event.address}</span>
+                <span className="font-body">{event.address || 'No address provided'}</span>
               </div>
               {event.distance !== undefined && (
                 <div className="text-sm text-white/70 font-data">
@@ -299,7 +299,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
 
 const renderEventList = (events, selectedEvent, handleEventClick, user, mapCenter) => (
   <div className="flex-1 overflow-y-auto p-4 space-y-3">
-    {events.map(event => (
+    {events.filter(event => event && event.id).map(event => (
       <div
         key={event.id}
         className={`
@@ -324,7 +324,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
           })()}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-white font-display font-medium truncate">{event.title}</h3>
+              <h3 className="text-white font-display font-medium truncate">{event.title || 'Untitled Event'}</h3>
               <span className="text-xs text-white/30 font-mono">#{event.id}</span>
               {user && event.created_by === user.id && (
                 <span className="text-xs text-spark-yellow font-data px-2 py-0.5 bg-spark-yellow/10 rounded-full border border-spark-yellow/20">
@@ -336,12 +336,12 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
               <div className="text-xs text-white/60 flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 <span>
-                  {event.date}
+                  {event.date || 'No date'}
                   {event.end_date && event.end_date !== event.date && ` - ${event.end_date}`}
                 </span>
                 <Clock className="w-3 h-3 ml-2" />
                 <span>
-                  {event.start_time}
+                  {event.start_time || 'No time'}
                   {event.end_time && ` - ${event.end_time}`}
                 </span>
               </div>
@@ -421,9 +421,22 @@ const EventMap = ({ mapsLoaded = false }) => {
       const data = await fetchWithTimeout(`${API_URL}/events`);
       
       if (Array.isArray(data)) {
+        // Filter out any null/undefined events and ensure required properties exist
+        const validEvents = data.filter(event => 
+          event && 
+          event.id && 
+          event.title && 
+          event.lat !== undefined && 
+          event.lng !== undefined
+        );
+
         // Calculate distances if we have a map center
-        const eventsWithDistance = mapCenter ? data.map(event => ({
+        const eventsWithDistance = mapCenter ? validEvents.map(event => ({
           ...event,
+          // Ensure all time fields have fallback values
+          start_time: event.start_time || '12:00',
+          end_time: event.end_time || null,
+          end_date: event.end_date || null,
           distance: calculateDistance(
             mapCenter.lat,
             mapCenter.lng,
@@ -431,7 +444,13 @@ const EventMap = ({ mapsLoaded = false }) => {
             event.lng
           )
         })).filter(event => event.distance <= proximityRange)
-          .sort((a, b) => a.distance - b.distance) : data;
+          .sort((a, b) => a.distance - b.distance) : validEvents.map(event => ({
+            ...event,
+            // Ensure all time fields have fallback values for non-proximity filtered events too
+            start_time: event.start_time || '12:00',
+            end_time: event.end_time || null,
+            end_date: event.end_date || null
+          }));
         
         setEvents(eventsWithDistance);
       } else {
@@ -488,6 +507,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   }, [events.length]); // Only depend on events.length, not the entire events array
 
   const filteredEvents = events.filter(event => {
+    if (!event || !event.id) return false;
     const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
     const dateMatch = isDateInRange(event.date, selectedDate);
     return categoryMatch && dateMatch;
@@ -1643,7 +1663,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       <Calendar className="w-4 h-4 text-pin-blue" />
                     </div>
                     <span className="font-data">
-                      {selectedEvent.date}
+                      {selectedEvent.date || 'No date'}
                       {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.date && ` - ${selectedEvent.end_date}`}
                     </span>
                   </div>
@@ -1652,7 +1672,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       <Clock className="w-4 h-4 text-fresh-teal" />
                     </div>
                     <span className="font-data">
-                      {selectedEvent.start_time}
+                      {selectedEvent.start_time || 'No time specified'}
                       {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
                     </span>
                   </div>
@@ -1660,7 +1680,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <div className="p-1.5 rounded-md bg-vibrant-magenta/10 flex-shrink-0 mt-0.5">
                       <MapPin className="w-4 h-4 text-vibrant-magenta" />
                     </div>
-                    <span className="font-body break-words leading-relaxed">{selectedEvent.address}</span>
+                    <span className="font-body break-words leading-relaxed">{selectedEvent.address || 'No address provided'}</span>
                   </div>
                   {selectedEvent.distance !== undefined && (
                     <div className="text-sm text-white/70 font-data ml-8">
