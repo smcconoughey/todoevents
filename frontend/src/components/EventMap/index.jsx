@@ -2677,6 +2677,9 @@ const EventMap = ({ mapsLoaded = false }) => {
                       📍 {selectedEvent.distance.toFixed(1)} miles away
                     </div>
                   )}
+                  
+                  {/* Interest and View Tracking - Mobile */}
+                  <EventInteractionComponents eventId={selectedEvent.id} />
                 </div>
                 {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
                   <div className="pt-3 space-y-2 border-t border-white/10">
