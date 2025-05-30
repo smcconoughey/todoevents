@@ -3162,3 +3162,98 @@ if __name__ == "__main__":
         port=port, 
         reload=not IS_PRODUCTION  # Only use reload in development
     )
+
+@app.get("/debug/schema")
+async def debug_schema():
+    """Debug endpoint to check database schema"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check events table columns
+            if IS_PRODUCTION and DB_URL:
+                c.execute("""
+                    SELECT column_name, data_type, is_nullable, column_default 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'events' 
+                    ORDER BY ordinal_position
+                """)
+                events_columns = c.fetchall()
+                
+                # Check if event_interests table exists
+                c.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_name = 'event_interests'
+                """)
+                interests_table = c.fetchone()
+                
+                # Check if event_views table exists
+                c.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_name = 'event_views'
+                """)
+                views_table = c.fetchone()
+                
+                # Get event_interests columns if table exists
+                interests_columns = []
+                if interests_table:
+                    c.execute("""
+                        SELECT column_name, data_type, is_nullable 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'event_interests' 
+                        ORDER BY ordinal_position
+                    """)
+                    interests_columns = c.fetchall()
+                
+                # Get event_views columns if table exists
+                views_columns = []
+                if views_table:
+                    c.execute("""
+                        SELECT column_name, data_type, is_nullable 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'event_views' 
+                        ORDER BY ordinal_position
+                    """)
+                    views_columns = c.fetchall()
+            else:
+                # SQLite
+                c.execute('PRAGMA table_info(events)')
+                events_columns = c.fetchall()
+                
+                c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='event_interests'")
+                interests_table = c.fetchone()
+                
+                c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='event_views'")
+                views_table = c.fetchone()
+                
+                interests_columns = []
+                views_columns = []
+                
+                if interests_table:
+                    c.execute('PRAGMA table_info(event_interests)')
+                    interests_columns = c.fetchall()
+                    
+                if views_table:
+                    c.execute('PRAGMA table_info(event_views)')
+                    views_columns = c.fetchall()
+            
+            return {
+                "database_type": "postgresql" if IS_PRODUCTION and DB_URL else "sqlite",
+                "events_table": {
+                    "columns": events_columns
+                },
+                "event_interests_table": {
+                    "exists": bool(interests_table),
+                    "columns": interests_columns
+                },
+                "event_views_table": {
+                    "exists": bool(views_table),
+                    "columns": views_columns
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Schema debug error: {str(e)}")
+        return {"error": str(e)}
