@@ -2512,7 +2512,15 @@ const EventMap = ({ mapsLoaded = false }) => {
             <div className="relative flex-1 transition-all duration-300">
               <MapContainer
                 ref={mapRef}
-                events={mapCenter ? filteredEvents : events}
+                events={
+                  filteredEvents.length > 0 || 
+                  selectedDate || 
+                  selectedTime !== 'all' || 
+                  !selectedCategory.includes('all') || 
+                  mapCenter
+                    ? filteredEvents
+                    : events
+                }
                 onEventClick={handleEventClick}
                 selectedCategory={selectedCategory}
                 mapCenter={mapCenter}
@@ -2554,7 +2562,11 @@ const EventMap = ({ mapsLoaded = false }) => {
         ) : (
           <div className="h-full overflow-y-auto bg-neutral-950">
             {renderEventList(
-              filteredEvents.length > 0 || selectedDate || !selectedCategory.includes('all') || mapCenter
+              filteredEvents.length > 0 || 
+              selectedDate || 
+              selectedTime !== 'all' || 
+              !selectedCategory.includes('all') || 
+              mapCenter
                 ? filteredEvents
                 : events,
               selectedEvent,
