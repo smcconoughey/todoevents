@@ -528,18 +528,22 @@ const EventMap = ({ mapsLoaded = false }) => {
     return distance;
   };
 
-  const handleCreateEvent = async (newEvent) => {
+  const handleCreateEvent = async (newEvent, skipApiCall = false) => {
     try {
-      // fetchWithTimeout already returns parsed JSON data, not a Response object
-      await fetchWithTimeout(`${API_URL}/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(newEvent)
-      });
+      // If skipApiCall is true, the form already made the API call
+      if (!skipApiCall) {
+        // fetchWithTimeout already returns parsed JSON data, not a Response object
+        await fetchWithTimeout(`${API_URL}/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(newEvent)
+        });
+      }
 
+      // Refresh events list to show the new event
       await fetchEvents();
       setIsCreateFormOpen(false);
       setSelectedLocation(null);
