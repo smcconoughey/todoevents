@@ -183,7 +183,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
   if (!event || typeof event !== 'object') {
     return (
       <div className="p-6 text-center">
-        <p className="text-white/70">Event not found</p>
+        <p className="text-themed-secondary">Event not found</p>
       </div>
     );
   }
@@ -281,14 +281,14 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
               <Icon className={`w-6 h-6 ${category.color}`} />
             </div>
             <div className="flex flex-col">
-              <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
+              <h2 className="text-xl font-display font-semibold text-themed-primary">{event.title}</h2>
               <span className="text-xs event-id-text font-mono">ID: {event.id}</span>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
+            className="h-8 w-8 text-themed-secondary hover:text-themed-primary hover:bg-white/10 rounded-full transition-all duration-200"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -297,19 +297,19 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
         {/* Tabs */}
         <div className="flex gap-2 border-b border-white/10 mb-2">
           <button
-            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-themed-primary' : 'text-themed-secondary hover:bg-white/5'}`}
             onClick={() => setActiveTab('details')}
           >Details</button>
           <button
-            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-themed-primary' : 'text-themed-secondary hover:bg-white/5'}`}
             onClick={() => setActiveTab('share')}
           >Share</button>
         </div>
         {activeTab === 'details' ? (
           <>
-            <p className="text-white/90 font-body leading-relaxed">{event.description}</p>
+            <p className="text-themed-primary font-body leading-relaxed">{event.description}</p>
             <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm text-white/70">
+              <div className="flex items-center gap-3 text-sm text-themed-secondary">
                 <div className="p-1.5 rounded-md bg-pin-blue/10">
                   <Calendar className="w-4 h-4 text-pin-blue" />
                 </div>
@@ -317,7 +317,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   {formatEventDate(event)}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-white/70">
+              <div className="flex items-center gap-3 text-sm text-themed-secondary">
                 <div className="p-1.5 rounded-md bg-fresh-teal/10">
                   <Clock className="w-4 h-4 text-fresh-teal" />
                 </div>
@@ -325,14 +325,14 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   {formatEventTime(event)}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-white/70">
+              <div className="flex items-center gap-3 text-sm text-themed-secondary">
                 <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
                   <MapPin className="w-4 h-4 text-vibrant-magenta" />
                 </div>
                 <span className="font-body">{event.address || 'No address provided'}</span>
               </div>
               {event.distance !== undefined && (
-                <div className="text-sm text-white/70 font-data">
+                <div className="text-sm text-themed-secondary font-data">
                   📍 {event.distance.toFixed(1)} miles away
                 </div>
               )}
@@ -344,7 +344,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
               <div className="pt-4 space-y-3 border-t border-white/10">
                 <Button
                   variant="ghost"
-                  className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
+                  className="w-full btn-secondary text-themed-primary font-medium transition-all duration-200 hover:scale-[1.02]"
                   onClick={onEdit}
                 >
                   Edit Event
@@ -387,8 +387,8 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 </Button>
               </div>
             </div>
-            {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-            <div className="text-xs text-white/40 mt-1 text-center">
+            {downloadStatus && <div className="text-xs text-themed-secondary mt-1 text-center">{downloadStatus}</div>}
+            <div className="text-xs text-themed-muted mt-1 text-center">
               <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
               <strong>Instagram:</strong> Download and upload the image to your story or feed!
             </div>
@@ -476,12 +476,12 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
                 {React.createElement(category.icon, {
                   className: `w-4 h-4 ${category.color}`
                 })}
-                <h3 className="font-semibold text-white text-sm truncate">
+                <h3 className="font-semibold text-themed-primary text-sm truncate">
                   {event.title || 'Untitled Event'}
                 </h3>
               </div>
               
-              <div className="space-y-1 text-xs text-white/70">
+              <div className="space-y-1 text-xs text-themed-secondary">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   <span>{formatEventDate(event)}</span>
@@ -506,7 +506,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
         </div>
       );
     }) : (
-      <div className="text-center py-8 text-white/50">
+      <div className="text-center py-8 text-themed-muted">
         <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
         <p>No events found in this area</p>
       </div>
@@ -1383,17 +1383,17 @@ const EventMap = ({ mapsLoaded = false }) => {
             variant="ghost"
             size="icon"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+            className="text-themed-primary hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-display font-bold text-white truncate px-2">todo-events</h1>
+          <h1 className="text-lg font-display font-bold text-themed-primary truncate px-2">todo-events</h1>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowWelcomePopup(true)}
-              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+              className="text-themed-primary hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
               title="Help & Tutorial"
             >
               <HelpCircle className="h-5 w-5" />
@@ -1403,7 +1403,7 @@ const EventMap = ({ mapsLoaded = false }) => {
               variant="ghost"
               size="icon"
               onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
-              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+              className="text-themed-primary hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
             >
               {activeView === 'map' ? <Filter className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
             </Button>
@@ -1422,12 +1422,12 @@ const EventMap = ({ mapsLoaded = false }) => {
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           {!isSidebarCollapsed && (
             <div className="flex items-center justify-between flex-1 mr-2">
-              <h2 className="text-xl font-display font-bold text-white">todo-events</h2>
+              <h2 className="text-xl font-display font-bold text-themed-primary">todo-events</h2>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  className="text-themed-secondary hover:text-themed-primary hover:bg-white/10 transition-all duration-200"
                   onClick={() => setShowWelcomePopup(true)}
                   title="Help & Tutorial"
                 >
@@ -1440,7 +1440,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        className="text-themed-secondary hover:text-themed-primary hover:bg-white/10 transition-all duration-200"
                         onClick={() => window.open('/admin', '_blank')}
                         title="Admin Dashboard"
                       >
@@ -1450,7 +1450,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                      className="text-themed-secondary hover:text-themed-primary hover:bg-white/10 transition-all duration-200"
                       onClick={logout}
                     >
                       <LogOut className="w-4 h-4" />
@@ -1460,7 +1460,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                    className="text-themed-secondary hover:text-themed-primary hover:bg-white/10 transition-all duration-200"
                     onClick={() => {
                       setLoginMode('login');
                       setShowLoginDialog(true);
@@ -1478,7 +1478,7 @@ const EventMap = ({ mapsLoaded = false }) => {
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/70 hover:text-white hover:bg-white/10 flex-shrink-0 transition-all duration-200"
+            className="text-themed-secondary hover:text-themed-primary hover:bg-white/10 flex-shrink-0 transition-all duration-200"
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           >
             {isSidebarCollapsed ? (
@@ -1498,7 +1498,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
-                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
+                      <label className="text-sm font-medium text-themed-primary">📍 Location</label>
                     </div>
                     <Button
                       variant="ghost"
@@ -1518,15 +1518,15 @@ const EventMap = ({ mapsLoaded = false }) => {
                   
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
+                    <label className="text-xs font-medium text-themed-muted">Search Radius</label>
                     <div className="grid grid-cols-4 gap-1">
                       {proximityOptions.map(option => (
                         <button
                           key={option.value}
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
                             proximityRange === option.value
-                              ? 'bg-pin-blue text-white border-pin-blue'
-                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                              ? 'bg-pin-blue text-themed-primary border-pin-blue'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-themed-secondary border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                           }`}
                           onClick={() => setProximityRange(option.value)}
                         >
@@ -1649,7 +1649,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Time Filter Tab */}
                   {activeFilterTab === 'time' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
-                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                      <div className="text-xs text-themed-muted mb-2 px-1">
                         🕐 Filter events by time of day
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -1693,8 +1693,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                               key={timeOption.value}
                               className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
                                 selectedTime === timeOption.value
-                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
-                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-themed-primary shadow-lg transform scale-[1.02]'
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-themed-secondary hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
                               }`}
                               onClick={() => setSelectedTime(timeOption.value)}
                             >
@@ -1703,12 +1703,12 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 <span className="text-xs font-medium">{timeOption.label}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${
-                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                selectedTime === timeOption.value ? 'text-themed-primary' : 'text-themed-muted'
                               }`}>
                                 {timeOption.description}
                               </div>
                               <div className={`text-xs mt-1 transition-colors duration-200 ${
-                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                selectedTime === timeOption.value ? 'text-themed-primary' : 'text-themed-muted'
                               }`}>
                                 {eventCount} events
                               </div>
@@ -1722,7 +1722,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
-                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                      <div className="text-xs text-themed-muted mb-2 px-1">
                         💡 Tap categories to toggle them on/off. You can select multiple!
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -1785,8 +1785,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                               key={category.id}
                               className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
                                 selectedCategory.includes(category.id)
-                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
-                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-themed-primary shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-themed-secondary hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
                               }`}
                               onClick={() => handleCategorySelect(category.id)}
                             >
@@ -1800,14 +1800,14 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 {React.createElement(category.icon, {
                                   className: `w-3 h-3 transition-colors duration-200 ${
                                     selectedCategory.includes(category.id) 
-                                      ? 'text-white dark:text-white light:text-black' 
+                                      ? 'text-themed-primary' 
                                       : category.color
                                   }`
                                 })}
                                 <span className="text-xs font-medium truncate">{category.name}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${
-                                selectedCategory.includes(category.id) ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                selectedCategory.includes(category.id) ? 'text-themed-primary' : 'text-themed-muted'
                               }`}>
                                 {eventCount} events
                               </div>
@@ -1823,11 +1823,11 @@ const EventMap = ({ mapsLoaded = false }) => {
                 {(!selectedCategory.includes('all') || selectedDate || selectedTime !== 'all' || proximityRange !== 15 || selectedLocation) && (
                   <div className="p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-white/70 dark:text-white/70 light:text-black/70">Active Filters</span>
+                      <span className="text-xs font-medium text-themed-secondary">Active Filters</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-xs text-white/50 dark:text-white/50 light:text-black/50 hover:text-white/70 dark:hover:text-white/70 light:hover:text-black/70 h-5 px-1"
+                        className="text-xs text-themed-muted hover:text-themed-secondary h-5 px-1"
                         onClick={() => {
                           setSelectedCategory(['all']);
                           setSelectedDate(null);
@@ -1841,27 +1841,27 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {!selectedCategory.includes('all') && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           {selectedCategory.length} categories selected
                         </span>
                       )}
                       {selectedDate && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           Date filter
                         </span>
                       )}
                       {selectedTime !== 'all' && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           {selectedTime.charAt(0).toUpperCase() + selectedTime.slice(1)} events
                         </span>
                       )}
                       {proximityRange !== 15 && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           {proximityRange}mi radius
                         </span>
                       )}
                       {selectedLocation && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           📍 Location set
                         </span>
                       )}
@@ -1870,7 +1870,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Event Count & Quick Actions */}
-                <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between text-xs text-themed-muted bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
                   <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
                 </div>
 
@@ -1901,12 +1901,12 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 {React.createElement(category.icon, {
                                   className: `w-4 h-4 ${category.color}`
                                 })}
-                                <h3 className="font-semibold text-white text-sm truncate">
+                                <h3 className="font-semibold text-themed-primary text-sm truncate">
                                   {event.title || 'Untitled Event'}
                                 </h3>
                               </div>
                               
-                              <div className="space-y-1 text-xs text-white/70">
+                              <div className="space-y-1 text-xs text-themed-secondary">
                                 <div className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3" />
                                   <span>{formatEventDate(event)}</span>
@@ -1931,9 +1931,9 @@ const EventMap = ({ mapsLoaded = false }) => {
                         </div>
                       );
                     }) : (
-                      <div className="text-center py-8 text-white/50">
+                      <div className="text-center py-8 text-themed-muted">
                         <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>No events found</p>
+                        <p>No events found in this area</p>
                       </div>
                     )}
                   </div>
@@ -1970,7 +1970,7 @@ const EventMap = ({ mapsLoaded = false }) => {
           <div className="flex flex-col h-full">
             <SheetHeader className="px-4 py-4 border-b border-white/10">
               <div className="flex items-center justify-between">
-                <SheetTitle className="text-white font-display font-bold">todo-events</SheetTitle>
+                <SheetTitle className="text-themed-primary font-display font-bold">todo-events</SheetTitle>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
@@ -2040,7 +2040,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
-                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
+                      <label className="text-sm font-medium text-themed-primary">📍 Location</label>
                     </div>
                     <Button
                       variant="ghost"
@@ -2060,15 +2060,15 @@ const EventMap = ({ mapsLoaded = false }) => {
                   
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
+                    <label className="text-xs font-medium text-themed-muted">Search Radius</label>
                     <div className="grid grid-cols-4 gap-1">
                       {proximityOptions.map(option => (
                         <button
                           key={option.value}
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
                             proximityRange === option.value
-                              ? 'bg-pin-blue text-white border-pin-blue'
-                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                              ? 'bg-pin-blue text-themed-primary border-pin-blue'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-themed-secondary border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
                           }`}
                           onClick={() => setProximityRange(option.value)}
                         >
@@ -2191,7 +2191,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Time Filter Tab */}
                   {activeFilterTab === 'time' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
-                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                      <div className="text-xs text-themed-muted mb-2 px-1">
                         🕐 Filter events by time of day
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
@@ -2235,8 +2235,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                               key={timeOption.value}
                               className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
                                 selectedTime === timeOption.value
-                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
-                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-themed-primary shadow-lg transform scale-[1.02]'
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-themed-secondary hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
                               }`}
                               onClick={() => setSelectedTime(timeOption.value)}
                             >
@@ -2245,12 +2245,12 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 <span className="text-xs font-medium">{timeOption.label}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${
-                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                selectedTime === timeOption.value ? 'text-themed-primary' : 'text-themed-muted'
                               }`}>
                                 {timeOption.description}
                               </div>
                               <div className={`text-xs mt-1 transition-colors duration-200 ${
-                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                selectedTime === timeOption.value ? 'text-themed-primary' : 'text-themed-muted'
                               }`}>
                                 {eventCount} events
                               </div>
@@ -2264,7 +2264,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
-                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                      <div className="text-xs text-themed-muted mb-2 px-1">
                         💡 Tap categories to toggle them on/off. You can select multiple!
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -2327,8 +2327,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                               key={category.id}
                               className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
                                 selectedCategory.includes(category.id)
-                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
-                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-themed-primary shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-themed-secondary hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
                               }`}
                               onClick={() => handleCategorySelect(category.id)}
                             >
@@ -2342,14 +2342,14 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 {React.createElement(category.icon, {
                                   className: `w-3 h-3 transition-colors duration-200 ${
                                     selectedCategory.includes(category.id) 
-                                      ? 'text-white dark:text-white light:text-black' 
+                                      ? 'text-themed-primary' 
                                       : category.color
                                   }`
                                 })}
                                 <span className="text-xs font-medium truncate">{category.name}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${
-                                selectedCategory.includes(category.id) ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                selectedCategory.includes(category.id) ? 'text-themed-primary' : 'text-themed-muted'
                               }`}>
                                 {eventCount} events
                               </div>
@@ -2383,27 +2383,27 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {!selectedCategory.includes('all') && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           {selectedCategory.length} categories selected
                         </span>
                       )}
                       {selectedDate && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           Date filter
                         </span>
                       )}
                       {selectedTime !== 'all' && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           {selectedTime.charAt(0).toUpperCase() + selectedTime.slice(1)} events
                         </span>
                       )}
                       {proximityRange !== 15 && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           {proximityRange}mi radius
                         </span>
                       )}
                       {selectedLocation && (
-                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-themed-primary rounded-full">
                           📍 Location set
                         </span>
                       )}
@@ -2412,7 +2412,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Event Count & Quick Actions */}
-                <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between text-xs text-themed-muted bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
                   <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
                 </div>
 
@@ -2443,12 +2443,12 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 {React.createElement(category.icon, {
                                   className: `w-4 h-4 ${category.color}`
                                 })}
-                                <h3 className="font-semibold text-white text-sm truncate">
+                                <h3 className="font-semibold text-themed-primary text-sm truncate">
                                   {event.title || 'Untitled Event'}
                                 </h3>
                               </div>
                               
-                              <div className="space-y-1 text-xs text-white/70">
+                              <div className="space-y-1 text-xs text-themed-secondary">
                                 <div className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3" />
                                   <span>{formatEventDate(event)}</span>
@@ -2473,9 +2473,9 @@ const EventMap = ({ mapsLoaded = false }) => {
                         </div>
                       );
                     }) : (
-                      <div className="text-center py-8 text-white/50">
+                      <div className="text-center py-8 text-themed-muted">
                         <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>No events found</p>
+                        <p>No events found in this area</p>
                       </div>
                     )}
                   </div>
@@ -2732,8 +2732,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </Button>
                   </div>
                 </div>
-                {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-                <div className="text-xs text-white/40 mt-1 text-center">
+                {downloadStatus && <div className="text-xs text-themed-secondary mt-1 text-center">{downloadStatus}</div>}
+                <div className="text-xs text-themed-muted mt-1 text-center">
                   <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
                   <strong>Instagram:</strong> Download and upload the image to your story or feed!
                 </div>

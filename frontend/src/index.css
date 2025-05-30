@@ -887,9 +887,12 @@ body {
 [data-theme='light'] .category-icon-sports { color: #059669 !important; }
 [data-theme='light'] .category-icon-community { color: #D97706 !important; }
 
-/* Light mode specific text overrides for better visibility */
+/* Light mode specific text overrides for better visibility with higher specificity */
 [data-theme='light'] .text-white,
+[data-theme='light'] .text-white\/90,
+[data-theme='light'] .text-white\/80,
 [data-theme='light'] .text-white\/70,
+[data-theme='light'] .text-white\/60,
 [data-theme='light'] .text-white\/50,
 [data-theme='light'] .text-white\/40,
 [data-theme='light'] .text-white\/30,
@@ -897,7 +900,19 @@ body {
   color: var(--text-primary) !important;
 }
 
+[data-theme='light'] .text-white\/90 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='light'] .text-white\/80 {
+  color: var(--text-primary) !important;
+}
+
 [data-theme='light'] .text-white\/70 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='light'] .text-white\/60 {
   color: var(--text-secondary) !important;
 }
 
@@ -909,6 +924,18 @@ body {
 [data-theme='light'] .text-white\/30,
 [data-theme='light'] .text-white\/20 {
   color: var(--text-muted) !important;
+}
+
+/* Additional overrides for specific component combinations */
+[data-theme='light'] button.text-white,
+[data-theme='light'] .text-white.hover\:text-white:hover,
+[data-theme='light'] .hover\:text-white:hover {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='light'] .text-white\/70.hover\:text-white:hover,
+[data-theme='light'] .hover\:text-white\/70:hover {
+  color: var(--text-secondary) !important;
 }
 
 /* Mobile-specific improvements */

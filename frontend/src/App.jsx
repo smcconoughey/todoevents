@@ -4,114 +4,122 @@ import { ThemeProvider } from './components/ThemeContext';
 import EventMap from './components/EventMap';
 import WelcomePopup from './components/WelcomePopup';
 import { initGoogleMaps } from './googleMapsLoader';
+import { GoogleMapsProvider } from './googleMapsLoader';
+import { testApiUrl } from './config';
+import './index.css';
 
 function App() {
   const [mapsLoaded, setMapsLoaded] = useState(false);
-  const [mapsError, setMapsError] = useState(null);
-  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const [shouldShowApp, setShouldShowApp] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(true);
 
+  // Test API connectivity first
   useEffect(() => {
-    // Get the API key and do some basic validation
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    
-    // Set a timeout to proceed with the app even if Maps doesn't load
-    const timeoutId = setTimeout(() => {
-      if (!mapsLoaded && !mapsError) {
-        console.warn("Google Maps loading timed out, proceeding with limited functionality");
-        setLoadingTimedOut(true);
-      }
-    }, 5000); // 5 second timeout
-    
-    if (!apiKey) {
-      console.error('Google Maps API key is missing from environment variables');
-      setMapsError('Missing API key');
-      clearTimeout(timeoutId);
-      return;
-    }
-    
-    if (apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
-      console.error('Google Maps API key has not been changed from the default placeholder');
-      setMapsError('Invalid API key');
-      clearTimeout(timeoutId);
-      return;
-    }
-    
-    console.log(`API key loaded (length: ${apiKey.length})`);
-    
-    // Initialize Google Maps
-    initGoogleMaps(apiKey)
-      .then(() => {
-        setMapsLoaded(true);
-        clearTimeout(timeoutId);
-      })
-      .catch(error => {
-        console.error('Failed to load Google Maps API:', error);
-        setMapsError('Failed to load Google Maps');
-        clearTimeout(timeoutId);
-      });
-      
-    return () => clearTimeout(timeoutId);
-  }, [mapsLoaded]);
+    const initializeApp = async () => {
+      try {
+        setIsConnecting(true);
+        
+        // Test API connectivity
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        console.log('Testing API connectivity:', baseUrl);
+        
+        const isConnected = await testApiUrl(baseUrl);
+        
+        if (!isConnected) {
+          throw new Error('Failed to connect to API server');
+        }
 
-  // We'll proceed even with Maps errors, but show a warning
-  const shouldShowApp = mapsLoaded || loadingTimedOut;
-  
+        console.log('✅ API connection successful');
+        
+        // Small delay for better UX
+        setTimeout(() => {
+          setShouldShowApp(true);
+          setIsConnecting(false);
+        }, 800);
+        
+      } catch (error) {
+        console.error('❌ API connection failed:', error);
+        setConnectionError(error.message);
+        setIsConnecting(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  if (isConnecting) {
+    return (
+      <ThemeProvider>
+        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+          <div className="text-center space-y-6">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full border-4 border-spark-yellow/20 border-t-spark-yellow animate-spin mx-auto"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-2 h-2 bg-spark-yellow rounded-full animate-pulse"></div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-display font-bold text-themed-primary">todo-events</h2>
+              <p className="text-themed-secondary">Connecting to server...</p>
+            </div>
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
+  if (connectionError) {
+    return (
+      <ThemeProvider>
+        <div className={`bg-vibrant-magenta/10 border-b border-vibrant-magenta/20 text-themed-primary p-3 text-sm ${shouldShowApp ? '' : 'h-full flex items-center justify-center'}`}>
+          <div className="max-w-4xl mx-auto space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-vibrant-magenta rounded-full animate-pulse"></div>
+              <span className="font-medium">Connection Error</span>
+            </div>
+            <p className="text-themed-secondary">
+              Cannot connect to the API server. Please check your connection or try again later.
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-pin-blue hover:bg-pin-blue-600 text-themed-primary px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105 shadow-lg"
+            >
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
+  if (!shouldShowApp) {
+    return (
+      <ThemeProvider>
+        <div className="flex items-center justify-center h-full bg-neutral-950 text-themed-primary">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 rounded-full border-4 border-spark-yellow/20 border-t-spark-yellow animate-spin mx-auto"></div>
+            <h2 className="text-2xl font-display font-bold text-themed-primary">todo-events</h2>
+            <p className="text-lg font-body text-themed-secondary">Find local events wherever you are.</p>
+            <div className="space-y-2">
+              <div className="w-48 mx-auto bg-neutral-800 rounded-full h-2">
+                <div className="bg-spark-yellow h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+              </div>
+              <p className="font-body text-themed-secondary">Initializing Google Maps API</p>
+            </div>
+          </div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <AuthProvider>
-        <div className="h-screen w-screen bg-neutral-950">
-          {mapsError && (
-            <div className={`bg-vibrant-magenta/10 border-b border-vibrant-magenta/20 text-white p-3 text-sm ${shouldShowApp ? '' : 'h-full flex items-center justify-center'}`}>
-              <div className={`p-6 bg-vibrant-magenta/20 border border-vibrant-magenta/30 rounded-xl backdrop-blur-sm ${shouldShowApp ? 'max-w-md mx-auto' : ''}`}>
-                <h2 className="text-lg font-display font-bold mb-2 text-vibrant-magenta">Google Maps Warning</h2>
-                <p className="mb-4 font-body leading-relaxed">
-                  {mapsError === 'Missing API key' ? 
-                    'Google Maps API key is missing. Map functionality will be limited.' :
-                  mapsError === 'Invalid API key' ?
-                    'Google Maps API key is invalid. Map functionality will be limited.' :
-                    'Failed to load Google Maps. Map functionality will be limited.'}
-                </p>
-                {!shouldShowApp && (
-                  <button 
-                    onClick={() => setLoadingTimedOut(true)}
-                    className="bg-pin-blue hover:bg-pin-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105 shadow-lg"
-                  >
-                    Continue Anyway
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {!shouldShowApp && !mapsError ? (
-            <div className="flex items-center justify-center h-full bg-neutral-950 text-white">
-              <div className="p-8 bg-neutral-900/95 border border-white/10 rounded-xl backdrop-blur-sm shadow-2xl max-w-md mx-auto text-center">
-                <div className="mb-6">
-                  <h1 className="text-3xl font-display font-bold text-spark-yellow mb-2">todo-events</h1>
-                  <p className="text-lg font-body text-white/80">Find local events wherever you are.</p>
-                </div>
-                
-                <div className="mb-6">
-                  <div className="w-12 h-12 border-4 border-spark-yellow border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <h2 className="text-xl font-display font-semibold mb-2">Loading Maps...</h2>
-                  <p className="font-body text-white/70">Initializing Google Maps API</p>
-                </div>
-                
-                <button 
-                  onClick={() => setLoadingTimedOut(true)}
-                  className="bg-pin-blue/20 hover:bg-pin-blue/30 text-pin-blue border border-pin-blue/40 hover:border-pin-blue/60 px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105"
-                >
-                  Skip Map Loading
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <EventMap mapsLoaded={mapsLoaded} />
-              <WelcomePopup />
-            </>
-          )}
-        </div>
+        <GoogleMapsProvider onLoad={() => setMapsLoaded(true)}>
+          <EventMap mapsLoaded={mapsLoaded} />
+          <WelcomePopup />
+        </GoogleMapsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

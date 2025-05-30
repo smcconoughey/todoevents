@@ -31,7 +31,7 @@ const InterestButton = ({
         ${sizeClasses[size]}
         ${interested 
           ? 'bg-vibrant-magenta/20 text-vibrant-magenta border border-vibrant-magenta/30 hover:bg-vibrant-magenta/30' 
-          : 'bg-white/5 text-white/70 border border-white/20 hover:bg-white/10 hover:text-white'
+          : 'bg-white/5 text-themed-secondary border border-white/20 hover:bg-white/10 hover:text-themed-primary'
         }
         ${loading ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}
         ${className}

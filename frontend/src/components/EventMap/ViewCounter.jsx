@@ -25,7 +25,7 @@ const ViewCounter = ({ viewCount, size = 'sm', className = '', alwaysShow = fals
   return (
     <div className={`
       inline-flex items-center gap-1.5 px-2 py-1 rounded-md
-      bg-white/5 border border-white/10 text-white/70
+      bg-white/5 border border-white/10 text-themed-secondary
       ${sizeClasses[size]} 
       ${className}
     `}>
