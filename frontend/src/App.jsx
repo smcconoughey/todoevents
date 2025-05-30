@@ -4,7 +4,6 @@ import { ThemeProvider } from './components/ThemeContext';
 import EventMap from './components/EventMap';
 import WelcomePopup from './components/WelcomePopup';
 import { initGoogleMaps } from './googleMapsLoader';
-import { GoogleMapsProvider } from './googleMapsLoader';
 import { testApiUrl } from './config';
 import './index.css';
 
@@ -31,6 +30,20 @@ function App() {
         }
 
         console.log('✅ API connection successful');
+        
+        // Initialize Google Maps
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+          try {
+            await initGoogleMaps(apiKey);
+            setMapsLoaded(true);
+            console.log('✅ Google Maps initialized successfully');
+          } catch (error) {
+            console.error('❌ Google Maps initialization failed:', error);
+          }
+        } else {
+          console.warn('⚠️ Google Maps API key not configured');
+        }
         
         // Small delay for better UX
         setTimeout(() => {
@@ -116,10 +129,8 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <GoogleMapsProvider onLoad={() => setMapsLoaded(true)}>
-          <EventMap mapsLoaded={mapsLoaded} />
-          <WelcomePopup />
-        </GoogleMapsProvider>
+        <EventMap mapsLoaded={mapsLoaded} />
+        <WelcomePopup />
       </AuthProvider>
     </ThemeProvider>
   );
