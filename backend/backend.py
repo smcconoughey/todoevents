@@ -404,7 +404,7 @@ def init_db():
                             id SERIAL PRIMARY KEY,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
-                            browser_fingerprint TEXT NOT NULL,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             UNIQUE(event_id, user_id, browser_fingerprint),
                             FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
@@ -416,67 +416,16 @@ def init_db():
                             id SERIAL PRIMARY KEY,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
-                            browser_fingerprint TEXT NOT NULL,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
                             viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             UNIQUE(event_id, user_id, browser_fingerprint),
                             FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
                             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
                         )''')
                 
-                # Fix existing tables if they have wrong schema
-                try:
-                    # Check if event_interests table has the correct schema
-                    c.execute("""
-                        SELECT column_name, is_nullable 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'event_interests' AND column_name = 'browser_fingerprint'
-                    """)
-                    result = c.fetchone()
-                    if result and result[1] == 'YES':  # Column allows NULL
-                        logger.info("Fixing event_interests table schema...")
-                        c.execute('DROP TABLE IF EXISTS event_interests CASCADE')
-                        c.execute('''CREATE TABLE event_interests (
-                                    id SERIAL PRIMARY KEY,
-                                    event_id INTEGER NOT NULL,
-                                    user_id INTEGER,
-                                    browser_fingerprint TEXT NOT NULL,
-                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                    UNIQUE(event_id, user_id, browser_fingerprint),
-                                    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
-                                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
-                                )''')
-                        logger.info("✅ Fixed event_interests table schema")
-                        
-                    # Check if event_views table has the correct schema
-                    c.execute("""
-                        SELECT column_name, is_nullable 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'event_views' AND column_name = 'browser_fingerprint'
-                    """)
-                    result = c.fetchone()
-                    if result and result[1] == 'YES':  # Column allows NULL
-                        logger.info("Fixing event_views table schema...")
-                        c.execute('DROP TABLE IF EXISTS event_views CASCADE')
-                        c.execute('''CREATE TABLE event_views (
-                                    id SERIAL PRIMARY KEY,
-                                    event_id INTEGER NOT NULL,
-                                    user_id INTEGER,
-                                    browser_fingerprint TEXT NOT NULL,
-                                    viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                    UNIQUE(event_id, user_id, browser_fingerprint),
-                                    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
-                                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
-                                )''')
-                        logger.info("✅ Fixed event_views table schema")
-                        
-                    conn.commit()
-                except Exception as schema_fix_error:
-                    logger.error(f"Schema fix error: {schema_fix_error}")
-                    # Don't fail the entire initialization
-                    try:
-                        conn.rollback()
-                    except:
-                        pass
+                # Ensure tables are committed
+                conn.commit()
+                logger.info("✅ Interest and view tracking tables created/verified")
             else:
                 # SQLite table creation (existing code)
                 c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -557,7 +506,7 @@ def init_db():
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
-                            browser_fingerprint TEXT NOT NULL,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             UNIQUE(event_id, user_id, browser_fingerprint),
                             FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
@@ -569,7 +518,7 @@ def init_db():
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
-                            browser_fingerprint TEXT NOT NULL,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
                             viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             UNIQUE(event_id, user_id, browser_fingerprint),
                             FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
@@ -592,7 +541,7 @@ def init_db():
                                     id SERIAL PRIMARY KEY,
                                     event_id INTEGER NOT NULL,
                                     user_id INTEGER,
-                                    browser_fingerprint TEXT NOT NULL,
+                                    browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                     UNIQUE(event_id, user_id, browser_fingerprint),
                                     FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
@@ -614,7 +563,7 @@ def init_db():
                                     id SERIAL PRIMARY KEY,
                                     event_id INTEGER NOT NULL,
                                     user_id INTEGER,
-                                    browser_fingerprint TEXT NOT NULL,
+                                    browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
                                     viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                     UNIQUE(event_id, user_id, browser_fingerprint),
                                     FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
