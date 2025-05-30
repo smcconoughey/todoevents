@@ -1227,6 +1227,8 @@ class EventResponse(EventBase):
     id: int
     created_by: int
     created_at: str
+    interest_count: Optional[int] = 0
+    view_count: Optional[int] = 0
 
     class Config:
         from_attributes = True
@@ -1795,8 +1797,12 @@ async def list_events(
                 # Start a read-only transaction
                 cursor.execute("BEGIN")
                 
-                # Build query with parameters
-                query = "SELECT * FROM events WHERE 1=1"
+                # Build query with parameters - make sure to handle NULL values for counters
+                query = """SELECT id, title, description, date, start_time, end_time, end_date, 
+                          category, address, lat, lng, recurring, frequency, created_by, created_at,
+                          COALESCE(interest_count, 0) as interest_count,
+                          COALESCE(view_count, 0) as view_count
+                          FROM events WHERE 1=1"""
                 params = []
                 
                 # Add filters if provided
@@ -1829,6 +1835,10 @@ async def list_events(
                         # Convert datetime to string format
                         if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                             event_dict['created_at'] = event_dict['created_at'].isoformat()
+                        
+                        # Ensure counters are integers (not None)
+                        event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
+                        event_dict['view_count'] = event_dict.get('view_count', 0) or 0
                         
                         result.append(event_dict)
                     except Exception as conversion_error:
@@ -1883,7 +1893,12 @@ async def read_event(event_id: int):
     try:
         with get_db() as conn:
             c = conn.cursor()
-            c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
+            # Use COALESCE to handle NULL values
+            c.execute(f"""SELECT id, title, description, date, start_time, end_time, end_date, 
+                         category, address, lat, lng, recurring, frequency, created_by, created_at,
+                         COALESCE(interest_count, 0) as interest_count,
+                         COALESCE(view_count, 0) as view_count
+                         FROM events WHERE id = {placeholder}""", (event_id,))
             event = c.fetchone()
             
             if not event:
@@ -1895,6 +1910,10 @@ async def read_event(event_id: int):
             # Convert datetime to string for serialization
             if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                 event_dict['created_at'] = event_dict['created_at'].isoformat()
+            
+            # Ensure counters are integers (not None)
+            event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
+            event_dict['view_count'] = event_dict.get('view_count', 0) or 0
             
             return event_dict
             
@@ -2899,7 +2918,7 @@ async def track_event_view(event_id: int, user_id: int = None, browser_fingerpri
                 
                 # Update view count
                 cursor.execute(
-                    f"UPDATE events SET view_count = view_count + 1 WHERE id = {placeholder}",
+                    f"UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = {placeholder}",
                     (event_id,)
                 )
                 
@@ -2967,7 +2986,7 @@ async def toggle_event_interest(
                 
                 # Update interest count
                 cursor.execute(
-                    f"UPDATE events SET interest_count = interest_count - 1 WHERE id = {placeholder}",
+                    f"UPDATE events SET interest_count = COALESCE(interest_count, 0) - 1 WHERE id = {placeholder}",
                     (event_id,)
                 )
                 
@@ -2982,15 +3001,15 @@ async def toggle_event_interest(
                 
                 # Update interest count
                 cursor.execute(
-                    f"UPDATE events SET interest_count = interest_count + 1 WHERE id = {placeholder}",
+                    f"UPDATE events SET interest_count = COALESCE(interest_count, 0) + 1 WHERE id = {placeholder}",
                     (event_id,)
                 )
                 
                 conn.commit()
                 action = "added"
             
-            # Get updated count
-            cursor.execute(f"SELECT interest_count FROM events WHERE id = {placeholder}", (event_id,))
+            # Get updated count - use COALESCE to handle NULL
+            cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             updated_count = cursor.fetchone()[0]
             
             return {
@@ -3027,7 +3046,7 @@ async def get_event_interest_status(
             cursor = conn.cursor()
             
             # Check if event exists and get interest count
-            cursor.execute(f"SELECT interest_count FROM events WHERE id = {placeholder}", (event_id,))
+            cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             event_data = cursor.fetchone()
             
             if not event_data:
@@ -3083,7 +3102,7 @@ async def track_event_view_endpoint(
             cursor = conn.cursor()
             
             # Check if event exists
-            cursor.execute(f"SELECT view_count FROM events WHERE id = {placeholder}", (event_id,))
+            cursor.execute(f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             event_data = cursor.fetchone()
             
             if not event_data:
@@ -3093,7 +3112,7 @@ async def track_event_view_endpoint(
             view_tracked = await track_event_view(event_id, user_id, browser_fingerprint)
             
             # Get updated count
-            cursor.execute(f"SELECT view_count FROM events WHERE id = {placeholder}", (event_id,))
+            cursor.execute(f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             updated_count = cursor.fetchone()[0]
             
             return {
