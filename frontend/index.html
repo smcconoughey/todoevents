@@ -202,6 +202,11 @@
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://maps.googleapis.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Preload critical Inter font weights for better performance -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"></noscript>
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://todo-events.com/" />
@@ -228,6 +233,23 @@
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Font loading script for better Inter font enforcement -->
+    <script>
+      // Ensure Inter font loads properly
+      if ('fonts' in document) {
+        Promise.all([
+          document.fonts.load('400 16px Inter'),
+          document.fonts.load('500 16px Inter'),
+          document.fonts.load('600 16px Inter')
+        ]).then(() => {
+          document.body.classList.add('fonts-loaded');
+        }).catch(() => {
+          console.log('Inter font failed to load, using fallback');
+        });
+      }
+    </script>
+    
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

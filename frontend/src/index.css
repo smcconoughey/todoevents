@@ -1,5 +1,12 @@
-/* Import Inter font for modern, professional typography */
+/* Preconnect to Google Fonts for better performance */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Ensure font loads properly with fallback */
+@supports (font-variation-settings: normal) {
+  * {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
+  }
+}
 
 @tailwind base;
 @tailwind components;
@@ -84,9 +91,21 @@
 
 /* Apply theme variables to Tailwind elements */
 @layer base {
+  /* Global font enforcement - ensure Inter loads everywhere */
+  *, *::before, *::after {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
+  }
+  
+  /* Ensure fonts render properly once loaded */
+  .fonts-loaded *, .fonts-loaded *::before, .fonts-loaded *::after {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'pnum' 1, 'tnum' 0, 'onum' 1, 'lnum' 0, 'dlig' 0;
+    font-optical-sizing: auto;
+  }
+  
   /* Typography - Modern, attractive fonts */
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
     @apply transition-colors duration-300;
     background-color: var(--bg-main) !important;
     color: var(--text-primary) !important;
@@ -95,14 +114,14 @@
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
     font-weight: 600;
     color: var(--text-primary) !important;
     letter-spacing: -0.02em;
   }
   
   .font-display {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
     font-weight: 600;
     letter-spacing: -0.02em;
   }
@@ -134,7 +153,7 @@
     font-weight: 500;
     border-radius: 8px !important;
     transition: all 0.2s ease;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     letter-spacing: -0.01em;
   }
   
@@ -151,7 +170,7 @@
     font-weight: 500;
     border-radius: 8px !important;
     transition: all 0.2s ease;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     letter-spacing: -0.01em;
   }
   
@@ -252,7 +271,7 @@
   
   /* Form element improvements - Warm and inviting */
   input, textarea, select, button {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     transition: all 0.2s ease;
     border-radius: 8px !important;
     font-weight: 400;
