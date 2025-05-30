@@ -1439,9 +1439,12 @@ const EventMap = ({ mapsLoaded = false }) => {
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-4">
                 {/* Location Section - Compact */}
-                <div className="space-y-2">
+                <div className="space-y-2 p-3 bg-white/5 rounded-lg border border-white/10">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-white/70">Location</label>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
+                      <label className="text-sm font-medium text-white">📍 Location</label>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1501,13 +1504,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Filters Tab Interface */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                <div className="space-y-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
+                    <span className="text-sm font-medium text-white">🎯 Search Filters</span>
+                    <div className="text-xs text-white/50 bg-white/10 px-2 py-0.5 rounded-full ml-auto">
+                      💡 Combine for better results
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1 border border-white/20">
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'date' 
-                          ? 'bg-white/20 text-white' 
-                          : 'text-white/60 hover:text-white/80'
+                          ? 'bg-white/30 text-white shadow-sm' 
+                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
@@ -1516,8 +1527,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
-                          ? 'bg-white/20 text-white' 
-                          : 'text-white/60 hover:text-white/80'
+                          ? 'bg-white/30 text-white shadow-sm' 
+                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
@@ -1527,7 +1538,7 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Date Filter Tab */}
                   {activeFilterTab === 'date' && (
-                    <div className="space-y-2 animate-in fade-in duration-200">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
                       {/* Quick Date Presets */}
                       <div className="grid grid-cols-2 gap-1">
                         {[
@@ -1572,35 +1583,84 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
-                    <div className="space-y-2 animate-in fade-in duration-200">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
                       <div className="text-xs text-white/60 mb-2 px-1">
                         💡 Tap categories to toggle them on/off. You can select multiple!
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-1.5">
                         {categories.map(category => {
-                          const eventCount = filteredEvents.filter(event => 
-                            category.id === 'all' ? true : category.id === category.id
-                          ).length;
+                          // Calculate filtered event count for this specific category
+                          let eventCount;
+                          if (category.id === 'all') {
+                            eventCount = filteredEvents.length;
+                          } else {
+                            // Count events that match this category AND other active filters
+                            eventCount = events.filter(event => {
+                              if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                              
+                              // Must match this specific category
+                              if (event.category !== category.id) return false;
+                              
+                              // Apply other filters (date, proximity) but not category filter
+                              const dateMatch = isDateInRange(event.date, selectedDate);
+                              if (!dateMatch) return false;
+                              
+                              // Proximity filter
+                              if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                                const distance = calculateDistance(
+                                  selectedLocation.lat,
+                                  selectedLocation.lng,
+                                  event.lat,
+                                  event.lng
+                                );
+                                if (distance > proximityRange) return false;
+                              }
+                              
+                              return true;
+                            }).length;
+                          }
+                          
+                          // Map category colors to border classes
+                          const getBorderColor = (categoryId) => {
+                            const colorMap = {
+                              'all': 'border-gray-400',
+                              'food-drink': 'border-vibrant-magenta',
+                              'music': 'border-pin-blue',
+                              'arts': 'border-fresh-teal',
+                              'sports': 'border-spark-yellow',
+                              'automotive': 'border-vibrant-magenta',
+                              'airshows': 'border-pin-blue',
+                              'vehicle-sports': 'border-spark-yellow',
+                              'community': 'border-fresh-teal',
+                              'religious': 'border-pin-blue',
+                              'education': 'border-fresh-teal',
+                              'veteran': 'border-pin-blue',
+                              'cookout': 'border-vibrant-magenta',
+                              'graduation': 'border-spark-yellow',
+                              'tech-education': 'border-fresh-teal'
+                            };
+                            return colorMap[categoryId] || 'border-gray-400';
+                          };
                           
                           return (
                             <button
                               key={category.id}
-                              className={`p-2 rounded-lg border-2 transition-all duration-200 text-left relative ${
+                              className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
                                 selectedCategory.includes(category.id)
-                                  ? `bg-white/20 border-${category.color.replace('text-', '')} text-white shadow-lg transform scale-[1.02]`
+                                  ? `bg-white/20 ${getBorderColor(category.id)} text-white shadow-lg transform scale-[1.02]`
                                   : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30'
                               }`}
                               onClick={() => handleCategorySelect(category.id)}
                             >
                               {/* Selected indicator */}
                               {selectedCategory.includes(category.id) && (
-                                <div className="absolute top-1 right-1">
-                                  <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
+                                <div className="absolute top-0.5 right-0.5">
+                                  <div className="w-1.5 h-1.5 bg-white rounded-full opacity-80"></div>
                                 </div>
                               )}
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-1 mb-0.5">
                                 {React.createElement(category.icon, {
-                                  className: `w-4 h-4 transition-colors duration-200 ${
+                                  className: `w-3 h-3 transition-colors duration-200 ${
                                     selectedCategory.includes(category.id) 
                                       ? 'text-white' 
                                       : category.color
@@ -1823,9 +1883,12 @@ const EventMap = ({ mapsLoaded = false }) => {
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-4">
                 {/* Location Section - Compact */}
-                <div className="space-y-2">
+                <div className="space-y-2 p-3 bg-white/5 rounded-lg border border-white/10">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-white/70">Location</label>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
+                      <label className="text-sm font-medium text-white">📍 Location</label>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1885,13 +1948,21 @@ const EventMap = ({ mapsLoaded = false }) => {
                 )}
 
                 {/* Filters Tab Interface */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                <div className="space-y-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
+                    <span className="text-sm font-medium text-white">🎯 Search Filters</span>
+                    <div className="text-xs text-white/50 bg-white/10 px-2 py-0.5 rounded-full ml-auto">
+                      💡 Combine for better results
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1 border border-white/20">
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'date' 
-                          ? 'bg-white/20 text-white' 
-                          : 'text-white/60 hover:text-white/80'
+                          ? 'bg-white/30 text-white shadow-sm' 
+                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
@@ -1900,8 +1971,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
-                          ? 'bg-white/20 text-white' 
-                          : 'text-white/60 hover:text-white/80'
+                          ? 'bg-white/30 text-white shadow-sm' 
+                          : 'text-white/60 hover:text-white/80 hover:bg-white/10'
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
@@ -1911,7 +1982,7 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Date Filter Tab */}
                   {activeFilterTab === 'date' && (
-                    <div className="space-y-2 animate-in fade-in duration-200">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
                       {/* Quick Date Presets */}
                       <div className="grid grid-cols-2 gap-1">
                         {[
@@ -1956,15 +2027,42 @@ const EventMap = ({ mapsLoaded = false }) => {
 
                   {/* Category Filter Tab */}
                   {activeFilterTab === 'category' && (
-                    <div className="space-y-2 animate-in fade-in duration-200">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 rounded-md border border-white/10">
                       <div className="text-xs text-white/60 mb-2 px-1">
                         💡 Tap categories to toggle them on/off. You can select multiple!
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-1.5">
                         {categories.map(category => {
-                          const eventCount = events.filter(event => 
-                            category.id === 'all' ? true : event.category === category.id
-                          ).length;
+                          // Calculate filtered event count for this specific category
+                          let eventCount;
+                          if (category.id === 'all') {
+                            eventCount = filteredEvents.length;
+                          } else {
+                            // Count events that match this category AND other active filters
+                            eventCount = events.filter(event => {
+                              if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                              
+                              // Must match this specific category
+                              if (event.category !== category.id) return false;
+                              
+                              // Apply other filters (date, proximity) but not category filter
+                              const dateMatch = isDateInRange(event.date, selectedDate);
+                              if (!dateMatch) return false;
+                              
+                              // Proximity filter
+                              if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                                const distance = calculateDistance(
+                                  selectedLocation.lat,
+                                  selectedLocation.lng,
+                                  event.lat,
+                                  event.lng
+                                );
+                                if (distance > proximityRange) return false;
+                              }
+                              
+                              return true;
+                            }).length;
+                          }
                           
                           // Map category colors to border classes
                           const getBorderColor = (categoryId) => {
@@ -1982,7 +2080,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                               'education': 'border-fresh-teal',
                               'veteran': 'border-pin-blue',
                               'cookout': 'border-vibrant-magenta',
-                              'graduation': 'border-spark-yellow'
+                              'graduation': 'border-spark-yellow',
+                              'tech-education': 'border-fresh-teal'
                             };
                             return colorMap[categoryId] || 'border-gray-400';
                           };
@@ -1990,7 +2089,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                           return (
                             <button
                               key={category.id}
-                              className={`p-2 rounded-lg border-2 transition-all duration-200 text-left relative ${
+                              className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
                                 selectedCategory.includes(category.id)
                                   ? `bg-white/20 ${getBorderColor(category.id)} text-white shadow-lg transform scale-[1.02]`
                                   : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30'
@@ -1999,13 +2098,13 @@ const EventMap = ({ mapsLoaded = false }) => {
                             >
                               {/* Selected indicator */}
                               {selectedCategory.includes(category.id) && (
-                                <div className="absolute top-1 right-1">
-                                  <div className="w-2 h-2 bg-white rounded-full opacity-80"></div>
+                                <div className="absolute top-0.5 right-0.5">
+                                  <div className="w-1.5 h-1.5 bg-white rounded-full opacity-80"></div>
                                 </div>
                               )}
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-1 mb-0.5">
                                 {React.createElement(category.icon, {
-                                  className: `w-4 h-4 transition-colors duration-200 ${
+                                  className: `w-3 h-3 transition-colors duration-200 ${
                                     selectedCategory.includes(category.id) 
                                       ? 'text-white' 
                                       : category.color
