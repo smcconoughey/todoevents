@@ -1,3 +1,6 @@
+/* Import Inter font for modern, professional typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,8 +19,8 @@
   --fresh-teal: #2FB8A6;        /* Support accent - -15% lightness */
   
   /* Neutrals - Dark Mode */
-  --bg-main: #121212;           /* Dark background */
-  --bg-card: rgba(30, 30, 30, 0.95);
+  --bg-main: #0f0f0f;           /* Dark background */
+  --bg-card: #1a1a1a;
   --bg-card-hover: rgba(45, 45, 45, 0.95);
   --bg-card-active: rgba(60, 60, 60, 0.95);
   --text-primary: #FFFFFF;      /* Pure white for maximum contrast */
@@ -81,27 +84,32 @@
 
 /* Apply theme variables to Tailwind elements */
 @layer base {
-  /* Typography - Warm, human fonts */
+  /* Typography - Modern, attractive fonts */
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     @apply transition-colors duration-300;
     background-color: var(--bg-main) !important;
     color: var(--text-primary) !important;
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 500;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-weight: 600;
     color: var(--text-primary) !important;
+    letter-spacing: -0.02em;
   }
   
   .font-display {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-weight: 500;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
   
   .font-mono, .font-data {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+    font-weight: 400;
   }
   
   /* Brand color utilities */
@@ -126,6 +134,8 @@
     font-weight: 500;
     border-radius: 8px !important;
     transition: all 0.2s ease;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.01em;
   }
   
   .btn-primary:hover {
@@ -141,6 +151,8 @@
     font-weight: 500;
     border-radius: 8px !important;
     transition: all 0.2s ease;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.01em;
   }
   
   .btn-secondary:hover {
@@ -240,10 +252,11 @@
   
   /* Form element improvements - Warm and inviting */
   input, textarea, select, button {
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     transition: all 0.2s ease;
     border-radius: 8px !important;
     font-weight: 400;
+    letter-spacing: -0.01em;
   }
   
   input:focus, textarea:focus, select:focus {
@@ -612,6 +625,8 @@ body {
   font-weight: 500;
   border-radius: 8px !important;
   transition: all 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .btn-yellow-themed:hover {
@@ -627,6 +642,8 @@ body {
   font-weight: 500;
   border-radius: 8px !important;
   transition: all 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .btn-blue-themed:hover {
