@@ -51,24 +51,42 @@ const CreateEventForm = ({
   // Reset form when initialEvent changes
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        title: initialEvent?.title || '',
-        description: initialEvent?.description || '',
-        date: initialEvent?.date || '',
-        start_time: initialEvent?.start_time || '',
-        end_time: initialEvent?.end_time || '',
-        end_date: initialEvent?.end_date || '',
-        category: initialEvent?.category || 'community',
-        address: initialEvent?.address || '',
-        location: initialEvent ? {
-          lat: initialEvent.lat,
-          lng: initialEvent.lng,
-          address: initialEvent.address
-        } : null
-      });
-      setError(null);
-      setConnectionError(false);
-      setIsSameDay(!initialEvent.end_date || initialEvent.end_date === initialEvent.date);
+      if (initialEvent && typeof initialEvent === 'object') {
+        setFormData({
+          title: initialEvent.title || '',
+          description: initialEvent.description || '',
+          date: initialEvent.date || '',
+          start_time: initialEvent.start_time || '',
+          end_time: initialEvent.end_time || '',
+          end_date: initialEvent.end_date || '',
+          category: initialEvent.category || '',
+          address: initialEvent.address || '',
+          location: initialEvent.lat != null && initialEvent.lng != null ? {
+            lat: initialEvent.lat,
+            lng: initialEvent.lng,
+            address: initialEvent.address
+          } : null
+        });
+        setError(null);
+        setConnectionError(false);
+        setIsSameDay(!initialEvent.end_date || initialEvent.end_date === initialEvent.date);
+      } else {
+        // Reset to default values when no initialEvent or initialEvent is null
+        setFormData({
+          title: '',
+          description: '',
+          date: '',
+          start_time: '',
+          end_time: '',
+          end_date: '',
+          category: '',
+          address: '',
+          location: null
+        });
+        setError(null);
+        setConnectionError(false);
+        setIsSameDay(true);
+      }
     }
   }, [isOpen, initialEvent]);
 

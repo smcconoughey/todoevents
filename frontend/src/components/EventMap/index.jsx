@@ -38,7 +38,8 @@ import {
   Filter,
   Search,
   Shield,
-  Navigation
+  Navigation,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -484,6 +485,8 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [downloadStatus, setDownloadStatus] = useState('');
   const [activeFilterTab, setActiveFilterTab] = useState('date');
+  const [error, setError] = useState(null);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
@@ -520,7 +523,6 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   const fetchEvents = async () => {
     try {
-      setIsLoading(true);
       setError(null);
 
       const response = await fetchWithTimeout(`${API_URL}/events`);
@@ -580,14 +582,12 @@ const EventMap = ({ mapsLoaded = false }) => {
       console.error('Error fetching events:', error);
       setError('Failed to load events. Please try again.');
       setEvents([]); // Set empty array as fallback
-    } finally {
-      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchEvents();
-  }, [mapCenter, proximityRange]);
+  }, []); // Only fetch events once on component mount
 
   // Handle URL parameters for event deep linking
   useEffect(() => {
@@ -629,10 +629,40 @@ const EventMap = ({ mapsLoaded = false }) => {
   }, [events.length]); // Only depend on events.length, not the entire events array
 
   const filteredEvents = events.filter(event => {
-    if (!event || !event.id) return false;
+    // Basic null/validity check
+    if (!event || !event.id || event.lat == null || event.lng == null) return false;
+    
+    // Category filter
     const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
+    if (!categoryMatch) return false;
+    
+    // Date filter
     const dateMatch = isDateInRange(event.date, selectedDate);
-    return categoryMatch && dateMatch;
+    if (!dateMatch) return false;
+    
+    // Proximity filter - only apply if we have a selected location
+    if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+      const distance = calculateDistance(
+        selectedLocation.lat,
+        selectedLocation.lng,
+        event.lat,
+        event.lng
+      );
+      
+      // Filter by proximity range
+      if (distance > proximityRange) return false;
+      
+      // Add distance to event for display purposes
+      event.distance = distance;
+    }
+    
+    return true;
+  }).sort((a, b) => {
+    // Sort by distance if available, otherwise by date
+    if (a.distance != null && b.distance != null) {
+      return a.distance - b.distance;
+    }
+    return new Date(a.date) - new Date(b.date);
   });
 
   const handleEventClick = (event) => {
@@ -1421,6 +1451,27 @@ const EventMap = ({ mapsLoaded = false }) => {
                   </div>
                 </div>
 
+                {/* Error Display */}
+                {error && (
+                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium">Error</p>
+                        <p className="text-red-200/80 mt-1">{error}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-200/80 hover:text-red-200 mt-2 h-6 px-2 text-xs"
+                          onClick={() => setError(null)}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Filters Tab Interface */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
@@ -1711,6 +1762,27 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </div>
                   </div>
                 </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium">Error</p>
+                        <p className="text-red-200/80 mt-1">{error}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-200/80 hover:text-red-200 mt-2 h-6 px-2 text-xs"
+                          onClick={() => setError(null)}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Filters Tab Interface */}
                 <div className="space-y-3">
