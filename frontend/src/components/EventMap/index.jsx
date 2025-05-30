@@ -272,7 +272,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
   }, [event]);
 
   return (
-    <div className="absolute right-4 top-4 w-96 bg-neutral-900/95 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden z-20 shadow-2xl">
+    <div className="absolute right-4 top-4 w-96 dialog-themed backdrop-blur-sm rounded-xl overflow-hidden z-20 shadow-2xl">
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1371,9 +1371,9 @@ const EventMap = ({ mapsLoaded = false }) => {
   ];
 
   return (
-    <div className="h-screen w-full relative bg-neutral-950">
+    <div className="h-screen w-full relative" style={{backgroundColor: 'var(--bg-main)'}}>
       {/* Mobile Header */}
-      <div className="sm:hidden fixed top-0 left-0 right-0 z-30 bg-neutral-900/95 backdrop-blur-sm border-b border-white/10">
+      <div className="sm:hidden fixed top-0 left-0 right-0 z-30 dialog-themed backdrop-blur-sm border-b border-themed">
         <div className="flex items-center justify-between p-2 min-h-[2.5rem]">
           <Button
             variant="ghost"
@@ -1412,7 +1412,7 @@ const EventMap = ({ mapsLoaded = false }) => {
         fixed left-0 top-0 z-40 h-full
         transition-all duration-300 ease-in-out
         ${isSidebarCollapsed ? 'w-24' : 'w-96'}
-        bg-neutral-900/95 backdrop-blur-sm border-r border-white/10
+        dialog-themed backdrop-blur-sm border-r border-themed
         hidden sm:flex flex-col
       `}>
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -2560,7 +2560,7 @@ const EventMap = ({ mapsLoaded = false }) => {
             </div>
           </div>
         ) : (
-          <div className="h-full overflow-y-auto bg-neutral-950">
+          <div className="h-full overflow-y-auto" style={{backgroundColor: 'var(--bg-main)'}}>
             {renderEventList(
               filteredEvents.length > 0 || 
               selectedDate || 
@@ -2583,8 +2583,8 @@ const EventMap = ({ mapsLoaded = false }) => {
       {selectedEvent && (
         <div className={`
           fixed bottom-0 left-0 right-0 
-          bg-neutral-900/95 backdrop-blur-sm
-          border-t border-white/10 
+          dialog-themed backdrop-blur-sm
+          border-t border-themed
           rounded-t-lg z-40
           sm:hidden
           transform transition-transform duration-300
@@ -2765,7 +2765,7 @@ const EventMap = ({ mapsLoaded = false }) => {
         }}
       >
         <DialogContent 
-          className="bg-neutral-900/95 backdrop-blur-sm border-white/10 p-6"
+          className="dialog-themed backdrop-blur-sm p-6"
           aria-describedby="login-dialog-description"
         >
           <DialogHeader>

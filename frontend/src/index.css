@@ -1,10 +1,8 @@
-/* Import Google Fonts for the new brand typography */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap');
-
-/* Main application styles - critical for the application to render properly */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom CSS variables for theming */
 
 :root,
 .dark-mode {
@@ -216,7 +214,7 @@
   }
   
   .hover\:bg-white\/15:hover {
-    background-color: var(--bg-card-active) !important;
+    background-color: var(--bg-card-hover) !important;
   }
   
   .hover\:bg-neutral-700:hover {
@@ -225,431 +223,382 @@
   
   /* Border overrides */
   .border-white\/20 {
-    border-color: var(--border-color) !important;
+    border-color: var(--border-color-hover) !important;
   }
   
   .border-white\/10 {
     border-color: var(--border-color) !important;
   }
   
-  /* Force theme on inputs and form elements */
+  /* Form element improvements */
   input, textarea, select, button {
-    background-color: var(--bg-card) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
+    font-family: inherit;
     transition: all var(--transition-speed) ease-out;
+    border-radius: 0.375rem;
   }
   
   input:focus, textarea:focus, select:focus {
-    border-color: var(--pin-blue) !important;
-    box-shadow: 0 0 0 3px rgba(38, 132, 255, 0.1) !important;
+    outline: none;
+    ring-color: var(--pin-blue);
   }
   
   input::placeholder, textarea::placeholder {
-    color: var(--text-tertiary) !important;
+    color: var(--text-muted) !important;
   }
   
-  /* Placeholder override */
   .placeholder\:text-white\/50::placeholder {
-    color: var(--text-tertiary) !important;
-  }
-
-  /* Shadcn/ui color tokens updated for brand */
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
-
-    --primary: 45 97% 62%;         /* Adjusted yellow for better contrast */
-    --primary-foreground: 0 0% 10%;
-
-    --secondary: 217 100% 58%;     /* Pin Blue */
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-
-    --accent: 45 97% 62%;          /* Adjusted yellow for better contrast */
-    --accent-foreground: 0 0% 10%;
-
-    --destructive: 343 81% 60%;    /* Vibrant Magenta */
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 217 100% 58% / 0.2;
-    --input: 217 100% 58% / 0.2;
-    --ring: 45 97% 62%;
-
-    --radius: 0.75rem;
-  }
-
-  .dark {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 100%;
-
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 100%;
-
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 100%;
-
-    --primary: 54 100% 58%;        /* Spark Yellow - darker */
-    --primary-foreground: 0 0% 10%;
-
-    --secondary: 217 100% 63%;     /* Pin Blue - lighter */
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 85%;
-
-    --accent: 54 100% 58%;         /* Spark Yellow - darker */
-    --accent-foreground: 0 0% 10%;
-
-    --destructive: 343 81% 60%;    /* Vibrant Magenta - darker */
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 54 100% 58% / 0.2;
-    --input: 54 100% 58% / 0.2;
-    --ring: 54 100% 58%;
-  }
-
-  /* Core HTML element fixes */
-  html,
-  body,
-  #root {
-    @apply h-full;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    overflow: hidden;
-  }
-
-  /* Map container specific styles */
-  .map-container {
-    @apply h-[calc(100dvh-4rem)] sm:h-full w-full;
-    will-change: transform;
-  }
-
-  /* Google Maps specific fixes with brand colors */
-  .gm-style {
-    /* Map controls styling */
-    .gm-control-container {
-      filter: brightness(0.9);
-    }
-    
-    img:not([src*="svg"]) {
-      filter: brightness(0.8) contrast(1.1);
-    }
-  }
-
-  /* Light mode map adjustments */
-  .light-mode .gm-style .gm-control-container,
-  .light-mode .gm-style .gm-control-container * {
-    filter: brightness(1) !important;
-  }
-  
-  .light-mode .gm-style img:not([src*="svg"]),
-  .light-mode .gm-style img:not([src*="svg"]) * {
-    filter: brightness(1) contrast(1) !important;
-  }
-
-  /* Hide unwanted Google Maps controls */
-  .gm-fullscreen-control,
-  .gm-svpc,
-  .gm-control-container .gm-style-cc {
-    display: none !important;
-  }
-
-  /* Google Places Autocomplete styling with brand colors */
-  .pac-container {
-    background-color: var(--bg-card) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 0.75rem !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
-  }
-
-  .pac-item {
-    color: var(--text-primary) !important;
-    border-top: 1px solid var(--border-color) !important;
-    padding: 12px 16px !important;
-    
-    &:first-child { @apply border-t-0 !important; }
-    &:hover { 
-      background-color: var(--bg-card-hover) !important;
-      border-left: 3px solid var(--pin-blue) !important;
-    }
-  }
-
-  .pac-item-query {
-    color: var(--text-primary) !important;
-    font-weight: 500 !important;
-  }
-
-  .pac-matched {
-    color: var(--pin-blue) !important;
-    font-weight: 600 !important;
-  }
-
-  /* Mobile optimizations */
-  @media (max-width: 640px) {
-    body {
-      font-size: 13px;
-      line-height: 1.3;
-    }
-    
-    .map-container {
-      height: calc(100dvh - 2.5rem) !important;
-    }
-    
-    /* Improve text sizing on mobile */
-    h1 { font-size: 1.25rem; line-height: 1.2; }
-    h2 { font-size: 1.125rem; line-height: 1.2; }
-    h3 { font-size: 1rem; line-height: 1.2; }
-    
-    /* Better button sizing on mobile */
-    .btn-primary, .btn-secondary {
-      min-height: 40px;
-      padding: 10px 14px;
-      font-size: 14px;
-    }
-    
-    /* Dialog improvements for mobile */
-    [role="dialog"] {
-      max-width: calc(100vw - 1.5rem) !important;
-      max-height: calc(100vh - 1.5rem) !important;
-      margin: 0.75rem;
-      padding: 0.75rem !important;
-    }
-    
-    /* Mobile sheet improvements */
-    .mobile-sheet {
-      max-height: 80vh;
-    }
-    
-    /* Improve tap targets */
-    button, .clickable {
-      min-height: 40px;
-      min-width: 40px;
-    }
-    
-    /* Better text readability */
-    .text-xs { font-size: 0.75rem; }
-    .text-sm { font-size: 0.875rem; }
-    .text-base { font-size: 0.875rem; }
-    .text-lg { font-size: 1rem; }
-    .text-xl { font-size: 1.125rem; }
-    .text-2xl { font-size: 1.25rem; }
-    
-    /* Improved spacing - more compact */
-    .p-1 { padding: 0.125rem; }
-    .p-2 { padding: 0.375rem; }
-    .p-3 { padding: 0.5rem; }
-    .p-4 { padding: 0.75rem; }
-    .p-6 { padding: 1rem; }
-    
-    .m-1 { margin: 0.125rem; }
-    .m-2 { margin: 0.375rem; }
-    .m-3 { margin: 0.5rem; }
-    .m-4 { margin: 0.75rem; }
-    .m-6 { margin: 1rem; }
-    
-    .gap-1 { gap: 0.125rem; }
-    .gap-2 { gap: 0.375rem; }
-    .gap-3 { gap: 0.5rem; }
-    .gap-4 { gap: 0.75rem; }
-    .gap-6 { gap: 1rem; }
-    
-    .space-y-1 > * + * { margin-top: 0.125rem; }
-    .space-y-2 > * + * { margin-top: 0.375rem; }
-    .space-y-3 > * + * { margin-top: 0.5rem; }
-    .space-y-4 > * + * { margin-top: 0.75rem; }
-    .space-y-6 > * + * { margin-top: 1rem; }
-    
-    /* Better mobile event card sizing */
-    .event-card {
-      min-height: 100px;
-      padding: 0.75rem;
-    }
-    
-    /* Mobile navigation improvements */
-    .mobile-nav {
-      padding: 0.5rem 0.75rem;
-      min-height: 2.5rem;
-    }
-    
-    /* Form element improvements */
-    input, textarea, select {
-      min-height: 40px;
-      font-size: 16px; /* Prevents zoom on iOS */
-      padding: 10px 12px;
-    }
-    
-    /* Mobile header height reduction */
-    .mobile-header {
-      min-height: 2.5rem;
-      padding: 0.5rem 0.75rem;
-    }
-    
-    /* Reduce icon sizes on mobile */
-    .icon-sm { width: 0.875rem; height: 0.875rem; }
-    .icon-md { width: 1rem; height: 1rem; }
-    .icon-lg { width: 1.25rem; height: 1.25rem; }
-    
-    /* More compact mobile list items */
-    .mobile-list-item {
-      padding: 0.5rem 0.75rem;
-      min-height: 2.5rem;
-    }
-    
-    /* Smaller mobile borders and rounded corners */
-    .border { border-width: 1px; }
-    .rounded-sm { border-radius: 0.25rem; }
-    .rounded { border-radius: 0.375rem; }
-    .rounded-md { border-radius: 0.375rem; }
-    .rounded-lg { border-radius: 0.5rem; }
-    .rounded-xl { border-radius: 0.75rem; }
-    
-    /* Mobile-specific font weights */
-    .font-light { font-weight: 400; }
-    .font-normal { font-weight: 400; }
-    .font-medium { font-weight: 500; }
-    .font-semibold { font-weight: 600; }
-    .font-bold { font-weight: 600; }
-  }
-  
-  /* Tablet optimizations */
-  @media (min-width: 641px) and (max-width: 1024px) {
-    .map-container {
-      height: calc(100vh - 2rem) !important;
-    }
-    
-    /* Better sidebar sizing on tablets */
-    .sidebar {
-      width: 320px;
-    }
-  }
-
-  /* Radix UI overrides */
-  [data-radix-popper-content-wrapper] {
-    z-index: 9999 !important;
-  }
-
-  /* Custom scrollbar with brand colors */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: var(--bg-card);
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--pin-blue);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--spark-yellow);
+    color: var(--text-muted) !important;
   }
 }
 
-/* Brand-specific animations */
+/* CSS Custom Properties applied to the document */
+:root {
+  /* Global theme settings */
+  color-scheme: dark light;
+  
+  /* Scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+/* Apply theme variables for dark mode by default */
+.dark {
+  color-scheme: dark;
+}
+
+/* Light mode color scheme */
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* Base body styles that work with both themes */
+html,
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Map container styling that works with both themes */
+.map-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Google Maps styling overrides */
+.gm-style {
+  /* Remove Google Maps UI in both themes */
+  .gm-control-container {
+    display: none !important;
+  }
+  
+  img:not([src*="svg"]) {
+    filter: grayscale(0%) contrast(100%) brightness(100%);
+  }
+}
+
+/* Light mode map adjustments */
+.light-mode .gm-style .gm-control-container,
+.light-mode .gm-style .gm-control-container * {
+  color: #333 !important;
+  background-color: #fff !important;
+}
+
+.light-mode .gm-style img:not([src*="svg"]),
+.light-mode .gm-style img:not([src*="svg"]) * {
+  filter: grayscale(0%) contrast(100%) brightness(100%);
+}
+
+/* Hide default Google Maps controls for cleaner look */
+.gm-fullscreen-control,
+.gm-bundled-control,
+.gm-bundled-control-on-bottom {
+  display: none !important;
+}
+
+/* Address autocomplete styling that works with both themes */
+.pac-container {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+}
+
+.pac-item {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  padding: 8px 12px !important;
+  
+  &:first-child { @apply border-t-0 !important; }
+  &:hover { 
+    background-color: var(--bg-card-hover) !important;
+    color: var(--text-primary) !important;
+  }
+}
+
+.pac-item-query {
+  color: var(--text-primary) !important;
+  font-weight: 600;
+}
+
+.pac-matched {
+  color: var(--pin-blue) !important;
+  font-weight: 700;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .map-container {
+    height: calc(100vh - 60px);
+  }
+  
+  h1 { font-size: 1.25rem; line-height: 1.2; }
+  h2 { font-size: 1.125rem; line-height: 1.2; }
+  h3 { font-size: 1rem; line-height: 1.2; }
+  
+  /* Better touch targets */
+  .btn-primary, .btn-secondary {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+  
+  /* Mobile modal and sheet improvements */
+  [role="dialog"] {
+    max-height: 90vh;
+    margin: 10px;
+    border-radius: 12px;
+  }
+  
+  .mobile-sheet {
+    border-radius: 16px 16px 0 0;
+  }
+  
+  /* Better mobile touch targets */
+  button, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Mobile typography scale */
+  .text-xs { font-size: 0.75rem; }
+  .text-sm { font-size: 0.875rem; }
+  .text-base { font-size: 0.875rem; }
+  .text-lg { font-size: 1rem; }
+  .text-xl { font-size: 1.125rem; }
+  .text-2xl { font-size: 1.25rem; }
+  
+  /* Mobile spacing scale */
+  .p-1 { padding: 0.125rem; }
+  .p-2 { padding: 0.375rem; }
+  .p-3 { padding: 0.5rem; }
+  .p-4 { padding: 0.75rem; }
+  .p-6 { padding: 1rem; }
+  
+  .m-1 { margin: 0.125rem; }
+  .m-2 { margin: 0.375rem; }
+  .m-3 { margin: 0.5rem; }
+  .m-4 { margin: 0.75rem; }
+  .m-6 { margin: 1rem; }
+  
+  .gap-1 { gap: 0.125rem; }
+  .gap-2 { gap: 0.375rem; }
+  .gap-3 { gap: 0.5rem; }
+  .gap-4 { gap: 0.75rem; }
+  .gap-6 { gap: 1rem; }
+  
+  .space-y-1 > * + * { margin-top: 0.125rem; }
+  .space-y-2 > * + * { margin-top: 0.375rem; }
+  .space-y-3 > * + * { margin-top: 0.5rem; }
+  .space-y-4 > * + * { margin-top: 0.75rem; }
+  .space-y-6 > * + * { margin-top: 1rem; }
+  
+  /* Mobile event card improvements */
+  .event-card {
+    padding: 12px;
+    margin: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .mobile-nav {
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+  
+  /* Mobile form elements */
+  input, textarea, select {
+    font-size: 16px;
+    padding: 12px;
+    border-radius: 8px;
+    min-height: 44px;
+  }
+  
+  /* Mobile header adjustments */
+  .mobile-header {
+    padding: 8px 16px;
+    min-height: 52px;
+  }
+  
+  /* Mobile icon sizing */
+  .icon-sm { width: 0.875rem; height: 0.875rem; }
+  .icon-md { width: 1rem; height: 1rem; }
+  .icon-lg { width: 1.25rem; height: 1.25rem; }
+  
+  /* Mobile list items */
+  .mobile-list-item {
+    padding: 12px 16px;
+    min-height: 56px;
+    border-radius: 8px;
+  }
+  
+  .border { border-width: 1px; }
+  .rounded-sm { border-radius: 0.25rem; }
+  .rounded { border-radius: 0.375rem; }
+  .rounded-md { border-radius: 0.375rem; }
+  .rounded-lg { border-radius: 0.5rem; }
+  .rounded-xl { border-radius: 0.75rem; }
+  
+  /* Mobile font weights */
+  .font-light { font-weight: 400; }
+  .font-normal { font-weight: 400; }
+  .font-medium { font-weight: 500; }
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 600; }
+}
+
+/* Tablet responsive adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .map-container {
+    height: calc(100vh - 80px);
+  }
+  
+  .sidebar {
+    width: 320px;
+    max-width: 35vw;
+  }
+}
+
+/* Radix UI popover adjustments for both themes */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+/* Custom scrollbar styling for both themes */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-color-hover);
+}
+
+/* Animation utilities */
 @layer utilities {
   .bounce-in {
-    animation: bounceIn 0.25s var(--bounce-ease);
+    animation: bounceIn 0.6s var(--bounce-ease);
   }
   
   .pulse-yellow {
-    animation: pulseYellow 2s infinite;
+    animation: pulseYellow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
   .will-change-transform {
     will-change: transform;
   }
-
+  
   .backdrop-blur-sm {
     backdrop-filter: blur(4px);
   }
-
+  
   .backdrop-blur-md {
     backdrop-filter: blur(12px);
   }
-
+  
   .backdrop-blur-lg {
     backdrop-filter: blur(16px);
   }
 }
 
-/* Brand keyframes */
+/* Keyframe animations */
 @keyframes bounceIn {
   0% {
-    transform: scale(0.3) translateY(20px);
+    transform: scale(0.3);
     opacity: 0;
   }
   50% {
-    transform: scale(1.05) translateY(-5px);
+    transform: scale(1.05);
+    opacity: 0.8;
   }
   70% {
-    transform: scale(0.9) translateY(2px);
+    transform: scale(0.9);
+    opacity: 0.9;
   }
   100% {
-    transform: scale(1) translateY(0);
+    transform: scale(1);
     opacity: 1;
   }
 }
 
 @keyframes pulseYellow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(245, 200, 66, 0.7);
+    opacity: 1;
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(245, 200, 66, 0);
+    opacity: 0.7;
   }
 }
 
-/* =================================================================
-   STANDARDIZED THEME-AWARE CLASSES - GUARANTEED CONTRAST
-   ================================================================= */
-
-/* Event ID text - guaranteed visibility in both themes */
+/* Event ID display styling */
 .event-id-text {
   color: var(--text-muted) !important;
+  font-weight: 500;
 }
 
-/* Theme-aware yellow text with proper contrast */
 .yellow-text-themed {
   color: var(--spark-yellow-text) !important;
 }
 
-/* Theme-aware yellow buttons with dark text on yellow background */
 .btn-yellow-themed {
   background-color: var(--spark-yellow) !important;
   color: var(--btn-yellow-text) !important;
   border: 2px solid var(--spark-yellow) !important;
   font-weight: 600;
-  transition: all var(--transition-speed) var(--bounce-ease);
+  transition: all var(--transition-speed) ease-out;
 }
 
 .btn-yellow-themed:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(245, 200, 66, 0.3);
-  background-color: var(--spark-yellow) !important;
-  opacity: 0.9;
+  background-color: var(--spark-yellow-muted) !important;
+  transform: translateY(-1px);
 }
 
-/* Blue button with guaranteed white text */
 .btn-blue-themed {
   background-color: var(--pin-blue) !important;
   color: var(--btn-blue-text) !important;
   border: 2px solid var(--pin-blue) !important;
-  font-weight: 600;
+  font-weight: 500;
   transition: all var(--transition-speed) ease-out;
 }
 
@@ -658,7 +607,6 @@
   transform: translateY(-1px);
 }
 
-/* Theme-aware surface backgrounds */
 .bg-themed-surface {
   background-color: var(--bg-card) !important;
 }
@@ -671,7 +619,6 @@
   background-color: var(--bg-card-active) !important;
 }
 
-/* Theme-aware border colors */
 .border-themed {
   border-color: var(--border-color) !important;
 }
@@ -680,7 +627,6 @@
   border-color: var(--border-color-hover) !important;
 }
 
-/* Standardized text colors with guaranteed contrast */
 .text-themed-primary {
   color: var(--text-primary) !important;
 }
@@ -697,9 +643,9 @@
   color: var(--text-muted) !important;
 }
 
-/* Active Filters specific styling with guaranteed visibility */
+/* Active filters styling */
 .active-filters-section {
-  background-color: var(--bg-card-hover) !important;
+  background-color: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
 }
 
@@ -852,3 +798,55 @@
 [data-theme='light'] .category-icon-arts { color: #DC2626 !important; }
 [data-theme='light'] .category-icon-sports { color: #059669 !important; }
 [data-theme='light'] .category-icon-community { color: #D97706 !important; }
+
+/* Light mode specific text overrides for better visibility */
+[data-theme='light'] .text-white,
+[data-theme='light'] .text-white\/70,
+[data-theme='light'] .text-white\/50,
+[data-theme='light'] .text-white\/40,
+[data-theme='light'] .text-white\/30,
+[data-theme='light'] .text-white\/20 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='light'] .text-white\/70 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='light'] .text-white\/50 {
+  color: var(--text-tertiary) !important;
+}
+
+[data-theme='light'] .text-white\/40,
+[data-theme='light'] .text-white\/30,
+[data-theme='light'] .text-white\/20 {
+  color: var(--text-muted) !important;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  /* Mobile bottom sheets and dialogs */
+  .fixed.bottom-0 {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Mobile headers */
+  .fixed.top-0 {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+  }
+}
+
+/* Theme-aware background overrides with higher specificity */
+.bg-neutral-950,
+.bg-neutral-900,
+.bg-neutral-800 {
+  background-color: var(--bg-card) !important;
+}
+
+/* Border color overrides */
+.border-white\/10,
+.border-white\/20 {
+  border-color: var(--border-color) !important;
+} 
