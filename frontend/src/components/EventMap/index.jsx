@@ -389,6 +389,42 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return distance;
 };
 
+// Helper function to format event date
+const formatEventDate = (event) => {
+  if (!event?.date) return 'Date not specified';
+  
+  try {
+    const startDate = new Date(event.date);
+    let dateStr = startDate.toLocaleDateString();
+    
+    if (event.end_date && event.end_date !== event.date) {
+      const endDate = new Date(event.end_date);
+      dateStr += ` - ${endDate.toLocaleDateString()}`;
+    }
+    
+    return dateStr;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return event.date || 'Date not specified';
+  }
+};
+
+// Helper function to format event time
+const formatEventTime = (event) => {
+  if (!event?.start_time) return 'Time not specified';
+  
+  try {
+    let timeStr = event.start_time;
+    if (event.end_time) {
+      timeStr += ` - ${event.end_time}`;
+    }
+    return timeStr;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return event.start_time || 'Time not specified';
+  }
+};
+
 const renderEventList = (events, selectedEvent, handleEventClick, user, mapCenter) => (
   <div className="space-y-2 p-4">
     {events && events.length > 0 ? events.filter(event => 
@@ -399,27 +435,6 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
       const distance = mapCenter ? calculateDistance(
         mapCenter.lat, mapCenter.lng, event.lat, event.lng
       ) : null;
-      
-      // Safe date formatting with null checks
-      const formatEventDate = (event) => {
-        if (!event.date) return 'Date not specified';
-        
-        try {
-          const startDate = new Date(event.date);
-          let dateStr = startDate.toLocaleDateString();
-          
-          // Only add end date if it exists and is different from start date
-          if (event.end_date && event.end_date !== event.date) {
-            const endDate = new Date(event.end_date);
-            dateStr += ` - ${endDate.toLocaleDateString()}`;
-          }
-          
-          return dateStr;
-        } catch (error) {
-          console.error('Error formatting date in list:', error);
-          return event.date || 'Date not specified';
-        }
-      };
       
       return (
         <div
@@ -449,8 +464,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  <span>{event.start_time || 'Time not specified'}</span>
-                  {event.end_time && <span> - {event.end_time}</span>}
+                  <span>{formatEventTime(event)}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
@@ -490,7 +504,6 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [searchValue, setSearchValue] = useState('');
   const [proximityRange, setProximityRange] = useState(15);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showDesktopList, setShowDesktopList] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeView, setActiveView] = useState('map');
   const [showLoginDialog, setShowLoginDialog] = useState(false);
@@ -524,10 +537,6 @@ const EventMap = ({ mapsLoaded = false }) => {
     if (mapRef.current) {
       mapRef.current.resetView();
     }
-  };
-
-  const toggleDesktopList = () => {
-    setShowDesktopList(!showDesktopList);
   };
 
   const handleCategorySelect = (categoryId) => {
@@ -1358,10 +1367,11 @@ const EventMap = ({ mapsLoaded = false }) => {
 
       {/* Desktop Sidebar */}
       <div className={`
-        hidden sm:flex fixed left-4 top-4 bottom-4 z-20
-        flex-col bg-neutral-900/95 backdrop-blur-sm rounded-xl
-        border border-white/10 transition-all duration-300 shadow-2xl
-        ${isSidebarCollapsed ? 'w-16' : 'w-80'}
+        fixed left-0 top-0 z-40 h-full
+        transition-all duration-300 ease-in-out
+        ${isSidebarCollapsed ? 'w-24' : 'w-96'}
+        bg-neutral-900/95 backdrop-blur-sm border-r border-white/10
+        hidden sm:flex flex-col
       `}>
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           {!isSidebarCollapsed && (
@@ -1658,15 +1668,70 @@ const EventMap = ({ mapsLoaded = false }) => {
                 {/* Event Count & Quick Actions */}
                 <div className="flex items-center justify-between text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">
                   <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-white/50 hover:text-white/70 h-6 px-2"
-                      onClick={toggleDesktopList}
-                    >
-                      {showDesktopList ? 'Hide List' : 'Show List'}
-                    </Button>
+                </div>
+
+                {/* Event List */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="space-y-2">
+                    {filteredEvents.length > 0 ? filteredEvents.filter(event => 
+                      event && typeof event === 'object' && event.title && event.date && event.lat != null && event.lng != null
+                    ).map(event => {
+                      const category = getCategory(event.category);
+                      const distance = mapCenter ? calculateDistance(
+                        mapCenter.lat, mapCenter.lng, event.lat, event.lng
+                      ) : null;
+                      
+                      return (
+                        <div
+                          key={event.id}
+                          className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
+                            selectedEvent?.id === event.id
+                              ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg'
+                              : 'border-white/10 bg-white/5 hover:bg-white/10'
+                          }`}
+                          onClick={() => handleEventClick(event)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {React.createElement(category.icon, {
+                                  className: `w-4 h-4 ${category.color}`
+                                })}
+                                <h3 className="font-semibold text-white text-sm truncate">
+                                  {event.title || 'Untitled Event'}
+                                </h3>
+                              </div>
+                              
+                              <div className="space-y-1 text-xs text-white/70">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{formatEventDate(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{formatEventTime(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="truncate">{event.address || 'Location not specified'}</span>
+                                </div>
+                                {distance !== null && (
+                                  <div className="flex items-center gap-1">
+                                    <Navigation className="w-3 h-3" />
+                                    <span>{distance.toFixed(1)} miles away</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <div className="text-center py-8 text-white/50">
+                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No events found</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2008,15 +2073,70 @@ const EventMap = ({ mapsLoaded = false }) => {
                 {/* Event Count & Quick Actions */}
                 <div className="flex items-center justify-between text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">
                   <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-white/50 hover:text-white/70 h-6 px-2"
-                      onClick={toggleDesktopList}
-                    >
-                      {showDesktopList ? 'Hide List' : 'Show List'}
-                    </Button>
+                </div>
+
+                {/* Event List */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="space-y-2">
+                    {filteredEvents.length > 0 ? filteredEvents.filter(event => 
+                      event && typeof event === 'object' && event.title && event.date && event.lat != null && event.lng != null
+                    ).map(event => {
+                      const category = getCategory(event.category);
+                      const distance = mapCenter ? calculateDistance(
+                        mapCenter.lat, mapCenter.lng, event.lat, event.lng
+                      ) : null;
+                      
+                      return (
+                        <div
+                          key={event.id}
+                          className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
+                            selectedEvent?.id === event.id
+                              ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg'
+                              : 'border-white/10 bg-white/5 hover:bg-white/10'
+                          }`}
+                          onClick={() => handleEventClick(event)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {React.createElement(category.icon, {
+                                  className: `w-4 h-4 ${category.color}`
+                                })}
+                                <h3 className="font-semibold text-white text-sm truncate">
+                                  {event.title || 'Untitled Event'}
+                                </h3>
+                              </div>
+                              
+                              <div className="space-y-1 text-xs text-white/70">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{formatEventDate(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{formatEventTime(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="truncate">{event.address || 'Location not specified'}</span>
+                                </div>
+                                {distance !== null && (
+                                  <div className="flex items-center gap-1">
+                                    <Navigation className="w-3 h-3" />
+                                    <span>{distance.toFixed(1)} miles away</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <div className="text-center py-8 text-white/50">
+                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No events found</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2045,14 +2165,14 @@ const EventMap = ({ mapsLoaded = false }) => {
       {/* Main Content Area */}
       <div className={`
   flex-1 h-[calc(100dvh-2.5rem)] sm:h-screen
-  ${isSidebarCollapsed ? 'sm:pl-24' : 'sm:pl-88'}
-  pt-10 sm:pt-4
+  ${isSidebarCollapsed ? 'sm:pl-24' : 'sm:pl-96'}
+  pt-10 sm:pt-0
   relative
 `}>
         {activeView === 'map' ? (
           <div className="absolute inset-0 flex">
             {/* Map Container */}
-            <div className={`relative flex-1 transition-all duration-300 ${showDesktopList ? 'sm:pr-96' : ''}`}>
+            <div className="relative flex-1 transition-all duration-300">
               <MapContainer
                 ref={mapRef}
                 events={mapCenter ? filteredEvents : events}
@@ -2065,7 +2185,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 onEventDelete={handleEventDelete}
                 defaultCenter={DEFAULT_CENTER}
                 defaultZoom={DEFAULT_ZOOM}
-                selectedDate={selectedDate}  // Add this line
+                selectedDate={selectedDate}
               />
 
               {/* Desktop Event Details Panel */}
@@ -2091,57 +2211,6 @@ const EventMap = ({ mapsLoaded = false }) => {
                   handleCopyLink={handleCopyLink}
                   handleFacebookShare={handleFacebookShare}
                 />
-              </div>
-            </div>
-
-            {/* Desktop Event List */}
-            <div className={`
-        hidden sm:block fixed right-4 top-4 bottom-4
-        transition-all duration-300 ease-in-out
-        ${showDesktopList ? 'w-96' : 'w-0'}
-      `}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleDesktopList}
-                className={`
-            absolute -left-10 top-4 
-            text-white/70 hover:text-white hover:bg-pin-blue/10
-            bg-neutral-900/95 backdrop-blur-sm
-            border border-white/10 rounded-lg
-            transition-all duration-300
-            ${showDesktopList ? 'rotate-180' : ''}
-          `}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              <div className={`
-          h-full w-full
-          bg-neutral-900/95 backdrop-blur-sm
-          border border-white/10 rounded-xl 
-          overflow-hidden shadow-2xl
-          transition-all duration-300
-          ${showDesktopList ? 'opacity-100' : 'opacity-0'}
-        `}>
-                <div className="h-full flex flex-col">
-                  <div className="p-4 border-b border-white/10">
-                    <h2 className="text-lg font-display font-semibold text-white">
-                      {mapCenter ? 'Events Nearby' : 'All Events'}
-                    </h2>
-                  </div>
-                  <div className="flex-1 overflow-y-auto">
-                    {renderEventList(
-                      filteredEvents.length > 0 || selectedDate || !selectedCategory.includes('all') || mapCenter
-                        ? filteredEvents
-                        : events,
-                      selectedEvent,
-                      handleEventClick,
-                      user,
-                      mapCenter
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
           </div>

@@ -278,8 +278,14 @@ const MapContainer = React.forwardRef(({
     }
 
     const validEvents = events.filter(event => {
-      // Category filter
-      const categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
+      // Category filter - handle both array and string formats
+      let categoryMatch;
+      if (Array.isArray(selectedCategory)) {
+        categoryMatch = selectedCategory.includes('all') || selectedCategory.includes(event.category);
+      } else {
+        // Fallback for old string format
+        categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
+      }
       
       // Date filter
       const dateMatch = isDateInRange(event.date, selectedDate);
