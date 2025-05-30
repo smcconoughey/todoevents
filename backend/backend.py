@@ -3259,50 +3259,43 @@ async def debug_schema():
 
 @app.post("/debug/create-tables")
 async def create_tracking_tables():
-    """Manually create tracking tables - DEBUG ONLY"""
+    """Debug endpoint to manually create tracking tables and fix counter values"""
     try:
         with get_db() as conn:
-            c = conn.cursor()
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
             
-            logger.info("🔧 Manually creating tracking tables...")
+            # Create event_interests table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS event_interests (
+                    id SERIAL PRIMARY KEY,
+                    event_id INTEGER NOT NULL,
+                    user_id INTEGER,
+                    browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(event_id, user_id, browser_fingerprint),
+                    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+                )
+            """)
             
-            # Drop existing tables if they exist (to start fresh)
-            c.execute('DROP TABLE IF EXISTS event_interests CASCADE')
-            c.execute('DROP TABLE IF EXISTS event_views CASCADE')
+            # Create event_views table if it doesn't exist  
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS event_views (
+                    id SERIAL PRIMARY KEY,
+                    event_id INTEGER NOT NULL,
+                    user_id INTEGER,
+                    browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(event_id, user_id, browser_fingerprint),
+                    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+                )
+            """)
             
-            # Create event_interests table
-            c.execute('''CREATE TABLE event_interests (
-                        id SERIAL PRIMARY KEY,
-                        event_id INTEGER NOT NULL,
-                        user_id INTEGER,
-                        browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE(event_id, user_id, browser_fingerprint),
-                        FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
-                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
-                    )''')
+            # Fix NULL counter values in existing events
+            cursor.execute("UPDATE events SET interest_count = 0 WHERE interest_count IS NULL")
+            cursor.execute("UPDATE events SET view_count = 0 WHERE view_count IS NULL")
             
-            # Create event_views table
-            c.execute('''CREATE TABLE event_views (
-                        id SERIAL PRIMARY KEY,
-                        event_id INTEGER NOT NULL,
-                        user_id INTEGER,
-                        browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
-                        viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE(event_id, user_id, browser_fingerprint),
-                        FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
-                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
-                    )''')
-            
-            # Fix existing events to have proper counter values
-            logger.info("🔄 Updating existing events with counter values...")
-            c.execute('UPDATE events SET interest_count = 0 WHERE interest_count IS NULL')
-            c.execute('UPDATE events SET view_count = 0 WHERE view_count IS NULL')
-            
-            # Commit changes
             conn.commit()
-            
-            logger.info("✅ Tracking tables created successfully")
             
             return {
                 "success": True,
@@ -3315,5 +3308,62 @@ async def create_tracking_tables():
         logger.error(f"Error creating tracking tables: {str(e)}")
         return {
             "success": False,
-            "error": str(e)
+            "error": str(e),
+            "message": "Failed to create tracking tables"
+        }
+
+@app.get("/debug/test-tracking/{event_id}")
+async def debug_test_tracking(event_id: int):
+    """Debug endpoint to test tracking functionality"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Test 1: Check if event exists
+            cursor.execute(f"SELECT id FROM events WHERE id = {placeholder}", (event_id,))
+            event_exists = cursor.fetchone()
+            
+            # Test 2: Check tracking tables
+            cursor.execute("SELECT COUNT(*) FROM event_interests")
+            interest_count = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM event_views")
+            view_count = cursor.fetchone()[0]
+            
+            # Test 3: Try simple insert (without constraints)
+            test_fingerprint = f"debug-test-{event_id}"
+            
+            # Clean up any existing test data first
+            cursor.execute(f"DELETE FROM event_interests WHERE browser_fingerprint = {placeholder}", (test_fingerprint,))
+            cursor.execute(f"DELETE FROM event_views WHERE browser_fingerprint = {placeholder}", (test_fingerprint,))
+            
+            # Test insert
+            cursor.execute(
+                f"INSERT INTO event_interests (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                (event_id, None, test_fingerprint)
+            )
+            
+            cursor.execute(
+                f"INSERT INTO event_views (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                (event_id, None, test_fingerprint)
+            )
+            
+            conn.commit()
+            
+            return {
+                "success": True,
+                "event_exists": event_exists is not None,
+                "event_id": event_id,
+                "interest_records": interest_count,
+                "view_records": view_count,
+                "insert_test": "passed"
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
         }
