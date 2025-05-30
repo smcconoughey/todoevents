@@ -56,6 +56,8 @@ import EventInteractionComponents from './EventInteractionComponents';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { createMarkerIcon } from './markerUtils';
+import SyncStatusIndicator from '../ui/SyncStatusIndicator';
 
 
 const normalizeDate = (date) => {
@@ -2801,6 +2803,9 @@ const EventMap = ({ mapsLoaded = false }) => {
           forceShow={true}
         />
       )}
+
+      {/* Sync Status Indicator */}
+      <SyncStatusIndicator />
     </div>
   );
 };

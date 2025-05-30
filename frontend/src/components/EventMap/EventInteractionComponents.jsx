@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useEventInteraction } from '../../hooks/useEventInteraction';
 import { InterestButton } from './InterestButton';
 import { ViewCounter } from './ViewCounter';
-import { fetchWithTimeout } from '../../utils/fetchWithTimeout';
 
 const EventInteractionComponents = ({ eventId }) => {
   const {
@@ -11,54 +10,31 @@ const EventInteractionComponents = ({ eventId }) => {
     viewCount,
     loading,
     toggleInterest,
-    refreshData
+    trackView,
+    isInitialized
   } = useEventInteraction(eventId);
   
-  const [isInitializing, setIsInitializing] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // Track view when component mounts (this will be batched)
   useEffect(() => {
-    if (eventId) {
-      // Track view and refresh data when component mounts
-      const trackViewAndRefresh = async () => {
-        setIsInitializing(true);
-        setHasError(false);
-        
+    if (eventId && isInitialized) {
+      const trackViewAsync = async () => {
         try {
-          // Track the view using mobile-optimized fetch
-          await fetchWithTimeout(`${import.meta.env.VITE_API_URL}/events/${eventId}/view`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(localStorage.getItem('token') ? {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              } : {})
-            },
-          }, 12000); // 12 second timeout for mobile
-
-          // Then refresh the data regardless of view tracking success
-          await refreshData();
+          await trackView();
+          setHasError(false);
         } catch (error) {
-          console.error('Error tracking view or refreshing data:', error);
+          console.error('Error tracking view:', error);
           setHasError(true);
-          
-          // Still try to refresh data even if view tracking fails
-          try {
-            await refreshData();
-          } catch (refreshError) {
-            console.error('Error refreshing data after view tracking failure:', refreshError);
-          }
-        } finally {
-          setIsInitializing(false);
         }
       };
 
-      trackViewAndRefresh();
+      trackViewAsync();
     }
-  }, [eventId, refreshData]);
+  }, [eventId, isInitialized, trackView]);
 
-  // Show loading state during initialization on mobile
-  if (isInitializing) {
+  // Show loading state during initialization
+  if (!isInitialized) {
     return (
       <div className="border-t border-white/10 pt-3">
         <div className="text-xs text-themed-muted font-medium">Engagement</div>
@@ -72,24 +48,14 @@ const EventInteractionComponents = ({ eventId }) => {
     );
   }
 
-  // Show retry option if there's an error
-  const handleRetry = async () => {
-    setHasError(false);
-    setIsInitializing(true);
-    
-    try {
-      await refreshData();
-    } catch (error) {
-      console.error('Error retrying data refresh:', error);
-      setHasError(true);
-    } finally {
-      setIsInitializing(false);
-    }
-  };
-
   return (
     <div className="border-t border-white/10 pt-3">
-      <div className="text-xs text-themed-muted font-medium">Engagement</div>
+      <div className="text-xs text-themed-muted font-medium">
+        Engagement
+        {hasError && (
+          <span className="ml-2 text-yellow-400 text-xs">⚠️ Offline</span>
+        )}
+      </div>
       <div className="flex items-center gap-4 mt-2">
         <InterestButton
           interested={interested}
@@ -105,17 +71,6 @@ const EventInteractionComponents = ({ eventId }) => {
           alwaysShow={true}
           className="text-themed-secondary"
         />
-        
-        {/* Show retry button on mobile if there's an error */}
-        {hasError && (
-          <button
-            onClick={handleRetry}
-            className="text-xs text-themed-muted hover:text-themed-secondary px-2 py-1 rounded border border-themed-muted hover:border-themed-secondary transition-colors"
-            aria-label="Retry loading engagement data"
-          >
-            Retry
-          </button>
-        )}
       </div>
     </div>
   );
