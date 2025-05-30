@@ -2953,16 +2953,6 @@ async def toggle_event_interest(
     Toggle interest in an event - simplified endpoint
     """
     try:
-        logger.info(f"Interest toggle endpoint called for event {event_id}")
-        
-        # Get user ID if authenticated with debug logging
-        logger.info(f"Current user object: {current_user}")
-        logger.info(f"Current user type: {type(current_user)}")
-        
-        user_id = current_user.get('id') if current_user else None
-        logger.info(f"Extracted user_id: {user_id}")
-        
-        # Generate browser fingerprint
         browser_fingerprint = generate_browser_fingerprint(request)
         logger.info(f"Generated fingerprint: {browser_fingerprint}")
         
@@ -3071,16 +3061,6 @@ async def get_event_interest_status(
     Get interest status for an event - simplified endpoint
     """
     try:
-        logger.info(f"Interest status endpoint called for event {event_id}")
-        
-        # Get user ID if authenticated with debug logging
-        logger.info(f"Current user object: {current_user}")
-        logger.info(f"Current user type: {type(current_user)}")
-        
-        user_id = current_user.get('id') if current_user else None
-        logger.info(f"Extracted user_id: {user_id}")
-        
-        # Generate browser fingerprint
         browser_fingerprint = generate_browser_fingerprint(request)
         logger.info(f"Generated fingerprint: {browser_fingerprint}")
         
@@ -3147,16 +3127,6 @@ async def track_event_view_endpoint(
     Track a view for an event - simplified endpoint
     """
     try:
-        logger.info(f"View tracking endpoint called for event {event_id}")
-        
-        # Get user ID if authenticated with debug logging
-        logger.info(f"Current user object: {current_user}")
-        logger.info(f"Current user type: {type(current_user)}")
-        
-        user_id = current_user.get('id') if current_user else None
-        logger.info(f"Extracted user_id: {user_id}")
-        
-        # Generate browser fingerprint
         browser_fingerprint = generate_browser_fingerprint(request)
         logger.info(f"Generated fingerprint: {browser_fingerprint}")
         
