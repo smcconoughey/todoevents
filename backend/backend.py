@@ -3218,3 +3218,58 @@ async def debug_schema():
     except Exception as e:
         logger.error(f"Schema debug error: {str(e)}")
         return {"error": str(e)}
+
+@app.post("/debug/create-tables")
+async def create_tracking_tables():
+    """Manually create tracking tables - DEBUG ONLY"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            logger.info("🔧 Manually creating tracking tables...")
+            
+            # Drop existing tables if they exist (to start fresh)
+            c.execute('DROP TABLE IF EXISTS event_interests CASCADE')
+            c.execute('DROP TABLE IF EXISTS event_views CASCADE')
+            
+            # Create event_interests table
+            c.execute('''CREATE TABLE event_interests (
+                        id SERIAL PRIMARY KEY,
+                        event_id INTEGER NOT NULL,
+                        user_id INTEGER,
+                        browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(event_id, user_id, browser_fingerprint),
+                        FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                    )''')
+            
+            # Create event_views table
+            c.execute('''CREATE TABLE event_views (
+                        id SERIAL PRIMARY KEY,
+                        event_id INTEGER NOT NULL,
+                        user_id INTEGER,
+                        browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                        viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(event_id, user_id, browser_fingerprint),
+                        FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                    )''')
+            
+            # Commit changes
+            conn.commit()
+            
+            logger.info("✅ Tracking tables created successfully")
+            
+            return {
+                "success": True,
+                "message": "Tracking tables created successfully",
+                "tables_created": ["event_interests", "event_views"]
+            }
+            
+    except Exception as e:
+        logger.error(f"Error creating tracking tables: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
