@@ -2888,70 +2888,60 @@ def generate_browser_fingerprint(request: Request) -> str:
     return fingerprint
 
 async def track_event_view(event_id: int, user_id: int = None, browser_fingerprint: str = None):
-    """Track a view for an event"""
+    """
+    Track a view for an event - simplified and robust implementation
+    """
+    if not browser_fingerprint:
+        browser_fingerprint = 'anonymous'
+    
     placeholder = get_placeholder()
     
     try:
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Check if this view already exists
+            # First, verify the event exists
+            cursor.execute(f"SELECT id FROM events WHERE id = {placeholder}", (event_id,))
+            if not cursor.fetchone():
+                logger.warning(f"Attempted to track view for non-existent event {event_id}")
+                return False
+            
+            # Check if view already exists (prevent duplicates)
             if user_id:
                 cursor.execute(
-                    f"SELECT id FROM event_views WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                    f"SELECT id FROM event_views WHERE event_id = {placeholder} AND user_id = {placeholder} LIMIT 1",
                     (event_id, user_id)
                 )
             else:
                 cursor.execute(
-                    f"SELECT id FROM event_views WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                    f"SELECT id FROM event_views WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder} LIMIT 1",
                     (event_id, browser_fingerprint)
                 )
             
             existing_view = cursor.fetchone()
             
-            if not existing_view:
-                # Insert new view with constraint handling
-                try:
-                    cursor.execute(
-                        f"INSERT INTO event_views (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                        (event_id, user_id, browser_fingerprint)
-                    )
-                    
-                    # Update view count
-                    cursor.execute(
-                        f"UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = {placeholder}",
-                        (event_id,)
-                    )
-                    
-                    conn.commit()
-                    return True
-                except Exception as insert_error:
-                    # Handle constraint violations gracefully
-                    logger.warning(f"View insert failed for event {event_id}, likely duplicate: {str(insert_error)}")
-                    # Check if view was created by another request
-                    if user_id:
-                        cursor.execute(
-                            f"SELECT id FROM event_views WHERE event_id = {placeholder} AND user_id = {placeholder}",
-                            (event_id, user_id)
-                        )
-                    else:
-                        cursor.execute(
-                            f"SELECT id FROM event_views WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
-                            (event_id, browser_fingerprint)
-                        )
-                    
-                    if cursor.fetchone():
-                        # View was created by another request
-                        conn.commit()  # Commit any pending transaction
-                        return False  # View already exists
-                    else:
-                        # Re-raise if it's not a constraint issue
-                        raise insert_error
-            return False
+            if existing_view:
+                # View already exists, don't track again
+                return False
+            
+            # Insert new view record
+            cursor.execute(
+                f"INSERT INTO event_views (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                (event_id, user_id, browser_fingerprint)
+            )
+            
+            # Update view count safely
+            cursor.execute(
+                f"UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = {placeholder}",
+                (event_id,)
+            )
+            
+            conn.commit()
+            logger.info(f"Successfully tracked view for event {event_id}")
+            return True
             
     except Exception as e:
-        logger.error(f"Error tracking view for event {event_id}: {type(e).__name__}: {str(e)}")
-        logger.error(f"Exception details: {repr(e)}")
+        logger.error(f"Error in track_event_view for event {event_id}: {type(e).__name__}: {str(e)}")
         return False
 
 # Interest and View API Endpoints
@@ -2961,22 +2951,24 @@ async def toggle_event_interest(
     request: Request,
     current_user: dict = Depends(get_current_user_optional_no_exception)
 ):
-    """Toggle interest in an event for logged-in or anonymous users"""
-    placeholder = get_placeholder()
-    
+    """
+    Toggle interest in an event - simplified endpoint
+    """
     try:
-        # Get user info and always generate browser fingerprint
-        user_id = current_user.get("id") if current_user else None
-        browser_fingerprint = generate_browser_fingerprint(request)
+        # Get user ID if authenticated
+        user_id = current_user.get('id') if current_user else None
         
-        # Ensure browser_fingerprint is never None
+        # Generate browser fingerprint
+        browser_fingerprint = generate_browser_fingerprint(request)
         if not browser_fingerprint:
-            browser_fingerprint = f"fallback-{request.client.host if request.client else 'unknown'}"
+            browser_fingerprint = 'anonymous'
+        
+        placeholder = get_placeholder()
         
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Check if event exists
+            # Verify event exists
             cursor.execute(f"SELECT id FROM events WHERE id = {placeholder}", (event_id,))
             if not cursor.fetchone():
                 raise HTTPException(status_code=404, detail="Event not found")
@@ -2984,12 +2976,12 @@ async def toggle_event_interest(
             # Check if interest already exists
             if user_id:
                 cursor.execute(
-                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder} LIMIT 1",
                     (event_id, user_id)
                 )
             else:
                 cursor.execute(
-                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder} LIMIT 1",
                     (event_id, browser_fingerprint)
                 )
             
@@ -3008,71 +3000,49 @@ async def toggle_event_interest(
                         (event_id, browser_fingerprint)
                     )
                 
-                # Update interest count with safety check
+                # Decrease interest count
                 cursor.execute(
                     f"UPDATE events SET interest_count = GREATEST(COALESCE(interest_count, 0) - 1, 0) WHERE id = {placeholder}",
                     (event_id,)
                 )
                 
-                conn.commit()
                 action = "removed"
+                interested = False
             else:
-                # Add interest - always include browser_fingerprint
-                try:
-                    cursor.execute(
-                        f"INSERT INTO event_interests (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                        (event_id, user_id, browser_fingerprint)
-                    )
-                except Exception as insert_error:
-                    # Handle constraint violations gracefully
-                    logger.warning(f"Interest insert failed for event {event_id}, likely duplicate: {str(insert_error)}")
-                    # Check if it now exists (race condition)
-                    if user_id:
-                        cursor.execute(
-                            f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder}",
-                            (event_id, user_id)
-                        )
-                    else:
-                        cursor.execute(
-                            f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
-                            (event_id, browser_fingerprint)
-                        )
-                    
-                    if cursor.fetchone():
-                        # Interest was created by another request, treat as existing
-                        action = "already_exists"
-                    else:
-                        # Re-raise if it's not a constraint issue
-                        raise insert_error
-                else:
-                    # Update interest count
-                    cursor.execute(
-                        f"UPDATE events SET interest_count = COALESCE(interest_count, 0) + 1 WHERE id = {placeholder}",
-                        (event_id,)
-                    )
-                    action = "added"
+                # Add interest
+                cursor.execute(
+                    f"INSERT INTO event_interests (event_id, user_id, browser_fingerprint) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                    (event_id, user_id, browser_fingerprint)
+                )
                 
-                conn.commit()
+                # Increase interest count
+                cursor.execute(
+                    f"UPDATE events SET interest_count = COALESCE(interest_count, 0) + 1 WHERE id = {placeholder}",
+                    (event_id,)
+                )
+                
+                action = "added"
+                interested = True
             
-            # Get updated count - use COALESCE to handle NULL
+            # Get updated count
             cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             result = cursor.fetchone()
-            if not result:
-                raise HTTPException(status_code=404, detail="Event not found after operation")
-            updated_count = result[0]
+            interest_count = result[0] if result else 0
+            
+            conn.commit()
             
             return {
+                "success": True,
                 "action": action,
-                "interested": action in ["added", "already_exists"],
-                "interest_count": updated_count,
+                "interested": interested,
+                "interest_count": interest_count,
                 "event_id": event_id
             }
-            
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error toggling interest for event {event_id}: {type(e).__name__}: {str(e)}")
-        logger.error(f"Exception details: {repr(e)}")
+        logger.error(f"Error in interest toggle endpoint for event {event_id}: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error updating interest")
 
 @app.get("/events/{event_id}/interest")
@@ -3081,55 +3051,57 @@ async def get_event_interest_status(
     request: Request,
     current_user: dict = Depends(get_current_user_optional_no_exception)
 ):
-    """Check if user is interested in an event"""
-    placeholder = get_placeholder()
-    
+    """
+    Get interest status for an event - simplified endpoint
+    """
     try:
-        user_id = current_user.get("id") if current_user else None
-        browser_fingerprint = generate_browser_fingerprint(request)
+        # Get user ID if authenticated
+        user_id = current_user.get('id') if current_user else None
         
-        # Ensure browser_fingerprint is never None
+        # Generate browser fingerprint
+        browser_fingerprint = generate_browser_fingerprint(request)
         if not browser_fingerprint:
-            browser_fingerprint = f"fallback-{request.client.host if request.client else 'unknown'}"
+            browser_fingerprint = 'anonymous'
+        
+        placeholder = get_placeholder()
         
         with get_db() as conn:
             cursor = conn.cursor()
             
             # Check if event exists and get interest count
             cursor.execute(f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
-            event_data = cursor.fetchone()
+            result = cursor.fetchone()
             
-            if not event_data:
+            if not result:
                 raise HTTPException(status_code=404, detail="Event not found")
             
-            interest_count = event_data[0] if event_data[0] is not None else 0
+            interest_count = result[0]
             
             # Check if user is interested
-            user_interested = False
             if user_id:
                 cursor.execute(
-                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder}",
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND user_id = {placeholder} LIMIT 1",
                     (event_id, user_id)
                 )
-                user_interested = cursor.fetchone() is not None
             else:
                 cursor.execute(
-                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder}",
+                    f"SELECT id FROM event_interests WHERE event_id = {placeholder} AND browser_fingerprint = {placeholder} LIMIT 1",
                     (event_id, browser_fingerprint)
                 )
-                user_interested = cursor.fetchone() is not None
+            
+            user_interested = cursor.fetchone() is not None
             
             return {
+                "success": True,
                 "interested": user_interested,
                 "interest_count": interest_count,
                 "event_id": event_id
             }
-            
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting interest status for event {event_id}: {type(e).__name__}: {str(e)}")
-        logger.error(f"Exception details: {repr(e)}")
+        logger.error(f"Error in interest status endpoint for event {event_id}: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error checking interest status")
 
 @app.post("/events/{event_id}/view")
@@ -3138,48 +3110,42 @@ async def track_event_view_endpoint(
     request: Request,
     current_user: dict = Depends(get_current_user_optional_no_exception)
 ):
-    """Track a view for an event"""
-    placeholder = get_placeholder()
-    
+    """
+    Track a view for an event - simplified endpoint
+    """
     try:
-        user_id = current_user.get("id") if current_user else None
+        # Get user ID if authenticated
+        user_id = current_user.get('id') if current_user else None
+        
+        # Generate browser fingerprint
         browser_fingerprint = generate_browser_fingerprint(request)
         
-        # Ensure browser_fingerprint is never None
-        if not browser_fingerprint:
-            browser_fingerprint = f"fallback-{request.client.host if request.client else 'unknown'}"
+        # Track the view
+        view_tracked = await track_event_view(event_id, user_id, browser_fingerprint)
         
+        # Get updated view count
+        placeholder = get_placeholder()
         with get_db() as conn:
             cursor = conn.cursor()
-            
-            # Check if event exists
-            cursor.execute(f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
-            event_data = cursor.fetchone()
-            
-            if not event_data:
-                raise HTTPException(status_code=404, detail="Event not found")
-            
-            # Track the view
-            view_tracked = await track_event_view(event_id, user_id, browser_fingerprint)
-            
-            # Get updated count with safety check
             cursor.execute(f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder}", (event_id,))
             result = cursor.fetchone()
+            
             if not result:
-                raise HTTPException(status_code=404, detail="Event not found after view tracking")
-            updated_count = result[0]
+                raise HTTPException(status_code=404, detail="Event not found")
             
-            return {
-                "view_tracked": view_tracked,
-                "view_count": updated_count,
-                "event_id": event_id
-            }
-            
+            view_count = result[0]
+        
+        return {
+            "success": True,
+            "view_tracked": view_tracked,
+            "view_count": view_count,
+            "event_id": event_id
+        }
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error tracking view for event {event_id}: {type(e).__name__}: {str(e)}")
-        logger.error(f"Exception details: {repr(e)}")
+        logger.error(f"Error in view tracking endpoint for event {event_id}: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error tracking view")
 
 # Main execution block
