@@ -82,14 +82,11 @@ def get_cors_origins():
 # Custom CORS middleware for flexible Render.com handling
 @app.middleware("http")
 async def cors_handler(request, call_next):
-    # Log the request for debugging
+    # Log the request for debugging (reduced logging for performance)
     origin = request.headers.get("origin")
-    logger.info(f"Request: {request.method} {request.url} from origin: {origin}")
     
     # Handle preflight requests
     if request.method == "OPTIONS":
-        logger.info(f"Handling preflight request from origin: {origin}")
-        
         # Determine allowed origin
         allowed_origin = "*"  # Default fallback
         
@@ -97,20 +94,14 @@ async def cors_handler(request, call_next):
             # Allow localhost and 127.0.0.1 for development
             if ("localhost" in origin or "127.0.0.1" in origin):
                 allowed_origin = origin
-                logger.info(f"Allowing localhost origin: {origin}")
             # Allow Render.com domains for production
             elif ".onrender.com" in origin:
                 allowed_origin = origin
-                logger.info(f"Allowing Render.com origin: {origin}")
             # Allow the actual domain
             elif "todo-events.com" in origin:
                 allowed_origin = origin
-                logger.info(f"Allowing main domain: {origin}")
             else:
-                logger.warning(f"Unrecognized origin, but allowing: {origin}")
                 allowed_origin = origin
-        
-        logger.info(f"OPTIONS response for origin {origin} with allowed_origin: {allowed_origin}")
         
         # Return proper preflight response
         return Response(
@@ -140,7 +131,6 @@ async def cors_handler(request, call_next):
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma"
-            logger.info(f"Added CORS headers for successful response to origin: {origin}")
         
         return response
         
@@ -167,7 +157,6 @@ async def cors_handler(request, call_next):
                 
             error_response.headers["Access-Control-Allow-Origin"] = allowed_origin
             error_response.headers["Access-Control-Allow-Credentials"] = "true"
-            logger.info(f"Added CORS headers for error response to origin: {origin}")
             
         return error_response
 
@@ -199,28 +188,26 @@ def get_db():
         from psycopg2.extras import RealDictCursor
         
         # Reduced retry count for faster failover
-        retry_count = 3
+        retry_count = 2  # Reduced from 3
         conn = None
         
         for attempt in range(retry_count):
             try:
                 # Optimized connection parameters for faster connections
-                logger.info(f"Connecting to PostgreSQL (attempt {attempt+1}/{retry_count})")
                 conn = psycopg2.connect(
                     DB_URL,
                     cursor_factory=RealDictCursor,
-                    connect_timeout=10,  # Reduced from 15
+                    connect_timeout=8,  # Reduced from 10
                     keepalives=1,
                     keepalives_idle=30,
-                    keepalives_interval=5,  # Reduced from 10
-                    keepalives_count=3,     # Reduced from 5
+                    keepalives_interval=5,
+                    keepalives_count=3,
                     # Add connection pooling parameters
                     application_name='todoevents'
                 )
                 
                 # Set autocommit for read operations to reduce lock time
                 conn.autocommit = True
-                logger.info("PostgreSQL connection successful")
                 break  # Connection successful, exit retry loop
                 
             except Exception as e:
@@ -232,12 +219,10 @@ def get_db():
                         pass
                 
                 error_msg = str(e)
-                logger.error(f"Database connection failed (attempt {attempt+1}/{retry_count}): {error_msg}")
                 
                 if attempt < retry_count - 1:
                     # Faster backoff for production
-                    wait_time = min(1 + attempt, 3)  # Cap at 3 seconds
-                    logger.info(f"Waiting {wait_time}s before retry...")
+                    wait_time = 1  # Reduced wait time
                     time.sleep(wait_time)
                 else:
                     logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
@@ -253,7 +238,6 @@ def get_db():
         finally:
             if conn:
                 conn.close()
-                logger.info("PostgreSQL connection closed")
     else:
         # Local development with SQLite - optimized
         conn = sqlite3.connect(DB_FILE, timeout=10)  # Add timeout
