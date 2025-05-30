@@ -10,15 +10,24 @@ const EventInteractionComponents = ({ eventId }) => {
     viewCount, 
     loading, 
     toggleInterest, 
-    trackView 
+    trackView,
+    refreshData
   } = useEventInteraction(eventId);
 
-  // Track view when component mounts
+  // Track view when component mounts and refresh data
   React.useEffect(() => {
     if (eventId) {
-      trackView();
+      const trackViewAndRefresh = async () => {
+        await trackView();
+        // Small delay to allow backend to process, then refresh counts
+        setTimeout(() => {
+          refreshData();
+        }, 500);
+      };
+      
+      trackViewAndRefresh();
     }
-  }, [eventId, trackView]);
+  }, [eventId, trackView, refreshData]);
 
   return (
     <div className="space-y-2 pt-3 border-t border-white/10">

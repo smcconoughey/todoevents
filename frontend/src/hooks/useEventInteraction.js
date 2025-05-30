@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -15,31 +15,47 @@ export const useEventInteraction = (eventId) => {
     view_tracked: false
   });
 
-  // Get stored interaction data from localStorage
-  const getStoredInteraction = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(`event_interaction_${eventId}`);
-      return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.error('Error reading stored interaction:', error);
-      return null;
-    }
-  }, [eventId]);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const initializationRef = useRef(false);
+  const viewTrackedRef = useRef(false);
 
-  // Store interaction data to localStorage
-  const storeInteraction = useCallback((data) => {
+  // Fetch event data (includes both interest and view counts)
+  const fetchEventData = useCallback(async () => {
+    if (!eventId) return null;
+    
     try {
-      localStorage.setItem(`event_interaction_${eventId}`, JSON.stringify({
-        ...data,
-        timestamp: Date.now()
+      const data = await fetchWithTimeout(`${API_URL}/events/${eventId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('token') ? {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          } : {})
+        }
+      }, 5000);
+
+      // Update both interest and view data from event data
+      setInterestData(prev => ({
+        ...prev,
+        interest_count: data.interest_count || 0
       }));
+
+      setViewData(prev => ({
+        ...prev,
+        view_count: data.view_count || 0
+      }));
+
+      return data;
     } catch (error) {
-      console.error('Error storing interaction:', error);
+      console.error('Error fetching event data:', error);
+      return null;
     }
   }, [eventId]);
 
   // Fetch current interest status
   const fetchInterestStatus = useCallback(async () => {
+    if (!eventId) return null;
+    
     try {
       const data = await fetchWithTimeout(`${API_URL}/events/${eventId}/interest`, {
         method: 'GET',
@@ -49,34 +65,31 @@ export const useEventInteraction = (eventId) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           } : {})
         }
-      });
-
-      setInterestData(prev => ({
-        ...prev,
-        interested: data.interested,
-        interest_count: data.interest_count
-      }));
-
-      // Update stored data
-      const stored = getStoredInteraction() || {};
-      storeInteraction({
-        ...stored,
-        interested: data.interested,
-        interest_count: data.interest_count
-      });
+      }, 5000); // 5 second timeout
 
       return data;
     } catch (error) {
       console.error('Error fetching interest status:', error);
       return null;
     }
-  }, [eventId, getStoredInteraction, storeInteraction]);
+  }, [eventId]);
 
-  // Toggle interest
+  // Toggle interest with optimistic updates
   const toggleInterest = useCallback(async () => {
-    if (interestData.loading) return;
+    if (interestData.loading || !isInitialized) return;
 
-    setInterestData(prev => ({ ...prev, loading: true }));
+    // Optimistic update
+    const newInterested = !interestData.interested;
+    const newCount = newInterested 
+      ? interestData.interest_count + 1 
+      : Math.max(0, interestData.interest_count - 1);
+
+    setInterestData(prev => ({ 
+      ...prev, 
+      loading: true,
+      interested: newInterested,
+      interest_count: newCount
+    }));
 
     try {
       const data = await fetchWithTimeout(`${API_URL}/events/${eventId}/interest`, {
@@ -87,8 +100,9 @@ export const useEventInteraction = (eventId) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           } : {})
         }
-      });
+      }, 5000);
 
+      // Update with actual server response
       setInterestData(prev => ({
         ...prev,
         interested: data.interested,
@@ -96,32 +110,25 @@ export const useEventInteraction = (eventId) => {
         loading: false
       }));
 
-      // Update stored data
-      const stored = getStoredInteraction() || {};
-      storeInteraction({
-        ...stored,
-        interested: data.interested,
-        interest_count: data.interest_count
-      });
-
       return data;
     } catch (error) {
       console.error('Error toggling interest:', error);
-      setInterestData(prev => ({ ...prev, loading: false }));
+      // Revert optimistic update on error
+      setInterestData(prev => ({
+        ...prev,
+        interested: interestData.interested,
+        interest_count: interestData.interest_count,
+        loading: false
+      }));
       return null;
     }
-  }, [eventId, interestData.loading, getStoredInteraction, storeInteraction]);
+  }, [eventId, interestData.loading, interestData.interested, interestData.interest_count, isInitialized]);
 
-  // Track view
+  // Track view (only once per session)
   const trackView = useCallback(async () => {
-    // Check if view was already tracked recently (within 1 hour)
-    const stored = getStoredInteraction();
-    const oneHour = 60 * 60 * 1000;
+    if (!eventId || viewTrackedRef.current) return;
     
-    if (stored && stored.view_tracked && stored.timestamp && 
-        (Date.now() - stored.timestamp) < oneHour) {
-      return; // Don't track again so soon
-    }
+    viewTrackedRef.current = true;
 
     try {
       const data = await fetchWithTimeout(`${API_URL}/events/${eventId}/view`, {
@@ -132,64 +139,121 @@ export const useEventInteraction = (eventId) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           } : {})
         }
-      });
+      }, 5000);
 
+      // Update view data with response
       setViewData({
         view_count: data.view_count,
         view_tracked: data.view_tracked
       });
 
-      // Update stored data
-      const storedData = getStoredInteraction() || {};
-      storeInteraction({
-        ...storedData,
-        view_tracked: true,
-        view_count: data.view_count
-      });
-
       return data;
     } catch (error) {
       console.error('Error tracking view:', error);
+      viewTrackedRef.current = false; // Reset on error so it can retry
       return null;
     }
-  }, [eventId, getStoredInteraction, storeInteraction]);
+  }, [eventId]);
 
-  // Initialize data on mount
-  useEffect(() => {
+  // Refresh all data (for manual refresh)
+  const refreshData = useCallback(async () => {
     if (!eventId) return;
-
-    // Load from cache first
-    const stored = getStoredInteraction();
-    if (stored) {
-      setInterestData(prev => ({
-        ...prev,
-        interested: stored.interested || false,
-        interest_count: stored.interest_count || 0
-      }));
+    
+    try {
+      // Fetch both interest status and event data for complete picture
+      const [interestStatusData, eventData] = await Promise.all([
+        fetchInterestStatus(),
+        fetchEventData()
+      ]);
       
-      setViewData({
-        view_count: stored.view_count || 0,
-        view_tracked: stored.view_tracked || false
-      });
-    }
+      if (interestStatusData) {
+        setInterestData(prev => ({
+          ...prev,
+          interested: interestStatusData.interested,
+          interest_count: interestStatusData.interest_count
+        }));
+      }
 
-    // Then fetch fresh data
-    fetchInterestStatus();
-  }, [eventId, fetchInterestStatus, getStoredInteraction]);
+      // Event data has the most accurate view and interest counts
+      if (eventData) {
+        setViewData(prev => ({
+          ...prev,
+          view_count: eventData.view_count || 0
+        }));
+        
+        setInterestData(prev => ({
+          ...prev,
+          interest_count: eventData.interest_count || prev.interest_count
+        }));
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  }, [eventId, fetchInterestStatus, fetchEventData]);
+
+  // Initialize data once on mount
+  useEffect(() => {
+    if (!eventId || initializationRef.current) return;
+    
+    initializationRef.current = true;
+
+    const initializeData = async () => {
+      try {
+        // Fetch both interest status and event data
+        const [interestStatusData, eventData] = await Promise.all([
+          fetchInterestStatus(),
+          fetchEventData()
+        ]);
+        
+        if (interestStatusData) {
+          setInterestData(prev => ({
+            ...prev,
+            interested: interestStatusData.interested,
+            interest_count: interestStatusData.interest_count
+          }));
+        }
+
+        // Event data provides accurate view counts
+        if (eventData) {
+          setViewData({
+            view_count: eventData.view_count || 0,
+            view_tracked: false
+          });
+          
+          // Also update interest count from event data if available
+          setInterestData(prev => ({
+            ...prev,
+            interest_count: eventData.interest_count || prev.interest_count
+          }));
+        }
+
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing event interaction data:', error);
+        setIsInitialized(true); // Still mark as initialized to allow user interaction
+      }
+    };
+
+    initializeData();
+  }, [eventId, fetchInterestStatus, fetchEventData]);
 
   return {
     // Interest data
     interested: interestData.interested,
     interestCount: interestData.interest_count,
-    interestLoading: interestData.loading,
+    loading: interestData.loading,
     
     // View data
     viewCount: viewData.view_count,
     viewTracked: viewData.view_tracked,
     
+    // State
+    isInitialized,
+    
     // Actions
     toggleInterest,
     trackView,
-    fetchInterestStatus
+    fetchInterestStatus,
+    refreshData
   };
 }; 
