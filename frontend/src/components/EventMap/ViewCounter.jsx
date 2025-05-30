@@ -37,4 +37,4 @@ const ViewCounter = ({ viewCount, size = 'sm', className = '', alwaysShow = fals
   );
 };
 
-export default ViewCounter; 
+export { ViewCounter }; 

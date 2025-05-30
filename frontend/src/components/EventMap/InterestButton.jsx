@@ -60,4 +60,4 @@ const InterestButton = ({
   );
 };
 
-export default InterestButton; 
+export { InterestButton }; 
