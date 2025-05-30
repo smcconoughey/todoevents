@@ -159,6 +159,24 @@ const injectEventSchema = (event) => {
   document.head.appendChild(script);
 };
 
+// Add this function before the EventDetailsPanel component
+const getTimePeriod = (timeString) => {
+  if (!timeString) return null;
+  
+  try {
+    // Extract hour from time string (assuming format like "09:00", "14:30", etc.)
+    const hour = parseInt(timeString.split(':')[0], 10);
+    
+    if (hour >= 5 && hour < 12) return 'morning';      // 5 AM - 11:59 AM
+    if (hour >= 12 && hour < 17) return 'afternoon';   // 12 PM - 4:59 PM
+    if (hour >= 17 && hour < 21) return 'evening';     // 5 PM - 8:59 PM
+    return 'night';                                     // 9 PM - 4:59 AM
+  } catch (error) {
+    console.warn('Error parsing time:', timeString, error);
+    return null;
+  }
+};
+
 const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, setActiveTab, shareCardRef, downloadStatus, handleDownload, handleCopyLink, handleFacebookShare }) => {
   // Add comprehensive null checks
   if (!event || typeof event !== 'object') {
@@ -501,6 +519,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [selectedCategory, setSelectedCategory] = useState(['all']);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedTime, setSelectedTime] = useState('all');
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [searchValue, setSearchValue] = useState('');
@@ -534,6 +553,7 @@ const EventMap = ({ mapsLoaded = false }) => {
     setSearchValue('');
     setProximityRange(15);
     setSelectedDate(null);
+    setSelectedTime('all');
     setSelectedCategory(['all']);
     setSelectedEvent(null);
     
@@ -696,6 +716,12 @@ const EventMap = ({ mapsLoaded = false }) => {
     // Date filter
     const dateMatch = isDateInRange(event.date, selectedDate);
     if (!dateMatch) return false;
+    
+    // Time filter
+    if (selectedTime !== 'all') {
+      const eventTimePeriod = getTimePeriod(event.start_time);
+      if (eventTimePeriod !== selectedTime) return false;
+    }
     
     // Proximity filter - only apply if we have a selected location
     if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
@@ -1547,6 +1573,16 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'time' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('time')}
+                    >
+                      🕐 Time
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
                           ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
                           : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
@@ -1599,6 +1635,79 @@ const EventMap = ({ mapsLoaded = false }) => {
                         onDateSelect={setSelectedDate}
                         onClear={() => setSelectedDate(null)}
                       />
+                    </div>
+                  )}
+
+                  {/* Time Filter Tab */}
+                  {activeFilterTab === 'time' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        🕐 Filter events by time of day
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
+                          { value: 'afternoon', label: 'Afternoon', icon: '☀️', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: '🌆', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: '🌙', description: '9 PM - 5 AM' }
+                        ].map(timeOption => {
+                          // Calculate event count for this time period
+                          const eventCount = events.filter(event => {
+                            if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                            
+                            // Apply other filters but not time filter
+                            const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
+                            if (!categoryMatch) return false;
+                            
+                            const dateMatch = isDateInRange(event.date, selectedDate);
+                            if (!dateMatch) return false;
+                            
+                            // Proximity filter
+                            if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                              const distance = calculateDistance(
+                                selectedLocation.lat,
+                                selectedLocation.lng,
+                                event.lat,
+                                event.lng
+                              );
+                              if (distance > proximityRange) return false;
+                            }
+                            
+                            // Time filter for this specific option
+                            if (timeOption.value === 'all') return true;
+                            const eventTimePeriod = getTimePeriod(event.start_time);
+                            return eventTimePeriod === timeOption.value;
+                          }).length;
+                          
+                          return (
+                            <button
+                              key={timeOption.value}
+                              className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
+                                selectedTime === timeOption.value
+                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                              }`}
+                              onClick={() => setSelectedTime(timeOption.value)}
+                            >
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-sm">{timeOption.icon}</span>
+                                <span className="text-xs font-medium">{timeOption.label}</span>
+                              </div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {timeOption.description}
+                              </div>
+                              <div className={`text-xs mt-1 transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -1703,7 +1812,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 </div>
 
                 {/* Active Filters Summary */}
-                {(!selectedCategory.includes('all') || selectedDate || proximityRange !== 15 || selectedLocation) && (
+                {(!selectedCategory.includes('all') || selectedDate || selectedTime !== 'all' || proximityRange !== 15 || selectedLocation) && (
                   <div className="p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-white/70 dark:text-white/70 light:text-black/70">Active Filters</span>
@@ -1714,6 +1823,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                         onClick={() => {
                           setSelectedCategory(['all']);
                           setSelectedDate(null);
+                          setSelectedTime('all');
                           setProximityRange(15);
                           if (!selectedLocation) setSearchValue('');
                         }}
@@ -1730,6 +1840,11 @@ const EventMap = ({ mapsLoaded = false }) => {
                       {selectedDate && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           Date filter
+                        </span>
+                      )}
+                      {selectedTime !== 'all' && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {selectedTime.charAt(0).toUpperCase() + selectedTime.slice(1)} events
                         </span>
                       )}
                       {proximityRange !== 15 && (
@@ -2000,6 +2115,16 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'time' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('time')}
+                    >
+                      🕐 Time
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                         activeFilterTab === 'category' 
                           ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
                           : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
@@ -2052,6 +2177,79 @@ const EventMap = ({ mapsLoaded = false }) => {
                         onDateSelect={setSelectedDate}
                         onClear={() => setSelectedDate(null)}
                       />
+                    </div>
+                  )}
+
+                  {/* Time Filter Tab */}
+                  {activeFilterTab === 'time' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        🕐 Filter events by time of day
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
+                          { value: 'afternoon', label: 'Afternoon', icon: '☀️', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: '🌆', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: '🌙', description: '9 PM - 5 AM' }
+                        ].map(timeOption => {
+                          // Calculate event count for this time period
+                          const eventCount = events.filter(event => {
+                            if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                            
+                            // Apply other filters but not time filter
+                            const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
+                            if (!categoryMatch) return false;
+                            
+                            const dateMatch = isDateInRange(event.date, selectedDate);
+                            if (!dateMatch) return false;
+                            
+                            // Proximity filter
+                            if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                              const distance = calculateDistance(
+                                selectedLocation.lat,
+                                selectedLocation.lng,
+                                event.lat,
+                                event.lng
+                              );
+                              if (distance > proximityRange) return false;
+                            }
+                            
+                            // Time filter for this specific option
+                            if (timeOption.value === 'all') return true;
+                            const eventTimePeriod = getTimePeriod(event.start_time);
+                            return eventTimePeriod === timeOption.value;
+                          }).length;
+                          
+                          return (
+                            <button
+                              key={timeOption.value}
+                              className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
+                                selectedTime === timeOption.value
+                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                              }`}
+                              onClick={() => setSelectedTime(timeOption.value)}
+                            >
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-sm">{timeOption.icon}</span>
+                                <span className="text-xs font-medium">{timeOption.label}</span>
+                              </div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {timeOption.description}
+                              </div>
+                              <div className={`text-xs mt-1 transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -2156,7 +2354,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 </div>
 
                 {/* Active Filters Summary */}
-                {(!selectedCategory.includes('all') || selectedDate || proximityRange !== 15 || selectedLocation) && (
+                {(!selectedCategory.includes('all') || selectedDate || selectedTime !== 'all' || proximityRange !== 15 || selectedLocation) && (
                   <div className="p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-white/70 dark:text-white/70 light:text-black/70">Active Filters</span>
@@ -2167,6 +2365,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                         onClick={() => {
                           setSelectedCategory(['all']);
                           setSelectedDate(null);
+                          setSelectedTime('all');
                           setProximityRange(15);
                           if (!selectedLocation) setSearchValue('');
                         }}
@@ -2183,6 +2382,11 @@ const EventMap = ({ mapsLoaded = false }) => {
                       {selectedDate && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
                           Date filter
+                        </span>
+                      )}
+                      {selectedTime !== 'all' && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {selectedTime.charAt(0).toUpperCase() + selectedTime.slice(1)} events
                         </span>
                       )}
                       {proximityRange !== 15 && (
@@ -2271,7 +2475,7 @@ const EventMap = ({ mapsLoaded = false }) => {
               </div>
             </div>
 
-            <div className="p-4 mt-auto border-t border-white/10">
+            <div className="p-4 border-t border-white/10">
               <Button
                 className="w-full btn-primary font-display font-semibold text-base py-2.5 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
                 onClick={() => {
