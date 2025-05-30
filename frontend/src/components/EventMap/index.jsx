@@ -37,7 +37,8 @@ import {
   Menu,
   Filter,
   Search,
-  Shield
+  Shield,
+  Navigation
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,43 +81,61 @@ const isDateInRange = (dateStr, range) => {
 
 // Add this function before the EventDetailsPanel component
 const generateEventSchema = (event) => {
-  if (!event || !event.date || !event.start_time) return null;
-  
-  const startDate = `${event.date}T${event.start_time}:00`;
-  const endDate = event.end_date && event.end_time 
-    ? `${event.end_date}T${event.end_time}:00`
-    : event.end_time 
-      ? `${event.date}T${event.end_time}:00`
-      : startDate;
+  // Add comprehensive null/undefined checks
+  if (!event || typeof event !== 'object') {
+    console.warn('generateEventSchema: Invalid event object', event);
+    return null;
+  }
 
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Event',
-    name: event.title || 'Event',
-    description: event.description || 'Local event',
-    startDate: startDate,
-    endDate: endDate,
-    location: {
-      '@type': 'Place',
-      name: event.address || 'Location',
-      address: {
-        '@type': 'PostalAddress',
-        streetAddress: event.address || 'Address'
-      },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: event.lat || 0,
-        longitude: event.lng || 0
-      }
-    },
-    eventStatus: 'https://schema.org/EventScheduled',
-    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    organizer: {
-      '@type': 'Organization',
-      name: 'todo-events',
-      url: 'https://todo-events.com'
+  // Ensure required fields exist
+  const requiredFields = ['title', 'description', 'date', 'start_time', 'address', 'lat', 'lng'];
+  for (const field of requiredFields) {
+    if (!event[field] && event[field] !== 0) { // Allow 0 for lat/lng
+      console.warn(`generateEventSchema: Missing required field '${field}'`, event);
+      return null;
     }
-  };
+  }
+
+  try {
+    const startDateTime = `${event.date}T${event.start_time}:00`;
+    
+    // Handle end date/time with proper null checks
+    const endDate = (event.end_date && event.end_time)
+      ? `${event.end_date}T${event.end_time}:00`
+      : (event.end_time ? `${event.date}T${event.end_time}:00` : null);
+
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "Event",
+      "name": event.title || 'Untitled Event',
+      "description": event.description || 'No description available',
+      "startDate": startDateTime,
+      "location": {
+        "@type": "Place",
+        "name": event.address || 'Location not specified',
+        "address": event.address || 'Address not available',
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": event.lat || 0,
+          "longitude": event.lng || 0
+        }
+      },
+      "organizer": {
+        "@type": "Organization",
+        "name": "TodoEvents"
+      }
+    };
+
+    // Only add endDate if we have valid end time information
+    if (endDate) {
+      schema.endDate = endDate;
+    }
+
+    return schema;
+  } catch (error) {
+    console.error('generateEventSchema: Error generating schema', error, event);
+    return null;
+  }
 };
 
 // Add this function to inject schema into the document head
@@ -138,8 +157,68 @@ const injectEventSchema = (event) => {
 };
 
 const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, setActiveTab, shareCardRef, downloadStatus, handleDownload, handleCopyLink, handleFacebookShare }) => {
+  // Add comprehensive null checks
+  if (!event || typeof event !== 'object') {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-white/70">Event not found</p>
+      </div>
+    );
+  }
 
-  if (!event) return null;
+  const formatEventDate = (event) => {
+    if (!event.date) return 'Date not specified';
+    
+    try {
+      const startDate = new Date(event.date);
+      const endDate = event.end_date ? new Date(event.end_date) : null;
+      
+      if (endDate && event.end_date !== event.date) {
+        return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+      }
+      return startDate.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return event.date || 'Date not specified';
+    }
+  };
+
+  const formatEventTime = (event) => {
+    if (!event.start_time) return 'Time not specified';
+    
+    try {
+      const startTime = event.start_time;
+      const endTime = event.end_time;
+      
+      if (endTime) {
+        return `${startTime} - ${endTime}`;
+      }
+      return startTime;
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return event.start_time || 'Time not specified';
+    }
+  };
+
+  const formatDateRange = (event) => {
+    if (!event.date) return 'Date not specified';
+    
+    try {
+      const startDate = new Date(event.date);
+      let dateRange = startDate.toLocaleDateString();
+      
+      // Only add end date if it exists and is different from start date
+      if (event.end_date && event.end_date !== event.date) {
+        const endDate = new Date(event.end_date);
+        dateRange += ` - ${endDate.toLocaleDateString()}`;
+      }
+      
+      return dateRange;
+    } catch (error) {
+      console.error('Error formatting date range:', error);
+      return event.date || 'Date not specified';
+    }
+  };
 
   const category = getCategory(event.category);
   const Icon = category.icon;
@@ -213,8 +292,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   <Calendar className="w-4 h-4 text-pin-blue" />
                 </div>
                 <span className="font-data">
-                  {event.date || 'No date'}
-                  {event.end_date && event.end_date !== event.date && ` - ${event.end_date}`}
+                  {formatEventDate(event)}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm text-white/70">
@@ -222,8 +300,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   <Clock className="w-4 h-4 text-fresh-teal" />
                 </div>
                 <span className="font-data">
-                  {event.start_time || 'No time specified'}
-                  {event.end_time && ` - ${event.end_time}`}
+                  {formatEventTime(event)}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm text-white/70">
@@ -298,64 +375,89 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
 };
 
 const renderEventList = (events, selectedEvent, handleEventClick, user, mapCenter) => (
-  <div className="flex-1 overflow-y-auto p-4 space-y-3">
-    {events.filter(event => event && event.id).map(event => (
-      <div
-        key={event.id}
-        className={`
-          w-full p-4 rounded-xl transition-all duration-200 cursor-pointer hover:scale-[1.02]
-          ${selectedEvent?.id === event.id
-            ? 'bg-spark-yellow/20 border-spark-yellow/40 shadow-lg'
-            : 'bg-white/5 hover:bg-white/10 border-white/10'
+  <div className="space-y-2 p-4">
+    {events && events.length > 0 ? events.filter(event => 
+      // Filter out null or invalid events
+      event && typeof event === 'object' && event.title && event.date && event.lat != null && event.lng != null
+    ).map(event => {
+      const category = getCategory(event.category);
+      const distance = mapCenter ? calculateDistance(
+        mapCenter.lat, mapCenter.lng, event.lat, event.lng
+      ) : null;
+      
+      // Safe date formatting with null checks
+      const formatEventDate = (event) => {
+        if (!event.date) return 'Date not specified';
+        
+        try {
+          const startDate = new Date(event.date);
+          let dateStr = startDate.toLocaleDateString();
+          
+          // Only add end date if it exists and is different from start date
+          if (event.end_date && event.end_date !== event.date) {
+            const endDate = new Date(event.end_date);
+            dateStr += ` - ${endDate.toLocaleDateString()}`;
           }
-          border backdrop-blur-sm
-        `}
-        onClick={() => handleEventClick(event)}
-      >
-        <div className="flex items-center gap-3">
-          {(() => {
-            const category = getCategory(event.category);
-            const Icon = category.icon;
-            return (
-              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                <Icon className={`w-5 h-5 ${category.color}`} />
+          
+          return dateStr;
+        } catch (error) {
+          console.error('Error formatting date in list:', error);
+          return event.date || 'Date not specified';
+        }
+      };
+      
+      return (
+        <div
+          key={event.id}
+          className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
+            selectedEvent?.id === event.id
+              ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg'
+              : 'border-white/10 bg-white/5 hover:bg-white/10'
+          }`}
+          onClick={() => handleEventClick(event)}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                {React.createElement(category.icon, {
+                  className: `w-4 h-4 ${category.color}`
+                })}
+                <h3 className="font-semibold text-white text-sm truncate">
+                  {event.title || 'Untitled Event'}
+                </h3>
               </div>
-            );
-          })()}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-white font-display font-medium truncate">{event.title || 'Untitled Event'}</h3>
-              <span className="text-xs text-white/30 font-mono">#{event.id}</span>
-              {user && event.created_by === user.id && (
-                <span className="text-xs text-spark-yellow font-data px-2 py-0.5 bg-spark-yellow/10 rounded-full border border-spark-yellow/20">
-                  Your event
-                </span>
-              )}
-            </div>
-            <div className="mt-2 flex items-center gap-2 text-sm text-white/60">
-              <div className="text-xs text-white/60 flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>
-                  {event.date || 'No date'}
-                  {event.end_date && event.end_date !== event.date && ` - ${event.end_date}`}
-                </span>
-                <Clock className="w-3 h-3 ml-2" />
-                <span>
-                  {event.start_time || 'No time'}
-                  {event.end_time && ` - ${event.end_time}`}
-                </span>
+              
+              <div className="space-y-1 text-xs text-white/70">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  <span>{formatEventDate(event)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  <span>{event.start_time || 'Time not specified'}</span>
+                  {event.end_time && <span> - {event.end_time}</span>}
+                </div>
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  <span className="truncate">{event.address || 'Location not specified'}</span>
+                </div>
+                {distance !== null && (
+                  <div className="flex items-center gap-1">
+                    <Navigation className="w-3 h-3" />
+                    <span>{distance.toFixed(1)} miles away</span>
+                  </div>
+                )}
               </div>
-              {event.distance !== undefined && (
-                <>
-                  <span className="text-white/30">•</span>
-                  <span className="font-data">{event.distance.toFixed(1)} mi</span>
-                </>
-              )}
             </div>
           </div>
         </div>
+      );
+    }) : (
+      <div className="text-center py-8 text-white/50">
+        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p>No events found in this area</p>
       </div>
-    ))}
+    )}
   </div>
 );
 
@@ -381,6 +483,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [editingEvent, setEditingEvent] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   const [downloadStatus, setDownloadStatus] = useState('');
+  const [activeFilterTab, setActiveFilterTab] = useState('date');
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
@@ -417,49 +520,68 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   const fetchEvents = async () => {
     try {
-      // fetchWithTimeout already returns parsed JSON data, not a Response object
-      const data = await fetchWithTimeout(`${API_URL}/events`);
-      
-      if (Array.isArray(data)) {
-        // Filter out any null/undefined events and ensure required properties exist
-        const validEvents = data.filter(event => 
-          event && 
-          event.id && 
-          event.title && 
-          event.lat !== undefined && 
-          event.lng !== undefined
-        );
+      setIsLoading(true);
+      setError(null);
 
-        // Calculate distances if we have a map center
-        const eventsWithDistance = mapCenter ? validEvents.map(event => ({
+      const response = await fetchWithTimeout(`${API_URL}/events`);
+      
+      if (!response || !Array.isArray(response)) {
+        console.warn('Invalid response format from events API:', response);
+        setEvents([]);
+        return;
+      }
+
+      // Filter and validate events to prevent null reference errors
+      const validEvents = response.filter(event => {
+        // Basic null/undefined check
+        if (!event || typeof event !== 'object') {
+          console.warn('Skipping invalid event (null/not object):', event);
+          return false;
+        }
+
+        // Required fields check
+        const requiredFields = ['id', 'title', 'date', 'lat', 'lng'];
+        for (const field of requiredFields) {
+          if (event[field] == null || event[field] === '') {
+            console.warn(`Skipping event with missing ${field}:`, event);
+            return false;
+          }
+        }
+
+        // Validate coordinates
+        if (typeof event.lat !== 'number' || typeof event.lng !== 'number' ||
+            isNaN(event.lat) || isNaN(event.lng) ||
+            Math.abs(event.lat) > 90 || Math.abs(event.lng) > 180) {
+          console.warn('Skipping event with invalid coordinates:', event);
+          return false;
+        }
+
+        return true;
+      }).map(event => {
+        // Ensure all expected properties exist with fallbacks
+        return {
           ...event,
-          // Ensure all time fields have fallback values
+          title: event.title || 'Untitled Event',
+          description: event.description || 'No description available',
           start_time: event.start_time || '12:00',
           end_time: event.end_time || null,
           end_date: event.end_date || null,
-          distance: calculateDistance(
-            mapCenter.lat,
-            mapCenter.lng,
-            event.lat,
-            event.lng
-          )
-        })).filter(event => event.distance <= proximityRange)
-          .sort((a, b) => a.distance - b.distance) : validEvents.map(event => ({
-            ...event,
-            // Ensure all time fields have fallback values for non-proximity filtered events too
-            start_time: event.start_time || '12:00',
-            end_time: event.end_time || null,
-            end_date: event.end_date || null
-          }));
-        
-        setEvents(eventsWithDistance);
-      } else {
-        console.error('Expected array but got:', typeof data);
-        setEvents([]);
-      }
+          category: event.category || 'other',
+          address: event.address || 'Location not specified',
+          recurring: Boolean(event.recurring),
+          frequency: event.frequency || null
+        };
+      });
+
+      console.log(`Fetched ${response.length} events, ${validEvents.length} valid events`);
+      setEvents(validEvents);
+
     } catch (error) {
       console.error('Error fetching events:', error);
-      setEvents([]);
+      setError('Failed to load events. Please try again.');
+      setEvents([]); // Set empty array as fallback
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -549,30 +671,101 @@ const EventMap = ({ mapsLoaded = false }) => {
   };
 
   const handleCreateEvent = async (newEvent, skipApiCall = false) => {
+    if (!user) {
+      setError('Please log in to create events');
+      return;
+    }
+
+    // Validate event data
+    if (!newEvent || typeof newEvent !== 'object') {
+      setError('Invalid event data');
+      return;
+    }
+
+    const requiredFields = ['title', 'description', 'date', 'start_time', 'category', 'address'];
+    for (const field of requiredFields) {
+      if (!newEvent[field]) {
+        setError(`Missing required field: ${field}`);
+        return;
+      }
+    }
+
+    if (!newEvent.location || typeof newEvent.location !== 'object' || 
+        newEvent.location.lat == null || newEvent.location.lng == null) {
+      setError('Please select a valid location');
+      return;
+    }
+
+    if (skipApiCall) {
+      // Event was already created by the form, just update the UI
+      try {
+        await fetchEvents();
+        setIsCreateFormOpen(false);
+        setError(null);
+      } catch (error) {
+        console.error('Error refreshing events:', error);
+        setError('Event created but failed to refresh event list');
+      }
+      return;
+    }
+
     try {
-      // If skipApiCall is true, the form already made the API call
-      if (!skipApiCall) {
-        // fetchWithTimeout already returns parsed JSON data, not a Response object
-        await fetchWithTimeout(`${API_URL}/events`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(newEvent)
-        });
+      setIsCreatingEvent(true);
+      setError(null);
+
+      // Prepare event data with proper null handling
+      const eventData = {
+        title: newEvent.title || '',
+        description: newEvent.description || '',
+        category: newEvent.category || 'other',
+        date: newEvent.date || '',
+        start_time: newEvent.start_time || '',
+        end_time: newEvent.end_time || null,
+        end_date: newEvent.end_date || null,
+        address: newEvent.address || '',
+        lat: Number(newEvent.location.lat) || 0,
+        lng: Number(newEvent.location.lng) || 0,
+        recurring: Boolean(newEvent.recurring),
+        frequency: newEvent.frequency || null
+      };
+
+      // Validate coordinates
+      if (Math.abs(eventData.lat) > 90 || Math.abs(eventData.lng) > 180) {
+        throw new Error('Invalid coordinates');
       }
 
-      // Refresh events list to show the new event
+      const response = await fetch(`${API_URL}/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(eventData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const createdEvent = await response.json();
+      
+      // Validate the created event
+      if (!createdEvent || typeof createdEvent !== 'object') {
+        throw new Error('Invalid response from server');
+      }
+
+      // Update events list
       await fetchEvents();
+      
       setIsCreateFormOpen(false);
-      setSelectedLocation(null);
-      setSearchValue('');
+      setSelectedEvent(createdEvent);
+
     } catch (error) {
       console.error('Error creating event:', error);
-      if (error.message && error.message.includes('401')) {
-        setShowLoginDialog(true);
-      }
+      setError(error.message || 'Failed to create event. Please try again.');
+    } finally {
+      setIsCreatingEvent(false);
     }
   };
 
@@ -1186,99 +1379,216 @@ const EventMap = ({ mapsLoaded = false }) => {
         {!isSidebarCollapsed && (
           <>
             <div className="flex-1 overflow-y-auto">
-              <div className="p-4 space-y-6">
-                <AddressAutocomplete
-                  value={searchValue}
-                  onChange={setSearchValue}
-                  onSelect={handleAddressSelect}
-                  className="w-full"
-                />
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-white/70">Date Filter</label>
-                  <CalendarFilter
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    onClear={() => setSelectedDate({ from: null, to: null })}
-                  />
-                </div>
-                <div className="space-y-3">
+              <div className="p-4 space-y-4">
+                {/* Location Section - Compact */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-white/70">Search Radius</label>
+                    <label className="text-sm font-medium text-white/70">Location</label>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200"
+                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200 h-6 px-2"
                       onClick={handleResetView}
                     >
-                      Reset View
+                      Reset All
                     </Button>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {proximityOptions.map(option => (
-                      <Button
-                        key={option.value}
-                        onClick={() => setProximityRange(option.value)}
-                        variant="outline"
-                        className={`
-                            flex flex-col items-center p-3 h-auto rounded-lg transition-all duration-200 hover:scale-[1.02]
-                            ${proximityRange === option.value
-                            ? 'bg-spark-yellow/20 text-white border-spark-yellow/40 shadow-lg'
-                            : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
-                          }
-                          `}
-                      >
-                        <span className="text-base font-data font-medium">{option.label}</span>
-                        <span className="text-xs opacity-70 font-body">{option.description}</span>
-                      </Button>
-                    ))}
+                  <AddressAutocomplete
+                    value={searchValue}
+                    onChange={setSearchValue}
+                    onSelect={handleAddressSelect}
+                    className="w-full"
+                  />
+                  
+                  {/* Compact Search Radius */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-white/50">Search Radius</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {proximityOptions.map(option => (
+                        <button
+                          key={option.value}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
+                            proximityRange === option.value
+                              ? 'bg-pin-blue text-white border-pin-blue'
+                              : 'bg-white/5 text-white/70 border-white/20 hover:bg-white/10'
+                          }`}
+                          onClick={() => setProximityRange(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  {categories.map((category) => {
-                    const Icon = category.icon;
-                    const count = events.filter(e =>
-                      category.id === 'all' ? true : e.category === category.id
-                    ).length;
+                {/* Filters Tab Interface */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'date' 
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/60 hover:text-white/80'
+                      }`}
+                      onClick={() => setActiveFilterTab('date')}
+                    >
+                      📅 Date
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'category' 
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/60 hover:text-white/80'
+                      }`}
+                      onClick={() => setActiveFilterTab('category')}
+                    >
+                      🏷️ Type
+                    </button>
+                  </div>
 
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => handleCategorySelect(category.id)}
-                        className={`
-                            w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 hover:scale-[1.02]
-                            ${selectedCategory === category.id
-                            ? 'bg-pin-blue/20 border border-pin-blue/40 shadow-lg'
-                            : 'hover:bg-white/5 border border-transparent'
-                          }
-                          `}
+                  {/* Date Filter Tab */}
+                  {activeFilterTab === 'date' && (
+                    <div className="space-y-2 animate-in fade-in duration-200">
+                      {/* Quick Date Presets */}
+                      <div className="grid grid-cols-2 gap-1">
+                        {[
+                          { label: 'Today', getValue: () => ({ from: new Date(), to: new Date() }) },
+                          { label: 'Tomorrow', getValue: () => {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            return { from: tomorrow, to: tomorrow };
+                          }},
+                          { label: 'This Week', getValue: () => {
+                            const today = new Date();
+                            const endOfWeek = new Date(today);
+                            endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+                            return { from: today, to: endOfWeek };
+                          }},
+                          { label: 'Weekend', getValue: () => {
+                            const today = new Date();
+                            const saturday = new Date(today);
+                            saturday.setDate(today.getDate() + (6 - today.getDay()));
+                            const sunday = new Date(saturday);
+                            sunday.setDate(saturday.getDate() + 1);
+                            return { from: saturday, to: sunday };
+                          }}
+                        ].map(preset => (
+                          <button
+                            key={preset.label}
+                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 text-white/70 border border-white/20 hover:bg-white/10 transition-all duration-200"
+                            onClick={() => setSelectedDate(preset.getValue())}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <CalendarFilter
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        onClear={() => setSelectedDate({ from: null, to: null })}
+                      />
+                    </div>
+                  )}
+
+                  {/* Category Filter Tab */}
+                  {activeFilterTab === 'category' && (
+                    <div className="space-y-2 animate-in fade-in duration-200">
+                      <div className="grid grid-cols-2 gap-2">
+                        {categories.map(category => {
+                          const eventCount = filteredEvents.filter(event => 
+                            category.id === 'all' ? true : event.category === category.id
+                          ).length;
+                          
+                          return (
+                            <button
+                              key={category.id}
+                              className={`p-2 rounded-lg border transition-all duration-200 text-left ${
+                                selectedCategory === category.id
+                                  ? 'bg-white/20 border-white/30 text-white'
+                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10'
+                              }`}
+                              onClick={() => handleCategorySelect(category.id)}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                {React.createElement(category.icon, {
+                                  className: `w-4 h-4 ${selectedCategory === category.id ? 'text-white' : category.color}`
+                                })}
+                                <span className="text-xs font-medium truncate">{category.name}</span>
+                              </div>
+                              <div className="text-xs text-white/50">{eventCount} events</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Active Filters Summary */}
+                {(selectedCategory !== 'all' || selectedDate?.from || proximityRange !== 15 || selectedLocation) && (
+                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white/70">Active Filters</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-white/50 hover:text-white/70 h-5 px-1"
+                        onClick={() => {
+                          setSelectedCategory('all');
+                          setSelectedDate({ from: null, to: null });
+                          setProximityRange(15);
+                          if (!selectedLocation) setSearchValue('');
+                        }}
                       >
-                        <div className="flex items-center">
-                          <div className="p-1.5 rounded-md bg-white/5 mr-3">
-                            <Icon className={`w-5 h-5 ${category.color}`} />
-                          </div>
-                          <span className="text-white text-sm font-body">{category.name}</span>
-                        </div>
-                        <span className={`
-                            text-xs px-2 py-1 rounded-full font-data
-                            ${selectedCategory === category.id
-                            ? 'bg-pin-blue/30 text-white'
-                            : 'bg-white/5 text-white/60'
-                          }
-                          `}>
-                          {count}
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedCategory !== 'all' && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          {getCategory(selectedCategory).name}
                         </span>
-                      </button>
-                    );
-                  })}
+                      )}
+                      {selectedDate?.from && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          Date filter
+                        </span>
+                      )}
+                      {proximityRange !== 15 && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          {proximityRange}mi radius
+                        </span>
+                      )}
+                      {selectedLocation && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          📍 Location set
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Event Count & Quick Actions */}
+                <div className="flex items-center justify-between text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">
+                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-white/50 hover:text-white/70 h-6 px-2"
+                      onClick={toggleDesktopList}
+                    >
+                      {showDesktopList ? 'Hide List' : 'Show List'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="p-4 border-t border-white/10">
               <Button
-                className="w-full btn-primary font-display font-semibold text-lg py-3 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
+                className="w-full btn-primary font-display font-semibold text-base py-2.5 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
                 onClick={() => {
                   if (!user) {
                     setLoginMode('login');
@@ -1288,7 +1598,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   setIsCreateFormOpen(true);
                 }}
               >
-                <Plus className="w-5 h-5 mr-2" />
+                <Plus className="w-4 h-4 mr-2" />
                 {user ? 'Create Event' : 'Sign in to Create'}
               </Button>
             </div>
@@ -1360,111 +1670,226 @@ const EventMap = ({ mapsLoaded = false }) => {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto">
-              <div className="p-4 space-y-6">
-                <AddressAutocomplete
-                  value={searchValue}
-                  onChange={setSearchValue}
-                  onSelect={handleAddressSelect}
-                  className="w-full"
-                />
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-white/70">Date Filter</label>
-                  <CalendarFilter
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    onClear={() => setSelectedDate(null)}
-                  />
-                </div>
-                <div className="space-y-3">
+              <div className="p-4 space-y-4">
+                {/* Location Section - Compact */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-white/70">Search Radius</label>
+                    <label className="text-sm font-medium text-white/70">Location</label>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200"
+                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200 h-6 px-2"
                       onClick={handleResetView}
                     >
-                      Reset View
+                      Reset All
                     </Button>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {proximityOptions.map(option => (
-                      <Button
-                        key={option.value}
-                        onClick={() => setProximityRange(option.value)}
-                        variant="outline"
-                        className={`
-                            flex flex-col items-center p-3 h-auto rounded-lg transition-all duration-200 hover:scale-[1.02]
-                            ${proximityRange === option.value
-                            ? 'bg-spark-yellow/20 text-white border-spark-yellow/40 shadow-lg'
-                            : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
-                          }
-                          `}
-                      >
-                        <span className="text-base font-data font-medium">{option.label}</span>
-                        <span className="text-xs opacity-70 font-body">{option.description}</span>
-                      </Button>
-                    ))}
+                  <AddressAutocomplete
+                    value={searchValue}
+                    onChange={setSearchValue}
+                    onSelect={handleAddressSelect}
+                    className="w-full"
+                  />
+                  
+                  {/* Compact Search Radius */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-white/50">Search Radius</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {proximityOptions.map(option => (
+                        <button
+                          key={option.value}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
+                            proximityRange === option.value
+                              ? 'bg-pin-blue text-white border-pin-blue'
+                              : 'bg-white/5 text-white/70 border-white/20 hover:bg-white/10'
+                          }`}
+                          onClick={() => setProximityRange(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  {categories.map((category) => {
-                    const Icon = category.icon;
-                    const count = events.filter(e =>
-                      category.id === 'all' ? true : e.category === category.id
-                    ).length;
+                {/* Filters Tab Interface */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'date' 
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/60 hover:text-white/80'
+                      }`}
+                      onClick={() => setActiveFilterTab('date')}
+                    >
+                      📅 Date
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'category' 
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/60 hover:text-white/80'
+                      }`}
+                      onClick={() => setActiveFilterTab('category')}
+                    >
+                      🏷️ Type
+                    </button>
+                  </div>
 
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => handleCategorySelect(category.id)}
-                        className={`
-                            w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 hover:scale-[1.02]
-                            ${selectedCategory === category.id
-                            ? 'bg-pin-blue/20 border border-pin-blue/40 shadow-lg'
-                            : 'hover:bg-white/5 border border-transparent'
-                          }
-                          `}
+                  {/* Date Filter Tab */}
+                  {activeFilterTab === 'date' && (
+                    <div className="space-y-2 animate-in fade-in duration-200">
+                      {/* Quick Date Presets */}
+                      <div className="grid grid-cols-2 gap-1">
+                        {[
+                          { label: 'Today', getValue: () => ({ from: new Date(), to: new Date() }) },
+                          { label: 'Tomorrow', getValue: () => {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            return { from: tomorrow, to: tomorrow };
+                          }},
+                          { label: 'This Week', getValue: () => {
+                            const today = new Date();
+                            const endOfWeek = new Date(today);
+                            endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+                            return { from: today, to: endOfWeek };
+                          }},
+                          { label: 'Weekend', getValue: () => {
+                            const today = new Date();
+                            const saturday = new Date(today);
+                            saturday.setDate(today.getDate() + (6 - today.getDay()));
+                            const sunday = new Date(saturday);
+                            sunday.setDate(saturday.getDate() + 1);
+                            return { from: saturday, to: sunday };
+                          }}
+                        ].map(preset => (
+                          <button
+                            key={preset.label}
+                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 text-white/70 border border-white/20 hover:bg-white/10 transition-all duration-200"
+                            onClick={() => setSelectedDate(preset.getValue())}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <CalendarFilter
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        onClear={() => setSelectedDate({ from: null, to: null })}
+                      />
+                    </div>
+                  )}
+
+                  {/* Category Filter Tab */}
+                  {activeFilterTab === 'category' && (
+                    <div className="space-y-2 animate-in fade-in duration-200">
+                      <div className="grid grid-cols-2 gap-2">
+                        {categories.map(category => {
+                          const eventCount = filteredEvents.filter(event => 
+                            category.id === 'all' ? true : event.category === category.id
+                          ).length;
+                          
+                          return (
+                            <button
+                              key={category.id}
+                              className={`p-2 rounded-lg border transition-all duration-200 text-left ${
+                                selectedCategory === category.id
+                                  ? 'bg-white/20 border-white/30 text-white'
+                                  : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10'
+                              }`}
+                              onClick={() => handleCategorySelect(category.id)}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                {React.createElement(category.icon, {
+                                  className: `w-4 h-4 ${selectedCategory === category.id ? 'text-white' : category.color}`
+                                })}
+                                <span className="text-xs font-medium truncate">{category.name}</span>
+                              </div>
+                              <div className="text-xs text-white/50">{eventCount} events</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Active Filters Summary */}
+                {(selectedCategory !== 'all' || selectedDate?.from || proximityRange !== 15 || selectedLocation) && (
+                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white/70">Active Filters</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-white/50 hover:text-white/70 h-5 px-1"
+                        onClick={() => {
+                          setSelectedCategory('all');
+                          setSelectedDate({ from: null, to: null });
+                          setProximityRange(15);
+                          if (!selectedLocation) setSearchValue('');
+                        }}
                       >
-                        <div className="flex items-center">
-                          <div className="p-1.5 rounded-md bg-white/5 mr-3">
-                            <Icon className={`w-5 h-5 ${category.color}`} />
-                          </div>
-                          <span className="text-white text-sm font-body">{category.name}</span>
-                        </div>
-                        <span className={`
-                            text-xs px-2 py-1 rounded-full font-data
-                            ${selectedCategory === category.id
-                            ? 'bg-pin-blue/30 text-white'
-                            : 'bg-white/5 text-white/60'
-                          }
-                          `}>
-                          {count}
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedCategory !== 'all' && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          {getCategory(selectedCategory).name}
                         </span>
-                      </button>
-                    );
-                  })}
+                      )}
+                      {selectedDate?.from && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          Date filter
+                        </span>
+                      )}
+                      {proximityRange !== 15 && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          {proximityRange}mi radius
+                        </span>
+                      )}
+                      {selectedLocation && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 text-white/80 rounded-full">
+                          📍 Location set
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Event Count & Quick Actions */}
+                <div className="flex items-center justify-between text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">
+                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-white/50 hover:text-white/70 h-6 px-2"
+                      onClick={toggleDesktopList}
+                    >
+                      {showDesktopList ? 'Hide List' : 'Show List'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="p-4 mt-auto border-t border-white/10">
               <Button
-                className="w-full btn-primary font-display font-semibold text-lg py-3 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
+                className="w-full btn-primary font-display font-semibold text-base py-2.5 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
                 onClick={() => {
                   if (!user) {
                     setLoginMode('login');
                     setShowLoginDialog(true);
-                    setIsMobileMenuOpen(false);
                     return;
                   }
                   setIsCreateFormOpen(true);
-                  setIsMobileMenuOpen(false);
                 }}
               >
-                <Plus className="w-5 h-5 mr-2" />
+                <Plus className="w-4 h-4 mr-2" />
                 {user ? 'Create Event' : 'Sign in to Create'}
               </Button>
             </div>
@@ -1663,8 +2088,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       <Calendar className="w-4 h-4 text-pin-blue" />
                     </div>
                     <span className="font-data">
-                      {selectedEvent.date || 'No date'}
-                      {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.date && ` - ${selectedEvent.end_date}`}
+                      {formatEventDate(selectedEvent)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-white/70">
@@ -1672,8 +2096,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       <Clock className="w-4 h-4 text-fresh-teal" />
                     </div>
                     <span className="font-data">
-                      {selectedEvent.start_time || 'No time specified'}
-                      {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
+                      {formatEventTime(selectedEvent)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-white/70">
