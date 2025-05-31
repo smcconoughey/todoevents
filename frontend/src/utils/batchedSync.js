@@ -86,19 +86,31 @@ class BatchedSyncService {
   }
 
   /**
-   * Track view optimistically and queue for sync
+   * Track view with optimistic UI update
    */
   trackView(eventId) {
-    // Avoid duplicate view tracking
-    if (this.viewQueue.has(eventId)) {
-      return;
+    if (!eventId) {
+      return {
+        view_count: 0,
+        viewTracked: false,
+        isOptimistic: false
+      };
     }
     
     const timestamp = Date.now();
+    const cachedData = this.getCachedEventData(eventId);
+    
+    // If already tracked, return current state
+    if (cachedData && cachedData.viewTracked) {
+      return {
+        view_count: cachedData.view_count || 0,
+        viewTracked: true,
+        isOptimistic: false
+      };
+    }
     
     // 1. Immediate UI update
-    const cachedData = this.getCachedEventData(eventId);
-    if (cachedData && !cachedData.viewTracked) {
+    if (cachedData) {
       cachedData.view_count = (cachedData.view_count || 0) + 1;
       cachedData.viewTracked = true;
       cachedData.lastOptimisticUpdate = timestamp;

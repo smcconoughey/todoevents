@@ -84,10 +84,7 @@ export const useEventInteraction = (eventId) => {
     setInterestData(prev => ({ ...prev, loading: true }));
     
     try {
-      const result = batchedSync.toggleInterest(eventId, {
-        interested: interestData.interested,
-        interest_count: interestData.interest_count
-      });
+      const result = batchedSync.toggleInterest(eventId, interestData.interested);
       
       // Update local state immediately (optimistic update)
       setInterestData({
@@ -99,17 +96,28 @@ export const useEventInteraction = (eventId) => {
       console.error('Error toggling interest:', error);
       setInterestData(prev => ({ ...prev, loading: false }));
     }
-  }, [eventId, interestData.interested, interestData.interest_count]);
+  }, [eventId, interestData.interested]);
 
   const trackView = useCallback(() => {
     if (!eventId || viewData.view_tracked) return;
     
     try {
       const result = batchedSync.trackView(eventId);
-      setViewData({
-        view_count: result.view_count,
-        view_tracked: true
-      });
+      
+      // Ensure result is valid before using it
+      if (result && typeof result === 'object') {
+        setViewData({
+          view_count: result.view_count || 0,
+          view_tracked: result.viewTracked || true
+        });
+      } else {
+        console.warn('Invalid result from trackView:', result);
+        // Fallback to just marking as tracked
+        setViewData(prev => ({
+          ...prev,
+          view_tracked: true
+        }));
+      }
     } catch (error) {
       console.error('Error tracking view:', error);
     }

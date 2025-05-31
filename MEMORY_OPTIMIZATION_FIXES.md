@@ -1,7 +1,7 @@
 # Memory Optimization & Error Handling Fixes
 
 ## Overview
-Fixed critical issues with 404 errors for deleted events, backend memory creep, and event interaction data not updating when switching between events.
+Fixed critical issues with 404 errors for deleted events, backend memory creep, event interaction data not updating when switching between events, and undefined result objects causing crashes.
 
 ## Problems Identified
 
@@ -19,6 +19,11 @@ Fixed critical issues with 404 errors for deleted events, backend memory creep, 
 - **Issue**: View counts and interaction data not updating when switching between events in the details panel
 - **Cause**: `useEventInteraction` hook not reinitializing when `eventId` changes
 - **Impact**: Users had to close and reopen the panel to see updated data
+
+### 4. **Undefined Result Object Error**
+- **Issue**: `TypeError: Cannot read properties of undefined (reading 'view_count')`
+- **Cause**: `trackView` method not returning proper result object in all cases, and incorrect parameter passing to `toggleInterest`
+- **Impact**: Complete breakdown of interaction functionality with no visible counts
 
 ## Solutions Implemented
 
@@ -77,6 +82,40 @@ useEffect(() => {
   setIsInitialized(false);
   initializeData();
 }, [eventId]); // Dependency on eventId ensures it runs when eventId changes
+```
+
+#### **Result Object Validation Fix**
+```javascript
+// Before: Assumed result was always valid
+const result = batchedSync.trackView(eventId);
+setViewData({
+  view_count: result.view_count, // Could be undefined
+  view_tracked: true
+});
+
+// After: Proper validation and error handling
+const result = batchedSync.trackView(eventId);
+if (result && typeof result === 'object') {
+  setViewData({
+    view_count: result.view_count || 0,
+    view_tracked: result.viewTracked || true
+  });
+} else {
+  console.warn('Invalid result from trackView:', result);
+  setViewData(prev => ({ ...prev, view_tracked: true }));
+}
+```
+
+#### **Method Parameter Fix**
+```javascript
+// Before: Passing entire object to toggleInterest
+const result = batchedSync.toggleInterest(eventId, {
+  interested: interestData.interested,
+  interest_count: interestData.interest_count
+});
+
+// After: Passing just the boolean state
+const result = batchedSync.toggleInterest(eventId, interestData.interested);
 ```
 
 ### Backend Fixes (backend.py)
@@ -147,6 +186,12 @@ async def health_check():
 - ✅ Smooth user experience across event navigation
 - ✅ Proper state cleanup prevents stale data
 
+### **Error Handling Improvements**
+- ✅ Robust result object validation prevents crashes
+- ✅ Graceful fallbacks when data is invalid
+- ✅ Proper parameter passing between methods
+- ✅ Comprehensive error logging for debugging
+
 ## Monitoring & Debugging
 
 ### **Frontend Debug Access**
@@ -198,4 +243,11 @@ GET /health
 4. **User Check**: Verify user's interest status if logged in
 5. **UI Update**: Display updated counts and interaction state
 
-This comprehensive fix addresses both immediate user-facing errors and long-term server stability concerns while ensuring a smooth user experience when navigating between events. 
+### **Result Object Validation**
+1. **Method Call**: Execute trackView or toggleInterest
+2. **Result Check**: Validate returned object structure
+3. **Error Handling**: Provide fallback values if invalid
+4. **State Update**: Update UI with validated data
+5. **Error Logging**: Log warnings for debugging
+
+This comprehensive fix addresses both immediate user-facing errors and long-term server stability concerns while ensuring a smooth user experience when navigating between events and robust error handling for all interaction scenarios. 
