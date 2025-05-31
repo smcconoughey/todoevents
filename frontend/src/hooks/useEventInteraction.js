@@ -20,7 +20,7 @@ export const useEventInteraction = (eventId) => {
   const initializationRef = useRef(false);
   const viewTrackedRef = useRef(false);
 
-  // Initialize with cached data from batched sync service
+  // Initialize with cached data from batched sync service (now pre-populated from events fetch)
   useEffect(() => {
     if (!eventId || initializationRef.current) return;
     
@@ -28,7 +28,7 @@ export const useEventInteraction = (eventId) => {
 
     const initializeData = async () => {
       try {
-        // 1. Start with optimistic/cached data for instant UI
+        // Get cached data that was populated during the main events fetch
         const cachedState = batchedSync.getEventState(eventId);
         
         if (cachedState) {
@@ -42,58 +42,23 @@ export const useEventInteraction = (eventId) => {
             view_count: cachedState.view_count,
             view_tracked: cachedState.viewTracked
           });
-        }
-
-        // 2. Fetch fresh data from server in background (less frequently)
-        // Only fetch if we don't have recent cached data
-        const lastSync = cachedState?.lastSync || 0;
-        const shouldFetchFresh = Date.now() - lastSync > 60000; // 1 minute threshold
-        
-        if (shouldFetchFresh) {
-          console.log(`🔄 Fetching fresh data for event ${eventId} (last sync: ${new Date(lastSync).toLocaleTimeString()})`);
           
-          const [interestStatusData, eventData] = await Promise.allSettled([
-            fetchInterestStatus(),
-            fetchEventData()
-          ]);
-          
-          // Update with server data if successful
-          if (interestStatusData.status === 'fulfilled' && interestStatusData.value) {
-            const serverData = interestStatusData.value;
-            
-            // Update batched sync cache
-            batchedSync.updateCache(eventId, {
-              interested: serverData.interested,
-              interest_count: serverData.interest_count,
-              lastSync: Date.now()
-            });
-            
-            // Update UI only if not currently showing optimistic data
-            if (!cachedState?.isOptimistic) {
-              setInterestData(prev => ({
-                ...prev,
-                interested: serverData.interested,
-                interest_count: serverData.interest_count
-              }));
-            }
-          }
+          console.log(`📊 Loaded cached interaction data for event ${eventId}:`, {
+            interest_count: cachedState.interest_count,
+            view_count: cachedState.view_count
+          });
 
-          if (eventData.status === 'fulfilled' && eventData.value) {
-            const serverEventData = eventData.value;
-            
-            // Update view count from server
-            setViewData(prev => ({
+          // Check user's interest status if we haven't already and user is logged in
+          if (!cachedState.interestStatusChecked && localStorage.getItem('token')) {
+            const isInterested = await batchedSync.checkUserInterestStatus(eventId);
+            setInterestData(prev => ({
               ...prev,
-              view_count: serverEventData.view_count || prev.view_count
+              interested: isInterested
             }));
-            
-            // Update cache with accurate interest count from event data
-            batchedSync.updateCache(eventId, {
-              interest_count: serverEventData.interest_count || cachedState?.interest_count || 0,
-              view_count: serverEventData.view_count || 0,
-              lastSync: Date.now()
-            });
           }
+        } else {
+          // Fallback for events not in cache (shouldn't happen with new system)
+          console.warn(`⚠️ No cached data found for event ${eventId}, using defaults`);
         }
 
         setIsInitialized(true);
@@ -164,92 +129,6 @@ export const useEventInteraction = (eventId) => {
     }
   }, [eventId]);
 
-  // Fetch interest status (used for periodic refresh)
-  const fetchInterestStatus = useCallback(async () => {
-    if (!eventId) return null;
-
-    try {
-      const data = await fetchWithTimeout(`${API_URL}/events/${eventId}/interest`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('token') ? {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          } : {})
-        }
-      }, 8000); // Shorter timeout for background requests
-
-      return data;
-    } catch (error) {
-      console.error('Error fetching interest status:', error);
-      return null;
-    }
-  }, [eventId]);
-
-  // Fetch event data (used for periodic refresh)
-  const fetchEventData = useCallback(async () => {
-    if (!eventId) return null;
-
-    try {
-      const data = await fetchWithTimeout(`${API_URL}/events/${eventId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }, 8000); // Shorter timeout for background requests
-
-      return data;
-    } catch (error) {
-      console.error('Error fetching event data:', error);
-      return null;
-    }
-  }, [eventId]);
-
-  // Manual refresh (less frequent, more deliberate)
-  const refreshData = useCallback(async () => {
-    if (!eventId) return;
-    
-    console.log(`🔄 Manual refresh requested for event ${eventId}`);
-    
-    try {
-      const [interestStatusData, eventData] = await Promise.all([
-        fetchInterestStatus(),
-        fetchEventData()
-      ]);
-      
-      if (interestStatusData) {
-        // Update cache and UI
-        batchedSync.updateCache(eventId, {
-          interested: interestStatusData.interested,
-          interest_count: interestStatusData.interest_count,
-          lastSync: Date.now()
-        });
-        
-        setInterestData(prev => ({
-          ...prev,
-          interested: interestStatusData.interested,
-          interest_count: interestStatusData.interest_count
-        }));
-      }
-
-      if (eventData) {
-        setViewData(prev => ({
-          ...prev,
-          view_count: eventData.view_count || 0
-        }));
-        
-        // Update cache with accurate counts
-        batchedSync.updateCache(eventId, {
-          interest_count: eventData.interest_count || interestData.interest_count,
-          view_count: eventData.view_count || 0,
-          lastSync: Date.now()
-        });
-      }
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    }
-  }, [eventId, fetchInterestStatus, fetchEventData, interestData.interest_count]);
-
   return {
     // Interest data
     interested: interestData.interested,
@@ -265,8 +144,6 @@ export const useEventInteraction = (eventId) => {
     
     // Actions
     toggleInterest,
-    trackView,
-    fetchInterestStatus,
-    refreshData
+    trackView
   };
 }; 

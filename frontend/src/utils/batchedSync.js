@@ -130,6 +130,7 @@ class BatchedSyncService {
         interest_count: 0,
         view_count: 0,
         viewTracked: false,
+        interestStatusChecked: false,
         lastSync: 0,
         lastOptimisticUpdate: 0
       });
@@ -150,6 +151,16 @@ class BatchedSyncService {
         lastSync: Date.now(),
         isOptimistic: false
       });
+    } else {
+      // If we're initializing with server data but don't have optimistic updates,
+      // always accept the server data
+      if (!cached.lastOptimisticUpdate) {
+        Object.assign(cached, {
+          ...serverData,
+          lastSync: Date.now(),
+          isOptimistic: false
+        });
+      }
     }
     
     return cached;
@@ -366,6 +377,52 @@ class BatchedSyncService {
       cachedEvents: this.localCache.size,
       hasPendingChanges: this.hasPendingChanges()
     };
+  }
+
+  /**
+   * Check user's interest status for a specific event (lazy loading)
+   */
+  async checkUserInterestStatus(eventId) {
+    const cached = this.getCachedEventData(eventId);
+    
+    // If we already know the user's interest status, return it
+    if (cached.interestStatusChecked) {
+      return cached.interested;
+    }
+    
+    try {
+      const API_URL = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        // User not logged in, can't be interested
+        cached.interested = false;
+        cached.interestStatusChecked = true;
+        return false;
+      }
+      
+      const response = await fetchWithTimeout(`${API_URL}/events/${eventId}/interest`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }, 5000);
+      
+      if (response) {
+        cached.interested = response.interested || false;
+        cached.interestStatusChecked = true;
+        return cached.interested;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error(`Error checking interest status for event ${eventId}:`, error);
+      // Default to not interested on error
+      cached.interested = false;
+      cached.interestStatusChecked = true;
+      return false;
+    }
   }
 }
 

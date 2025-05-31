@@ -57,6 +57,7 @@ import EventInteractionComponents from './EventInteractionComponents';
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { createMarkerIcon } from './markerUtils';
+import { batchedSync } from '@/utils/batchedSync';
 
 
 const normalizeDate = (date) => {
@@ -541,6 +542,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [error, setError] = useState(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
@@ -590,66 +592,48 @@ const EventMap = ({ mapsLoaded = false }) => {
   };
 
   const fetchEvents = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setError(null);
-
-      const response = await fetchWithTimeout(`${API_URL}/events`);
-      
-      if (!response || !Array.isArray(response)) {
-        console.warn('Invalid response format from events API:', response);
-        setEvents([]);
-        return;
+      const params = new URLSearchParams();
+      if (selectedCategory && selectedCategory !== 'all') {
+        params.append('category', selectedCategory);
+      }
+      if (selectedDate) {
+        params.append('date', selectedDate);
+      }
+      if (mapCenter) {
+        params.append('lat', mapCenter.lat.toString());
+        params.append('lng', mapCenter.lng.toString());
+        params.append('radius', '25');
       }
 
-      // Filter and validate events to prevent null reference errors
-      const validEvents = response.filter(event => {
-        // Basic null/undefined check
-        if (!event || typeof event !== 'object') {
-          console.warn('Skipping invalid event (null/not object):', event);
-          return false;
-        }
-
-        // Required fields check
-        const requiredFields = ['id', 'title', 'date', 'lat', 'lng'];
-        for (const field of requiredFields) {
-          if (event[field] == null || event[field] === '') {
-            console.warn(`Skipping event with missing ${field}:`, event);
-            return false;
-          }
-        }
-
-        // Validate coordinates
-        if (typeof event.lat !== 'number' || typeof event.lng !== 'number' ||
-            isNaN(event.lat) || isNaN(event.lng) ||
-            Math.abs(event.lat) > 90 || Math.abs(event.lng) > 180) {
-          console.warn('Skipping event with invalid coordinates:', event);
-          return false;
-        }
-
-        return true;
-      }).map(event => {
-        // Ensure all expected properties exist with fallbacks
-        return {
-          ...event,
-          title: event.title || 'Untitled Event',
-          description: event.description || 'No description available',
-          start_time: event.start_time || '12:00',
-          end_time: event.end_time || null,
-          end_date: event.end_date || null,
-          category: event.category || 'other',
-          address: event.address || 'Location not specified',
-          recurring: Boolean(event.recurring),
-          frequency: event.frequency || null
-        };
-      });
-
-      console.log(`Fetched ${response.length} events, ${validEvents.length} valid events`);
-      setEvents(validEvents);
-
+      const url = `${API_URL}/events${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetchWithTimeout(url, { method: 'GET' }, 10000);
+      
+      // Initialize batchedSync cache with the event data that includes interest_count and view_count
+      if (response && Array.isArray(response)) {
+        response.forEach(event => {
+          // Initialize cache with server data for each event
+          batchedSync.updateCache(event.id, {
+            interested: false, // Will be determined by individual interest check if needed
+            interest_count: event.interest_count || 0,
+            view_count: event.view_count || 0,
+            viewTracked: false,
+            lastSync: Date.now(),
+            isOptimistic: false
+          });
+        });
+        console.log(`🎯 Initialized cache for ${response.length} events with interest/view counts from server`);
+      }
+      
+      setEvents(response || []);
     } catch (error) {
       console.error('Error fetching events:', error);
       setError('Failed to load events. Please try again.');
-      setEvents([]); // Set empty array as fallback
+      setEvents([]);
+    } finally {
+      setLoading(false);
     }
   };
 
