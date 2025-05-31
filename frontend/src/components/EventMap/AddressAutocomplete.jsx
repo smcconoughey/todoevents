@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, MapPin } from 'lucide-react';
+import { mapsCache } from '@/utils/mapsCache';
 
 // Debounce helper function
 const debounce = (func, delay) => {
@@ -85,6 +86,16 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
         return;
       }
 
+      // Check cache first
+      const cached = mapsCache.getCachedPlaces(input);
+      if (cached) {
+        console.log(`🎯 Using cached places for: ${input}`);
+        setPredictions(cached);
+        setShowPredictions(true);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       
       try {
@@ -110,7 +121,12 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
             
             if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
               // Limit to max 5 results to reduce API usage
-              setPredictions(results.slice(0, 5));
+              const limitedResults = results.slice(0, 5);
+              
+              // Cache the results
+              mapsCache.cachePlacesResult(input, limitedResults);
+              
+              setPredictions(limitedResults);
               setShowPredictions(true);
             } else {
               console.warn("Place predictions error:", status);
@@ -144,6 +160,14 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
 
   const handlePredictionSelect = (prediction) => {
     try {
+      // Check cache for place details first
+      const cachedDetails = mapsCache.getCachedPlaceDetails(prediction.place_id);
+      if (cachedDetails) {
+        console.log(`🎯 Using cached place details for: ${prediction.place_id}`);
+        processPlaceDetails(cachedDetails, prediction);
+        return;
+      }
+
       // Create a PlacesService to get place details
       if (!window.google?.maps?.places) {
         console.warn('Places API not available for getting details');
@@ -168,73 +192,9 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       
       placesService.getDetails(requestOptions, (place, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-          try {
-            // Extract coordinates safely
-            let lat, lng;
-            
-            if (place.geometry && place.geometry.location) {
-              // Handle both function calls and direct properties
-              if (typeof place.geometry.location.lat === 'function') {
-                lat = place.geometry.location.lat();
-                lng = place.geometry.location.lng();
-              } else {
-                lat = place.geometry.location.lat;
-                lng = place.geometry.location.lng;
-              }
-              
-              // Validate coordinates before proceeding
-              if (isValidCoordinate(lat, lng)) {
-                const locationData = {
-                  address: place.formatted_address,
-                  lat: lat,
-                  lng: lng
-                };
-                
-                console.log('Valid location data:', locationData);
-                onChange(place.formatted_address);
-                onSelect(locationData);
-              } else {
-                console.error('Invalid coordinates received:', { lat, lng });
-                // Fallback to center of US
-                const locationData = {
-                  address: place.formatted_address,
-                  lat: 39.8283,
-                  lng: -98.5795
-                };
-                onChange(place.formatted_address);
-                onSelect(locationData);
-              }
-            } else {
-              console.error('No geometry data available for this place');
-              // Fallback to center of US
-              const locationData = {
-                address: place.formatted_address || prediction.description,
-                lat: 39.8283,
-                lng: -98.5795
-              };
-              onChange(place.formatted_address || prediction.description);
-              onSelect(locationData);
-            }
-            
-            // Generate a new session token after getting place details
-            if (window.google?.maps?.places?.AutocompleteSessionToken) {
-              try {
-                sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
-              } catch (error) {
-                console.warn("Error creating new session token:", error);
-              }
-            }
-          } catch (coordError) {
-            console.error("Error processing coordinates:", coordError);
-            // Fallback to center of US
-            const locationData = {
-              address: place.formatted_address || prediction.description,
-              lat: 39.8283,
-              lng: -98.5795
-            };
-            onChange(place.formatted_address || prediction.description);
-            onSelect(locationData);
-          }
+          // Cache the place details
+          mapsCache.cachePlaceDetails(prediction.place_id, place);
+          processPlaceDetails(place, prediction);
         } else {
           console.warn("Error getting place details:", status);
           // Fallback with just the prediction description
@@ -260,6 +220,77 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       onChange(prediction.description);
       onSelect(locationData);
       setShowPredictions(false);
+    }
+  };
+
+  // Helper function to process place details
+  const processPlaceDetails = (place, prediction) => {
+    try {
+      // Extract coordinates safely
+      let lat, lng;
+      
+      if (place.geometry && place.geometry.location) {
+        // Handle both function calls and direct properties
+        if (typeof place.geometry.location.lat === 'function') {
+          lat = place.geometry.location.lat();
+          lng = place.geometry.location.lng();
+        } else {
+          lat = place.geometry.location.lat;
+          lng = place.geometry.location.lng;
+        }
+        
+        // Validate coordinates before proceeding
+        if (isValidCoordinate(lat, lng)) {
+          const locationData = {
+            address: place.formatted_address,
+            lat: lat,
+            lng: lng
+          };
+          
+          console.log('Valid location data:', locationData);
+          onChange(place.formatted_address);
+          onSelect(locationData);
+        } else {
+          console.error('Invalid coordinates received:', { lat, lng });
+          // Fallback to center of US
+          const locationData = {
+            address: place.formatted_address,
+            lat: 39.8283,
+            lng: -98.5795
+          };
+          onChange(place.formatted_address);
+          onSelect(locationData);
+        }
+      } else {
+        console.error('No geometry data available for this place');
+        // Fallback to center of US
+        const locationData = {
+          address: place.formatted_address || prediction.description,
+          lat: 39.8283,
+          lng: -98.5795
+        };
+        onChange(place.formatted_address || prediction.description);
+        onSelect(locationData);
+      }
+      
+      // Generate a new session token after getting place details
+      if (window.google?.maps?.places?.AutocompleteSessionToken) {
+        try {
+          sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+        } catch (error) {
+          console.warn("Error creating new session token:", error);
+        }
+      }
+    } catch (coordError) {
+      console.error("Error processing coordinates:", coordError);
+      // Fallback to center of US
+      const locationData = {
+        address: place.formatted_address || prediction.description,
+        lat: 39.8283,
+        lng: -98.5795
+      };
+      onChange(place.formatted_address || prediction.description);
+      onSelect(locationData);
     }
   };
 

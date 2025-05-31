@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { ThemeContext } from "../ThemeContext";
 import { getCategory } from "./categoryConfig";
 import { CategoryIcon } from "./CategoryIcons";
+import { mapsCache } from '@/utils/mapsCache';
 
 // Custom logo component - Replace with your actual logo
 const TodoEventsLogo = ({ theme, className = "" }) => {
@@ -163,6 +164,25 @@ const ShareCard = ({ event }) => {
       const markerColor = category.color?.replace('#', '') || "red";
       const marker = `markers=color:${markerColor}%7Csize:large%7C${center}`;
       
+      // Create cache key parameters
+      const cacheParams = {
+        lat: event.lat,
+        lng: event.lng,
+        zoom,
+        size,
+        scale,
+        markerColor,
+        theme
+      };
+      
+      // Check cache first
+      const cachedUrl = mapsCache.getCachedStaticMap(cacheParams);
+      if (cachedUrl) {
+        console.log(`🎯 Using cached static map URL for: ${center}`);
+        setMapUrl(cachedUrl);
+        return;
+      }
+      
       // Enhanced map styles for better readability
       const baseStyles = [
         "feature:poi.business|visibility:off", // Hide business POIs for cleaner look
@@ -205,6 +225,9 @@ const ShareCard = ({ event }) => {
       const styleParam = allStyles.map(style => `&style=${encodeURIComponent(style)}`).join('');
       
       const url = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=roadmap&${marker}${styleParam}&key=${apiKey}`;
+      
+      // Cache the URL
+      mapsCache.cacheStaticMap(cacheParams, url);
       
       setMapUrl(url);
     }

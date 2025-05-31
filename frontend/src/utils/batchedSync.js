@@ -233,65 +233,80 @@ class BatchedSyncService {
   }
 
   /**
-   * Sync view tracking
+   * Sync view tracking with server
    */
   async syncViewTracking() {
-    const viewsToSync = Array.from(this.viewQueue);
+    if (this.viewQueue.size === 0) return;
+    
     const API_URL = import.meta.env.VITE_API_URL;
+    const viewsToSync = Array.from(this.viewQueue);
     
     for (const eventId of viewsToSync) {
       try {
-        await fetchWithTimeout(`${API_URL}/events/${eventId}/view`, {
+        // Validate event exists before making API call
+        const eventExists = await this.validateEventExists(eventId);
+        if (!eventExists) {
+          continue; // Skip this event, it was cleaned up by validateEventExists
+        }
+
+        const response = await fetchWithTimeout(`${API_URL}/events/${eventId}/view`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            ...(localStorage.getItem('token') ? {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            } : {})
+            'Content-Type': 'application/json'
           }
         }, 10000); // 10 second timeout for batch operations
 
         // Remove from queue on success
         this.viewQueue.delete(eventId);
-        console.log(`✅ View synced for event ${eventId}`);
+        console.log(`✅ View synced for event ${eventId}:`, response);
         
       } catch (error) {
         // Handle 404 errors (event doesn't exist anymore)
         if (error.message && (error.message.includes('404') || error.message.includes('Event not found'))) {
           console.log(`🗑️ Event ${eventId} no longer exists, removing from view queue`);
-          this.viewQueue.delete(eventId);
-          // Also clean up from cache
-          this.localCache.delete(eventId);
+          this.removeEvent(eventId);
         } else {
           console.error(`❌ Failed to sync view for event ${eventId}:`, error);
-          // Keep in queue for retry, but don't spam logs
+          // Keep in queue for retry on next sync
         }
       }
     }
   }
 
   /**
-   * Sync interest changes
+   * Sync interest changes with server
    */
   async syncInterestChanges() {
-    const API_URL = import.meta.env.VITE_API_URL;
+    if (this.interestQueue.size === 0) return;
     
-    for (const [eventId, change] of this.interestQueue.entries()) {
-      // Skip if too many retries
-      if (change.retryCount >= this.MAX_RETRY_ATTEMPTS) {
-        console.warn(`⚠️ Giving up on interest sync for event ${eventId} after ${this.MAX_RETRY_ATTEMPTS} attempts`);
-        this.interestQueue.delete(eventId);
+    const API_URL = import.meta.env.VITE_API_URL;
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('No auth token, skipping interest sync');
+      return;
+    }
+    
+    const interestsToSync = Array.from(this.interestQueue.entries());
+    
+    for (const [eventId, change] of interestsToSync) {
+      // Skip if this change has a retry delay that hasn't passed yet
+      if (change.nextRetry && Date.now() < change.nextRetry) {
         continue;
       }
-
+      
       try {
+        // Validate event exists before making API call
+        const eventExists = await this.validateEventExists(eventId);
+        if (!eventExists) {
+          continue; // Skip this event, it was cleaned up by validateEventExists
+        }
+
         const response = await fetchWithTimeout(`${API_URL}/events/${eventId}/interest`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(localStorage.getItem('token') ? {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            } : {})
+            'Authorization': `Bearer ${token}`
           }
         }, 10000); // 10 second timeout for batch operations
 
@@ -303,9 +318,7 @@ class BatchedSyncService {
         // Handle 404 errors (event doesn't exist anymore)
         if (error.message && (error.message.includes('404') || error.message.includes('Event not found'))) {
           console.log(`🗑️ Event ${eventId} no longer exists, removing from interest queue`);
-          this.interestQueue.delete(eventId);
-          // Also clean up from cache
-          this.localCache.delete(eventId);
+          this.removeEvent(eventId);
         } else {
           console.error(`❌ Failed to sync interest for event ${eventId}:`, error);
           
@@ -425,6 +438,40 @@ class BatchedSyncService {
     this.persistData();
     
     console.log('🧹 Cleaned up old sync entries');
+  }
+
+  /**
+   * Remove a specific event from all caches and queues (for when event is deleted)
+   */
+  removeEvent(eventId) {
+    this.localCache.delete(eventId);
+    this.viewQueue.delete(eventId);
+    this.interestQueue.delete(eventId);
+    this.persistData();
+    console.log(`🗑️ Removed event ${eventId} from all caches and queues`);
+  }
+
+  /**
+   * Check if an event exists before making API calls
+   */
+  async validateEventExists(eventId) {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${API_URL}/events/${eventId}`, {
+        method: 'HEAD' // Just check if it exists without downloading data
+      });
+      
+      if (response.status === 404) {
+        console.log(`🗑️ Event ${eventId} no longer exists, cleaning up`);
+        this.removeEvent(eventId);
+        return false;
+      }
+      
+      return response.ok;
+    } catch (error) {
+      console.warn(`Could not validate event ${eventId}:`, error);
+      return true; // Assume it exists if we can't check
+    }
   }
 
   /**
