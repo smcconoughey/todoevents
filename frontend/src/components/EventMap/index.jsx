@@ -551,12 +551,23 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCacheManager, setShowCacheManager] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
 
   const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
   const DEFAULT_ZOOM = 4;
+
+  // Responsive detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const mapCenter = selectedLocation ? {
     lat: selectedLocation.lat,
