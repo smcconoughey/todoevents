@@ -40,8 +40,7 @@ import {
   Shield,
   Navigation,
   AlertCircle,
-  HelpCircle,
-  Database
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,13 +52,9 @@ import {
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import AddressAutocomplete from './AddressAutocomplete';
 import WelcomePopup from '../WelcomePopup';
-import EventInteractionComponents from './EventInteractionComponents';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
-import { createMarkerIcon } from './markerUtils';
-import { batchedSync } from '@/utils/batchedSync';
-import CacheManager from './CacheManager';
 
 
 const normalizeDate = (date) => {
@@ -187,7 +182,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
   if (!event || typeof event !== 'object') {
     return (
       <div className="p-6 text-center">
-        <p className="text-themed-secondary">Event not found</p>
+        <p className="text-white/70">Event not found</p>
       </div>
     );
   }
@@ -285,14 +280,14 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
               <Icon className={`w-6 h-6 ${category.color}`} />
             </div>
             <div className="flex flex-col">
-              <h2 className="text-xl font-display font-semibold text-themed-primary">{event.title}</h2>
+              <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
               <span className="text-xs event-id-text font-mono">ID: {event.id}</span>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-themed-secondary hover:text-themed-primary hover:bg-white/10 rounded-full transition-all duration-200"
+            className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -301,19 +296,19 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
         {/* Tabs */}
         <div className="flex gap-2 border-b border-white/10 mb-2">
           <button
-            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-themed-primary' : 'text-themed-secondary hover:bg-white/5'}`}
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
             onClick={() => setActiveTab('details')}
           >Details</button>
           <button
-            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-themed-primary' : 'text-themed-secondary hover:bg-white/5'}`}
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
             onClick={() => setActiveTab('share')}
           >Share</button>
         </div>
         {activeTab === 'details' ? (
           <>
-            <p className="text-themed-primary font-body leading-relaxed">{event.description}</p>
+            <p className="text-white/90 font-body leading-relaxed">{event.description}</p>
             <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm text-themed-secondary">
+              <div className="flex items-center gap-3 text-sm text-white/70">
                 <div className="p-1.5 rounded-md bg-pin-blue/10">
                   <Calendar className="w-4 h-4 text-pin-blue" />
                 </div>
@@ -321,7 +316,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   {formatEventDate(event)}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-themed-secondary">
+              <div className="flex items-center gap-3 text-sm text-white/70">
                 <div className="p-1.5 rounded-md bg-fresh-teal/10">
                   <Clock className="w-4 h-4 text-fresh-teal" />
                 </div>
@@ -329,26 +324,23 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   {formatEventTime(event)}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-themed-secondary">
+              <div className="flex items-center gap-3 text-sm text-white/70">
                 <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
                   <MapPin className="w-4 h-4 text-vibrant-magenta" />
                 </div>
                 <span className="font-body">{event.address || 'No address provided'}</span>
               </div>
               {event.distance !== undefined && (
-                <div className="text-sm text-themed-secondary font-data">
+                <div className="text-sm text-white/70 font-data">
                   📍 {event.distance.toFixed(1)} miles away
                 </div>
               )}
-              
-              {/* Interest and View Tracking */}
-              <EventInteractionComponents eventId={event.id} />
             </div>
             {user && (user.id === event.created_by || user.role === 'admin') && (
               <div className="pt-4 space-y-3 border-t border-white/10">
                 <Button
                   variant="ghost"
-                  className="w-full btn-secondary text-themed-primary font-medium transition-all duration-200 hover:scale-[1.02]"
+                  className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
                   onClick={onEdit}
                 >
                   Edit Event
@@ -391,8 +383,8 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 </Button>
               </div>
             </div>
-            {downloadStatus && <div className="text-xs text-themed-secondary mt-1 text-center">{downloadStatus}</div>}
-            <div className="text-xs text-themed-muted mt-1 text-center">
+            {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
+            <div className="text-xs text-white/40 mt-1 text-center">
               <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
               <strong>Instagram:</strong> Download and upload the image to your story or feed!
             </div>
@@ -480,12 +472,12 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
                 {React.createElement(category.icon, {
                   className: `w-4 h-4 ${category.color}`
                 })}
-                <h3 className="font-semibold text-themed-primary text-sm truncate">
+                <h3 className="font-semibold text-white text-sm truncate">
                   {event.title || 'Untitled Event'}
                 </h3>
               </div>
               
-              <div className="space-y-1 text-xs text-themed-secondary">
+              <div className="space-y-1 text-xs text-white/70">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   <span>{formatEventDate(event)}</span>
@@ -505,17 +497,12 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
                   </div>
                 )}
               </div>
-              
-              {/* Event Interaction Components */}
-              <div className="mt-2 pt-2 border-t border-white/10">
-                <EventInteractionComponents eventId={event.id} />
-              </div>
             </div>
           </div>
         </div>
       );
     }) : (
-      <div className="text-center py-8 text-themed-muted">
+      <div className="text-center py-8 text-white/50">
         <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
         <p>No events found in this area</p>
       </div>
@@ -549,25 +536,12 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [error, setError] = useState(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showCacheManager, setShowCacheManager] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
 
   const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
   const DEFAULT_ZOOM = 4;
-
-  // Responsive detection
-  useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const mapCenter = selectedLocation ? {
     lat: selectedLocation.lat,
@@ -611,60 +585,66 @@ const EventMap = ({ mapsLoaded = false }) => {
   };
 
   const fetchEvents = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const params = new URLSearchParams();
-      if (selectedCategory && selectedCategory !== 'all') {
-        params.append('category', selectedCategory);
-      }
-      if (selectedDate) {
-        params.append('date', selectedDate);
-      }
-      if (mapCenter) {
-        params.append('lat', mapCenter.lat.toString());
-        params.append('lng', mapCenter.lng.toString());
-        params.append('radius', '25');
+      setError(null);
+
+      const response = await fetchWithTimeout(`${API_URL}/events`);
+      
+      if (!response || !Array.isArray(response)) {
+        console.warn('Invalid response format from events API:', response);
+        setEvents([]);
+        return;
       }
 
-      const url = `${API_URL}/events${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetchWithTimeout(url, { method: 'GET' }, 10000);
-      
-      // Initialize batchedSync cache with the event data that includes interest_count and view_count
-      if (response && Array.isArray(response)) {
-        // Get current event IDs from server
-        const currentEventIds = new Set(response.map(event => event.id.toString()));
-        
-        // Clean up any cached events that no longer exist on the server
-        const cachedEventIds = Array.from(batchedSync.localCache.keys());
-        for (const cachedEventId of cachedEventIds) {
-          if (!currentEventIds.has(cachedEventId.toString())) {
-            console.log(`🗑️ Cleaning up deleted event ${cachedEventId} from cache`);
-            batchedSync.removeEvent(cachedEventId);
+      // Filter and validate events to prevent null reference errors
+      const validEvents = response.filter(event => {
+        // Basic null/undefined check
+        if (!event || typeof event !== 'object') {
+          console.warn('Skipping invalid event (null/not object):', event);
+          return false;
+        }
+
+        // Required fields check
+        const requiredFields = ['id', 'title', 'date', 'lat', 'lng'];
+        for (const field of requiredFields) {
+          if (event[field] == null || event[field] === '') {
+            console.warn(`Skipping event with missing ${field}:`, event);
+            return false;
           }
         }
-        
-        // Initialize cache with server data for each event
-        response.forEach(event => {
-          batchedSync.updateCache(event.id, {
-            interested: false, // Will be determined by individual interest check if needed
-            interest_count: event.interest_count || 0,
-            view_count: event.view_count || 0,
-            viewTracked: false,
-            lastSync: Date.now(),
-            isOptimistic: false
-          });
-        });
-        console.log(`🎯 Initialized cache for ${response.length} events with interest/view counts from server`);
-      }
-      
-      setEvents(response || []);
+
+        // Validate coordinates
+        if (typeof event.lat !== 'number' || typeof event.lng !== 'number' ||
+            isNaN(event.lat) || isNaN(event.lng) ||
+            Math.abs(event.lat) > 90 || Math.abs(event.lng) > 180) {
+          console.warn('Skipping event with invalid coordinates:', event);
+          return false;
+        }
+
+        return true;
+      }).map(event => {
+        // Ensure all expected properties exist with fallbacks
+        return {
+          ...event,
+          title: event.title || 'Untitled Event',
+          description: event.description || 'No description available',
+          start_time: event.start_time || '12:00',
+          end_time: event.end_time || null,
+          end_date: event.end_date || null,
+          category: event.category || 'other',
+          address: event.address || 'Location not specified',
+          recurring: Boolean(event.recurring),
+          frequency: event.frequency || null
+        };
+      });
+
+      console.log(`Fetched ${response.length} events, ${validEvents.length} valid events`);
+      setEvents(validEvents);
+
     } catch (error) {
       console.error('Error fetching events:', error);
       setError('Failed to load events. Please try again.');
-      setEvents([]);
-    } finally {
-      setLoading(false);
+      setEvents([]); // Set empty array as fallback
     }
   };
 
@@ -1391,89 +1371,1429 @@ const EventMap = ({ mapsLoaded = false }) => {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-themed-surface">
-      {/* ... existing JSX ... */}
-      
-      {/* Desktop Layout */}
-      {isDesktop && (
-        <div className="flex-1 flex relative">
-          {/* Sidebar */}
-          <div className={`bg-themed-surface border-r border-themed transition-all duration-300 flex flex-col ${
-            isSidebarCollapsed ? 'w-16' : 'w-80'
-          }`}>
-            {/* Sidebar Header */}
-            <div className="p-4 border-b border-themed flex items-center justify-between">
+    <div className="h-screen w-full relative" style={{backgroundColor: 'var(--bg-main)'}}>
+      {/* Mobile Header */}
+      <div className="sm:hidden fixed top-0 left-0 right-0 z-30 dialog-themed backdrop-blur-sm border-b border-themed">
+        <div className="flex items-center justify-between p-2 min-h-[2.5rem]">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-display font-bold text-white truncate px-2">todo-events</h1>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowWelcomePopup(true)}
+              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+              title="Help & Tutorial"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Button>
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
+              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+            >
+              {activeView === 'map' ? <Filter className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <div className={`
+        fixed left-0 top-0 z-40 h-full
+        transition-all duration-300 ease-in-out
+        ${isSidebarCollapsed ? 'w-24' : 'w-96'}
+        dialog-themed backdrop-blur-sm border-r border-themed
+        hidden sm:flex flex-col
+      `}>
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          {!isSidebarCollapsed && (
+            <div className="flex items-center justify-between flex-1 mr-2">
+              <h2 className="text-xl font-display font-bold text-white">todo-events</h2>
               <div className="flex items-center gap-2">
-                {!isSidebarCollapsed && (
-                  <>
-                    <div className="text-xl font-display">TodoEvents</div>
-                    <div className="text-xs text-themed-muted bg-themed-surface-hover px-2 py-1 rounded">
-                      BETA
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {!isSidebarCollapsed && (
-                  <button
-                    onClick={() => setShowCacheManager(true)}
-                    className="p-2 text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover rounded-md transition-colors"
-                    title="Manage Maps Cache"
-                  >
-                    <Database className="w-4 h-4" />
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                  className="p-2 text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover rounded-md transition-colors"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  onClick={() => setShowWelcomePopup(true)}
+                  title="Help & Tutorial"
                 >
-                  {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-                </button>
+                  <HelpCircle className="w-4 h-4" />
+                </Button>
+                <ThemeToggle />
+                {user ? (
+                  <div className="flex items-center gap-2">
+                    {user.role === 'admin' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        onClick={() => window.open('/admin', '_blank')}
+                        title="Admin Dashboard"
+                      >
+                        <Shield className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                      onClick={logout}
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                    onClick={() => {
+                      setLoginMode('login');
+                      setShowLoginDialog(true);
+                    }}
+                  >
+                    <User className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
-
-            {/* ... rest of sidebar content ... */}
-          </div>
-
-          {/* ... rest of desktop layout ... */}
+          )}
+          {isSidebarCollapsed && (
+            <ThemeToggle />
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white/70 hover:text-white hover:bg-white/10 flex-shrink-0 transition-all duration-200"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </Button>
         </div>
-      )}
 
-      {/* Mobile Layout */}
-      {!isDesktop && (
-        // ... existing mobile layout ...
-        <div className="flex-1 flex flex-col relative">
-          {/* Mobile Header */}
-          <div className="bg-themed-surface border-b border-themed p-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="text-lg font-display">TodoEvents</div>
-              <div className="text-xs text-themed-muted bg-themed-surface-hover px-2 py-1 rounded">
-                BETA
+        {!isSidebarCollapsed && (
+          <>
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 space-y-4">
+                {/* Location Section - Compact */}
+                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
+                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200 h-6 px-2"
+                      onClick={handleResetView}
+                    >
+                      Reset All
+                    </Button>
+                  </div>
+                  <AddressAutocomplete
+                    value={searchValue}
+                    onChange={setSearchValue}
+                    onSelect={handleAddressSelect}
+                    className="w-full"
+                  />
+                  
+                  {/* Compact Search Radius */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {proximityOptions.map(option => (
+                        <button
+                          key={option.value}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
+                            proximityRange === option.value
+                              ? 'bg-pin-blue text-white border-pin-blue'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          }`}
+                          onClick={() => setProximityRange(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 dark:text-red-200 light:text-red-800 text-sm">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium">Error</p>
+                        <p className="text-red-200/80 dark:text-red-200/80 light:text-red-700 mt-1">{error}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-200/80 dark:text-red-200/80 light:text-red-700 hover:text-red-200 dark:hover:text-red-200 light:hover:text-red-600 mt-2 h-6 px-2 text-xs"
+                          onClick={() => setError(null)}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filters Tab Interface */}
+                <div className="space-y-3 p-3 bg-themed-surface rounded-lg border border-themed">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
+                    <span className="text-sm font-medium text-themed-primary">🎯 Search Filters</span>
+                    <div className="text-xs text-themed-tertiary bg-themed-surface-hover px-2 py-0.5 rounded-full ml-auto">
+                      💡 Combine for better results
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-themed-surface-hover rounded-lg p-1 border border-themed">
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'date' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('date')}
+                    >
+                      📅 Date
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'time' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('time')}
+                    >
+                      🕐 Time
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'category' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('category')}
+                    >
+                      🏷️ Type
+                    </button>
+                  </div>
+
+                  {/* Date Filter Tab */}
+                  {activeFilterTab === 'date' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      {/* Quick Date Presets */}
+                      <div className="grid grid-cols-2 gap-1">
+                        {[
+                          { label: 'Today', getValue: () => ({ from: new Date(), to: new Date() }) },
+                          { label: 'Tomorrow', getValue: () => {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            return { from: tomorrow, to: tomorrow };
+                          }},
+                          { label: 'This Week', getValue: () => {
+                            const today = new Date();
+                            const endOfWeek = new Date(today);
+                            endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+                            return { from: today, to: endOfWeek };
+                          }},
+                          { label: 'Weekend', getValue: () => {
+                            const today = new Date();
+                            const saturday = new Date(today);
+                            saturday.setDate(today.getDate() + (6 - today.getDay()));
+                            const sunday = new Date(saturday);
+                            sunday.setDate(saturday.getDate() + 1);
+                            return { from: saturday, to: sunday };
+                          }}
+                        ].map(preset => (
+                          <button
+                            key={preset.label}
+                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 transition-all duration-200"
+                            onClick={() => setSelectedDate(preset.getValue())}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <CalendarFilter
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        onClear={() => setSelectedDate(null)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Time Filter Tab */}
+                  {activeFilterTab === 'time' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        🕐 Filter events by time of day
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
+                          { value: 'afternoon', label: 'Afternoon', icon: '☀️', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: '🌆', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: '🌙', description: '9 PM - 5 AM' }
+                        ].map(timeOption => {
+                          // Calculate event count for this time period
+                          const eventCount = events.filter(event => {
+                            if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                            
+                            // Apply other filters but not time filter
+                            const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
+                            if (!categoryMatch) return false;
+                            
+                            const dateMatch = isDateInRange(event.date, selectedDate);
+                            if (!dateMatch) return false;
+                            
+                            // Proximity filter
+                            if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                              const distance = calculateDistance(
+                                selectedLocation.lat,
+                                selectedLocation.lng,
+                                event.lat,
+                                event.lng
+                              );
+                              if (distance > proximityRange) return false;
+                            }
+                            
+                            // Time filter for this specific option
+                            if (timeOption.value === 'all') return true;
+                            const eventTimePeriod = getTimePeriod(event.start_time);
+                            return eventTimePeriod === timeOption.value;
+                          }).length;
+                          
+                          return (
+                            <button
+                              key={timeOption.value}
+                              className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
+                                selectedTime === timeOption.value
+                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                              }`}
+                              onClick={() => setSelectedTime(timeOption.value)}
+                            >
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-sm">{timeOption.icon}</span>
+                                <span className="text-xs font-medium">{timeOption.label}</span>
+                              </div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {timeOption.description}
+                              </div>
+                              <div className={`text-xs mt-1 transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Category Filter Tab */}
+                  {activeFilterTab === 'category' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        💡 Tap categories to toggle them on/off. You can select multiple!
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {categories.map(category => {
+                          // Calculate filtered event count for this specific category
+                          let eventCount;
+                          if (category.id === 'all') {
+                            eventCount = filteredEvents.length;
+                          } else {
+                            // Count events that match this category AND other active filters
+                            eventCount = events.filter(event => {
+                              if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                              
+                              // Must match this specific category
+                              if (event.category !== category.id) return false;
+                              
+                              // Apply other filters (date, proximity) but not category filter
+                              const dateMatch = isDateInRange(event.date, selectedDate);
+                              if (!dateMatch) return false;
+                              
+                              // Proximity filter
+                              if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                                const distance = calculateDistance(
+                                  selectedLocation.lat,
+                                  selectedLocation.lng,
+                                  event.lat,
+                                  event.lng
+                                );
+                                if (distance > proximityRange) return false;
+                              }
+                              
+                              return true;
+                            }).length;
+                          }
+                          
+                          // Map category colors to border classes
+                          const getBorderColor = (categoryId) => {
+                            const colorMap = {
+                              'all': 'border-gray-400',
+                              'food-drink': 'border-vibrant-magenta',
+                              'music': 'border-pin-blue',
+                              'arts': 'border-fresh-teal',
+                              'sports': 'border-spark-yellow',
+                              'automotive': 'border-vibrant-magenta',
+                              'airshows': 'border-pin-blue',
+                              'vehicle-sports': 'border-spark-yellow',
+                              'community': 'border-fresh-teal',
+                              'religious': 'border-pin-blue',
+                              'education': 'border-fresh-teal',
+                              'veteran': 'border-pin-blue',
+                              'cookout': 'border-vibrant-magenta',
+                              'graduation': 'border-spark-yellow',
+                              'tech-education': 'border-fresh-teal'
+                            };
+                            return colorMap[categoryId] || 'border-gray-400';
+                          };
+                          
+                          return (
+                            <button
+                              key={category.id}
+                              className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
+                                selectedCategory.includes(category.id)
+                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                              }`}
+                              onClick={() => handleCategorySelect(category.id)}
+                            >
+                              {/* Selected indicator */}
+                              {selectedCategory.includes(category.id) && (
+                                <div className="absolute top-0.5 right-0.5">
+                                  <div className="w-1.5 h-1.5 bg-white dark:bg-white light:bg-black rounded-full opacity-80"></div>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1 mb-0.5">
+                                {React.createElement(category.icon, {
+                                  className: `w-3 h-3 transition-colors duration-200 ${
+                                    selectedCategory.includes(category.id) 
+                                      ? 'text-white dark:text-white light:text-black' 
+                                      : category.color
+                                  }`
+                                })}
+                                <span className="text-xs font-medium truncate">{category.name}</span>
+                              </div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedCategory.includes(category.id) ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Active Filters Summary */}
+                {(!selectedCategory.includes('all') || selectedDate || selectedTime !== 'all' || proximityRange !== 15 || selectedLocation) && (
+                  <div className="p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white/70 dark:text-white/70 light:text-black/70">Active Filters</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-white/50 dark:text-white/50 light:text-black/50 hover:text-white/70 dark:hover:text-white/70 light:hover:text-black/70 h-5 px-1"
+                        onClick={() => {
+                          setSelectedCategory(['all']);
+                          setSelectedDate(null);
+                          setSelectedTime('all');
+                          setProximityRange(15);
+                          if (!selectedLocation) setSearchValue('');
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {!selectedCategory.includes('all') && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {selectedCategory.length} categories selected
+                        </span>
+                      )}
+                      {selectedDate && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          Date filter
+                        </span>
+                      )}
+                      {selectedTime !== 'all' && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {selectedTime.charAt(0).toUpperCase() + selectedTime.slice(1)} events
+                        </span>
+                      )}
+                      {proximityRange !== 15 && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {proximityRange}mi radius
+                        </span>
+                      )}
+                      {selectedLocation && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          📍 Location set
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Event Count & Quick Actions */}
+                <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
+                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                </div>
+
+                {/* Event List */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="space-y-2">
+                    {filteredEvents.length > 0 ? filteredEvents.filter(event => 
+                      event && typeof event === 'object' && event.title && event.date && event.lat != null && event.lng != null
+                    ).map(event => {
+                      const category = getCategory(event.category);
+                      const distance = mapCenter ? calculateDistance(
+                        mapCenter.lat, mapCenter.lng, event.lat, event.lng
+                      ) : null;
+                      
+                      return (
+                        <div
+                          key={event.id}
+                          className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
+                            selectedEvent?.id === event.id
+                              ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg'
+                              : 'border-white/10 bg-white/5 hover:bg-white/10'
+                          }`}
+                          onClick={() => handleEventClick(event)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {React.createElement(category.icon, {
+                                  className: `w-4 h-4 ${category.color}`
+                                })}
+                                <h3 className="font-semibold text-white text-sm truncate">
+                                  {event.title || 'Untitled Event'}
+                                </h3>
+                              </div>
+                              
+                              <div className="space-y-1 text-xs text-white/70">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{formatEventDate(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{formatEventTime(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="truncate">{event.address || 'Location not specified'}</span>
+                                </div>
+                                {distance !== null && (
+                                  <div className="flex items-center gap-1">
+                                    <Navigation className="w-3 h-3" />
+                                    <span>{distance.toFixed(1)} miles away</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <div className="text-center py-8 text-white/50">
+                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No events found</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowCacheManager(true)}
-                className="p-2 text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover rounded-md transition-colors"
-                title="Manage Maps Cache"
+
+            <div className="p-4 border-t border-white/10">
+              <Button
+                className="w-full btn-primary font-display font-semibold text-base py-2.5 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
+                onClick={() => {
+                  if (!user) {
+                    setLoginMode('login');
+                    setShowLoginDialog(true);
+                    return;
+                  }
+                  setIsCreateFormOpen(true);
+                }}
               >
-                <Database className="w-4 h-4" />
-              </button>
-              {/* ... other mobile header buttons ... */}
+                <Plus className="w-4 h-4 mr-2" />
+                {user ? 'Create Event' : 'Sign in to Create'}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Mobile Sheet */}
+      <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+        <SheetContent
+          side="left"
+          className="w-full sm:w-[400px] p-0 border-r border-white/10 bg-neutral-900/80 backdrop-blur-sm"
+        >
+          <div className="flex flex-col h-full">
+            <SheetHeader className="px-4 py-4 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-white font-display font-bold">todo-events</SheetTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                    onClick={() => setShowWelcomePopup(true)}
+                    title="Help & Tutorial"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </Button>
+                  <ThemeToggle />
+                  {user ? (
+                    <div className="flex items-center gap-2">
+                      {user.role === 'admin' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                          onClick={() => window.open('/admin', '_blank')}
+                          title="Admin Dashboard"
+                        >
+                          <Shield className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        onClick={() => {
+                          logout();
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                      onClick={() => {
+                        setLoginMode('login');
+                        setShowLoginDialog(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      <User className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 space-y-4">
+                {/* Location Section - Compact */}
+                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
+                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-pin-blue hover:text-pin-blue-300 hover:bg-pin-blue/10 transition-all duration-200 h-6 px-2"
+                      onClick={handleResetView}
+                    >
+                      Reset All
+                    </Button>
+                  </div>
+                  <AddressAutocomplete
+                    value={searchValue}
+                    onChange={setSearchValue}
+                    onSelect={handleAddressSelect}
+                    className="w-full"
+                  />
+                  
+                  {/* Compact Search Radius */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {proximityOptions.map(option => (
+                        <button
+                          key={option.value}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
+                            proximityRange === option.value
+                              ? 'bg-pin-blue text-white border-pin-blue'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          }`}
+                          onClick={() => setProximityRange(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 dark:text-red-200 light:text-red-800 text-sm">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium">Error</p>
+                        <p className="text-red-200/80 dark:text-red-200/80 light:text-red-700 mt-1">{error}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-200/80 dark:text-red-200/80 light:text-red-700 hover:text-red-200 dark:hover:text-red-200 light:hover:text-red-600 mt-2 h-6 px-2 text-xs"
+                          onClick={() => setError(null)}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filters Tab Interface */}
+                <div className="space-y-3 p-3 bg-themed-surface rounded-lg border border-themed">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
+                    <span className="text-sm font-medium text-themed-primary">🎯 Search Filters</span>
+                    <div className="text-xs text-themed-tertiary bg-themed-surface-hover px-2 py-0.5 rounded-full ml-auto">
+                      💡 Combine for better results
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-themed-surface-hover rounded-lg p-1 border border-themed">
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'date' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('date')}
+                    >
+                      📅 Date
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'time' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('time')}
+                    >
+                      🕐 Time
+                    </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'category' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('category')}
+                    >
+                      🏷️ Type
+                    </button>
+                  </div>
+
+                  {/* Date Filter Tab */}
+                  {activeFilterTab === 'date' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      {/* Quick Date Presets */}
+                      <div className="grid grid-cols-2 gap-1">
+                        {[
+                          { label: 'Today', getValue: () => ({ from: new Date(), to: new Date() }) },
+                          { label: 'Tomorrow', getValue: () => {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            return { from: tomorrow, to: tomorrow };
+                          }},
+                          { label: 'This Week', getValue: () => {
+                            const today = new Date();
+                            const endOfWeek = new Date(today);
+                            endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+                            return { from: today, to: endOfWeek };
+                          }},
+                          { label: 'Weekend', getValue: () => {
+                            const today = new Date();
+                            const saturday = new Date(today);
+                            saturday.setDate(today.getDate() + (6 - today.getDay()));
+                            const sunday = new Date(saturday);
+                            sunday.setDate(saturday.getDate() + 1);
+                            return { from: saturday, to: sunday };
+                          }}
+                        ].map(preset => (
+                          <button
+                            key={preset.label}
+                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 transition-all duration-200"
+                            onClick={() => setSelectedDate(preset.getValue())}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <CalendarFilter
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        onClear={() => setSelectedDate(null)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Time Filter Tab */}
+                  {activeFilterTab === 'time' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        🕐 Filter events by time of day
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
+                          { value: 'afternoon', label: 'Afternoon', icon: '☀️', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: '🌆', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: '🌙', description: '9 PM - 5 AM' }
+                        ].map(timeOption => {
+                          // Calculate event count for this time period
+                          const eventCount = events.filter(event => {
+                            if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                            
+                            // Apply other filters but not time filter
+                            const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
+                            if (!categoryMatch) return false;
+                            
+                            const dateMatch = isDateInRange(event.date, selectedDate);
+                            if (!dateMatch) return false;
+                            
+                            // Proximity filter
+                            if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                              const distance = calculateDistance(
+                                selectedLocation.lat,
+                                selectedLocation.lng,
+                                event.lat,
+                                event.lng
+                              );
+                              if (distance > proximityRange) return false;
+                            }
+                            
+                            // Time filter for this specific option
+                            if (timeOption.value === 'all') return true;
+                            const eventTimePeriod = getTimePeriod(event.start_time);
+                            return eventTimePeriod === timeOption.value;
+                          }).length;
+                          
+                          return (
+                            <button
+                              key={timeOption.value}
+                              className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
+                                selectedTime === timeOption.value
+                                  ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                              }`}
+                              onClick={() => setSelectedTime(timeOption.value)}
+                            >
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-sm">{timeOption.icon}</span>
+                                <span className="text-xs font-medium">{timeOption.label}</span>
+                              </div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {timeOption.description}
+                              </div>
+                              <div className={`text-xs mt-1 transition-colors duration-200 ${
+                                selectedTime === timeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Category Filter Tab */}
+                  {activeFilterTab === 'category' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        💡 Tap categories to toggle them on/off. You can select multiple!
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {categories.map(category => {
+                          // Calculate filtered event count for this specific category
+                          let eventCount;
+                          if (category.id === 'all') {
+                            eventCount = filteredEvents.length;
+                          } else {
+                            // Count events that match this category AND other active filters
+                            eventCount = events.filter(event => {
+                              if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                              
+                              // Must match this specific category
+                              if (event.category !== category.id) return false;
+                              
+                              // Apply other filters (date, proximity) but not category filter
+                              const dateMatch = isDateInRange(event.date, selectedDate);
+                              if (!dateMatch) return false;
+                              
+                              // Proximity filter
+                              if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                                const distance = calculateDistance(
+                                  selectedLocation.lat,
+                                  selectedLocation.lng,
+                                  event.lat,
+                                  event.lng
+                                );
+                                if (distance > proximityRange) return false;
+                              }
+                              
+                              return true;
+                            }).length;
+                          }
+                          
+                          // Map category colors to border classes
+                          const getBorderColor = (categoryId) => {
+                            const colorMap = {
+                              'all': 'border-gray-400',
+                              'food-drink': 'border-vibrant-magenta',
+                              'music': 'border-pin-blue',
+                              'arts': 'border-fresh-teal',
+                              'sports': 'border-spark-yellow',
+                              'automotive': 'border-vibrant-magenta',
+                              'airshows': 'border-pin-blue',
+                              'vehicle-sports': 'border-spark-yellow',
+                              'community': 'border-fresh-teal',
+                              'religious': 'border-pin-blue',
+                              'education': 'border-fresh-teal',
+                              'veteran': 'border-pin-blue',
+                              'cookout': 'border-vibrant-magenta',
+                              'graduation': 'border-spark-yellow',
+                              'tech-education': 'border-fresh-teal'
+                            };
+                            return colorMap[categoryId] || 'border-gray-400';
+                          };
+                          
+                          return (
+                            <button
+                              key={category.id}
+                              className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
+                                selectedCategory.includes(category.id)
+                                  ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
+                                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                              }`}
+                              onClick={() => handleCategorySelect(category.id)}
+                            >
+                              {/* Selected indicator */}
+                              {selectedCategory.includes(category.id) && (
+                                <div className="absolute top-0.5 right-0.5">
+                                  <div className="w-1.5 h-1.5 bg-white dark:bg-white light:bg-black rounded-full opacity-80"></div>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1 mb-0.5">
+                                {React.createElement(category.icon, {
+                                  className: `w-3 h-3 transition-colors duration-200 ${
+                                    selectedCategory.includes(category.id) 
+                                      ? 'text-white dark:text-white light:text-black' 
+                                      : category.color
+                                  }`
+                                })}
+                                <span className="text-xs font-medium truncate">{category.name}</span>
+                              </div>
+                              <div className={`text-xs transition-colors duration-200 ${
+                                selectedCategory.includes(category.id) ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                              }`}>
+                                {eventCount} events
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Active Filters Summary */}
+                {(!selectedCategory.includes('all') || selectedDate || selectedTime !== 'all' || proximityRange !== 15 || selectedLocation) && (
+                  <div className="p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white/70 dark:text-white/70 light:text-black/70">Active Filters</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-white/50 dark:text-white/50 light:text-black/50 hover:text-white/70 dark:hover:text-white/70 light:hover:text-black/70 h-5 px-1"
+                        onClick={() => {
+                          setSelectedCategory(['all']);
+                          setSelectedDate(null);
+                          setSelectedTime('all');
+                          setProximityRange(15);
+                          if (!selectedLocation) setSearchValue('');
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {!selectedCategory.includes('all') && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {selectedCategory.length} categories selected
+                        </span>
+                      )}
+                      {selectedDate && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          Date filter
+                        </span>
+                      )}
+                      {selectedTime !== 'all' && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {selectedTime.charAt(0).toUpperCase() + selectedTime.slice(1)} events
+                        </span>
+                      )}
+                      {proximityRange !== 15 && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          {proximityRange}mi radius
+                        </span>
+                      )}
+                      {selectedLocation && (
+                        <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
+                          📍 Location set
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Event Count & Quick Actions */}
+                <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
+                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                </div>
+
+                {/* Event List */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="space-y-2">
+                    {filteredEvents.length > 0 ? filteredEvents.filter(event => 
+                      event && typeof event === 'object' && event.title && event.date && event.lat != null && event.lng != null
+                    ).map(event => {
+                      const category = getCategory(event.category);
+                      const distance = mapCenter ? calculateDistance(
+                        mapCenter.lat, mapCenter.lng, event.lat, event.lng
+                      ) : null;
+                      
+                      return (
+                        <div
+                          key={event.id}
+                          className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
+                            selectedEvent?.id === event.id
+                              ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg'
+                              : 'border-white/10 bg-white/5 hover:bg-white/10'
+                          }`}
+                          onClick={() => handleEventClick(event)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {React.createElement(category.icon, {
+                                  className: `w-4 h-4 ${category.color}`
+                                })}
+                                <h3 className="font-semibold text-white text-sm truncate">
+                                  {event.title || 'Untitled Event'}
+                                </h3>
+                              </div>
+                              
+                              <div className="space-y-1 text-xs text-white/70">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{formatEventDate(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{formatEventTime(event)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="truncate">{event.address || 'Location not specified'}</span>
+                                </div>
+                                {distance !== null && (
+                                  <div className="flex items-center gap-1">
+                                    <Navigation className="w-3 h-3" />
+                                    <span>{distance.toFixed(1)} miles away</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <div className="text-center py-8 text-white/50">
+                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No events found</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-white/10">
+              <Button
+                className="w-full btn-primary font-display font-semibold text-base py-2.5 transition-all duration-200 hover:scale-[1.02] animate-bounce-in"
+                onClick={() => {
+                  if (!user) {
+                    setLoginMode('login');
+                    setShowLoginDialog(true);
+                    return;
+                  }
+                  setIsCreateFormOpen(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {user ? 'Create Event' : 'Sign in to Create'}
+              </Button>
             </div>
           </div>
+        </SheetContent>
+      </Sheet>
 
-          {/* ... rest of mobile layout ... */}
+      {/* Main Content Area */}
+      <div className={`
+  flex-1 h-[calc(100dvh-2.5rem)] sm:h-screen
+  ${isSidebarCollapsed ? 'sm:pl-24' : 'sm:pl-96'}
+  pt-10 sm:pt-0
+  relative
+`}>
+        {activeView === 'map' ? (
+          <div className="absolute inset-0 flex">
+            {/* Map Container */}
+            <div className="relative flex-1 transition-all duration-300">
+              <MapContainer
+                ref={mapRef}
+                events={
+                  filteredEvents.length > 0 || 
+                  selectedDate || 
+                  selectedTime !== 'all' || 
+                  !selectedCategory.includes('all') || 
+                  mapCenter
+                    ? filteredEvents
+                    : events
+                }
+                onEventClick={handleEventClick}
+                selectedCategory={selectedCategory}
+                mapCenter={mapCenter}
+                proximityRange={proximityRange}
+                selectedEvent={selectedEvent}
+                currentUser={user}
+                onEventDelete={handleEventDelete}
+                defaultCenter={DEFAULT_CENTER}
+                defaultZoom={DEFAULT_ZOOM}
+                selectedDate={selectedDate}
+              />
+
+              {/* Desktop Event Details Panel */}
+              <div className="hidden sm:block">
+                <EventDetailsPanel
+                  event={selectedEvent}
+                  user={user}
+                  onClose={() => setSelectedEvent(null)}
+                  onEdit={() => {
+                    setIsCreateFormOpen(true);
+                    setSelectedLocation({
+                      lat: selectedEvent.lat,
+                      lng: selectedEvent.lng,
+                      address: selectedEvent.address
+                    });
+                  }}
+                  onDelete={handleEventDelete}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  shareCardRef={shareCardRef}
+                  downloadStatus={downloadStatus}
+                  handleDownload={handleDownload}
+                  handleCopyLink={handleCopyLink}
+                  handleFacebookShare={handleFacebookShare}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-full overflow-y-auto" style={{backgroundColor: 'var(--bg-main)'}}>
+            {renderEventList(
+              filteredEvents.length > 0 || 
+              selectedDate || 
+              selectedTime !== 'all' || 
+              !selectedCategory.includes('all') || 
+              mapCenter
+                ? filteredEvents
+                : events,
+              selectedEvent,
+              handleEventClick,
+              user,
+              mapCenter
+            )}
+          </div>
+        )}
+      </div>
+
+
+      {/* Mobile Event Details Bottom Sheet */}
+      {selectedEvent && (
+        <div className={`
+          fixed bottom-0 left-0 right-0 
+          dialog-themed backdrop-blur-sm
+          border-t border-themed
+          rounded-t-lg z-40
+          sm:hidden
+          transform transition-transform duration-300
+          max-h-[80vh] overflow-y-auto shadow-2xl
+          ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
+        `}>
+          <div className="p-3 space-y-3 pb-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                {(() => {
+                  const category = getCategory(selectedEvent.category);
+                  const Icon = category.icon;
+                  return (
+                    <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20 flex-shrink-0">
+                      <Icon className={`w-5 h-5 ${category.color}`} />
+                    </div>
+                  );
+                })()}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h2 className="text-lg font-display font-semibold text-white break-words leading-tight">{selectedEvent.title}</h2>
+                  <span className="text-xs event-id-text font-mono mt-0.5">ID: {selectedEvent.id}</span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0"
+                onClick={() => setSelectedEvent(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Mobile Tabs */}
+            <div className="flex gap-1 border-b border-white/10 -mx-3 px-3">
+              <button
+                className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
+                  activeTab === 'details' 
+                    ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
+                    : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
+                }`}
+                onClick={() => setActiveTab('details')}
+              >
+                Details
+              </button>
+              <button
+                className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
+                  activeTab === 'share' 
+                    ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
+                    : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
+                }`}
+                onClick={() => setActiveTab('share')}
+              >
+                Share
+              </button>
+            </div>
+            
+            {activeTab === 'details' ? (
+              <div className="space-y-4">
+                <p className="text-white/90 font-body leading-relaxed text-sm">{selectedEvent.description}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-pin-blue/10 flex-shrink-0">
+                      <Calendar className="w-4 h-4 text-pin-blue" />
+                    </div>
+                    <span className="font-data">
+                      {formatEventDate(selectedEvent)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-fresh-teal/10">
+                      <Clock className="w-4 h-4 text-fresh-teal" />
+                    </div>
+                    <span className="font-data">
+                      {formatEventTime(selectedEvent)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-vibrant-magenta/10 flex-shrink-0 mt-0.5">
+                      <MapPin className="w-4 h-4 text-vibrant-magenta" />
+                    </div>
+                    <span className="font-body break-words leading-relaxed">{selectedEvent.address || 'No address provided'}</span>
+                  </div>
+                  {selectedEvent.distance !== undefined && (
+                    <div className="text-sm text-white/70 font-data ml-8">
+                      📍 {selectedEvent.distance.toFixed(1)} miles away
+                    </div>
+                  )}
+                </div>
+                {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
+                  <div className="pt-3 space-y-2 border-t border-white/10">
+                    <Button
+                      variant="ghost"
+                      className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02] min-h-[40px] text-sm"
+                      onClick={() => {
+                        setIsCreateFormOpen(true);
+                        setSelectedLocation({
+                          lat: selectedEvent.lat,
+                          lng: selectedEvent.lng,
+                          address: selectedEvent.address
+                        });
+                      }}
+                    >
+                      Edit Event
+                    </Button>
+                    <Button
+                      className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02] min-h-[40px] text-sm"
+                      onClick={() => handleEventDelete(selectedEvent.id)}
+                    >
+                      Delete Event
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <div ref={shareCardRef} className="my-1">
+                  <ShareCard event={selectedEvent} />
+                </div>
+                <div className="flex flex-col gap-3 w-full">
+                  <Button 
+                    onClick={handleDownload} 
+                    className="w-full btn-yellow-themed font-bold min-h-[44px]"
+                  >
+                    Download Image
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleCopyLink} 
+                      variant="secondary" 
+                      className="flex-1 min-h-[40px]"
+                    >
+                      Copy Link
+                    </Button>
+                    <Button 
+                      onClick={handleFacebookShare} 
+                      variant="secondary" 
+                      className="flex-1 min-h-[40px]"
+                    >
+                      Share to Facebook
+                    </Button>
+                  </div>
+                </div>
+                {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
+                <div className="text-xs text-white/40 mt-1 text-center">
+                  <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
+                  <strong>Instagram:</strong> Download and upload the image to your story or feed!
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Cache Manager Modal */}
-      <CacheManager 
-        isOpen={showCacheManager}
-        onClose={() => setShowCacheManager(false)}
-      />
+      {/* Create Event Form Dialog */}
+      {isCreateFormOpen && (
+        <CreateEventForm
+          isOpen={isCreateFormOpen}
+          onClose={() => {
+            setIsCreateFormOpen(false);
+            setSelectedLocation(null);
+          }}
+          onSubmit={handleCreateEvent}
+          selectedLocation={selectedLocation}
+          onLocationSelect={setSelectedLocation}
+          initialEvent={selectedEvent}
+        />
+      )}
 
-      {/* ... rest of existing components ... */}
+      {/* Login Dialog */}
+      <Dialog
+        open={showLoginDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowLoginDialog(false);
+            setTimeout(() => setLoginMode('login'), 300);
+          }
+        }}
+      >
+        <DialogContent 
+          className="dialog-themed backdrop-blur-sm p-6"
+          aria-describedby="login-dialog-description"
+        >
+          <DialogHeader>
+            <DialogTitle className="text-white mb-4">
+              {loginMode === 'login' ? 'Sign In' : 'Create Account'}
+            </DialogTitle>
+            <DialogDescription id="login-dialog-description" className="text-white/60 mb-4">
+              {loginMode === 'login' ? 'Sign in to your account' : 'Create a new account'}
+            </DialogDescription>
+          </DialogHeader>
+          <LoginForm
+            mode={loginMode}
+            onSuccess={() => {
+              setShowLoginDialog(false);
+              setIsCreateFormOpen(true);
+            }}
+            onModeChange={(newMode) => setLoginMode(newMode)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Welcome/Help Popup */}
+      {showWelcomePopup && (
+        <WelcomePopup 
+          onClose={() => setShowWelcomePopup(false)}
+          forceShow={true}
+        />
+      )}
     </div>
   );
 };
