@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, MapPin } from 'lucide-react';
-import { mapsCache } from '@/utils/mapsCache';
 
 // Debounce helper function
 const debounce = (func, delay) => {
@@ -86,16 +85,6 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
         return;
       }
 
-      // Check cache first
-      const cached = mapsCache.getCachedPlaces(input);
-      if (cached) {
-        console.log(`🎯 Using cached places for: ${input}`);
-        setPredictions(cached);
-        setShowPredictions(true);
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
       
       try {
@@ -122,9 +111,6 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
               // Limit to max 5 results to reduce API usage
               const limitedResults = results.slice(0, 5);
-              
-              // Cache the results
-              mapsCache.cachePlacesResult(input, limitedResults);
               
               setPredictions(limitedResults);
               setShowPredictions(true);
@@ -160,14 +146,6 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
 
   const handlePredictionSelect = (prediction) => {
     try {
-      // Check cache for place details first
-      const cachedDetails = mapsCache.getCachedPlaceDetails(prediction.place_id);
-      if (cachedDetails) {
-        console.log(`🎯 Using cached place details for: ${prediction.place_id}`);
-        processPlaceDetails(cachedDetails, prediction);
-        return;
-      }
-
       // Create a PlacesService to get place details
       if (!window.google?.maps?.places) {
         console.warn('Places API not available for getting details');
@@ -192,8 +170,6 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       
       placesService.getDetails(requestOptions, (place, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-          // Cache the place details
-          mapsCache.cachePlaceDetails(prediction.place_id, place);
           processPlaceDetails(place, prediction);
         } else {
           console.warn("Error getting place details:", status);
