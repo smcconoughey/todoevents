@@ -1,7 +1,7 @@
 # Memory Optimization & Error Handling Fixes
 
 ## Overview
-Fixed critical issues with 404 errors for deleted events and backend memory creep that was causing performance degradation.
+Fixed critical issues with 404 errors for deleted events, backend memory creep, and event interaction data not updating when switching between events.
 
 ## Problems Identified
 
@@ -14,6 +14,11 @@ Fixed critical issues with 404 errors for deleted events and backend memory cree
 - **Issue**: Backend memory slowly increasing without active usage
 - **Cause**: Inadequate cache management and cleanup
 - **Impact**: Server performance degradation over time
+
+### 3. **Event Switching Data Stale Issue**
+- **Issue**: View counts and interaction data not updating when switching between events in the details panel
+- **Cause**: `useEventInteraction` hook not reinitializing when `eventId` changes
+- **Impact**: Users had to close and reopen the panel to see updated data
 
 ## Solutions Implemented
 
@@ -49,6 +54,29 @@ initializeService() {
     this.cleanupOldEntries();
   }, 60 * 60 * 1000);
 }
+```
+
+#### **Event Switching Fix (useEventInteraction.js)**
+```javascript
+// Before: Hook wouldn't reinitialize on eventId change
+useEffect(() => {
+  if (!eventId || initializationRef.current) return;
+  initializationRef.current = true; // This prevented reinitialization
+  
+// After: Proper reinitialization on eventId change
+useEffect(() => {
+  if (!eventId) {
+    // Reset state when no eventId
+    setInterestData({ interested: false, interest_count: 0, loading: false });
+    setViewData({ view_count: 0, view_tracked: false });
+    setIsInitialized(false);
+    return;
+  }
+  
+  // Reset initialization state and reload data for new eventId
+  setIsInitialized(false);
+  initializeData();
+}, [eventId]); // Dependency on eventId ensures it runs when eventId changes
 ```
 
 ### Backend Fixes (backend.py)
@@ -113,6 +141,12 @@ async def health_check():
 - ✅ Reduced unnecessary API calls
 - ✅ Better error recovery and retry logic
 
+### **Event Switching Improvements**
+- ✅ Interaction data updates immediately when switching events
+- ✅ No need to close/reopen panel to see updated counts
+- ✅ Smooth user experience across event navigation
+- ✅ Proper state cleanup prevents stale data
+
 ## Monitoring & Debugging
 
 ### **Frontend Debug Access**
@@ -157,4 +191,11 @@ GET /health
 3. **Cache Cleanup**: Clear related cache entries
 4. **Graceful Continuation**: Continue syncing valid events
 
-This comprehensive fix addresses both immediate user-facing errors and long-term server stability concerns. 
+### **Event Switching Flow**
+1. **Event Change**: User clicks on new event
+2. **State Reset**: Hook clears old data and resets initialization
+3. **Data Load**: Load cached interaction data for new event
+4. **User Check**: Verify user's interest status if logged in
+5. **UI Update**: Display updated counts and interaction state
+
+This comprehensive fix addresses both immediate user-facing errors and long-term server stability concerns while ensuring a smooth user experience when navigating between events. 

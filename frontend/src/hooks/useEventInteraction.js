@@ -17,14 +17,23 @@ export const useEventInteraction = (eventId) => {
   });
 
   const [isInitialized, setIsInitialized] = useState(false);
-  const initializationRef = useRef(false);
-  const viewTrackedRef = useRef(false);
 
   // Initialize with cached data from batched sync service (now pre-populated from events fetch)
   useEffect(() => {
-    if (!eventId || initializationRef.current) return;
-    
-    initializationRef.current = true;
+    if (!eventId) {
+      // Reset state when no eventId
+      setInterestData({
+        interested: false,
+        interest_count: 0,
+        loading: false
+      });
+      setViewData({
+        view_count: 0,
+        view_tracked: false
+      });
+      setIsInitialized(false);
+      return;
+    }
 
     const initializeData = async () => {
       try {
@@ -42,108 +51,77 @@ export const useEventInteraction = (eventId) => {
             view_count: cachedState.view_count,
             view_tracked: cachedState.viewTracked
           });
-          
-          console.log(`📊 Loaded cached interaction data for event ${eventId}:`, {
-            interest_count: cachedState.interest_count,
-            view_count: cachedState.view_count
-          });
-
-          // Check user's interest status if we haven't already and user is logged in
-          if (!cachedState.interestStatusChecked && localStorage.getItem('token')) {
-            const isInterested = await batchedSync.checkUserInterestStatus(eventId);
-            setInterestData(prev => ({
-              ...prev,
-              interested: isInterested
-            }));
-          }
-        } else {
-          // Fallback for events not in cache (shouldn't happen with new system)
-          console.warn(`⚠️ No cached data found for event ${eventId}, using defaults`);
         }
 
+        // Check user's interest status if user is logged in and we haven't checked yet
+        const token = localStorage.getItem('token');
+        if (token && !cachedState?.interestStatusChecked) {
+          const userInterestStatus = await batchedSync.checkUserInterestStatus(eventId);
+          if (userInterestStatus !== null) {
+            setInterestData(prev => ({
+              ...prev,
+              interested: userInterestStatus
+            }));
+          }
+        }
+        
         setIsInitialized(true);
       } catch (error) {
         console.error('Error initializing event interaction data:', error);
-        setIsInitialized(true); // Still mark as initialized to allow user interaction
+        setIsInitialized(true); // Still mark as initialized to prevent infinite loops
       }
     };
 
+    // Reset initialization state and reload data for new eventId
+    setIsInitialized(false);
     initializeData();
-  }, [eventId]);
+    
+  }, [eventId]); // Dependency on eventId so it runs when eventId changes
 
-  // Optimistic interest toggle with batched sync
-  const toggleInterest = useCallback(async () => {
-    if (interestData.loading || !isInitialized) return;
-
-    // Show loading state briefly for user feedback
+  const toggleInterest = useCallback(() => {
+    if (!eventId) return;
+    
     setInterestData(prev => ({ ...prev, loading: true }));
-
+    
     try {
-      // Use batched sync for optimistic update
-      const result = batchedSync.toggleInterest(eventId, interestData.interested);
+      const result = batchedSync.toggleInterest(eventId, {
+        interested: interestData.interested,
+        interest_count: interestData.interest_count
+      });
       
-      // Update UI immediately with optimistic result
+      // Update local state immediately (optimistic update)
       setInterestData({
         interested: result.interested,
         interest_count: result.interest_count,
         loading: false
       });
-
-      console.log(`💖 Interest toggled optimistically for event ${eventId}:`, result);
-      return result;
-      
     } catch (error) {
       console.error('Error toggling interest:', error);
-      
-      // Reset loading state on error
       setInterestData(prev => ({ ...prev, loading: false }));
-      return null;
     }
-  }, [eventId, interestData.interested, interestData.loading, isInitialized]);
+  }, [eventId, interestData.interested, interestData.interest_count]);
 
-  // Optimistic view tracking with batched sync
-  const trackView = useCallback(async () => {
-    if (!eventId || viewTrackedRef.current) return;
+  const trackView = useCallback(() => {
+    if (!eventId || viewData.view_tracked) return;
     
-    viewTrackedRef.current = true;
-
     try {
-      // Use batched sync for optimistic view tracking
       const result = batchedSync.trackView(eventId);
-      
-      if (result) {
-        setViewData({
-          view_count: result.view_count,
-          view_tracked: result.viewTracked
-        });
-        
-        console.log(`👁️ View tracked optimistically for event ${eventId}:`, result);
-      }
-      
-      return result;
-      
+      setViewData({
+        view_count: result.view_count,
+        view_tracked: true
+      });
     } catch (error) {
       console.error('Error tracking view:', error);
-      viewTrackedRef.current = false; // Reset on error so it can retry
-      return null;
     }
-  }, [eventId]);
+  }, [eventId, viewData.view_tracked]);
 
   return {
-    // Interest data
     interested: interestData.interested,
-    interestCount: interestData.interest_count,
+    interest_count: interestData.interest_count,
+    view_count: viewData.view_count,
     loading: interestData.loading,
-    
-    // View data
-    viewCount: viewData.view_count,
-    viewTracked: viewData.view_tracked,
-    
-    // State
-    isInitialized,
-    
-    // Actions
     toggleInterest,
-    trackView
+    trackView,
+    isInitialized
   };
 }; 
