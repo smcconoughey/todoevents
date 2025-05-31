@@ -23,35 +23,32 @@ class BatchedSyncService {
   }
 
   initializeService() {
-    // Load persisted data from localStorage
     this.loadPersistedData();
     
-    // Set up periodic sync
+    // Clean up old entries on startup
+    this.cleanupOldEntries();
+    
     this.startPeriodicSync();
     
-    // Handle online/offline events
+    // Online/offline detection
     window.addEventListener('online', () => {
-      this.isOnline = true;
-      console.log('🟢 Back online - triggering sync');
+      console.log('🌐 Back online - triggering sync');
       this.syncNow();
     });
     
     window.addEventListener('offline', () => {
-      this.isOnline = false;
-      console.log('🔴 Gone offline - will queue changes');
+      console.log('📴 Gone offline - will queue changes');
     });
     
-    // Sync on page unload
-    window.addEventListener('beforeunload', () => {
-      this.syncNow(true); // Force immediate sync
-    });
+    // Periodic cleanup (once per hour)
+    setInterval(() => {
+      this.cleanupOldEntries();
+    }, 60 * 60 * 1000); // 1 hour
     
-    // Sync when page becomes visible (user switches back to tab)
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && this.isOnline) {
-        this.syncNow();
-      }
-    });
+    // Expose for debugging
+    if (typeof window !== 'undefined') {
+      window.batchedSync = this;
+    }
   }
 
   /**
@@ -247,8 +244,16 @@ class BatchedSyncService {
         console.log(`✅ View synced for event ${eventId}`);
         
       } catch (error) {
-        console.error(`❌ Failed to sync view for event ${eventId}:`, error);
-        // Keep in queue for retry, but don't spam logs
+        // Handle 404 errors (event doesn't exist anymore)
+        if (error.message && (error.message.includes('404') || error.message.includes('Event not found'))) {
+          console.log(`🗑️ Event ${eventId} no longer exists, removing from view queue`);
+          this.viewQueue.delete(eventId);
+          // Also clean up from cache
+          this.localCache.delete(eventId);
+        } else {
+          console.error(`❌ Failed to sync view for event ${eventId}:`, error);
+          // Keep in queue for retry, but don't spam logs
+        }
       }
     }
   }
@@ -276,28 +281,29 @@ class BatchedSyncService {
               'Authorization': `Bearer ${localStorage.getItem('token')}`
             } : {})
           }
-        }, 10000);
-
-        // Update cache with server response
-        this.updateCache(eventId, {
-          interested: response.interested,
-          interest_count: response.interest_count,
-          lastSync: Date.now()
-        });
+        }, 10000); // 10 second timeout for batch operations
 
         // Remove from queue on success
         this.interestQueue.delete(eventId);
         console.log(`✅ Interest synced for event ${eventId}:`, response);
         
       } catch (error) {
-        console.error(`❌ Failed to sync interest for event ${eventId}:`, error);
-        
-        // Increment retry count
-        change.retryCount = (change.retryCount || 0) + 1;
-        
-        // Exponential backoff for retries
-        if (change.retryCount < this.MAX_RETRY_ATTEMPTS) {
-          console.log(`🔄 Will retry interest sync for event ${eventId} (attempt ${change.retryCount + 1})`);
+        // Handle 404 errors (event doesn't exist anymore)
+        if (error.message && (error.message.includes('404') || error.message.includes('Event not found'))) {
+          console.log(`🗑️ Event ${eventId} no longer exists, removing from interest queue`);
+          this.interestQueue.delete(eventId);
+          // Also clean up from cache
+          this.localCache.delete(eventId);
+        } else {
+          console.error(`❌ Failed to sync interest for event ${eventId}:`, error);
+          
+          // Increment retry count
+          change.retryCount = (change.retryCount || 0) + 1;
+          
+          // Exponential backoff - wait before next retry
+          if (change.retryCount < this.MAX_RETRY_ATTEMPTS) {
+            change.nextRetry = Date.now() + (this.RETRY_DELAY * Math.pow(2, change.retryCount - 1));
+          }
         }
       }
     }
@@ -356,14 +362,57 @@ class BatchedSyncService {
   }
 
   /**
-   * Clear cache and queues (useful for logout)
+   * Clear all data (for testing/debugging)
    */
   clearAll() {
-    this.viewQueue.clear();
     this.interestQueue.clear();
+    this.viewQueue.clear();
     this.localCache.clear();
-    localStorage.removeItem('batchedSync_data');
-    console.log('🧹 Cleared all batched sync data');
+    
+    // Clear from localStorage
+    try {
+      localStorage.removeItem('batchedSync_data');
+    } catch (error) {
+      console.warn('Failed to clear localStorage:', error);
+    }
+    
+    console.log('🧹 All batched sync data cleared');
+  }
+
+  /**
+   * Clean up old or invalid entries from cache and localStorage
+   */
+  cleanupOldEntries() {
+    const cutoffTime = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
+    
+    // Clean up cache entries older than 24 hours
+    for (const [eventId, data] of this.localCache.entries()) {
+      if (data.lastSync && data.lastSync < cutoffTime && data.lastOptimisticUpdate < cutoffTime) {
+        this.localCache.delete(eventId);
+      }
+    }
+    
+    // Clean up queues - remove events that have been failing for too long
+    for (const [eventId, change] of this.interestQueue.entries()) {
+      if (change.retryCount >= this.MAX_RETRY_ATTEMPTS) {
+        this.interestQueue.delete(eventId);
+        console.log(`🗑️ Removed failed interest sync for event ${eventId} from queue`);
+      }
+    }
+    
+    // Remove any invalid entries from viewQueue
+    const validViews = new Set();
+    for (const eventId of this.viewQueue) {
+      if (eventId && typeof eventId === 'string' && !isNaN(parseInt(eventId))) {
+        validViews.add(eventId);
+      }
+    }
+    this.viewQueue = validViews;
+    
+    // Persist the cleaned data
+    this.persistData();
+    
+    console.log('🧹 Cleaned up old sync entries');
   }
 
   /**

@@ -2272,6 +2272,12 @@ async def delete_event(
                 
                 # Clear event cache since an event was deleted
                 event_cache.clear()
+                
+                # Also clean up any specific cache entries for this event
+                event_cache.delete(f"event:{event_id}")
+                event_cache.delete(f"event_interest:{event_id}")
+                event_cache.delete(f"event_view:{event_id}")
+                
                 logger.info("Cleared event cache after deleting event")
                 
                 return {"detail": "Event successfully deleted"}
@@ -2330,50 +2336,34 @@ async def list_users(current_user: dict = Depends(get_current_user)):
 @app.get("/health")
 async def health_check():
     """
-    Health check endpoint with database verification
-    Updated: Critical tracking fix deployed
+    Health check endpoint that returns app status.
     """
-    health_status = {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.2",
-        "environment": "production" if IS_PRODUCTION else "development",
-        "database": {
-            "status": "unknown",
-            "type": "postgresql" if IS_PRODUCTION and DB_URL else "sqlite",
-            "connection_test": None
-        }
-    }
-    
-    # Test database connection
-    start_time = time.time()
     try:
+        # Test database connection
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT 1")
             cursor.fetchone()
-            
-            end_time = time.time()
-            response_time = round((end_time - start_time) * 1000)  # ms
-            
-            health_status["database"]["status"] = "connected"
-            health_status["database"]["connection_test"] = {
-                "successful": True,
-                "response_time_ms": response_time
-            }
-    except Exception as e:
-        logger.error(f"Health check database test failed: {str(e)}")
-        health_status["status"] = "degraded"
-        health_status["database"]["status"] = "error"
-        health_status["database"]["connection_test"] = {
-            "successful": False,
-            "error": str(e)[:200]  # Truncate long error messages
+        
+        # Get cache stats for monitoring
+        cache_stats = event_cache.stats()
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "connected",
+            "cache": cache_stats,
+            "memory_optimization": "enabled"
         }
-    
-    # Return appropriate HTTP status code based on health
-    status_code = 200 if health_status["status"] == "healthy" else 503
-    
-    return health_status
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "error",
+            "error": str(e),
+            "cache": event_cache.stats() if event_cache else None
+        }
 
 # Root endpoint
 @app.get("/")
@@ -3454,36 +3444,102 @@ async def debug_test_tracking(event_id: int):
             "error_type": type(e).__name__
         }
 
-# Simple memory cache for frequently accessed data
+# Simple memory cache for frequently accessed data with improved memory management
 import time
 from typing import Dict, Any
+import threading
 
 class SimpleCache:
-    def __init__(self, ttl_seconds: int = 300):  # 5 minute TTL
+    def __init__(self, ttl_seconds: int = 300, max_size: int = 1000):  # 5 minute TTL, max 1000 items
         self.cache: Dict[str, Dict[str, Any]] = {}
         self.ttl = ttl_seconds
+        self.max_size = max_size
+        self._lock = threading.RLock()  # Thread-safe cache
+        self._last_cleanup = time.time()
+        self._cleanup_interval = 60  # Cleanup every minute
+    
+    def _cleanup_expired(self) -> None:
+        """Remove expired entries and enforce size limits"""
+        current_time = time.time()
+        
+        # Only cleanup if enough time has passed
+        if current_time - self._last_cleanup < self._cleanup_interval:
+            return
+        
+        with self._lock:
+            # Remove expired items
+            expired_keys = []
+            for key, data in self.cache.items():
+                if current_time - data['timestamp'] >= self.ttl:
+                    expired_keys.append(key)
+            
+            for key in expired_keys:
+                del self.cache[key]
+            
+            # Enforce size limit by removing oldest items
+            if len(self.cache) > self.max_size:
+                # Sort by timestamp and remove oldest items
+                sorted_items = sorted(self.cache.items(), key=lambda x: x[1]['timestamp'])
+                items_to_remove = len(self.cache) - self.max_size
+                
+                for i in range(items_to_remove):
+                    key_to_remove = sorted_items[i][0]
+                    del self.cache[key_to_remove]
+            
+            self._last_cleanup = current_time
+            
+            # Log cleanup if significant
+            if expired_keys or len(self.cache) > self.max_size * 0.8:
+                logger.info(f"Cache cleanup: removed {len(expired_keys)} expired items, current size: {len(self.cache)}")
     
     def get(self, key: str) -> Any:
-        if key in self.cache:
-            data = self.cache[key]
-            if time.time() - data['timestamp'] < self.ttl:
-                return data['value']
-            else:
-                del self.cache[key]
+        self._cleanup_expired()
+        
+        with self._lock:
+            if key in self.cache:
+                data = self.cache[key]
+                if time.time() - data['timestamp'] < self.ttl:
+                    # Update access time for LRU-like behavior
+                    data['last_access'] = time.time()
+                    return data['value']
+                else:
+                    del self.cache[key]
         return None
     
     def set(self, key: str, value: Any) -> None:
-        self.cache[key] = {
-            'value': value,
-            'timestamp': time.time()
-        }
+        self._cleanup_expired()
+        
+        with self._lock:
+            current_time = time.time()
+            self.cache[key] = {
+                'value': value,
+                'timestamp': current_time,
+                'last_access': current_time
+            }
     
     def delete(self, key: str) -> None:
-        if key in self.cache:
-            del self.cache[key]
+        with self._lock:
+            if key in self.cache:
+                del self.cache[key]
     
     def clear(self) -> None:
-        self.cache.clear()
+        with self._lock:
+            self.cache.clear()
+            self._last_cleanup = time.time()
+    
+    def size(self) -> int:
+        return len(self.cache)
+    
+    def stats(self) -> Dict[str, Any]:
+        """Get cache statistics for monitoring"""
+        self._cleanup_expired()
+        with self._lock:
+            return {
+                'size': len(self.cache),
+                'max_size': self.max_size,
+                'ttl_seconds': self.ttl,
+                'last_cleanup': self._last_cleanup
+            }
 
-# Global cache instance
-event_cache = SimpleCache(ttl_seconds=180)  # 3 minute cache for mobile
+# Global cache instance with improved settings
+event_cache = SimpleCache(ttl_seconds=180, max_size=500)  # 3 minute cache, max 500 events
