@@ -15,6 +15,21 @@ The todo-events admin dashboard now includes a powerful bulk event import featur
 2. Navigate to the **"Bulk Import"** tab in the sidebar
 3. The bulk import interface will be displayed
 
+## Using the Template Feature
+
+### Built-in Template
+The bulk import page includes a helpful template feature:
+
+1. **Show Template**: Click the "Show Template" button to view a complete example JSON structure
+2. **Copy Template**: Click the "Copy Template" button to copy the template to your clipboard
+3. **Use Template**: The template will either be copied to your clipboard or loaded directly into the text area
+
+### Template Structure
+The template includes three sample events demonstrating:
+- **Single-day event** (Music Festival)
+- **Multi-day event** (Food Truck Rally) 
+- **Recurring event** (Weekly Community Yoga)
+
 ## JSON Format Requirements
 
 ### Basic Structure

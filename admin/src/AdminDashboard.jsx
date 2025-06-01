@@ -23,7 +23,8 @@ import {
   Save,
   Plus,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Upload
 } from 'lucide-react';
 
 // Get API URL from environment variable or fallback to production backend
@@ -1250,22 +1251,23 @@ const AdminDashboard = () => {
 
   // Bulk Operations Component
   const BulkOperations = () => {
-    const [bulkJsonInput, setBulkJsonInput] = useState('');
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [bulkResults, setBulkResults] = useState(null);
-    const [showExample, setShowExample] = useState(false);
+    const [jsonInput, setJsonInput] = useState('');
+    const [importResults, setImportResults] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showTemplate, setShowTemplate] = useState(false);
 
-    const exampleJson = JSON.stringify({
+    // Template JSON for bulk import
+    const templateJson = {
       "events": [
         {
-          "title": "Summer Music Festival",
-          "description": "Join us for an amazing outdoor music festival featuring local and international artists.",
+          "title": "Sample Music Festival",
+          "description": "A wonderful outdoor music festival featuring local and international artists. Bring your friends and family for a day of great music, food, and fun.",
           "date": "2024-07-15",
-          "start_time": "18:00",
-          "end_time": "23:30",
+          "start_time": "14:00",
+          "end_time": "22:00",
           "end_date": "2024-07-15",
           "category": "music",
-          "address": "Central Park, New York, NY 10024, USA",
+          "address": "Central Park, New York, NY, USA",
           "lat": 40.7829,
           "lng": -73.9654,
           "recurring": false,
@@ -1273,187 +1275,208 @@ const AdminDashboard = () => {
         },
         {
           "title": "Food Truck Rally",
-          "description": "Delicious food from various food trucks gathered in one location.",
+          "description": "Join us for an amazing food truck rally featuring the best local cuisine. Over 20 food trucks will be serving delicious meals.",
           "date": "2024-07-20",
           "start_time": "11:00",
           "end_time": "20:00",
-          "category": "food-drink",
-          "address": "Brooklyn Bridge Park, Brooklyn, NY 11201, USA",
-          "lat": 40.7010,
-          "lng": -73.9969,
-          "recurring": false,
-          "frequency": null
+          "category": "food",
+          "address": "Downtown Plaza, Los Angeles, CA, USA",
+          "lat": 34.0522,
+          "lng": -118.2437,
+          "recurring": false
+        },
+        {
+          "title": "Weekly Community Yoga",
+          "description": "Free yoga classes for the community. All skill levels welcome. Bring your own mat.",
+          "date": "2024-07-17",
+          "start_time": "08:00",
+          "end_time": "09:30",
+          "category": "community",
+          "address": "Riverside Park, Portland, OR, USA",
+          "lat": 45.5152,
+          "lng": -122.6784,
+          "recurring": true,
+          "frequency": "weekly"
         }
       ]
-    }, null, 2);
+    };
+
+    const copyTemplate = () => {
+      const templateString = JSON.stringify(templateJson, null, 2);
+      navigator.clipboard.writeText(templateString).then(() => {
+        alert('Template copied to clipboard!');
+      }).catch(() => {
+        // Fallback for older browsers
+        setJsonInput(templateString);
+        alert('Template loaded into the text area!');
+      });
+    };
 
     const handleBulkImport = async () => {
-      if (!bulkJsonInput.trim()) {
-        setError('Please provide JSON data for bulk import');
+      if (!jsonInput.trim()) {
+        setError('Please enter JSON data to import');
         return;
       }
 
-      setIsProcessing(true);
-      setBulkResults(null);
+      setIsLoading(true);
       setError(null);
 
       try {
-        // Parse JSON
-        const bulkData = JSON.parse(bulkJsonInput);
+        const jsonData = JSON.parse(jsonInput);
         
-        if (!bulkData.events || !Array.isArray(bulkData.events)) {
-          throw new Error('JSON must contain an "events" array');
-        }
-
-        if (bulkData.events.length === 0) {
-          throw new Error('Events array cannot be empty');
-        }
-
-        // Call bulk import API
-        const response = await fetchData('/admin/events/bulk', 'POST', bulkData);
+        const response = await fetchData('/admin/events/bulk', 'POST', jsonData);
         
-        setBulkResults(response);
-        
-        if (response.success_count > 0) {
-          // Refresh events data
-          await refreshData();
+        if (response) {
+          setImportResults(response);
+          if (response.success_count > 0) {
+            setSuccess(`Successfully imported ${response.success_count} events!`);
+            setJsonInput(''); // Clear input on success
+          }
+          if (response.error_count > 0) {
+            setError(`${response.error_count} events failed to import. Check results below.`);
+          }
         }
-
-      } catch (parseError) {
-        if (parseError instanceof SyntaxError) {
-          setError(`Invalid JSON format: ${parseError.message}`);
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          setError('Invalid JSON format. Please check your JSON syntax.');
         } else {
-          setError(parseError.message || 'Failed to import events');
+          setError('Failed to import events: ' + (error.message || 'Unknown error'));
         }
       } finally {
-        setIsProcessing(false);
+        setIsLoading(false);
       }
     };
 
     const clearResults = () => {
-      setBulkResults(null);
-      setBulkJsonInput('');
+      setImportResults(null);
+      setError(null);
     };
 
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-blue-600">Bulk Event Import</h2>
-            <button
-              onClick={() => setShowExample(!showExample)}
-              className="text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              <Eye className="w-5 h-5 mr-2" />
-              {showExample ? 'Hide' : 'Show'} Example
-            </button>
-          </div>
-
-          {/* Example JSON */}
-          {showExample && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Example JSON Format:</h3>
-              <pre className="text-sm text-gray-600 overflow-x-auto whitespace-pre-wrap">
-                {exampleJson}
-              </pre>
-              <button
-                onClick={() => setBulkJsonInput(exampleJson)}
-                className="mt-3 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
-              >
-                Use Example
-              </button>
+          <h3 className="text-xl font-semibold text-blue-600 mb-4">Bulk Event Import</h3>
+          
+          {/* Template Section */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-lg font-medium text-gray-700">JSON Template</h4>
+              <div className="space-x-2">
+                <button
+                  onClick={() => setShowTemplate(!showTemplate)}
+                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
+                >
+                  {showTemplate ? 'Hide' : 'Show'} Template
+                </button>
+                <button
+                  onClick={copyTemplate}
+                  className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm"
+                >
+                  Copy Template
+                </button>
+              </div>
             </div>
-          )}
+            
+            {showTemplate && (
+              <div className="bg-white p-3 rounded border">
+                <pre className="text-xs text-gray-600 overflow-x-auto whitespace-pre-wrap">
+                  {JSON.stringify(templateJson, null, 2)}
+                </pre>
+              </div>
+            )}
+            
+            <div className="mt-3 text-sm text-gray-600">
+              <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
+              <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency</p>
+              <p><strong>Categories:</strong> music, food, arts, sports, community, networking, education, other</p>
+              <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
+              <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
+              <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
+            </div>
+          </div>
 
           {/* JSON Input */}
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-semibold mb-3">
-              Event Data (JSON Format):
-            </label>
-            <textarea
-              value={bulkJsonInput}
-              onChange={(e) => setBulkJsonInput(e.target.value)}
-              placeholder="Paste your JSON event data here..."
-              className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-              disabled={isProcessing}
-            />
-          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                JSON Data (Paste your event data here)
+              </label>
+              <textarea
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                className="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                placeholder="Paste your JSON data here or use the template above..."
+              />
+            </div>
 
-          {/* Actions */}
-          <div className="flex space-x-4 mb-6">
-            <button
-              onClick={handleBulkImport}
-              disabled={isProcessing || !bulkJsonInput.trim()}
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 flex items-center"
-            >
-              {isProcessing ? (
-                <>
-                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-5 h-5 mr-2" />
-                  Import Events
-                </>
-              )}
-            </button>
-            
-            {bulkResults && (
+            <div className="flex space-x-4">
               <button
-                onClick={clearResults}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 flex items-center"
+                onClick={handleBulkImport}
+                disabled={isLoading || !jsonInput.trim()}
+                className="bg-blue-600 text-white py-2 px-6 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
-                <X className="w-5 h-5 mr-2" />
-                Clear Results
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2" size={16} />
+                    Import Events
+                  </>
+                )}
               </button>
-            )}
+              
+              {importResults && (
+                <button
+                  onClick={clearResults}
+                  className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+                >
+                  Clear Results
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Results */}
-          {bulkResults && (
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">Import Results</h3>
+          {/* Import Results */}
+          {importResults && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-lg font-medium text-gray-700 mb-3">Import Results</h4>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="text-sm text-green-600 font-semibold">Successful Imports</h4>
-                  <p className="text-2xl font-bold text-green-800">{bulkResults.success_count}</p>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-3 bg-green-100 rounded">
+                  <div className="text-2xl font-bold text-green-600">{importResults.success_count}</div>
+                  <div className="text-sm text-green-700">Successful</div>
                 </div>
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <h4 className="text-sm text-red-600 font-semibold">Errors</h4>
-                  <p className="text-2xl font-bold text-red-800">{bulkResults.error_count}</p>
+                <div className="text-center p-3 bg-red-100 rounded">
+                  <div className="text-2xl font-bold text-red-600">{importResults.error_count}</div>
+                  <div className="text-sm text-red-700">Failed</div>
                 </div>
               </div>
 
-              {/* Error Details */}
-              {bulkResults.errors && bulkResults.errors.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-md font-semibold text-red-600 mb-2">Error Details:</h4>
-                  <div className="bg-red-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-                    {bulkResults.errors.map((error, index) => (
-                      <div key={index} className="mb-2 text-sm">
-                        <span className="font-semibold">Event #{error.index + 1}</span>
-                        {error.event_title && <span className="text-gray-600"> ({error.event_title})</span>}:
-                        <span className="text-red-700"> {error.error}</span>
+              {importResults.errors && importResults.errors.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="font-medium text-red-600 mb-2">Errors:</h5>
+                  <div className="max-h-32 overflow-y-auto">
+                    {importResults.errors.map((error, index) => (
+                      <div key={index} className="text-sm text-red-600 bg-red-50 p-2 rounded mb-1">
+                        <strong>Event {error.index + 1}:</strong> {error.error}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Successfully Created Events */}
-              {bulkResults.created_events && bulkResults.created_events.length > 0 && (
-                <div>
-                  <h4 className="text-md font-semibold text-green-600 mb-2">
-                    Successfully Created Events:
-                  </h4>
-                  <div className="bg-green-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-                    {bulkResults.created_events.map((event, index) => (
-                      <div key={event.id} className="mb-2 text-sm">
-                        <span className="font-semibold">#{event.id}</span>
-                        <span className="text-gray-600"> {event.title}</span>
-                        <span className="text-green-700"> - {event.date} at {event.start_time}</span>
+              {importResults.created_events && importResults.created_events.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="font-medium text-green-600 mb-2">
+                    Successfully Created Events ({importResults.created_events.length}):
+                  </h5>
+                  <div className="max-h-32 overflow-y-auto">
+                    {importResults.created_events.map((event, index) => (
+                      <div key={index} className="text-sm text-green-600 bg-green-50 p-2 rounded mb-1">
+                        <strong>{event.title}</strong> - {event.date} at {event.start_time}
                       </div>
                     ))}
                   </div>
@@ -1461,21 +1484,6 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
-
-          {/* Instructions */}
-          <div className="border-t pt-6 mt-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Instructions:</h3>
-            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-              <li>Provide events data in JSON format with an "events" array</li>
-              <li>Each event must include: title, description, date, start_time, category, address, lat, lng</li>
-              <li>Optional fields: end_time, end_date, recurring, frequency</li>
-              <li>Valid categories: food-drink, music, arts, sports, community</li>
-              <li>Date format: YYYY-MM-DD (e.g., 2024-07-15)</li>
-              <li>Time format: HH:MM (24-hour, e.g., 18:00)</li>
-              <li>Coordinates must be valid latitude/longitude values</li>
-              <li>Duplicate events (same title, date, time, and location) will be skipped</li>
-            </ul>
-          </div>
         </div>
       </div>
     );
