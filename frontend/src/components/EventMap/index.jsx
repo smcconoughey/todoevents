@@ -340,7 +340,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             </div>
             
             {/* Add event interaction components to the details panel */}
-            <EventInteractionComponents eventId={event.id} />
+            <EventInteractionComponents eventId={String(event.id)} />
             
             {user && (user.id === event.created_by || user.role === 'admin') && (
               <div className="pt-4 space-y-3 border-t border-white/10">
@@ -505,7 +505,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
               </div>
               
               {/* Use proper EventInteractionComponents instead of simple inline display */}
-              <EventInteractionComponents eventId={event.id} />
+              <EventInteractionComponents eventId={String(event.id)} />
             </div>
           </div>
         </div>
@@ -654,7 +654,9 @@ const EventMap = ({ mapsLoaded = false }) => {
       
       // Initialize batchedSync cache with event data
       validEvents.forEach(event => {
-        batchedSync.updateCache(event.id, {
+        const eventIdString = String(event.id); // Ensure consistent string type for cache keys
+        
+        batchedSync.updateCache(eventIdString, {
           view_count: event.view_count || 0,
           interest_count: event.interest_count || 0,
           interested: false, // This will be updated by checkUserInterestStatus for logged in users

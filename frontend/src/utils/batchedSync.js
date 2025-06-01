@@ -144,6 +144,7 @@ class BatchedSyncService {
         lastOptimisticUpdate: 0
       });
     }
+    
     return this.localCache.get(eventId);
   }
 
@@ -458,7 +459,7 @@ class BatchedSyncService {
     try {
       const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/events/${eventId}`, {
-        method: 'HEAD' // Just check if it exists without downloading data
+        method: 'GET' // Use GET instead of HEAD since backend doesn't support HEAD
       });
       
       if (response.status === 404) {
