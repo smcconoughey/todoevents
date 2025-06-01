@@ -24,7 +24,14 @@ import {
   Plus,
   Eye,
   RefreshCw,
-  Upload
+  Upload,
+  UserCheck,
+  Settings,
+  Copy,
+  CheckCircle,
+  XCircle,
+  List,
+  Grid
 } from 'lucide-react';
 
 // Get API URL from environment variable or fallback to production backend
@@ -450,6 +457,25 @@ const EventEditModal = ({ event, isOpen, onClose, onSave }) => {
     </Modal>
   );
 };
+
+// Event Categories Definition
+const EVENT_CATEGORIES = [
+  { id: 'all', name: 'All Events', description: 'Show all event types' },
+  { id: 'food-drink', name: 'Food & Drink', description: 'Restaurants, bars, food festivals, culinary events' },
+  { id: 'music', name: 'Music', description: 'Concerts, music festivals, live performances' },
+  { id: 'arts', name: 'Arts', description: 'Art galleries, theater, creative workshops' },
+  { id: 'sports', name: 'Sports', description: 'Athletic events, tournaments, recreational sports' },
+  { id: 'automotive', name: 'Automotive', description: 'Car shows, auto racing, vehicle exhibitions' },
+  { id: 'airshows', name: 'Airshows', description: 'Aviation displays, aircraft exhibitions' },
+  { id: 'vehicle-sports', name: 'Vehicle Sports', description: 'Boat races, motorcycle events, motorsports' },
+  { id: 'community', name: 'Community', description: 'Local gatherings, neighborhood events, social meetups' },
+  { id: 'religious', name: 'Religious', description: 'Religious services, spiritual gatherings' },
+  { id: 'education', name: 'Tech & Education', description: 'Workshops, conferences, learning events' },
+  { id: 'networking', name: 'Networking', description: 'Professional networking, business meetups' },
+  { id: 'veteran', name: 'Veteran', description: 'Military commemorative events, veteran services' },
+  { id: 'cookout', name: 'Cookout', description: 'BBQ events, outdoor cooking, grilling competitions' },
+  { id: 'graduation', name: 'Graduation', description: 'Graduation ceremonies, academic celebrations' }
+];
 
 // Main Admin Dashboard Component
 const AdminDashboard = () => {
@@ -1099,6 +1125,41 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Event Categories Reference */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-blue-600 flex items-center">
+              <List className="mr-2" />
+              Available Event Categories
+            </h3>
+            <div className="text-sm text-gray-500">
+              {EVENT_CATEGORIES.length - 1} categories (excluding "All Events")
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {EVENT_CATEGORIES.filter(cat => cat.id !== 'all').map((category) => (
+              <div key={category.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="font-semibold text-gray-800">{category.name}</h4>
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                    {category.id}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed">{category.description}</p>
+                <div className="mt-3 text-xs text-gray-500">
+                  Current events: {analytics.eventCategoryDistribution[category.id] || 0}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <strong>Note:</strong> These categories help organize events and make them easier to find. 
+              When creating or editing events, users can select from these predefined categories to ensure consistency.
+            </p>
           </div>
         </div>
       </div>
