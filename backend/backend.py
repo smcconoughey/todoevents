@@ -1965,59 +1965,63 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Start transaction explicitly
                 cursor.execute("BEGIN")
                 
-                # Check for duplicates first
+                # More robust duplicate check with coordinate tolerance (1 meter)
+                # Round coordinates to 6 decimal places (~1 meter precision)
+                lat_rounded = round(event.lat, 6)
+                lng_rounded = round(event.lng, 6)
+                
                 duplicate_check = f"""
                     SELECT id FROM events 
-                    WHERE title = {placeholder} 
+                    WHERE TRIM(LOWER(title)) = TRIM(LOWER({placeholder}))
                     AND date = {placeholder} 
                     AND start_time = {placeholder} 
-                    AND lat = {placeholder} 
-                    AND lng = {placeholder} 
+                    AND ABS(lat - {placeholder}) < 0.000001
+                    AND ABS(lng - {placeholder}) < 0.000001
                     AND category = {placeholder}
                 """
                 
                 cursor.execute(duplicate_check, (
-                    event.title, 
+                    event.title.strip(), 
                     event.date, 
                     event.start_time, 
-                    event.lat, 
-                    event.lng, 
+                    lat_rounded, 
+                    lng_rounded, 
                     event.category
                 ))
                 
                 duplicate = cursor.fetchone()
                 if duplicate:
-                    # No need for explicit rollback if we're just checking
                     cursor.execute("ROLLBACK")
+                    logger.warning(f"Duplicate event prevented: {event.title} by user {current_user['id']}")
                     raise HTTPException(
-                        status_code=400, 
-                        detail="An event with these exact details already exists"
+                        status_code=409, 
+                        detail="An event with these details already exists at this location and time"
                     )
                 
-                # Insert the new event
+                # Insert the new event with rounded coordinates
                 insert_query = f"""
                     INSERT INTO events (
                         title, description, date, start_time, end_time, end_date, category,
                         address, lat, lng, recurring, frequency,
-                        created_by
+                        created_by, interest_count, view_count
                     ) VALUES (
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}
+                        {placeholder}, {placeholder}, 0, 0
                     ) RETURNING id
                 """
                 
                 values = (
-                    event.title, 
-                    event.description, 
+                    event.title.strip(), 
+                    event.description.strip(), 
                     event.date,
                     event.start_time, 
                     event.end_time, 
                     event.end_date, 
                     event.category, 
-                    event.address,
-                    event.lat, 
-                    event.lng, 
+                    event.address.strip(),
+                    lat_rounded, 
+                    lng_rounded, 
                     event.recurring,
                     event.frequency, 
                     current_user["id"]
@@ -2034,7 +2038,6 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     event_id = cursor.lastrowid
                 
                 if not event_id:
-                    # Roll back if we couldn't get the event ID
                     cursor.execute("ROLLBACK")
                     raise ValueError("Failed to get ID of created event")
                 
@@ -2044,7 +2047,6 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 event_data = cursor.fetchone()
                 
                 if not event_data:
-                    # Roll back if we couldn't find the created event
                     cursor.execute("ROLLBACK")
                     raise ValueError("Created event not found")
                 
@@ -2058,9 +2060,13 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                     event_dict['created_at'] = event_dict['created_at'].isoformat()
                 
+                # Ensure counters are integers
+                event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
+                event_dict['view_count'] = event_dict.get('view_count', 0) or 0
+                
                 # Clear event cache since a new event was created
                 event_cache.clear()
-                logger.info("Cleared event cache after creating new event")
+                logger.info(f"Successfully created event {event_id}: {event.title}")
                 
                 return event_dict
                 
@@ -3585,20 +3591,24 @@ async def bulk_create_events(
                     # Check for duplicates
                     duplicate_check = f"""
                         SELECT id FROM events 
-                        WHERE title = {placeholder} 
+                        WHERE TRIM(LOWER(title)) = TRIM(LOWER({placeholder}))
                         AND date = {placeholder} 
                         AND start_time = {placeholder} 
-                        AND lat = {placeholder} 
-                        AND lng = {placeholder} 
+                        AND ABS(lat - {placeholder}) < 0.000001
+                        AND ABS(lng - {placeholder}) < 0.000001
                         AND category = {placeholder}
                     """
                     
+                    # Round coordinates for consistency
+                    lat_rounded = round(event.lat, 6)
+                    lng_rounded = round(event.lng, 6)
+                    
                     cursor.execute(duplicate_check, (
-                        event.title, 
+                        event.title.strip(), 
                         event.date, 
                         event.start_time, 
-                        event.lat, 
-                        event.lng, 
+                        lat_rounded, 
+                        lng_rounded, 
                         event.category
                     ))
                     
@@ -3627,16 +3637,16 @@ async def bulk_create_events(
                     """
                     
                     values = (
-                        event.title, 
-                        event.description, 
+                        event.title.strip(), 
+                        event.description.strip(), 
                         event.date,
                         event.start_time, 
                         event.end_time, 
                         event.end_date, 
                         event.category, 
-                        event.address,
-                        event.lat, 
-                        event.lng, 
+                        event.address.strip(),
+                        lat_rounded, 
+                        lng_rounded, 
                         event.recurring,
                         event.frequency, 
                         current_user["id"]
