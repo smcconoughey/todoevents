@@ -55,7 +55,7 @@ import WelcomePopup from '../WelcomePopup';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
-import { EventInteractionComponents } from './EventInteractionComponents';
+import EventInteractionComponents from './EventInteractionComponents';
 
 
 const normalizeDate = (date) => {
