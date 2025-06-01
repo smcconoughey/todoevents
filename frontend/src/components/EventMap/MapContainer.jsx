@@ -173,7 +173,8 @@ const MapContainer = React.forwardRef(({
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
-          clickableIcons: false
+          clickableIcons: false,
+          gestureHandling: "greedy"
         });
 
         mapInstanceRef.current = map;
@@ -316,7 +317,6 @@ const MapContainer = React.forwardRef(({
         icon: createMarkerIcon(eventCategory, true, theme),
         optimized: true,
         title: event.title, // Add hover title for better UX
-        animation: google.maps.Animation.DROP, // Add drop animation for visual interest
         zIndex: event.id // Use event ID for z-index to prioritize newer events
       });
 

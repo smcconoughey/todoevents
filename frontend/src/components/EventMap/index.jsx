@@ -210,8 +210,22 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
     if (!event.start_time) return 'Time not specified';
     
     try {
-      const startTime = event.start_time;
-      const endTime = event.end_time;
+      const convertTo12Hour = (time24) => {
+        if (!time24) return time24;
+        
+        // Handle time strings like "20:00" or "08:30"
+        const [hours, minutes] = time24.split(':').map(Number);
+        if (isNaN(hours) || isNaN(minutes)) return time24;
+        
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+        const minutesStr = minutes.toString().padStart(2, '0');
+        
+        return `${hours12}:${minutesStr} ${period}`;
+      };
+      
+      const startTime = convertTo12Hour(event.start_time);
+      const endTime = event.end_time ? convertTo12Hour(event.end_time) : null;
       
       if (endTime) {
         return `${startTime} - ${endTime}`;
@@ -347,7 +361,15 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 <Button
                   variant="ghost"
                   className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
-                  onClick={onEdit}
+                  onClick={() => {
+                    setEditingEvent(selectedEvent);
+                    setIsCreateFormOpen(true);
+                    setSelectedLocation({
+                      lat: selectedEvent.lat,
+                      lng: selectedEvent.lng,
+                      address: selectedEvent.address
+                    });
+                  }}
                 >
                   Edit Event
                 </Button>
@@ -440,11 +462,27 @@ const formatEventTime = (event) => {
   if (!event?.start_time) return 'Time not specified';
   
   try {
-    let timeStr = event.start_time;
-    if (event.end_time) {
-      timeStr += ` - ${event.end_time}`;
+    const convertTo12Hour = (time24) => {
+      if (!time24) return time24;
+      
+      // Handle time strings like "20:00" or "08:30"
+      const [hours, minutes] = time24.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) return time24;
+      
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      const minutesStr = minutes.toString().padStart(2, '0');
+      
+      return `${hours12}:${minutesStr} ${period}`;
+    };
+    
+    const startTime = convertTo12Hour(event.start_time);
+    const endTime = event.end_time ? convertTo12Hour(event.end_time) : null;
+    
+    if (endTime) {
+      return `${startTime} - ${endTime}`;
     }
-    return timeStr;
+    return startTime;
   } catch (error) {
     console.error('Error formatting time:', error);
     return event.start_time || 'Time not specified';
@@ -771,11 +809,11 @@ const EventMap = ({ mapsLoaded = false }) => {
         event.lng
       );
       
-      // Filter by proximity range
-      if (distance > proximityRange) return false;
-      
       // Add distance to event for display purposes
       event.distance = distance;
+      
+      // Filter by proximity range (unless "All" is selected)
+      if (proximityRange !== 9999 && distance > proximityRange) return false;
     }
     
     return true;
@@ -884,7 +922,10 @@ const EventMap = ({ mapsLoaded = false }) => {
       await fetchEvents();
       
       setIsCreateFormOpen(false);
+      setEditingEvent(null);
+      setSelectedLocation(null);
       setSelectedEvent(createdEvent);
+      setError(null); // Clear any existing errors on success
 
     } catch (error) {
       console.error('Error creating event:', error);
@@ -1406,7 +1447,8 @@ const EventMap = ({ mapsLoaded = false }) => {
     { value: 1, label: '1mi', description: 'Walking distance' },
     { value: 5, label: '5mi', description: 'Short drive' },
     { value: 15, label: '15mi', description: 'Local area' },
-    { value: 30, label: '30mi', description: 'Regional' }
+    { value: 30, label: '30mi', description: 'Regional' },
+    { value: 9999, label: 'All', description: 'Show all events by distance' }
   ];
 
   return (
@@ -1554,8 +1596,23 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
-                    <div className="grid grid-cols-4 gap-1">
-                      {proximityOptions.map(option => (
+                    <div className="grid grid-cols-3 gap-1">
+                      {proximityOptions.slice(0, 3).map(option => (
+                        <button
+                          key={option.value}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
+                            proximityRange === option.value
+                              ? 'bg-pin-blue text-white border-pin-blue'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          }`}
+                          onClick={() => setProximityRange(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {proximityOptions.slice(3).map(option => (
                         <button
                           key={option.value}
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
@@ -1985,6 +2042,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     setShowLoginDialog(true);
                     return;
                   }
+                  setEditingEvent(null); // Ensure this is always a create operation
+                  setSelectedEvent(null); // Clear any selected event
                   setIsCreateFormOpen(true);
                 }}
               >
@@ -2096,8 +2155,23 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
-                    <div className="grid grid-cols-4 gap-1">
-                      {proximityOptions.map(option => (
+                    <div className="grid grid-cols-3 gap-1">
+                      {proximityOptions.slice(0, 3).map(option => (
+                        <button
+                          key={option.value}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
+                            proximityRange === option.value
+                              ? 'bg-pin-blue text-white border-pin-blue'
+                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                          }`}
+                          onClick={() => setProximityRange(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {proximityOptions.slice(3).map(option => (
                         <button
                           key={option.value}
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
@@ -2527,6 +2601,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     setShowLoginDialog(true);
                     return;
                   }
+                  setEditingEvent(null); // Ensure this is always a create operation
+                  setSelectedEvent(null); // Clear any selected event
                   setIsCreateFormOpen(true);
                 }}
               >
@@ -2723,6 +2799,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                       variant="ghost"
                       className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02] min-h-[40px] text-sm"
                       onClick={() => {
+                        setEditingEvent(selectedEvent);
                         setIsCreateFormOpen(true);
                         setSelectedLocation({
                           lat: selectedEvent.lat,
@@ -2789,11 +2866,13 @@ const EventMap = ({ mapsLoaded = false }) => {
           onClose={() => {
             setIsCreateFormOpen(false);
             setSelectedLocation(null);
+            setEditingEvent(null);
+            setError(null); // Clear errors when form is closed
           }}
           onSubmit={handleCreateEvent}
           selectedLocation={selectedLocation}
           onLocationSelect={setSelectedLocation}
-          initialEvent={selectedEvent}
+          initialEvent={editingEvent}
         />
       )}
 

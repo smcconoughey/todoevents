@@ -72,8 +72,6 @@ export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DAR
     scale: 1.3,
     // Anchor at the bottom point of the pin
     anchor: new google.maps.Point(0, 0),
-    // Enhanced drop animation for brand appeal
-    animation: google.maps.Animation.DROP,
     // Higher z-index for better layering
     zIndex: 1000,
     // Add subtle shadow effect
@@ -137,9 +135,7 @@ export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
       labelOrigin: new google.maps.Point(0, 0),
       // Enhanced visual appeal
       anchor: new google.maps.Point(0, 0),
-      zIndex: 2000,
-      // Add subtle animation hint
-      animation: google.maps.Animation.DROP
+      zIndex: 2000
     };
   } catch (error) {
     console.error('Error creating cluster icon:', error);
