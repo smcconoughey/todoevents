@@ -6,6 +6,8 @@ import LoginForm from "./LoginForm";
 import CalendarFilter from "./CalendarFilter";
 import MapContainer from "./MapContainer";
 import ShareCard from "./ShareCard";
+import MarkerStyleToggle from "./MarkerStyleToggle";
+import { getMarkerStyle, setMarkerStyle } from "./markerUtils";
 import categories, { getCategory } from "./categoryConfig";
 import { CategoryIcon } from "./CategoryIcons";
 import * as htmlToImage from 'html-to-image';
@@ -600,6 +602,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [error, setError] = useState(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [useIconOnlyMarkers, setUseIconOnlyMarkers] = useState(getMarkerStyle() === 'icon-only');
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
@@ -1471,6 +1474,13 @@ const EventMap = ({ mapsLoaded = false }) => {
     { value: 9999, label: 'All', description: 'Show all events by distance' }
   ];
 
+  const handleMarkerStyleToggle = (useIconOnly) => {
+    setUseIconOnlyMarkers(useIconOnly);
+    setMarkerStyle(useIconOnly ? 'icon-only' : 'diamond-pins');
+    // Force map to re-render markers by toggling a dependency in MapContainer
+    setEvents(prevEvents => [...prevEvents]);
+  };
+
   return (
     <div className="h-screen w-full relative" style={{backgroundColor: 'var(--bg-main)'}}>
       {/* Mobile Header */}
@@ -1496,6 +1506,11 @@ const EventMap = ({ mapsLoaded = false }) => {
               <HelpCircle className="h-5 w-5" />
             </Button>
             <ThemeToggle />
+            <MarkerStyleToggle 
+              useIconOnly={useIconOnlyMarkers}
+              onToggle={handleMarkerStyleToggle}
+              className="min-h-[36px] min-w-[36px]"
+            />
             <Button
               variant="ghost"
               size="icon"
@@ -1531,6 +1546,11 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <HelpCircle className="w-4 h-4" />
                 </Button>
                 <ThemeToggle />
+                <MarkerStyleToggle 
+                  useIconOnly={useIconOnlyMarkers}
+                  onToggle={handleMarkerStyleToggle}
+                  className="w-8 h-8"
+                />
                 {user ? (
                   <div className="flex items-center gap-2">
                     {user.role === 'admin' && (
@@ -1570,7 +1590,14 @@ const EventMap = ({ mapsLoaded = false }) => {
             </div>
           )}
           {isSidebarCollapsed && (
-            <ThemeToggle />
+            <div className="flex flex-col gap-2">
+              <ThemeToggle />
+              <MarkerStyleToggle 
+                useIconOnly={useIconOnlyMarkers}
+                onToggle={handleMarkerStyleToggle}
+                className="w-8 h-8"
+              />
+            </div>
           )}
           <Button
             variant="ghost"
@@ -2102,6 +2129,11 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <HelpCircle className="w-4 h-4" />
                   </Button>
                   <ThemeToggle />
+                  <MarkerStyleToggle 
+                    useIconOnly={useIconOnlyMarkers}
+                    onToggle={handleMarkerStyleToggle}
+                    className="w-8 h-8"
+                  />
                   {user ? (
                     <div className="flex items-center gap-2">
                       {user.role === 'admin' && (

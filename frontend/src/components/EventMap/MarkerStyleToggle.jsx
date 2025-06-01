@@ -8,7 +8,7 @@ const MarkerStyleToggle = ({ useIconOnly, onToggle, className = "" }) => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={onToggle}
+        onClick={() => onToggle(!useIconOnly)}
         className="h-8 px-3 text-xs bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all duration-200"
         title={`Switch to ${useIconOnly ? 'pin' : 'icon-only'} markers`}
       >

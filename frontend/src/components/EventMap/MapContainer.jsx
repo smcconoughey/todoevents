@@ -342,7 +342,7 @@ const MapContainer = React.forwardRef(({
       const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
         map: mapInstanceRef.current,
-        icon: createMarkerIcon(eventCategory, true, theme),
+        icon: createMarkerIcon(eventCategory.id, true, theme),
         optimized: true,
         title: event.title, // Add hover title for better UX
         zIndex: event.id // Use event ID for z-index to prioritize newer events
@@ -375,7 +375,7 @@ const MapContainer = React.forwardRef(({
               );
             
             // Create a cluster marker with visible label
-            const clusterIcon = createClusterIcon(count, markerCategories, theme);
+            const clusterIcon = createClusterIcon(count, markerCategories.map(cat => cat.id), theme);
             
             return new google.maps.Marker({
               position,

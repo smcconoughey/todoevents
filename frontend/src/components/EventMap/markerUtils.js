@@ -1,5 +1,5 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
-import categories from './categoryConfig';
+import allCategories from './categoryConfig';
 import { createIconOnlyMarker, createIconOnlyClusterMarker } from './iconOnlyMarkers';
 
 // *** DYNAMIC MARKER STYLE SYSTEM ***
@@ -61,7 +61,16 @@ const getIconPathFromCategory = (category) => {
   return iconPaths[iconName] || iconPaths.MapPin;
 };
 
-export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DARK) => {
+export const createMarkerIcon = (categoryOrId, isDetailed = false, theme = THEME_DARK) => {
+  // Handle both category objects and category ID strings
+  let category;
+  if (typeof categoryOrId === 'string') {
+    // Find category by ID
+    category = allCategories.find(cat => cat.id === categoryOrId) || allCategories[0];
+  } else {
+    category = categoryOrId || allCategories[0];
+  }
+  
   // *** NEW FEATURE: Use icon-only markers if flag is enabled ***
   if (useIconOnlyMarkers()) {
     return createIconOnlyMarker(category, theme);
@@ -108,7 +117,22 @@ export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DAR
 };
 
 // Function to create custom cluster icons with brand colors
-export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
+export const createClusterIcon = (count, categoriesOrIds, theme = THEME_DARK) => {
+  // Handle both category objects and category ID strings
+  let categories;
+  if (Array.isArray(categoriesOrIds) && categoriesOrIds.length > 0) {
+    if (typeof categoriesOrIds[0] === 'string') {
+      // Convert category IDs to category objects
+      categories = categoriesOrIds.map(id => 
+        allCategories.find(cat => cat.id === id) || allCategories[0]
+      ).filter(Boolean);
+    } else {
+      categories = categoriesOrIds;
+    }
+  } else {
+    categories = [];
+  }
+  
   // *** NEW FEATURE: Use icon-only cluster markers if flag is enabled ***
   if (useIconOnlyMarkers()) {
     return createIconOnlyClusterMarker(count, categories, theme);
