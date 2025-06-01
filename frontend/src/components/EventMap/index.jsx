@@ -55,6 +55,7 @@ import WelcomePopup from '../WelcomePopup';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { EventInteractionComponents } from './EventInteractionComponents';
 
 
 const normalizeDate = (date) => {
@@ -497,6 +498,9 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
                   </div>
                 )}
               </div>
+              
+              {/* Use proper EventInteractionComponents instead of simple inline display */}
+              <EventInteractionComponents eventId={event.id} />
             </div>
           </div>
         </div>
