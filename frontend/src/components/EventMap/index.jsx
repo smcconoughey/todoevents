@@ -2713,6 +2713,10 @@ const EventMap = ({ mapsLoaded = false }) => {
                     </div>
                   )}
                 </div>
+                
+                {/* Event Interaction Components */}
+                <EventInteractionComponents eventId={String(selectedEvent.id)} />
+                
                 {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
                   <div className="pt-3 space-y-2 border-t border-white/10">
                     <Button
