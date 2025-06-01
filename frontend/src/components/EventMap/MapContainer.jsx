@@ -107,6 +107,31 @@ const isDateInRange = (dateStr, range) => {
   return true;
 };
 
+// Add function to check if an event has passed
+const isEventPast = (event) => {
+  if (!event || !event.date) return false;
+  
+  try {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
+    
+    // If the event has an end date, use that for comparison
+    if (event.end_date) {
+      const endDate = new Date(event.end_date);
+      endDate.setHours(23, 59, 59, 999); // End of the end date
+      return endDate < now;
+    }
+    
+    // If no end date, check if the event date has passed
+    const eventDate = new Date(event.date);
+    eventDate.setHours(23, 59, 59, 999); // End of the event date
+    return eventDate < now;
+  } catch (error) {
+    console.warn('Error checking if event is past:', error);
+    return false; // Don't filter out events if we can't determine
+  }
+};
+
 const MapContainer = React.forwardRef(({
   events = [],
   onEventClick,
@@ -279,6 +304,9 @@ const MapContainer = React.forwardRef(({
     }
 
     const validEvents = events.filter(event => {
+      // Filter out past events
+      if (isEventPast(event)) return false;
+      
       // Category filter - handle both array and string formats
       let categoryMatch;
       if (Array.isArray(selectedCategory)) {

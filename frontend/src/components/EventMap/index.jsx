@@ -84,6 +84,31 @@ const isDateInRange = (dateStr, range) => {
   return true;
 };
 
+// Add function to check if an event has passed
+const isEventPast = (event) => {
+  if (!event || !event.date) return false;
+  
+  try {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
+    
+    // If the event has an end date, use that for comparison
+    if (event.end_date) {
+      const endDate = new Date(event.end_date);
+      endDate.setHours(23, 59, 59, 999); // End of the end date
+      return endDate < now;
+    }
+    
+    // If no end date, check if the event date has passed
+    const eventDate = new Date(event.date);
+    eventDate.setHours(23, 59, 59, 999); // End of the event date
+    return eventDate < now;
+  } catch (error) {
+    console.warn('Error checking if event is past:', error);
+    return false; // Don't filter out events if we can't determine
+  }
+};
+
 // Add this function before the EventDetailsPanel component
 const generateEventSchema = (event) => {
   // Add comprehensive null/undefined checks
@@ -785,6 +810,9 @@ const EventMap = ({ mapsLoaded = false }) => {
   const filteredEvents = events.filter(event => {
     // Basic null/validity check
     if (!event || !event.id || event.lat == null || event.lng == null) return false;
+    
+    // Filter out past events
+    if (isEventPast(event)) return false;
     
     // Category filter
     const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
@@ -1756,6 +1784,9 @@ const EventMap = ({ mapsLoaded = false }) => {
                           const eventCount = events.filter(event => {
                             if (!event || !event.id || event.lat == null || event.lng == null) return false;
                             
+                            // Filter out past events
+                            if (isEventPast(event)) return false;
+                            
                             // Apply other filters but not time filter
                             const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
                             if (!categoryMatch) return false;
@@ -1771,7 +1802,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 event.lat,
                                 event.lng
                               );
-                              if (distance > proximityRange) return false;
+                              if (proximityRange !== 9999 && distance > proximityRange) return false;
                             }
                             
                             // Time filter for this specific option
@@ -1828,6 +1859,9 @@ const EventMap = ({ mapsLoaded = false }) => {
                             eventCount = events.filter(event => {
                               if (!event || !event.id || event.lat == null || event.lng == null) return false;
                               
+                              // Filter out past events
+                              if (isEventPast(event)) return false;
+                              
                               // Must match this specific category
                               if (event.category !== category.id) return false;
                               
@@ -1843,7 +1877,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                                   event.lat,
                                   event.lng
                                 );
-                                if (distance > proximityRange) return false;
+                                if (proximityRange !== 9999 && distance > proximityRange) return false;
                               }
                               
                               return true;
@@ -2315,6 +2349,9 @@ const EventMap = ({ mapsLoaded = false }) => {
                           const eventCount = events.filter(event => {
                             if (!event || !event.id || event.lat == null || event.lng == null) return false;
                             
+                            // Filter out past events
+                            if (isEventPast(event)) return false;
+                            
                             // Apply other filters but not time filter
                             const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
                             if (!categoryMatch) return false;
@@ -2330,7 +2367,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                                 event.lat,
                                 event.lng
                               );
-                              if (distance > proximityRange) return false;
+                              if (proximityRange !== 9999 && distance > proximityRange) return false;
                             }
                             
                             // Time filter for this specific option
@@ -2387,6 +2424,9 @@ const EventMap = ({ mapsLoaded = false }) => {
                             eventCount = events.filter(event => {
                               if (!event || !event.id || event.lat == null || event.lng == null) return false;
                               
+                              // Filter out past events
+                              if (isEventPast(event)) return false;
+                              
                               // Must match this specific category
                               if (event.category !== category.id) return false;
                               
@@ -2402,7 +2442,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                                   event.lat,
                                   event.lng
                                 );
-                                if (distance > proximityRange) return false;
+                                if (proximityRange !== 9999 && distance > proximityRange) return false;
                               }
                               
                               return true;
