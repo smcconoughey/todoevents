@@ -55,10 +55,6 @@ const EventInteractionComponents = ({ eventId }) => {
         {hasError && (
           <span className="ml-2 text-yellow-400 text-xs">⚠️ Offline</span>
         )}
-        {/* Temporary debug info for mobile */}
-        <span className="ml-2 text-blue-400 text-xs">
-          V:{viewCount || 0} I:{interestCount || 0}
-        </span>
       </div>
       <div className="flex items-center gap-4 mt-2">
         <InterestButton
