@@ -16,6 +16,17 @@ const EventInteractionComponents = ({ eventId }) => {
   
   const [hasError, setHasError] = useState(false);
 
+  // Temporary debugging
+  useEffect(() => {
+    console.log(`🔍 EventInteractionComponents - eventId: ${eventId}`, {
+      interested,
+      interestCount, 
+      viewCount,
+      loading,
+      isInitialized
+    });
+  }, [eventId, interested, interestCount, viewCount, loading, isInitialized]);
+
   // Track view when component mounts (this will be batched)
   useEffect(() => {
     if (eventId && isInitialized) {
@@ -55,6 +66,10 @@ const EventInteractionComponents = ({ eventId }) => {
         {hasError && (
           <span className="ml-2 text-yellow-400 text-xs">⚠️ Offline</span>
         )}
+        {/* Temporary debug display */}
+        <span className="ml-2 text-blue-400 text-xs">
+          Debug: V:{viewCount} I:{interestCount}
+        </span>
       </div>
       <div className="flex items-center gap-4 mt-2">
         <InterestButton

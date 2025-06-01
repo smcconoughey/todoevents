@@ -652,6 +652,14 @@ const EventMap = ({ mapsLoaded = false }) => {
 
       console.log(`Fetched ${response.length} events, ${validEvents.length} valid events`);
       
+      // Debug: Log first few events to see their data
+      console.log('📊 Sample events data:', validEvents.slice(0, 2).map(e => ({
+        id: e.id,
+        title: e.title,
+        view_count: e.view_count,
+        interest_count: e.interest_count
+      })));
+      
       // Initialize batchedSync cache with event data
       validEvents.forEach(event => {
         const eventIdString = String(event.id); // Ensure consistent string type for cache keys
@@ -666,6 +674,9 @@ const EventMap = ({ mapsLoaded = false }) => {
       });
       
       console.log('Initialized batchedSync cache with event interaction data');
+      
+      // Debug: Check cache contents
+      console.log('📦 Cache sample:', Array.from(batchedSync.localCache.entries()).slice(0, 2));
       
       setEvents(validEvents);
 
