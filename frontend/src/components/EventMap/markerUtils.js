@@ -1,5 +1,25 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 import categories from './categoryConfig';
+import { createIconOnlyMarker, createIconOnlyClusterMarker } from './iconOnlyMarkers';
+
+// *** DYNAMIC MARKER STYLE SYSTEM ***
+// Default to icon-only markers (new approach), but allow runtime switching
+let currentMarkerStyle = 'icon-only'; // 'icon-only' or 'diamond-pins'
+
+// Function to switch marker styles dynamically
+export const setMarkerStyle = (style) => {
+  if (style === 'icon-only' || style === 'diamond-pins') {
+    currentMarkerStyle = style;
+    return true;
+  }
+  return false;
+};
+
+// Function to get current marker style
+export const getMarkerStyle = () => currentMarkerStyle;
+
+// Function to check if using icon-only markers
+const useIconOnlyMarkers = () => currentMarkerStyle === 'icon-only';
 
 // Get pre-defined icon paths from categoryConfig
 const getIconPathFromCategory = (category) => {
@@ -42,6 +62,12 @@ const getIconPathFromCategory = (category) => {
 };
 
 export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DARK) => {
+  // *** NEW FEATURE: Use icon-only markers if flag is enabled ***
+  if (useIconOnlyMarkers()) {
+    return createIconOnlyMarker(category, theme);
+  }
+  
+  // *** ORIGINAL CODE: Keep existing diamond pin approach ***
   const isDarkMode = theme === THEME_DARK;
   
   // Brand-aware stroke colors
@@ -83,6 +109,12 @@ export const createMarkerIcon = (category, isDetailed = false, theme = THEME_DAR
 
 // Function to create custom cluster icons with brand colors
 export const createClusterIcon = (count, categories, theme = THEME_DARK) => {
+  // *** NEW FEATURE: Use icon-only cluster markers if flag is enabled ***
+  if (useIconOnlyMarkers()) {
+    return createIconOnlyClusterMarker(count, categories, theme);
+  }
+  
+  // *** ORIGINAL CODE: Keep existing cluster approach ***
   const isDarkMode = theme === THEME_DARK;
   
   // Brand colors for different themes
