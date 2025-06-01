@@ -2695,6 +2695,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   user={user}
                   onClose={() => setSelectedEvent(null)}
                   onEdit={() => {
+                    setEditingEvent(selectedEvent);
                     setIsCreateFormOpen(true);
                     setSelectedLocation({
                       lat: selectedEvent.lat,
