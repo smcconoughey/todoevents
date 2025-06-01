@@ -37,16 +37,10 @@ export const useEventInteraction = (eventId) => {
 
     const initializeData = async () => {
       try {
-        console.log(`🔄 useEventInteraction initializing for eventId: ${eventId} (type: ${typeof eventId})`);
-        
         // Get cached data that was populated during the main events fetch
         const cachedState = batchedSync.getEventState(eventId);
         
-        console.log(`📦 Cached state for event ${eventId}:`, cachedState);
-        console.log(`📦 Cache keys available:`, Array.from(batchedSync.localCache.keys()));
-        
         if (cachedState) {
-          console.log(`✅ Found cached data for event ${eventId}, updating state...`);
           setInterestData(prev => ({
             ...prev,
             interested: cachedState.interested,
@@ -57,15 +51,6 @@ export const useEventInteraction = (eventId) => {
             view_count: cachedState.view_count,
             view_tracked: cachedState.viewTracked
           });
-        } else {
-          console.warn(`❌ No cached state found for event ${eventId}`);
-          console.log(`🔍 Trying to find cache entry manually...`);
-          // Try to find the entry manually to debug
-          for (const [key, value] of batchedSync.localCache.entries()) {
-            if (key == eventId || String(key) == String(eventId)) {
-              console.log(`🎯 Found potential match: key=${key} (type: ${typeof key}), value:`, value);
-            }
-          }
         }
 
         // Check user's interest status if user is logged in and we haven't checked yet
@@ -140,8 +125,8 @@ export const useEventInteraction = (eventId) => {
 
   return {
     interested: interestData.interested,
-    interest_count: interestData.interest_count,
-    view_count: viewData.view_count,
+    interestCount: interestData.interest_count,
+    viewCount: viewData.view_count,
     loading: interestData.loading,
     toggleInterest,
     trackView,
