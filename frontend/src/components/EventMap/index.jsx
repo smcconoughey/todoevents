@@ -337,6 +337,10 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 </div>
               )}
             </div>
+            
+            {/* Add event interaction components to the details panel */}
+            <EventInteractionComponents eventId={event.id} />
+            
             {user && (user.id === event.created_by || user.role === 'admin') && (
               <div className="pt-4 space-y-3 border-t border-white/10">
                 <Button
