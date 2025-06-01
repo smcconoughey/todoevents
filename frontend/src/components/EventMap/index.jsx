@@ -56,6 +56,7 @@ import WelcomePopup from '../WelcomePopup';
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import EventInteractionComponents from './EventInteractionComponents';
+import { batchedSync } from '@/utils/batchedSync';
 
 
 const normalizeDate = (date) => {
@@ -642,11 +643,28 @@ const EventMap = ({ mapsLoaded = false }) => {
           category: event.category || 'other',
           address: event.address || 'Location not specified',
           recurring: Boolean(event.recurring),
-          frequency: event.frequency || null
+          frequency: event.frequency || null,
+          // Ensure view and interest counts are properly initialized
+          view_count: event.view_count || 0,
+          interest_count: event.interest_count || 0
         };
       });
 
       console.log(`Fetched ${response.length} events, ${validEvents.length} valid events`);
+      
+      // Initialize batchedSync cache with event data
+      validEvents.forEach(event => {
+        batchedSync.updateCache(event.id, {
+          view_count: event.view_count || 0,
+          interest_count: event.interest_count || 0,
+          interested: false, // This will be updated by checkUserInterestStatus for logged in users
+          viewTracked: false,
+          interestStatusChecked: false
+        });
+      });
+      
+      console.log('Initialized batchedSync cache with event interaction data');
+      
       setEvents(validEvents);
 
     } catch (error) {
