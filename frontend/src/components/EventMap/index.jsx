@@ -386,15 +386,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 <Button
                   variant="ghost"
                   className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
-                  onClick={() => {
-                    setEditingEvent(selectedEvent);
-                    setIsCreateFormOpen(true);
-                    setSelectedLocation({
-                      lat: selectedEvent.lat,
-                      lng: selectedEvent.lng,
-                      address: selectedEvent.address
-                    });
-                  }}
+                  onClick={onEdit}
                 >
                   Edit Event
                 </Button>

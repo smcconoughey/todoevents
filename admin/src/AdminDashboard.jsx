@@ -550,17 +550,77 @@ const AdminDashboard = () => {
           "recurring": false
         },
         {
-          "title": "Weekly Community Yoga",
-          "description": "Free yoga classes for the community. All skill levels welcome. Bring your own mat.",
+          "title": "Art Gallery Opening",
+          "description": "Contemporary art exhibition featuring works by emerging local artists. Wine and cheese reception included.",
+          "date": "2024-07-22",
+          "start_time": "18:00",
+          "end_time": "21:00",
+          "category": "arts",
+          "address": "Metropolitan Art Gallery, Chicago, IL, USA",
+          "lat": 41.8781,
+          "lng": -87.6298,
+          "recurring": false
+        },
+        {
+          "title": "Weekly Basketball League",
+          "description": "Competitive basketball league for adults. Registration required. All skill levels welcome.",
+          "date": "2024-07-18",
+          "start_time": "19:00",
+          "end_time": "21:00",
+          "category": "sports",
+          "address": "Community Sports Center, Austin, TX, USA",
+          "lat": 30.2672,
+          "lng": -97.7431,
+          "recurring": true,
+          "frequency": "weekly"
+        },
+        {
+          "title": "Community Garden Volunteer Day",
+          "description": "Help maintain our community garden! Tools provided. Great for families and individuals looking to give back.",
           "date": "2024-07-17",
           "start_time": "08:00",
-          "end_time": "09:30",
+          "end_time": "12:00",
           "category": "community",
           "address": "Riverside Park, Portland, OR, USA",
           "lat": 45.5152,
           "lng": -122.6784,
-          "recurring": true,
-          "frequency": "weekly"
+          "recurring": false
+        },
+        {
+          "title": "Tech Professionals Networking Mixer",
+          "description": "Connect with fellow tech professionals in the area. Refreshments provided. Perfect for career development and collaboration opportunities.",
+          "date": "2024-07-25",
+          "start_time": "17:30",
+          "end_time": "20:00",
+          "category": "networking",
+          "address": "Innovation Hub, San Francisco, CA, USA",
+          "lat": 37.7749,
+          "lng": -122.4194,
+          "recurring": false
+        },
+        {
+          "title": "Financial Literacy Workshop",
+          "description": "Learn essential money management skills, budgeting, and investment basics. Free workshop with certified financial advisors.",
+          "date": "2024-07-28",
+          "start_time": "10:00",
+          "end_time": "14:00",
+          "category": "education",
+          "address": "Public Library Main Branch, Seattle, WA, USA",
+          "lat": 47.6062,
+          "lng": -122.3321,
+          "recurring": false
+        },
+        {
+          "title": "Pet Adoption Drive",
+          "description": "Find your perfect furry companion! Local animal shelter hosting adoption event with over 50 pets looking for homes.",
+          "date": "2024-07-30",
+          "start_time": "10:00",
+          "end_time": "16:00",
+          "category": "other",
+          "address": "Central Mall Parking Lot, Denver, CO, USA",
+          "lat": 39.7392,
+          "lng": -104.9903,
+          "recurring": false
         }
       ]
     };
@@ -667,7 +727,7 @@ const AdminDashboard = () => {
             <div className="mt-3 text-sm text-gray-600">
               <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
               <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency</p>
-              <p><strong>Categories:</strong> music, food, arts, sports, community, networking, education, other</p>
+              <p><strong>Valid categories:</strong> music, food, arts, sports, community, networking, education, other</p>
               <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
               <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
               <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
