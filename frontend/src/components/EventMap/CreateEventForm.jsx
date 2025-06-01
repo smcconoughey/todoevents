@@ -200,7 +200,7 @@ const CreateEventForm = ({
     e.preventDefault();
     setError(null);
 
-    // Prevent double submission
+    // Prevent double submission with multiple checks
     if (isSubmitting) {
       console.log('Form already submitting, ignoring duplicate submission');
       return;
@@ -224,14 +224,14 @@ const CreateEventForm = ({
       }
 
       const eventData = {
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         date: formData.date,
         start_time: formData.start_time,
         end_time: formData.end_time,
         end_date: isSameDay ? null : (formData.end_date || null),
         category: formData.category,
-        address: formData.address,
+        address: formData.address.trim(),
         lat: formData.location.lat,
         lng: formData.location.lng,
         recurring: false,
@@ -269,7 +269,15 @@ const CreateEventForm = ({
       onClose();
     } catch (error) {
       console.error('Error saving event:', error);
-      setError(error.message || 'Failed to save event. Please try again.');
+      
+      // Check for specific duplicate error
+      if (error.message && error.message.includes('409')) {
+        setError('This event already exists. Please check for duplicates or modify the details.');
+      } else if (error.message && error.message.includes('already exists')) {
+        setError('An event with these details already exists at this location and time.');
+      } else {
+        setError(error.message || 'Failed to save event. Please try again.');
+      }
     } finally {
       // Always reset submitting state
       setIsSubmitting(false);
