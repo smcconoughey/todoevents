@@ -1248,6 +1248,239 @@ const AdminDashboard = () => {
     );
   };
 
+  // Bulk Operations Component
+  const BulkOperations = () => {
+    const [bulkJsonInput, setBulkJsonInput] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [bulkResults, setBulkResults] = useState(null);
+    const [showExample, setShowExample] = useState(false);
+
+    const exampleJson = JSON.stringify({
+      "events": [
+        {
+          "title": "Summer Music Festival",
+          "description": "Join us for an amazing outdoor music festival featuring local and international artists.",
+          "date": "2024-07-15",
+          "start_time": "18:00",
+          "end_time": "23:30",
+          "end_date": "2024-07-15",
+          "category": "music",
+          "address": "Central Park, New York, NY 10024, USA",
+          "lat": 40.7829,
+          "lng": -73.9654,
+          "recurring": false,
+          "frequency": null
+        },
+        {
+          "title": "Food Truck Rally",
+          "description": "Delicious food from various food trucks gathered in one location.",
+          "date": "2024-07-20",
+          "start_time": "11:00",
+          "end_time": "20:00",
+          "category": "food-drink",
+          "address": "Brooklyn Bridge Park, Brooklyn, NY 11201, USA",
+          "lat": 40.7010,
+          "lng": -73.9969,
+          "recurring": false,
+          "frequency": null
+        }
+      ]
+    }, null, 2);
+
+    const handleBulkImport = async () => {
+      if (!bulkJsonInput.trim()) {
+        setError('Please provide JSON data for bulk import');
+        return;
+      }
+
+      setIsProcessing(true);
+      setBulkResults(null);
+      setError(null);
+
+      try {
+        // Parse JSON
+        const bulkData = JSON.parse(bulkJsonInput);
+        
+        if (!bulkData.events || !Array.isArray(bulkData.events)) {
+          throw new Error('JSON must contain an "events" array');
+        }
+
+        if (bulkData.events.length === 0) {
+          throw new Error('Events array cannot be empty');
+        }
+
+        // Call bulk import API
+        const response = await fetchData('/admin/events/bulk', 'POST', bulkData);
+        
+        setBulkResults(response);
+        
+        if (response.success_count > 0) {
+          // Refresh events data
+          await refreshData();
+        }
+
+      } catch (parseError) {
+        if (parseError instanceof SyntaxError) {
+          setError(`Invalid JSON format: ${parseError.message}`);
+        } else {
+          setError(parseError.message || 'Failed to import events');
+        }
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    const clearResults = () => {
+      setBulkResults(null);
+      setBulkJsonInput('');
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-blue-600">Bulk Event Import</h2>
+            <button
+              onClick={() => setShowExample(!showExample)}
+              className="text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              <Eye className="w-5 h-5 mr-2" />
+              {showExample ? 'Hide' : 'Show'} Example
+            </button>
+          </div>
+
+          {/* Example JSON */}
+          {showExample && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Example JSON Format:</h3>
+              <pre className="text-sm text-gray-600 overflow-x-auto whitespace-pre-wrap">
+                {exampleJson}
+              </pre>
+              <button
+                onClick={() => setBulkJsonInput(exampleJson)}
+                className="mt-3 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+              >
+                Use Example
+              </button>
+            </div>
+          )}
+
+          {/* JSON Input */}
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-semibold mb-3">
+              Event Data (JSON Format):
+            </label>
+            <textarea
+              value={bulkJsonInput}
+              onChange={(e) => setBulkJsonInput(e.target.value)}
+              placeholder="Paste your JSON event data here..."
+              className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+              disabled={isProcessing}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex space-x-4 mb-6">
+            <button
+              onClick={handleBulkImport}
+              disabled={isProcessing || !bulkJsonInput.trim()}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 flex items-center"
+            >
+              {isProcessing ? (
+                <>
+                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 mr-2" />
+                  Import Events
+                </>
+              )}
+            </button>
+            
+            {bulkResults && (
+              <button
+                onClick={clearResults}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 flex items-center"
+              >
+                <X className="w-5 h-5 mr-2" />
+                Clear Results
+              </button>
+            )}
+          </div>
+
+          {/* Results */}
+          {bulkResults && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Import Results</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-green-600 font-semibold">Successful Imports</h4>
+                  <p className="text-2xl font-bold text-green-800">{bulkResults.success_count}</p>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-red-600 font-semibold">Errors</h4>
+                  <p className="text-2xl font-bold text-red-800">{bulkResults.error_count}</p>
+                </div>
+              </div>
+
+              {/* Error Details */}
+              {bulkResults.errors && bulkResults.errors.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-md font-semibold text-red-600 mb-2">Error Details:</h4>
+                  <div className="bg-red-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    {bulkResults.errors.map((error, index) => (
+                      <div key={index} className="mb-2 text-sm">
+                        <span className="font-semibold">Event #{error.index + 1}</span>
+                        {error.event_title && <span className="text-gray-600"> ({error.event_title})</span>}:
+                        <span className="text-red-700"> {error.error}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Successfully Created Events */}
+              {bulkResults.created_events && bulkResults.created_events.length > 0 && (
+                <div>
+                  <h4 className="text-md font-semibold text-green-600 mb-2">
+                    Successfully Created Events:
+                  </h4>
+                  <div className="bg-green-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    {bulkResults.created_events.map((event, index) => (
+                      <div key={event.id} className="mb-2 text-sm">
+                        <span className="font-semibold">#{event.id}</span>
+                        <span className="text-gray-600"> {event.title}</span>
+                        <span className="text-green-700"> - {event.date} at {event.start_time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Instructions */}
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Instructions:</h3>
+            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+              <li>Provide events data in JSON format with an "events" array</li>
+              <li>Each event must include: title, description, date, start_time, category, address, lat, lng</li>
+              <li>Optional fields: end_time, end_date, recurring, frequency</li>
+              <li>Valid categories: food-drink, music, arts, sports, community</li>
+              <li>Date format: YYYY-MM-DD (e.g., 2024-07-15)</li>
+              <li>Time format: HH:MM (24-hour, e.g., 18:00)</li>
+              <li>Coordinates must be valid latitude/longitude values</li>
+              <li>Duplicate events (same title, date, time, and location) will be skipped</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // The rest of the AdminDashboard component continues...
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1260,6 +1493,7 @@ const AdminDashboard = () => {
               { name: 'Dashboard', icon: <Server className="mr-2" />, tab: 'dashboard' },
               { name: 'Users', icon: <Users className="mr-2" />, tab: 'users' },
               { name: 'Events', icon: <Calendar className="mr-2" />, tab: 'events' },
+              { name: 'Bulk Import', icon: <Plus className="mr-2" />, tab: 'bulk' },
               { name: 'Analytics', icon: <BarChart2 className="mr-2" />, tab: 'analytics' },
               { name: 'Moderation', icon: <Shield className="mr-2" />, tab: 'moderation' }
             ].map(item => (
@@ -1321,6 +1555,7 @@ const AdminDashboard = () => {
           {activeTab === 'events' && <EventManagement />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'moderation' && <ModerationTools />}
+          {activeTab === 'bulk' && <BulkOperations />}
         </div>
       </div>
 

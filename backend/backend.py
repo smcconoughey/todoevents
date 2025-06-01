@@ -3543,3 +3543,206 @@ class SimpleCache:
 
 # Global cache instance with improved settings
 event_cache = SimpleCache(ttl_seconds=180, max_size=500)  # 3 minute cache, max 500 events
+
+# Bulk Event Creation for Admin
+class BulkEventCreate(BaseModel):
+    events: List[EventCreate]
+
+class BulkEventResponse(BaseModel):
+    success_count: int
+    error_count: int
+    errors: List[dict]
+    created_events: List[EventResponse]
+
+@app.post("/admin/events/bulk", response_model=BulkEventResponse)
+async def bulk_create_events(
+    bulk_events: BulkEventCreate, 
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Bulk create events (admin-only endpoint)
+    """
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized. Admin access required.")
+    
+    placeholder = get_placeholder()
+    success_count = 0
+    error_count = 0
+    errors = []
+    created_events = []
+    
+    logger.info(f"Admin {current_user['email']} initiating bulk event creation for {len(bulk_events.events)} events")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            for i, event in enumerate(bulk_events.events):
+                try:
+                    # Start transaction for each event
+                    cursor.execute("BEGIN")
+                    
+                    # Check for duplicates
+                    duplicate_check = f"""
+                        SELECT id FROM events 
+                        WHERE title = {placeholder} 
+                        AND date = {placeholder} 
+                        AND start_time = {placeholder} 
+                        AND lat = {placeholder} 
+                        AND lng = {placeholder} 
+                        AND category = {placeholder}
+                    """
+                    
+                    cursor.execute(duplicate_check, (
+                        event.title, 
+                        event.date, 
+                        event.start_time, 
+                        event.lat, 
+                        event.lng, 
+                        event.category
+                    ))
+                    
+                    duplicate = cursor.fetchone()
+                    if duplicate:
+                        cursor.execute("ROLLBACK")
+                        error_count += 1
+                        errors.append({
+                            "index": i,
+                            "event_title": event.title,
+                            "error": "Duplicate event - event with these exact details already exists"
+                        })
+                        continue
+                    
+                    # Insert the new event
+                    insert_query = f"""
+                        INSERT INTO events (
+                            title, description, date, start_time, end_time, end_date, category,
+                            address, lat, lng, recurring, frequency,
+                            created_by, interest_count, view_count
+                        ) VALUES (
+                            {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
+                            {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
+                            {placeholder}, {placeholder}, 0, 0
+                        ) RETURNING id
+                    """
+                    
+                    values = (
+                        event.title, 
+                        event.description, 
+                        event.date,
+                        event.start_time, 
+                        event.end_time, 
+                        event.end_date, 
+                        event.category, 
+                        event.address,
+                        event.lat, 
+                        event.lng, 
+                        event.recurring,
+                        event.frequency, 
+                        current_user["id"]
+                    )
+                    
+                    # For PostgreSQL, use RETURNING to get the ID in one step
+                    if IS_PRODUCTION and DB_URL:
+                        cursor.execute(insert_query, values)
+                        result = cursor.fetchone()
+                        event_id = result['id'] if result else None
+                    else:
+                        # SQLite doesn't support RETURNING, so we use lastrowid
+                        cursor.execute(insert_query.replace(" RETURNING id", ""), values)
+                        event_id = cursor.lastrowid
+                    
+                    if not event_id:
+                        cursor.execute("ROLLBACK")
+                        error_count += 1
+                        errors.append({
+                            "index": i,
+                            "event_title": event.title,
+                            "error": "Failed to get ID of created event"
+                        })
+                        continue
+                    
+                    # Fetch the created event
+                    fetch_query = f"SELECT * FROM events WHERE id = {placeholder}"
+                    cursor.execute(fetch_query, (event_id,))
+                    event_data = cursor.fetchone()
+                    
+                    if not event_data:
+                        cursor.execute("ROLLBACK")
+                        error_count += 1
+                        errors.append({
+                            "index": i,
+                            "event_title": event.title,
+                            "error": "Created event not found"
+                        })
+                        continue
+                    
+                    # Commit the transaction
+                    cursor.execute("COMMIT")
+                    
+                    # Convert to dict and process datetime objects
+                    event_dict = dict(event_data)
+                    
+                    # Convert datetime objects to ISO format strings
+                    if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
+                        event_dict['created_at'] = event_dict['created_at'].isoformat()
+                    
+                    # Ensure counters are integers
+                    event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
+                    event_dict['view_count'] = event_dict.get('view_count', 0) or 0
+                    
+                    created_events.append(event_dict)
+                    success_count += 1
+                    
+                    logger.info(f"Successfully created event: {event.title} (ID: {event_id})")
+                    
+                except HTTPException as http_ex:
+                    # Attempt to roll back the transaction
+                    try:
+                        cursor.execute("ROLLBACK")
+                    except:
+                        pass
+                    
+                    error_count += 1
+                    errors.append({
+                        "index": i,
+                        "event_title": event.title,
+                        "error": http_ex.detail
+                    })
+                    
+                except Exception as e:
+                    # Attempt to roll back the transaction
+                    try:
+                        cursor.execute("ROLLBACK")
+                    except:
+                        pass
+                    
+                    error_count += 1
+                    error_msg = str(e)
+                    errors.append({
+                        "index": i,
+                        "event_title": event.title,
+                        "error": f"Database error: {error_msg}"
+                    })
+                    logger.error(f"Error creating event {i} ({event.title}): {error_msg}")
+            
+            # Clear event cache since new events were created
+            if success_count > 0:
+                event_cache.clear()
+                logger.info(f"Cleared event cache after bulk creating {success_count} events")
+            
+            logger.info(f"Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+            
+            return BulkEventResponse(
+                success_count=success_count,
+                error_count=error_count,
+                errors=errors,
+                created_events=created_events
+            )
+            
+    except Exception as e:
+        logger.error(f"Critical error in bulk event creation: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Critical error during bulk event creation: {str(e)}"
+        )
