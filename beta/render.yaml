@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: todoevents-beta
+    env: node
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: VITE_API_URL
+        value: https://todoevents-backend.onrender.com
+      - key: NODE_ENV
+        value: production 
