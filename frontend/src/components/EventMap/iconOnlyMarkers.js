@@ -1,85 +1,105 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 
-// Simplified icon-only marker system with clean design and minimal clustering
-// Clean icons with strong outlines but no halos or extra visual clutter
+// Enhanced icon-only marker system with better visibility and improved clustering
+// Bigger, brighter icons with better contrast and larger clusters
 
-// Helper function to create clean icon-only SVG markers without halos
+// Helper function to create visible icon-only SVG markers
 const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
   
-  // Simple theme-aware colors for clean definition
+  // Enhanced colors for better visibility
   const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
+  const bgColor = isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)';
   
-  // Clean up the icon path with proper colors
+  // Enhanced icon path with brighter colors and thicker strokes
   const cleanIconPath = iconPath
     .replace(/stroke="white"/g, `stroke="${categoryColor}"`)
     .replace(/fill="white"/g, `fill="${categoryColor}"`)
-    .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2.5"');
+    .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"'); // Thicker for visibility
   
   return `
-    <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <!-- Main icon with clean colors -->
+    <svg width="36" height="36" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <!-- Background circle for contrast -->
+      <circle 
+        cx="12" 
+        cy="12" 
+        r="11" 
+        fill="${bgColor}" 
+        stroke="${outlineColor}"
+        stroke-width="1"
+        opacity="0.9"
+      />
+      <!-- Main icon with enhanced visibility -->
       <g transform="translate(0, 0)">
         ${cleanIconPath}
       </g>
       <!-- Strong outline for definition -->
       <g transform="translate(0, 0)">
-        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="1.5"')}
+        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')}
       </g>
     </svg>
   `;
 };
 
-// Simplified cluster showing category icons without overlapping backgrounds
-const createSimplifiedCluster = (categories, count, theme = THEME_DARK) => {
+// Enhanced cluster showing category icons with better sizing and no phantom numbers
+const createEnhancedCluster = (categories, count, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
   const uniqueCategories = [...new Map(categories.map(cat => [cat.id, cat])).values()];
-  const maxIcons = Math.min(4, uniqueCategories.length); // Reduced to 4 max for less clutter
+  const maxIcons = Math.min(4, uniqueCategories.length);
   
-  // Smaller, more compact cluster size
-  const baseSize = Math.min(40 + Math.log2(count) * 6, 60);
-  const iconSize = 14; // Fixed smaller size
-  const spacing = iconSize + 4; // Better spacing to avoid overlaps
+  // Larger cluster size for better visibility
+  const baseSize = Math.min(60 + Math.log2(count) * 8, 90);
+  const iconSize = 18; // Bigger icons
+  const spacing = iconSize + 6; // More spacing
   
-  // Arrange icons with better spacing to avoid overlaps
+  // Arrange icons with better spacing
   const positions = [];
   if (maxIcons === 1) {
     positions.push({ x: baseSize/2, y: baseSize/2 });
   } else if (maxIcons === 2) {
     positions.push(
-      { x: baseSize/2 - spacing/2, y: baseSize/2 },
-      { x: baseSize/2 + spacing/2, y: baseSize/2 }
+      { x: baseSize/2 - spacing*0.5, y: baseSize/2 },
+      { x: baseSize/2 + spacing*0.5, y: baseSize/2 }
     );
   } else if (maxIcons === 3) {
     positions.push(
-      { x: baseSize/2, y: baseSize/2 - spacing*0.4 },
-      { x: baseSize/2 - spacing*0.6, y: baseSize/2 + spacing*0.4 },
-      { x: baseSize/2 + spacing*0.6, y: baseSize/2 + spacing*0.4 }
+      { x: baseSize/2, y: baseSize/2 - spacing*0.5 },
+      { x: baseSize/2 - spacing*0.7, y: baseSize/2 + spacing*0.5 },
+      { x: baseSize/2 + spacing*0.7, y: baseSize/2 + spacing*0.5 }
     );
   } else {
     // 2x2 grid for 4 icons with better spacing
     positions.push(
-      { x: baseSize/2 - spacing*0.4, y: baseSize/2 - spacing*0.4 },
-      { x: baseSize/2 + spacing*0.4, y: baseSize/2 - spacing*0.4 },
-      { x: baseSize/2 - spacing*0.4, y: baseSize/2 + spacing*0.4 },
-      { x: baseSize/2 + spacing*0.4, y: baseSize/2 + spacing*0.4 }
+      { x: baseSize/2 - spacing*0.45, y: baseSize/2 - spacing*0.45 },
+      { x: baseSize/2 + spacing*0.45, y: baseSize/2 - spacing*0.45 },
+      { x: baseSize/2 - spacing*0.45, y: baseSize/2 + spacing*0.45 },
+      { x: baseSize/2 + spacing*0.45, y: baseSize/2 + spacing*0.45 }
     );
   }
   
-  // Create clean mini-icons without background circles
+  // Create enhanced mini-icons with better visibility
   const createMiniIcon = (category, x, y) => {
     const iconName = categoryIconMap[category.id] || 'MapPin';
     const iconPath = iconPaths[iconName] || iconPaths.MapPin;
-    const scale = iconSize / 24; // Scale down from 24px viewBox
+    const scale = iconSize / 24;
     
     return `
       <g transform="translate(${x - iconSize/2}, ${y - iconSize/2})">
-        <!-- Clean mini icon without background -->
+        <!-- Mini icon background for contrast -->
+        <circle 
+          cx="${iconSize/2}" 
+          cy="${iconSize/2}" 
+          r="${iconSize/2 - 1}" 
+          fill="${isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)'}" 
+          stroke="${category.markerColor}"
+          stroke-width="2"
+        />
+        <!-- Enhanced mini icon -->
         <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
           ${iconPath
             .replace(/stroke="white"/g, `stroke="${category.markerColor}"`)
             .replace(/fill="white"/g, `fill="${category.markerColor}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"') // Thicker stroke for visibility at small size
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"') // Thicker for small size
           }
         </g>
         <!-- White outline for definition -->
@@ -87,7 +107,7 @@ const createSimplifiedCluster = (categories, count, theme = THEME_DARK) => {
           ${iconPath
             .replace(/fill="white"/g, 'fill="none"')
             .replace(/stroke="white"/g, `stroke="${isDarkMode ? '#FFFFFF' : '#000000'}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="1"')
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="1.5"')
           }
         </g>
       </g>
@@ -101,37 +121,91 @@ const createSimplifiedCluster = (categories, count, theme = THEME_DARK) => {
     createMiniIcon(category, positions[index].x, positions[index].y)
   ).join('');
   
-  // Simplified count badge - smaller and cleaner
-  const badgeSize = 14;
-  const badgeX = baseSize - badgeSize/2 - 3;
-  const badgeY = badgeSize/2 + 3;
+  // Enhanced count badge - larger and cleaner (NO PHANTOM NUMBERS)
+  const badgeSize = 18;
+  const badgeX = baseSize - badgeSize/2 - 4;
+  const badgeY = badgeSize/2 + 4;
   
   return `
     <svg width="${baseSize}" height="${baseSize}" viewBox="0 0 ${baseSize} ${baseSize}" xmlns="http://www.w3.org/2000/svg">
-      <!-- Category icons without background clutter -->
+      <!-- Category icons with better contrast -->
       ${miniIcons}
       
-      <!-- Clean count badge -->
+      <!-- Clean count badge - ONLY count badge, no phantom numbers -->
       <circle 
         cx="${badgeX}" 
         cy="${badgeY}" 
         r="${badgeSize/2}" 
         fill="${uniqueCategories[0]?.markerColor || '#6B7280'}" 
         stroke="${outlineColor}"
-        stroke-width="1.5"
+        stroke-width="2"
       />
       <text 
         x="${badgeX}" 
-        y="${badgeY + 1}" 
+        y="${badgeY + 2}" 
         text-anchor="middle" 
         dominant-baseline="middle" 
         fill="${textColor}" 
         font-family="Arial, sans-serif" 
         font-weight="bold" 
-        font-size="8"
+        font-size="10"
+        stroke="${outlineColor === '#FFFFFF' ? '#000000' : '#FFFFFF'}"
+        stroke-width="0.5"
+      >${count}</text>
+    </svg>
+  `;
+};
+
+// Meta-cluster for clustering clusters when they get close
+const createMetaCluster = (clusterCount, totalEvents, theme = THEME_DARK) => {
+  const isDarkMode = theme === THEME_DARK;
+  const baseSize = Math.min(80 + Math.log2(totalEvents) * 10, 120);
+  
+  const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
+  const textColor = isDarkMode ? '#FFFFFF' : '#000000';
+  const bgColor = isDarkMode ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+  
+  return `
+    <svg width="${baseSize}" height="${baseSize}" viewBox="0 0 ${baseSize} ${baseSize}" xmlns="http://www.w3.org/2000/svg">
+      <!-- Meta cluster background -->
+      <circle 
+        cx="${baseSize/2}" 
+        cy="${baseSize/2}" 
+        r="${baseSize/2 - 3}" 
+        fill="${bgColor}" 
+        stroke="${outlineColor}"
+        stroke-width="3"
+        stroke-dasharray="5,5"
+        opacity="0.95"
+      />
+      
+      <!-- Cluster count indicator -->
+      <text 
+        x="${baseSize/2}" 
+        y="${baseSize/2 - 8}" 
+        text-anchor="middle" 
+        dominant-baseline="middle" 
+        fill="${textColor}" 
+        font-family="Arial, sans-serif" 
+        font-weight="bold" 
+        font-size="14"
+        stroke="${outlineColor === '#FFFFFF' ? '#000000' : '#FFFFFF'}"
+        stroke-width="0.5"
+      >${clusterCount} areas</text>
+      
+      <!-- Total events count -->
+      <text 
+        x="${baseSize/2}" 
+        y="${baseSize/2 + 8}" 
+        text-anchor="middle" 
+        dominant-baseline="middle" 
+        fill="${textColor}" 
+        font-family="Arial, sans-serif" 
+        font-weight="normal" 
+        font-size="10"
         stroke="${outlineColor === '#FFFFFF' ? '#000000' : '#FFFFFF'}"
         stroke-width="0.3"
-      >${count}</text>
+      >${totalEvents} events</text>
     </svg>
   `;
 };
@@ -188,9 +262,9 @@ const categoryIconMap = {
   'networking': 'Laptop'
 };
 
-// Create clean icon-only marker without halos
+// Create enhanced icon-only marker with better visibility
 export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
-  console.log('Creating clean icon-only marker for category:', category);
+  console.log('Creating enhanced icon-only marker for category:', category);
   const iconName = categoryIconMap[category.id] || 'MapPin';
   const iconPath = iconPaths[iconName];
   
@@ -201,37 +275,53 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
     
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(28, 28),
+      scaledSize: new google.maps.Size(36, 36),
       origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(14, 14),
+      anchor: new google.maps.Point(18, 18),
       optimized: false
     };
   }
   
   const svg = createIconOnlyMarkerSVG(iconPath, category.markerColor, theme);
-  console.log('Generated clean SVG for', category.id, ':', svg.substring(0, 200) + '...');
+  console.log('Generated enhanced SVG for', category.id, ':', svg.substring(0, 200) + '...');
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(28, 28),
+    scaledSize: new google.maps.Size(36, 36),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(14, 14),
+    anchor: new google.maps.Point(18, 18),
     optimized: false
   };
 };
 
-// Create simplified cluster marker without visual clutter
+// Create enhanced cluster marker with better visibility and no phantom numbers
 export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DARK) => {
-  console.log('Creating simplified cluster with', count, 'events and categories:', categories?.map(c => c.id));
+  console.log('Creating enhanced cluster with', count, 'events and categories:', categories?.map(c => c.id));
   
   const validCategories = categories && categories.length > 0 ? categories : [
     { id: 'all', markerColor: '#6B7280' }
   ];
   
-  const svg = createSimplifiedCluster(validCategories, count, theme);
+  const svg = createEnhancedCluster(validCategories, count, theme);
   
-  // Smaller, more compact size
-  const baseSize = Math.min(40 + Math.log2(count) * 6, 60);
+  // Larger size for better visibility
+  const baseSize = Math.min(60 + Math.log2(count) * 8, 90);
+  
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(baseSize, baseSize),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(baseSize/2, baseSize/2),
+    optimized: false
+  };
+};
+
+// Create meta-cluster for clustering clusters
+export const createMetaClusterMarker = (clusterCount, totalEvents, theme = THEME_DARK) => {
+  console.log('Creating meta-cluster with', clusterCount, 'clusters and', totalEvents, 'total events');
+  
+  const svg = createMetaCluster(clusterCount, totalEvents, theme);
+  const baseSize = Math.min(80 + Math.log2(totalEvents) * 10, 120);
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
@@ -244,5 +334,6 @@ export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DAR
 
 export default {
   createIconOnlyMarker,
-  createIconOnlyClusterMarker
+  createIconOnlyClusterMarker,
+  createMetaClusterMarker
 }; 
