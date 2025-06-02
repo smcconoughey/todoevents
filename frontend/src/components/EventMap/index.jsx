@@ -1506,11 +1506,6 @@ const EventMap = ({ mapsLoaded = false }) => {
               <HelpCircle className="h-5 w-5" />
             </Button>
             <ThemeToggle />
-            <MarkerStyleToggle 
-              useIconOnly={useIconOnlyMarkers}
-              onToggle={handleMarkerStyleToggle}
-              className="min-h-[36px] min-w-[36px]"
-            />
             <Button
               variant="ghost"
               size="icon"
@@ -1546,11 +1541,6 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <HelpCircle className="w-4 h-4" />
                 </Button>
                 <ThemeToggle />
-                <MarkerStyleToggle 
-                  useIconOnly={useIconOnlyMarkers}
-                  onToggle={handleMarkerStyleToggle}
-                  className="w-8 h-8"
-                />
                 {user ? (
                   <div className="flex items-center gap-2">
                     {user.role === 'admin' && (
@@ -1592,11 +1582,6 @@ const EventMap = ({ mapsLoaded = false }) => {
           {isSidebarCollapsed && (
             <div className="flex flex-col gap-2">
               <ThemeToggle />
-              <MarkerStyleToggle 
-                useIconOnly={useIconOnlyMarkers}
-                onToggle={handleMarkerStyleToggle}
-                className="w-8 h-8"
-              />
             </div>
           )}
           <Button
@@ -2711,6 +2696,16 @@ const EventMap = ({ mapsLoaded = false }) => {
                 defaultZoom={DEFAULT_ZOOM}
                 selectedDate={selectedDate}
               />
+
+              {/* Marker Style Toggle - Top Right Corner */}
+              {activeView === 'map' && (
+                <div className="absolute top-4 right-4 z-30">
+                  <MarkerStyleToggle 
+                    useIconOnly={useIconOnlyMarkers}
+                    onToggle={handleMarkerStyleToggle}
+                  />
+                </div>
+              )}
 
               {/* Desktop Event Details Panel */}
               <div className="hidden sm:block">

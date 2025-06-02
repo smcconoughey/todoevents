@@ -3,18 +3,15 @@ import { Button } from '../ui/button';
 
 const MarkerStyleToggle = ({ useIconOnly, onToggle, className = "" }) => {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <span className="text-sm text-white/70">Marker Style:</span>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onToggle(!useIconOnly)}
-        className="h-8 px-3 text-xs bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all duration-200"
-        title={`Switch to ${useIconOnly ? 'pin' : 'icon-only'} markers`}
-      >
-        {useIconOnly ? '🎯 Icons Only' : '📍 Diamond Pins'}
-      </Button>
-    </div>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => onToggle(!useIconOnly)}
+      className={`h-8 w-8 p-0 bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all duration-200 ${className}`}
+      title={`Switch to ${useIconOnly ? 'pin' : 'icon-only'} markers`}
+    >
+      {useIconOnly ? '🎯' : '📍'}
+    </Button>
   );
 };
 
