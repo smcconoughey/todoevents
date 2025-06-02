@@ -1,40 +1,207 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 
-// Icon-only marker system - shows pure icons with outlines for better visibility
-// This is an alternative to the current diamond pin approach
+// Enhanced icon-only marker system with improved definition and Snapchat-style clustering
+// Shows pure icons with strong outlines and better contrast for visibility
 
-// Helper function to create icon-only SVG markers with theme-aware outlines
+// Helper function to create enhanced icon-only SVG markers with better definition
 const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
   
-  // Theme-aware outline colors for better visibility
+  // Enhanced theme-aware colors for better definition
   const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
-  const shadowColor = isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.8)';
+  const shadowColor = isDarkMode ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.9)';
+  const borderColor = isDarkMode ? '#FFFFFF' : '#000000';
   
-  // Clean up the icon path and apply proper colors
+  // Clean up and enhance the icon path with proper colors
   const cleanIconPath = iconPath
     .replace(/stroke="white"/g, `stroke="${categoryColor}"`)
     .replace(/fill="white"/g, `fill="${categoryColor}"`)
     .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2.5"');
   
   return `
-    <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <!-- Background circle for contrast -->
+    <svg width="32" height="32" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <!-- Drop shadow for depth -->
+      <circle 
+        cx="12.5" 
+        cy="12.5" 
+        r="11" 
+        fill="rgba(0, 0, 0, 0.3)" 
+        opacity="0.6"
+      />
+      <!-- Background circle with gradient effect -->
       <circle 
         cx="12" 
         cy="12" 
-        r="12" 
+        r="11" 
         fill="${shadowColor}" 
+        stroke="${borderColor}"
+        stroke-width="2"
+        opacity="0.95"
+      />
+      <!-- Category color ring -->
+      <circle 
+        cx="12" 
+        cy="12" 
+        r="9" 
+        fill="none" 
+        stroke="${categoryColor}"
+        stroke-width="2"
         opacity="0.8"
       />
-      <!-- Main icon -->
+      <!-- Main icon with enhanced visibility -->
       <g transform="translate(0, 0)">
         ${cleanIconPath}
       </g>
-      <!-- White outline for visibility -->
+      <!-- Strong white outline for definition -->
       <g transform="translate(0, 0)">
-        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="1"')}
+        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="1.5"')}
       </g>
+      <!-- Additional inner glow for definition -->
+      <circle 
+        cx="12" 
+        cy="12" 
+        r="7" 
+        fill="none" 
+        stroke="${categoryColor}"
+        stroke-width="0.5"
+        opacity="0.4"
+      />
+    </svg>
+  `;
+};
+
+// Snapchat-style cluster that shows multiple category icons grouped together
+const createSnapchatStyleCluster = (categories, count, theme = THEME_DARK) => {
+  const isDarkMode = theme === THEME_DARK;
+  const uniqueCategories = [...new Map(categories.map(cat => [cat.id, cat])).values()];
+  const maxIcons = Math.min(5, uniqueCategories.length); // Show up to 5 different category icons
+  
+  // Calculate cluster size based on count
+  const baseSize = Math.min(50 + Math.log2(count) * 8, 80);
+  const iconSize = Math.max(16, baseSize / 4);
+  const spacing = iconSize * 0.6;
+  
+  // Arrange icons in a natural cluster formation
+  const positions = [];
+  if (maxIcons === 1) {
+    positions.push({ x: baseSize/2, y: baseSize/2 });
+  } else if (maxIcons === 2) {
+    positions.push(
+      { x: baseSize/2 - spacing/2, y: baseSize/2 },
+      { x: baseSize/2 + spacing/2, y: baseSize/2 }
+    );
+  } else if (maxIcons === 3) {
+    positions.push(
+      { x: baseSize/2, y: baseSize/2 - spacing/2 },
+      { x: baseSize/2 - spacing/2, y: baseSize/2 + spacing/2 },
+      { x: baseSize/2 + spacing/2, y: baseSize/2 + spacing/2 }
+    );
+  } else if (maxIcons === 4) {
+    positions.push(
+      { x: baseSize/2 - spacing/2, y: baseSize/2 - spacing/2 },
+      { x: baseSize/2 + spacing/2, y: baseSize/2 - spacing/2 },
+      { x: baseSize/2 - spacing/2, y: baseSize/2 + spacing/2 },
+      { x: baseSize/2 + spacing/2, y: baseSize/2 + spacing/2 }
+    );
+  } else {
+    // Circular arrangement for 5+ icons
+    const radius = spacing * 0.8;
+    const centerX = baseSize/2;
+    const centerY = baseSize/2;
+    
+    for (let i = 0; i < maxIcons; i++) {
+      const angle = (i * 2 * Math.PI) / maxIcons - Math.PI/2;
+      positions.push({
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle)
+      });
+    }
+  }
+  
+  // Create individual mini-icons for each category
+  const createMiniIcon = (category, x, y, index) => {
+    const iconName = categoryIconMap[category.id] || 'MapPin';
+    const iconPath = iconPaths[iconName] || iconPaths.MapPin;
+    const scale = iconSize / 24; // Scale down from 24px viewBox
+    const offset = index * 2; // Slight stagger for depth
+    
+    return `
+      <g transform="translate(${x - iconSize/2 + offset}, ${y - iconSize/2 + offset})">
+        <!-- Mini icon background -->
+        <circle 
+          cx="${iconSize/2}" 
+          cy="${iconSize/2}" 
+          r="${iconSize/2 - 1}" 
+          fill="${isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)'}" 
+          stroke="${category.markerColor}"
+          stroke-width="1.5"
+        />
+        <!-- Mini icon -->
+        <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
+          ${iconPath.replace(/stroke="white"/g, `stroke="${category.markerColor}"`).replace(/fill="white"/g, `fill="${category.markerColor}"`)}
+        </g>
+      </g>
+    `;
+  };
+  
+  // Create the cluster background
+  const shadowColor = isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.8)';
+  const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
+  const textColor = isDarkMode ? '#FFFFFF' : '#000000';
+  
+  const miniIcons = uniqueCategories.slice(0, maxIcons).map((category, index) => 
+    createMiniIcon(category, positions[index].x, positions[index].y, index)
+  ).join('');
+  
+  // Count badge in the corner
+  const badgeSize = Math.max(16, baseSize / 4);
+  const badgeX = baseSize - badgeSize/2 - 2;
+  const badgeY = badgeSize/2 + 2;
+  
+  return `
+    <svg width="${baseSize}" height="${baseSize}" viewBox="0 0 ${baseSize} ${baseSize}" xmlns="http://www.w3.org/2000/svg">
+      <!-- Cluster background with subtle shadow -->
+      <circle 
+        cx="${baseSize/2 + 1}" 
+        cy="${baseSize/2 + 1}" 
+        r="${baseSize/2 - 2}" 
+        fill="rgba(0, 0, 0, 0.2)" 
+        opacity="0.5"
+      />
+      <circle 
+        cx="${baseSize/2}" 
+        cy="${baseSize/2}" 
+        r="${baseSize/2 - 2}" 
+        fill="${shadowColor}" 
+        stroke="${outlineColor}"
+        stroke-width="2"
+        opacity="0.3"
+      />
+      
+      <!-- Category icons arranged in cluster -->
+      ${miniIcons}
+      
+      <!-- Count badge -->
+      <circle 
+        cx="${badgeX}" 
+        cy="${badgeY}" 
+        r="${badgeSize/2}" 
+        fill="${uniqueCategories[0]?.markerColor || '#6B7280'}" 
+        stroke="${outlineColor}"
+        stroke-width="1.5"
+      />
+      <text 
+        x="${badgeX}" 
+        y="${badgeY + 1}" 
+        text-anchor="middle" 
+        dominant-baseline="middle" 
+        fill="${textColor}" 
+        font-family="Arial, sans-serif" 
+        font-weight="bold" 
+        font-size="${Math.min(badgeSize/2.5, 10)}"
+        stroke="${outlineColor === '#FFFFFF' ? '#000000' : '#FFFFFF'}"
+        stroke-width="0.5"
+      >${count}</text>
     </svg>
   `;
 };
@@ -91,9 +258,9 @@ const categoryIconMap = {
   'networking': 'Laptop'
 };
 
-// Create icon-only marker (new approach)
+// Create enhanced icon-only marker
 export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
-  console.log('Creating icon-only marker for category:', category);
+  console.log('Creating enhanced icon-only marker for category:', category);
   const iconName = categoryIconMap[category.id] || 'MapPin';
   const iconPath = iconPaths[iconName];
   
@@ -104,76 +271,37 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
     
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(28, 28),
+      scaledSize: new google.maps.Size(32, 32),
       origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(14, 14),
+      anchor: new google.maps.Point(16, 16),
       optimized: false
     };
   }
   
   const svg = createIconOnlyMarkerSVG(iconPath, category.markerColor, theme);
-  console.log('Generated SVG for', category.id, ':', svg.substring(0, 200) + '...');
+  console.log('Generated enhanced SVG for', category.id, ':', svg.substring(0, 200) + '...');
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(28, 28),
+    scaledSize: new google.maps.Size(32, 32),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(14, 14),
+    anchor: new google.maps.Point(16, 16),
     optimized: false
   };
 };
 
-// Create icon-only cluster marker
+// Create Snapchat-style cluster marker showing multiple category icons
 export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DARK) => {
-  const isDarkMode = theme === THEME_DARK;
+  console.log('Creating Snapchat-style cluster with', count, 'events and categories:', categories?.map(c => c.id));
   
-  // Get the dominant category or use default
-  const dominantCategory = categories && categories.length > 0 ? categories[0] : null;
-  const clusterColor = dominantCategory ? dominantCategory.markerColor : '#6B7280';
+  const validCategories = categories && categories.length > 0 ? categories : [
+    { id: 'all', markerColor: '#6B7280' }
+  ];
   
-  // Theme-aware colors
-  const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
-  const textColor = isDarkMode ? '#000000' : '#FFFFFF';
-  const shadowColor = isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)';
+  const svg = createSnapchatStyleCluster(validCategories, count, theme);
   
-  // Scale based on count
-  const baseSize = Math.min(20 + Math.log2(count) * 4, 50);
-  
-  const svg = `
-    <svg width="${baseSize}" height="${baseSize}" viewBox="0 0 ${baseSize} ${baseSize}" xmlns="http://www.w3.org/2000/svg">
-      <!-- Shadow circle -->
-      <circle 
-        cx="${baseSize/2}" 
-        cy="${baseSize/2}" 
-        r="${baseSize/2 - 2}" 
-        fill="${shadowColor}" 
-        opacity="0.3"
-      />
-      <!-- Main cluster circle -->
-      <circle 
-        cx="${baseSize/2}" 
-        cy="${baseSize/2}" 
-        r="${baseSize/2 - 4}" 
-        fill="${clusterColor}" 
-        stroke="${outlineColor}" 
-        stroke-width="3"
-        opacity="0.9"
-      />
-      <!-- Count text -->
-      <text 
-        x="${baseSize/2}" 
-        y="${baseSize/2 + 1}" 
-        text-anchor="middle" 
-        dominant-baseline="middle" 
-        fill="${textColor}" 
-        font-family="Arial, sans-serif" 
-        font-weight="bold" 
-        font-size="${Math.min(baseSize/3, 14)}"
-        stroke="${outlineColor}"
-        stroke-width="0.5"
-      >${count}</text>
-    </svg>
-  `;
+  // Calculate size based on count for proper scaling
+  const baseSize = Math.min(50 + Math.log2(count) * 8, 80);
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
