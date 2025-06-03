@@ -1920,12 +1920,13 @@ async def list_events(
             if where_conditions:
                 where_clause = "WHERE " + " AND ".join(where_conditions)
             
-            # Optimized query with specific columns and LIMIT
+            # Optimized query with specific columns and LIMIT, including UX fields
             base_query = f"""
                 SELECT id, title, description, date, start_time, end_time, end_date, 
                        category, address, lat, lng, recurring, frequency, created_by, created_at,
                        COALESCE(interest_count, 0) as interest_count,
-                       COALESCE(view_count, 0) as view_count
+                       COALESCE(view_count, 0) as view_count,
+                       fee_required, event_url, host_name
                        {location_select}
                 FROM events 
                 {where_clause}
@@ -1949,11 +1950,12 @@ async def list_events(
                     elif isinstance(event, dict):
                         event_dict = dict(event)
                     else:
-                        # Handle tuple/list results with known schema
+                        # Handle tuple/list results with known schema including UX fields
                         column_names = [
                             'id', 'title', 'description', 'date', 'start_time', 'end_time',
                             'end_date', 'category', 'address', 'lat', 'lng', 'recurring',
-                            'frequency', 'created_by', 'created_at', 'interest_count', 'view_count'
+                            'frequency', 'created_by', 'created_at', 'interest_count', 'view_count',
+                            'fee_required', 'event_url', 'host_name'
                         ]
                         if location_select:
                             column_names.append('distance_miles')
@@ -2007,11 +2009,12 @@ async def read_event(event_id: int):
     try:
         with get_db() as conn:
             c = conn.cursor()
-            # Use COALESCE to handle NULL values
+            # Use COALESCE to handle NULL values and include UX fields
             c.execute(f"""SELECT id, title, description, date, start_time, end_time, end_date, 
                          category, address, lat, lng, recurring, frequency, created_by, created_at,
                          COALESCE(interest_count, 0) as interest_count,
-                         COALESCE(view_count, 0) as view_count
+                         COALESCE(view_count, 0) as view_count,
+                         fee_required, event_url, host_name
                          FROM events WHERE id = {placeholder}""", (event_id,))
             event = c.fetchone()
             
@@ -2811,10 +2814,10 @@ async def get_local_events_for_ai(
         with get_db() as conn:
             c = conn.cursor()
             
-            # Build base query
+            # Build base query including UX fields
             query = """
                 SELECT id, title, description, date, start_time, end_time, end_date, category, 
-                       address, lat, lng, created_at
+                       address, lat, lng, created_at, fee_required, event_url, host_name
                 FROM events 
                 WHERE date >= date('now')
             """
