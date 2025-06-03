@@ -262,6 +262,12 @@ const CreateEventForm = ({
       console.log('Submitting event data:', eventData);
       console.log('Request URL:', url);
       console.log('Request method:', method);
+      console.log('Form data before submission:', formData);
+      console.log('UX Enhancement fields:', {
+        fee_required: formData.fee_required,
+        event_url: formData.event_url,
+        host_name: formData.host_name
+      });
 
       // Use our fetchWithTimeout utility with improved error handling
       const savedEvent = await fetchWithTimeout(url, {
