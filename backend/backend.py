@@ -1250,7 +1250,9 @@ class EventBase(BaseModel):
 
     @validator('fee_required')
     def validate_fee_required(cls, v):
-        if v is None or v == "":
+        if v is None:
+            return ""  # Convert None to empty string
+        if v == "":
             return v
         # Limit fee description to reasonable length
         if len(v) > 500:
@@ -1259,7 +1261,9 @@ class EventBase(BaseModel):
 
     @validator('event_url')
     def validate_event_url(cls, v):
-        if v is None or v == "":
+        if v is None:
+            return ""  # Convert None to empty string
+        if v == "":
             return v
         # Basic URL validation
         if not v.startswith(('http://', 'https://')):
@@ -1286,7 +1290,9 @@ class EventBase(BaseModel):
 
     @validator('host_name')
     def validate_host_name(cls, v):
-        if v is None or v == "":
+        if v is None:
+            return ""  # Convert None to empty string
+        if v == "":
             return v
         # Limit host name to reasonable length
         if len(v) > 200:
@@ -2041,6 +2047,12 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
     # Log the event data for debugging
     logger.info(f"Creating event: {event.dict()}")
     
+    # Log UX fields specifically for debugging
+    logger.info(f"UX Fields Debug - Raw Pydantic values:")
+    logger.info(f"  fee_required: {event.fee_required!r} (type: {type(event.fee_required)})")
+    logger.info(f"  event_url: {event.event_url!r} (type: {type(event.event_url)})")
+    logger.info(f"  host_name: {event.host_name!r} (type: {type(event.host_name)})")
+    
     try:
         # Use database connection with proper transaction control
         with get_db_transaction() as conn:
@@ -2083,6 +2095,12 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                         detail="An event with these details already exists at this location and time"
                     )
                 
+                # UX fields are now handled by Pydantic validators (None -> "")
+                logger.info(f"UX Fields Debug - Post-validation values:")
+                logger.info(f"  event.fee_required: {event.fee_required!r} (type: {type(event.fee_required)})")
+                logger.info(f"  event.event_url: {event.event_url!r} (type: {type(event.event_url)})")
+                logger.info(f"  event.host_name: {event.host_name!r} (type: {type(event.host_name)})")
+                
                 # Insert the new event with rounded coordinates
                 insert_query = f"""
                     INSERT INTO events (
@@ -2110,10 +2128,15 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     event.recurring,
                     event.frequency, 
                     current_user["id"],
-                    sanitize_ux_field(event.fee_required),
-                    sanitize_ux_field(event.event_url),
-                    sanitize_ux_field(event.host_name)
+                    event.fee_required,
+                    event.event_url,
+                    event.host_name
                 )
+                
+                # Log the final values being inserted
+                logger.info(f"UX Fields Debug - Final insert values (last 3 items):")
+                logger.info(f"  Insert tuple values[-3:]: {values[-3:]}")
+                logger.info(f"  Full insert values: {values}")
                 
                 # For PostgreSQL, use RETURNING to get the ID in one step
                 if IS_PRODUCTION and DB_URL:
@@ -2137,6 +2160,13 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 if not event_data:
                     cursor.execute("ROLLBACK")
                     raise ValueError("Created event not found")
+                
+                # Log the fetched event data to check UX fields
+                event_dict = dict(event_data)
+                logger.info(f"UX Fields Debug - Fetched from DB after insert:")
+                logger.info(f"  DB fee_required: {event_dict.get('fee_required')!r} (type: {type(event_dict.get('fee_required'))})")
+                logger.info(f"  DB event_url: {event_dict.get('event_url')!r} (type: {type(event_dict.get('event_url'))})")
+                logger.info(f"  DB host_name: {event_dict.get('host_name')!r} (type: {type(event_dict.get('host_name'))})")
                 
                 # Commit the transaction
                 cursor.execute("COMMIT")
@@ -2268,9 +2298,9 @@ async def update_event(
                     event.title, event.description, event.date, event.start_time, 
                     event.end_time, event.end_date, event.category, event.address, 
                     event.lat, event.lng, event.recurring, event.frequency, 
-                    sanitize_ux_field(event.fee_required),
-                    sanitize_ux_field(event.event_url),
-                    sanitize_ux_field(event.host_name),
+                    event.fee_required,
+                    event.event_url,
+                    event.host_name,
                     event_id
                 )
                 
@@ -3546,11 +3576,130 @@ async def debug_test_tracking(event_id: int):
             }
             
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_type": type(e).__name__
-        }
+                    return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+
+@app.post("/debug/test-ux-fields")
+async def debug_test_ux_fields():
+    """Debug endpoint to test UX fields insertion directly"""
+    try:
+        logger.info("=== DEBUG UX FIELDS TEST ENDPOINT ===")
+        
+        # Test data with various scenarios
+        test_cases = [
+            {"fee_required": "Free", "event_url": "https://example.com", "host_name": "Test Host"},
+            {"fee_required": None, "event_url": None, "host_name": None},
+            {"fee_required": "", "event_url": "", "host_name": ""},
+            {"fee_required": "   ", "event_url": "  ", "host_name": "   "}  # whitespace test
+        ]
+        
+        results = []
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            for i, test_data in enumerate(test_cases):
+                logger.info(f"--- Test Case {i+1} ---")
+                logger.info(f"Input: {test_data}")
+                
+                # Sanitize the fields
+                sanitized_fee = sanitize_ux_field(test_data["fee_required"])
+                sanitized_url = sanitize_ux_field(test_data["event_url"])
+                sanitized_host = sanitize_ux_field(test_data["host_name"])
+                
+                # Insert test event
+                insert_query = f"""
+                    INSERT INTO events (
+                        title, description, date, start_time, category,
+                        address, lat, lng, created_by,
+                        fee_required, event_url, host_name,
+                        interest_count, view_count
+                    ) VALUES (
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder},
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}
+                    ) RETURNING id
+                """
+                
+                values = (
+                    f"Debug UX Test {i+1}",
+                    "Debug test event for UX fields",
+                    "2024-12-31",
+                    "12:00",
+                    "community",
+                    "Debug Address",
+                    37.7749,
+                    -122.4194,
+                    1,  # created_by
+                    sanitized_fee,
+                    sanitized_url,
+                    sanitized_host,
+                    0,  # interest_count
+                    0   # view_count
+                )
+                
+                logger.info(f"Final insert values (UX part): {values[-5:-2]}")
+                
+                # Handle SQLite vs PostgreSQL
+                if IS_PRODUCTION and DB_URL:
+                    cursor.execute(insert_query, values)
+                    result = cursor.fetchone()
+                    event_id = result['id'] if result else None
+                else:
+                    cursor.execute(insert_query.replace(" RETURNING id", ""), values)
+                    event_id = cursor.lastrowid
+                
+                if event_id:
+                    # Fetch the inserted event
+                    cursor.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
+                    fetched_event = cursor.fetchone()
+                    
+                    if fetched_event:
+                        event_dict = dict(fetched_event)
+                        result_data = {
+                            "test_case": i + 1,
+                            "event_id": event_id,
+                            "input": test_data,
+                            "sanitized": {
+                                "fee_required": sanitized_fee,
+                                "event_url": sanitized_url,
+                                "host_name": sanitized_host
+                            },
+                            "database_result": {
+                                "fee_required": event_dict.get('fee_required'),
+                                "event_url": event_dict.get('event_url'),
+                                "host_name": event_dict.get('host_name')
+                            },
+                            "success": True
+                        }
+                        
+                        logger.info(f"Database result: {result_data['database_result']}")
+                        results.append(result_data)
+                    else:
+                        results.append({
+                            "test_case": i + 1,
+                            "error": "Failed to fetch inserted event",
+                            "success": False
+                        })
+                else:
+                    results.append({
+                        "test_case": i + 1,
+                        "error": "Failed to get event ID after insert",
+                        "success": False
+                    })
+                
+                conn.commit()
+        
+        logger.info("=== DEBUG UX FIELDS TEST COMPLETED ===")
+        return {"test_results": results}
+        
+    except Exception as e:
+        logger.error(f"Error in UX fields debug test: {str(e)}")
+        return {"error": str(e)}
 
 # Simple memory cache for frequently accessed data with improved memory management
 import time
@@ -3752,9 +3901,9 @@ async def bulk_create_events(
                         event.recurring,
                         event.frequency, 
                         current_user["id"],
-                        sanitize_ux_field(event.fee_required),
-                        sanitize_ux_field(event.event_url),
-                        sanitize_ux_field(event.host_name)
+                        event.fee_required,
+                        event.event_url,
+                        event.host_name
                     )
                     
                     # For PostgreSQL, use RETURNING to get the ID in one step
@@ -3973,4 +4122,7 @@ async def migrate_production_database():
 
 def sanitize_ux_field(value):
     """Convert None to empty string for UX fields to avoid NULLs in DB."""
-    return value if value is not None else ""
+    logger.info(f"sanitize_ux_field called with: {value!r} (type: {type(value)})")
+    result = value if value is not None else ""
+    logger.info(f"sanitize_ux_field returning: {result!r} (type: {type(result)})")
+    return result
