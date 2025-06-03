@@ -154,7 +154,13 @@ def create_default_admin():
         
         # Create admin user
         from backend import get_password_hash
-        hashed_password = get_password_hash("admin123!")
+        # Generate a secure random password
+        import secrets
+        import string
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
+        hashed_password = get_password_hash(admin_password)
+        print(f"Generated admin password: {admin_password}")
         
         cursor.execute("""
             INSERT INTO users (email, hashed_password, role) 

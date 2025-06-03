@@ -84,12 +84,31 @@ def test_smtp_connection():
         print("❌ Cannot test SMTP: No password configured")
         return False
     
+    # Check for common server issues
+    if config['smtp_server'] == 'smtppro.zoho.com':
+        print("⚠️ Using smtppro.zoho.com - this may cause issues")
+        print("💡 Recommendation: Use 'smtp.zoho.com' instead")
+    
+    # Check for port/encryption mismatch
+    if config['smtp_port'] == 465:
+        print("📝 Port 465 detected - will use SSL connection")
+    elif config['smtp_port'] == 587:
+        print("📝 Port 587 detected - will use STARTTLS connection")
+    else:
+        print(f"⚠️ Unusual port {config['smtp_port']} - proceeding with STARTTLS")
+    
     try:
         print(f"🔌 Connecting to {config['smtp_server']}:{config['smtp_port']}")
-        server = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
         
-        print("🔐 Starting TLS...")
-        server.starttls()
+        if config['smtp_port'] == 465:
+            # Use SSL for port 465
+            server = smtplib.SMTP_SSL(config['smtp_server'], config['smtp_port'])
+            print("🔐 Using SSL connection...")
+        else:
+            # Use STARTTLS for other ports
+            server = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
+            print("🔐 Starting TLS...")
+            server.starttls()
         
         print(f"🔑 Authenticating as {config['smtp_username']}")
         server.login(config['smtp_username'], config['smtp_password'])
@@ -103,10 +122,19 @@ def test_smtp_connection():
         
         if "Name or service not known" in str(e):
             print("   🔍 This is a DNS resolution issue")
+            if 'smtppro' in config['smtp_server']:
+                print("   💡 Try changing SMTP_SERVER to 'smtp.zoho.com'")
         elif "Authentication failed" in str(e):
             print("   🔑 Check your username and password")
+            print("   💡 Make sure you're using your Zoho Mail password")
         elif "Connection refused" in str(e):
             print("   🚫 Server refused connection - check server/port")
+        elif "Connection unexpectedly closed" in str(e):
+            print("   🔌 Connection closed - likely encryption method mismatch")
+            if config['smtp_port'] == 465:
+                print("   💡 Try using port 587 with STARTTLS instead")
+            else:
+                print("   💡 Try using port 465 with SSL instead")
         
         return False
 

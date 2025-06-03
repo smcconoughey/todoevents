@@ -635,41 +635,46 @@ def init_db():
         # We'll handle DB errors at the endpoint level
 
 def create_default_admin_user(conn):
-    """Create a default admin user if no admin users exist in the database"""
+    """Create default admin user if none exists"""
     try:
-        placeholder = get_placeholder()
-        c = conn.cursor()
+        cursor = conn.cursor()
         
         # Check if any admin users exist
-        c.execute(f"SELECT COUNT(*) as admin_count FROM users WHERE role = {placeholder}", (UserRole.ADMIN,))
-        admin_count = c.fetchone()
+        cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
+        admin_count = cursor.fetchone()[0]
         
-        # Convert to integer based on database type
-        if IS_PRODUCTION and DB_URL:
-            # PostgreSQL returns a dict
-            admin_count = admin_count['admin_count']
-        else:
-            # SQLite returns a tuple
-            admin_count = admin_count[0]
-            
         if admin_count == 0:
-            logger.info("No admin users found. Creating default admin user.")
-            admin_email = "admin@todoevents.com"
-            admin_password = "Admin123!"  # This should be changed after first login
+            logger.info("No admin users found. Creating default admin user...")
+            
+            # Use a secure random password that must be changed
+            import secrets
+            import string
+            
+            # Generate a random 16-character password
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
+            
             hashed_password = get_password_hash(admin_password)
             
-            c.execute(
-                f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                (admin_email, hashed_password, UserRole.ADMIN)
+            cursor.execute(
+                "INSERT INTO users (email, hashed_password, role) VALUES (?, ?, ?)",
+                ("admin@todo-events.com", hashed_password, "admin")
             )
             conn.commit()
-            logger.info(f"Default admin user created: {admin_email}")
-            logger.info("IMPORTANT: Remember to change the default admin password after first login")
+            
+            logger.info("✅ Default admin user created:")
+            logger.info(f"   📧 Email: admin@todo-events.com")
+            logger.info(f"   🔑 Password: {admin_password}")
+            logger.info("⚠️ IMPORTANT: Change this password after first login!")
+            
         else:
             logger.info(f"Found {admin_count} existing admin users. Default admin creation skipped.")
             
     except Exception as e:
         logger.error(f"Error creating default admin user: {str(e)}")
+        return False
+    
+    return True
 
 # Initialize database
 try:

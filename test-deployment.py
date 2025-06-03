@@ -86,7 +86,7 @@ def test_registration():
     """Test user registration"""
     print("\n==== Testing User Registration ====")
     email = generate_random_email()
-    password = "TestPassword123!"
+    password = "SecureTestPass123!"
     
     try:
         print(f"Registering user with email: {email}")

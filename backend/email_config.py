@@ -64,16 +64,30 @@ class EmailService:
             html_part = MIMEText(html_content, 'html')
             msg.attach(html_part)
             
-            # Connect to server and send email
-            with smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port']) as server:
-                self.logger.info("🔐 Starting TLS encryption...")
-                server.starttls()
-                
-                self.logger.info(f"🔑 Authenticating with {self.config['smtp_username']}")
-                server.login(self.config['smtp_username'], self.config['smtp_password'])
-                
-                self.logger.info("📬 Sending message...")
-                server.send_message(msg)
+            # Handle different ports and encryption methods
+            smtp_port = self.config['smtp_port']
+            
+            if smtp_port == 465:
+                # Port 465 uses implicit SSL (SMTPS)
+                self.logger.info("🔐 Using SSL connection (port 465)")
+                with smtplib.SMTP_SSL(self.config['smtp_server'], smtp_port) as server:
+                    self.logger.info(f"🔑 Authenticating with {self.config['smtp_username']}")
+                    server.login(self.config['smtp_username'], self.config['smtp_password'])
+                    
+                    self.logger.info("📬 Sending message...")
+                    server.send_message(msg)
+            else:
+                # Port 587 (and others) use explicit TLS (STARTTLS)
+                self.logger.info("🔐 Using STARTTLS connection")
+                with smtplib.SMTP(self.config['smtp_server'], smtp_port) as server:
+                    self.logger.info("🔐 Starting TLS encryption...")
+                    server.starttls()
+                    
+                    self.logger.info(f"🔑 Authenticating with {self.config['smtp_username']}")
+                    server.login(self.config['smtp_username'], self.config['smtp_password'])
+                    
+                    self.logger.info("📬 Sending message...")
+                    server.send_message(msg)
             
             self.logger.info(f"✅ Email sent successfully to {to_email}")
             return True
@@ -86,12 +100,22 @@ class EmailService:
                 self.logger.error("🔍 DNS resolution failed for SMTP server")
                 self.logger.error(f"   Server: {self.config['smtp_server']}")
                 self.logger.error("   Check internet connection and DNS settings")
+                self.logger.error("   💡 Try using 'smtp.zoho.com' instead of 'smtppro.zoho.com'")
             elif "Authentication failed" in str(e) or "Invalid credentials" in str(e):
                 self.logger.error("🔑 SMTP authentication failed")
                 self.logger.error("   Check SMTP_USERNAME and SMTP_PASSWORD")
+                self.logger.error("   💡 Make sure you're using your Zoho Mail password or app-specific password")
             elif "Connection refused" in str(e):
                 self.logger.error("🚫 Connection refused by SMTP server")
                 self.logger.error(f"   Check SMTP_SERVER ({self.config['smtp_server']}) and SMTP_PORT ({self.config['smtp_port']})")
+            elif "Connection unexpectedly closed" in str(e):
+                self.logger.error("🔌 Connection unexpectedly closed")
+                self.logger.error("   This often happens when using wrong encryption method for the port")
+                self.logger.error("   💡 For port 465: Use SSL (implicit). For port 587: Use STARTTLS (explicit)")
+                self.logger.error("   💡 Try using smtp.zoho.com with port 587 instead")
+            elif "SSL" in str(e) or "TLS" in str(e):
+                self.logger.error("🔐 SSL/TLS encryption issue")
+                self.logger.error("   💡 Try switching between port 465 (SSL) and 587 (STARTTLS)")
             
             return False
     
