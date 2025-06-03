@@ -135,7 +135,8 @@ export const createClusterIcon = (count, categoriesOrIds, theme = THEME_DARK) =>
   
   // *** NEW FEATURE: Use icon-only cluster markers if flag is enabled ***
   if (useIconOnlyMarkers()) {
-    return createIconOnlyClusterMarker(count, categories, theme);
+    // Pass category IDs directly since categoriesOrIds is already an array of IDs when coming from MapContainer
+    return createIconOnlyClusterMarker(count, categoriesOrIds, theme);
   }
   
   // *** ORIGINAL CODE: Keep existing cluster approach ***

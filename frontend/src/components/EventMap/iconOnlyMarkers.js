@@ -1,4 +1,5 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
+import allCategories from './categoryConfig';
 
 // Clean icon-only marker system - larger icons with duplicate stacking (Snapchat style)
 // Shows duplicate icons of the dominant category rather than different categories
@@ -184,10 +185,10 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
 };
 
 // Create cluster marker - only show duplicates if ALL events are the SAME category
-export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DARK) => {
-  console.log('Creating cluster with', count, 'events and categories:', categories?.map(c => c.id));
+export const createIconOnlyClusterMarker = (count, categoryIds, theme = THEME_DARK) => {
+  console.log('Creating cluster with', count, 'events and category IDs:', categoryIds);
   
-  if (!categories || categories.length === 0) {
+  if (!categoryIds || categoryIds.length === 0) {
     // Fallback to single icon for unknown categories
     const fallbackCategory = { id: 'all', markerColor: '#6B7280' };
     const svg = createIconOnlyMarkerSVG(iconPaths.MapPin, fallbackCategory.markerColor, theme);
@@ -201,13 +202,18 @@ export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DAR
   }
   
   // Check if ALL events are the SAME category (for true duplicates)
-  const firstCategoryId = categories[0].id;
-  const allSameCategory = categories.every(cat => cat.id === firstCategoryId);
+  const firstCategoryId = categoryIds[0];
+  const allSameCategory = categoryIds.every(id => id === firstCategoryId);
+  
+  // Get the category object for the first/dominant category
+  const categories = allCategories || [];
+  const dominantCategory = categories.find(cat => cat.id === firstCategoryId) || 
+                           { id: firstCategoryId, markerColor: '#6B7280' };
   
   if (allSameCategory && count >= 2) {
     // Show duplicate icons only when events are actually the same type
     console.log('All events are same category (' + firstCategoryId + '), showing duplicates');
-    const svg = createDuplicateStack(categories[0], count, theme);
+    const svg = createDuplicateStack(dominantCategory, count, theme);
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
       scaledSize: new google.maps.Size(80, 80),
@@ -218,8 +224,9 @@ export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DAR
   } else {
     // Mixed categories - show single icon of most common category
     console.log('Mixed categories, showing single icon for dominant category:', firstCategoryId);
-    const dominantCategory = categories[0];
-    const svg = createIconOnlyMarkerSVG(iconPaths[categoryIconMap[dominantCategory.id]] || iconPaths.MapPin, dominantCategory.markerColor, theme);
+    const iconName = categoryIconMap[dominantCategory.id] || 'MapPin';
+    const iconPath = iconPaths[iconName] || iconPaths.MapPin;
+    const svg = createIconOnlyMarkerSVG(iconPath, dominantCategory.markerColor, theme);
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
       scaledSize: new google.maps.Size(80, 80),

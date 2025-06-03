@@ -204,6 +204,29 @@ const MapContainer = React.forwardRef(({
 
         mapInstanceRef.current = map;
 
+        // Inject CSS to completely hide marker labels on icon-only markers
+        const hideLabelsCSS = `
+          <style>
+            .gm-style div[style*="font"] {
+              display: none !important;
+            }
+            .gm-style-iw {
+              display: block !important;
+            }
+            .gm-style div[style*="color"][style*="font-size"] {
+              visibility: hidden !important;
+              opacity: 0 !important;
+              display: none !important;
+            }
+          </style>
+        `;
+        
+        // Insert the CSS into the document head
+        const head = document.getElementsByTagName('head')[0];
+        const style = document.createElement('div');
+        style.innerHTML = hideLabelsCSS;
+        head.appendChild(style.firstChild);
+
         if (resizeObserverRef.current) {
           resizeObserverRef.current.disconnect();
         }
@@ -368,22 +391,15 @@ const MapContainer = React.forwardRef(({
         markers: markers,
         renderer: {
           render: ({ count, position, markers }) => {
-            // Extract unique categories from the clustered markers
-            const markerCategories = markers.map(marker => marker.category)
-              .filter((cat, index, self) => 
-                index === self.findIndex(c => c.id === cat.id)
-              );
+            // Get ALL categories from markers (not just unique ones) for proper cluster rendering
+            // This allows the cluster renderer to know if there are multiple events of the same category
+            const allMarkerCategories = markers.map(marker => marker.category);
             
             // Create a cluster marker
-            const clusterIcon = createClusterIcon(count, markerCategories.map(cat => cat.id), theme);
+            const clusterIcon = createClusterIcon(count, allMarkerCategories.map(cat => cat.id), theme);
             
-            // Check if we're using icon-only markers (they won't need labels)
-            const isIconOnlyMode = clusterIcon.url && (
-              clusterIcon.url.includes('width="44"') || 
-              clusterIcon.url.includes('width="52"') || 
-              clusterIcon.url.includes('width="64"') || 
-              clusterIcon.url.includes('width="80"')
-            );
+            // Check if we're using icon-only markers
+            const isIconOnlyMode = clusterIcon.url && clusterIcon.url.includes('width="80"');
             
             const marker = new google.maps.Marker({
               position,
@@ -391,21 +407,33 @@ const MapContainer = React.forwardRef(({
               zIndex: Number.MAX_SAFE_INTEGER,
             });
             
-            // Force remove any potential labels for icon-only mode
+            // For icon-only mode: COMPLETELY eliminate any text/labels
             if (isIconOnlyMode) {
+              // Primary removal methods
               marker.setLabel(null);
-              // Also ensure no label property exists
-              if (marker.label) {
-                delete marker.label;
+              marker.label = null;
+              
+              // Force delete any label properties that might exist
+              delete marker.label;
+              
+              // Override any Google Maps internal label settings
+              if (marker.get) {
+                marker.set('label', null);
+                marker.set('labelContent', null);
+                marker.set('labelClass', null);
               }
-              // BACKUP: If label still shows somehow, make it invisible
-              marker.setLabel({
-                text: String(count),
-                color: 'transparent', // Invisible text as backup
-                fontSize: '1px',      // Tiny size as backup
-                fontWeight: 'normal'
-              });
+              
+              // Override the setLabel method to prevent any future label setting
+              const originalSetLabel = marker.setLabel;
+              marker.setLabel = function() {
+                // Do nothing - completely block label setting for icon-only mode
+                return;
+              };
+              
+              // Store original method in case we need to restore it
+              marker._originalSetLabel = originalSetLabel;
             } else {
+              // For non-icon-only mode, show count label
               marker.setLabel({
                 text: String(count),
                 color: 'black',
