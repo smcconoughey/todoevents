@@ -181,6 +181,64 @@ class UserRole(str, Enum):
 
 # Database context manager with retry logic
 @contextmanager
+def get_db_transaction():
+    """
+    Get database connection with transaction control - properly handles autocommit for PostgreSQL
+    
+    CRITICAL FIX: PostgreSQL connections default to autocommit=True which prevents manual 
+    transaction control (BEGIN/COMMIT/ROLLBACK). This function temporarily disables autocommit
+    to allow explicit transaction management, then restores the original setting.
+    
+    This fixes the "set_session cannot be used inside a transaction" error.
+    """
+    if IS_PRODUCTION and DB_URL:
+        # In production with PostgreSQL
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        
+        conn = None
+        original_autocommit = None
+        
+        try:
+            conn = psycopg2.connect(
+                DB_URL,
+                cursor_factory=RealDictCursor,
+                connect_timeout=8,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=5,
+                keepalives_count=3,
+                application_name='todoevents'
+            )
+            
+            # Store original autocommit setting and disable it for transaction control
+            original_autocommit = conn.autocommit
+            conn.autocommit = False  # CRITICAL: Disable autocommit for manual transactions
+            
+            yield conn
+            
+        finally:
+            if conn:
+                # Restore original autocommit setting
+                if original_autocommit is not None:
+                    try:
+                        conn.autocommit = original_autocommit
+                    except:
+                        pass
+                conn.close()
+    else:
+        # Local development with SQLite
+        conn = sqlite3.connect(DB_FILE, timeout=10)
+        conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')
+        conn.execute('PRAGMA cache_size=10000')
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+@contextmanager
 def get_db():
     if IS_PRODUCTION and DB_URL:
         # In production with PostgreSQL
@@ -1984,19 +2042,13 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
     logger.info(f"Creating event: {event.dict()}")
     
     try:
-        # Use database connection with explicit transaction control
-        with get_db() as conn:
+        # Use database connection with proper transaction control
+        with get_db_transaction() as conn:
             cursor = conn.cursor()
             
             try:
-                # For PostgreSQL, we need to handle transactions differently
-                # Don't change autocommit inside a transaction - set it before any operations
-                if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL: Use explicit transaction without changing autocommit
-                    cursor.execute("BEGIN")
-                else:
-                    # SQLite: Use explicit transaction
-                    cursor.execute("BEGIN")
+                # Start transaction (autocommit is already properly disabled in get_db_transaction)
+                cursor.execute("BEGIN")
                 
                 # More robust duplicate check with coordinate tolerance (1 meter)
                 # Round coordinates to 6 decimal places (~1 meter precision)
