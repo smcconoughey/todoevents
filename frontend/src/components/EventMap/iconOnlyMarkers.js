@@ -1,7 +1,7 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 
-// Clean icon-only marker system with larger clusters and no text elements
-// Individual markers 36px, clusters 48px for better density indication
+// Snapchat-style icon marker system - all markers same size with stacked clustering
+// Individual markers and clusters are identical size, density shown by stacked icons
 
 // Helper function to create clean icon-only SVG markers without halos
 const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) => {
@@ -30,52 +30,54 @@ const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) =>
   `;
 };
 
-// Larger cluster showing just category icons - NO TEXT ELEMENTS AT ALL
-const createLargeCluster = (categories, count, theme = THEME_DARK) => {
+// Snapchat-style stacked cluster - same size as individual markers with layered icons
+const createStackedCluster = (categories, count, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
   const uniqueCategories = [...new Map(categories.map(cat => [cat.id, cat])).values()];
   const maxIcons = Math.min(4, uniqueCategories.length);
   
-  // Larger size for clusters to indicate density
-  const baseSize = 48;
-  const iconSize = 14; // Slightly larger icons
+  // Same size as individual markers - Snapchat style
+  const baseSize = 36;
+  const iconSize = 10; // Smaller to fit multiple
   const center = baseSize / 2;
   
-  // Arrange icons within the 48x48 space
+  // Snapchat-style stacking/layering positions
   const positions = [];
   
   if (maxIcons === 1) {
-    positions.push({ x: center, y: center });
+    positions.push({ x: center, y: center, depth: 0 });
   } else if (maxIcons === 2) {
+    // Stack them slightly offset like Snapchat
     positions.push(
-      { x: center - 8, y: center },
-      { x: center + 8, y: center }
+      { x: center - 3, y: center - 2, depth: 0 },
+      { x: center + 3, y: center + 2, depth: 1 }
     );
   } else if (maxIcons === 3) {
+    // Layer them in a small stack
     positions.push(
-      { x: center, y: center - 8 },
-      { x: center - 9, y: center + 6 },
-      { x: center + 9, y: center + 6 }
+      { x: center - 4, y: center - 3, depth: 0 },
+      { x: center + 2, y: center - 1, depth: 1 },
+      { x: center - 1, y: center + 4, depth: 2 }
     );
   } else {
-    // 2x2 grid with more space
+    // Dense 4-icon stack like Snapchat groups
     positions.push(
-      { x: center - 8, y: center - 8 },
-      { x: center + 8, y: center - 8 },
-      { x: center - 8, y: center + 8 },
-      { x: center + 8, y: center + 8 }
+      { x: center - 5, y: center - 4, depth: 0 },
+      { x: center + 3, y: center - 3, depth: 1 },
+      { x: center - 2, y: center + 3, depth: 2 },
+      { x: center + 4, y: center + 4, depth: 3 }
     );
   }
   
-  // Create mini-icons with no backgrounds or text
-  const createMiniIcon = (category, x, y) => {
+  // Create stacked mini-icons like Snapchat avatars
+  const createStackedIcon = (category, x, y, depth) => {
     const iconName = categoryIconMap[category.id] || 'MapPin';
     const iconPath = iconPaths[iconName] || iconPaths.MapPin;
     const scale = iconSize / 24;
     
     return `
       <g transform="translate(${x - iconSize/2}, ${y - iconSize/2})">
-        <!-- Mini icon with category color - NO BACKGROUNDS -->
+        <!-- Stacked mini icon with subtle depth -->
         <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
           ${iconPath
             .replace(/stroke="white"/g, `stroke="${category.markerColor}"`)
@@ -83,7 +85,7 @@ const createLargeCluster = (categories, count, theme = THEME_DARK) => {
             .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"')
           }
         </g>
-        <!-- White outline for visibility -->
+        <!-- White outline for stacked visibility -->
         <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
           ${iconPath
             .replace(/fill="white"/g, 'fill="none"')
@@ -95,14 +97,23 @@ const createLargeCluster = (categories, count, theme = THEME_DARK) => {
     `;
   };
   
-  const miniIcons = uniqueCategories.slice(0, maxIcons).map((category, index) => 
-    createMiniIcon(category, positions[index].x, positions[index].y)
-  ).join('');
+  // Render icons in depth order (back to front)
+  const stackedIcons = uniqueCategories
+    .slice(0, maxIcons)
+    .map((category, index) => ({
+      category,
+      position: positions[index]
+    }))
+    .sort((a, b) => a.position.depth - b.position.depth) // Render back to front
+    .map(({ category, position }) => 
+      createStackedIcon(category, position.x, position.y, position.depth)
+    )
+    .join('');
   
-  // ABSOLUTELY NO TEXT ELEMENTS - just the icons
+  // Same size as individual markers - just stacked content
   return `
-    <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-      ${miniIcons}
+    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+      ${stackedIcons}
     </svg>
   `;
 };
@@ -191,21 +202,21 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
   };
 };
 
-// Create larger cluster marker with absolutely no text - 48x48 for better visibility
+// Create Snapchat-style stacked cluster - same size as individual markers
 export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DARK) => {
-  console.log('Creating large cluster with', count, 'events and categories:', categories?.map(c => c.id));
+  console.log('Creating Snapchat-style stacked cluster with', count, 'events and categories:', categories?.map(c => c.id));
   
   const validCategories = categories && categories.length > 0 ? categories : [
     { id: 'all', markerColor: '#6B7280' }
   ];
   
-  const svg = createLargeCluster(validCategories, count, theme);
+  const svg = createStackedCluster(validCategories, count, theme);
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(48, 48),
+    scaledSize: new google.maps.Size(36, 36),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(24, 24),
+    anchor: new google.maps.Point(18, 18),
     optimized: false
   };
 };
