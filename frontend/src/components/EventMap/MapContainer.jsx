@@ -1,10 +1,9 @@
 // src/components/EventMap/MapContainer.jsx
 import React, { useEffect, useRef, useState, useContext } from 'react';
-import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import categories from './categoryConfig';
 import { initGoogleMaps } from '@/googleMapsLoader';
 import { ThemeContext, THEME_DARK, THEME_LIGHT } from '@/components/ThemeContext';
-import { createMarkerIcon, createClusterIcon } from './markerUtils';
+import { CustomClusterManager } from './CustomMarkerOverlay';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
@@ -144,8 +143,7 @@ const MapContainer = React.forwardRef(({
 }, ref) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const markersRef = useRef([]);
-  const clustererRef = useRef(null);
+  const customClusterManagerRef = useRef(null);
   const proximityCircleRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const resizeObserverRef = useRef(null);
@@ -203,29 +201,6 @@ const MapContainer = React.forwardRef(({
         });
 
         mapInstanceRef.current = map;
-
-        // Inject CSS to completely hide marker labels on icon-only markers
-        const hideLabelsCSS = `
-          <style>
-            .gm-style div[style*="font"] {
-              display: none !important;
-            }
-            .gm-style-iw {
-              display: block !important;
-            }
-            .gm-style div[style*="color"][style*="font-size"] {
-              visibility: hidden !important;
-              opacity: 0 !important;
-              display: none !important;
-            }
-          </style>
-        `;
-        
-        // Insert the CSS into the document head
-        const head = document.getElementsByTagName('head')[0];
-        const style = document.createElement('div');
-        style.innerHTML = hideLabelsCSS;
-        head.appendChild(style.firstChild);
 
         if (resizeObserverRef.current) {
           resizeObserverRef.current.disconnect();
@@ -310,20 +285,13 @@ const MapContainer = React.forwardRef(({
     }
   }, [mapCenter, proximityRange, theme]);
 
-  // Handle event markers
+  // Handle event markers with custom overlay system
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
-    markersRef.current.forEach(marker => {
-      if (marker.infoWindow) {
-        marker.infoWindow.close();
-      }
-      marker.setMap(null);
-    });
-    markersRef.current = [];
-
-    if (clustererRef.current) {
-      clustererRef.current.clearMarkers();
+    // Clear existing overlays
+    if (customClusterManagerRef.current) {
+      customClusterManagerRef.current.clearOverlays();
     }
 
     const validEvents = events.filter(event => {
@@ -348,105 +316,51 @@ const MapContainer = React.forwardRef(({
       return categoryMatch && dateMatch && hasValidLocation;
     });
 
-    // Group events by category for the cluster renderer
-    const eventsByCategory = {};
-    validEvents.forEach(event => {
-      const categoryId = event.category || 'all';
-      if (!eventsByCategory[categoryId]) {
-        eventsByCategory[categoryId] = [];
-      }
-      eventsByCategory[categoryId].push(event);
-    });
-
-    const markers = validEvents.map(event => {
-      // Find the category for this event
+    // Convert events to custom marker format
+    const customMarkers = validEvents.map(event => {
       const eventCategory = categories.find(cat => cat.id === event.category) || categories[0];
       
-      const marker = new google.maps.Marker({
+      return {
         position: { lat: event.lat, lng: event.lng },
-        map: mapInstanceRef.current,
-        icon: createMarkerIcon(eventCategory.id, true, theme),
-        optimized: true,
-        title: event.title, // Add hover title for better UX
-        zIndex: event.id // Use event ID for z-index to prioritize newer events
-      });
-
-      // Add click listener to show event details
-      marker.addListener('click', () => {
-        onEventClick?.(event);
-      });
-
-      // Store event category with marker for cluster rendering
-      marker.category = eventCategory;
-
-      return marker;
+        category: eventCategory,
+        event: event,
+        onClick: () => onEventClick?.(event)
+      };
     });
 
-    markersRef.current = markers;
-
-    if (markers.length > 0) {
-      // Use our custom cluster renderer with category-based colors
-      clustererRef.current = new MarkerClusterer({
-        map: mapInstanceRef.current,
-        markers: markers,
-        renderer: {
-          render: ({ count, position, markers }) => {
-            // Get ALL categories from markers (not just unique ones) for proper cluster rendering
-            // This allows the cluster renderer to know if there are multiple events of the same category
-            const allMarkerCategories = markers.map(marker => marker.category);
-            
-            // Create a cluster marker
-            const clusterIcon = createClusterIcon(count, allMarkerCategories.map(cat => cat.id), theme);
-            
-            // Check if we're using icon-only markers
-            const isIconOnlyMode = clusterIcon.url && clusterIcon.url.includes('width="80"');
-            
-            const marker = new google.maps.Marker({
-              position,
-              icon: clusterIcon,
-              zIndex: Number.MAX_SAFE_INTEGER,
-            });
-            
-            // For icon-only mode: COMPLETELY eliminate any text/labels
-            if (isIconOnlyMode) {
-              // Primary removal methods
-              marker.setLabel(null);
-              marker.label = null;
-              
-              // Force delete any label properties that might exist
-              delete marker.label;
-              
-              // Override any Google Maps internal label settings
-              if (marker.get) {
-                marker.set('label', null);
-                marker.set('labelContent', null);
-                marker.set('labelClass', null);
-              }
-              
-              // Override the setLabel method to prevent any future label setting
-              const originalSetLabel = marker.setLabel;
-              marker.setLabel = function() {
-                // Do nothing - completely block label setting for icon-only mode
-                return;
-              };
-              
-              // Store original method in case we need to restore it
-              marker._originalSetLabel = originalSetLabel;
-            } else {
-              // For non-icon-only mode, show count label
-              marker.setLabel({
-                text: String(count),
-                color: 'black',
-                fontSize: '13px',
-                fontWeight: 'bold'
-              });
-            }
-            
-            return marker;
-          },
-        },
-      });
+    // Initialize or update custom cluster manager
+    if (!customClusterManagerRef.current) {
+      customClusterManagerRef.current = new CustomClusterManager(
+        mapInstanceRef.current,
+        customMarkers,
+        {
+          gridSize: 60,
+          maxZoom: 15
+        }
+      );
     }
+
+    // Add zoom change listener to update clusters
+    const zoomListener = google.maps.event.addListener(mapInstanceRef.current, 'zoom_changed', () => {
+      if (customClusterManagerRef.current) {
+        customClusterManagerRef.current.updateClusters();
+      }
+    });
+
+    // Add idle listener to update clusters after pan
+    const idleListener = google.maps.event.addListener(mapInstanceRef.current, 'idle', () => {
+      if (customClusterManagerRef.current) {
+        customClusterManagerRef.current.updateClusters();
+      }
+    });
+
+    customClusterManagerRef.current.addMarkers(customMarkers);
+
+    // Cleanup listeners
+    return () => {
+      google.maps.event.removeListener(zoomListener);
+      google.maps.event.removeListener(idleListener);
+    };
   }, [events, selectedCategory, selectedDate, theme]);
 
   // Determine background color based on theme
