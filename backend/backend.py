@@ -2110,9 +2110,9 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     event.recurring,
                     event.frequency, 
                     current_user["id"],
-                    event.fee_required,
-                    event.event_url,
-                    event.host_name
+                    sanitize_ux_field(event.fee_required),
+                    sanitize_ux_field(event.event_url),
+                    sanitize_ux_field(event.host_name)
                 )
                 
                 # For PostgreSQL, use RETURNING to get the ID in one step
@@ -2268,7 +2268,9 @@ async def update_event(
                     event.title, event.description, event.date, event.start_time, 
                     event.end_time, event.end_date, event.category, event.address, 
                     event.lat, event.lng, event.recurring, event.frequency, 
-                    event.fee_required, event.event_url, event.host_name,
+                    sanitize_ux_field(event.fee_required),
+                    sanitize_ux_field(event.event_url),
+                    sanitize_ux_field(event.host_name),
                     event_id
                 )
                 
@@ -3750,9 +3752,9 @@ async def bulk_create_events(
                         event.recurring,
                         event.frequency, 
                         current_user["id"],
-                        event.fee_required,
-                        event.event_url,
-                        event.host_name
+                        sanitize_ux_field(event.fee_required),
+                        sanitize_ux_field(event.event_url),
+                        sanitize_ux_field(event.host_name)
                     )
                     
                     # For PostgreSQL, use RETURNING to get the ID in one step
@@ -3968,3 +3970,7 @@ async def migrate_production_database():
             "status": "error", 
             "message": f"Migration failed: {str(e)}"
         }
+
+def sanitize_ux_field(value):
+    """Convert None to empty string for UX fields to avoid NULLs in DB."""
+    return value if value is not None else ""
