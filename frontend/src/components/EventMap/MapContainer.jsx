@@ -1,9 +1,10 @@
 // src/components/EventMap/MapContainer.jsx
 import React, { useEffect, useRef, useState, useContext } from 'react';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import categories from './categoryConfig';
 import { initGoogleMaps } from '@/googleMapsLoader';
 import { ThemeContext, THEME_DARK, THEME_LIGHT } from '@/components/ThemeContext';
-import { CustomClusterManager } from './CustomMarkerOverlay';
+import { createMarkerIcon, createClusterIcon } from './markerUtils';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
@@ -143,7 +144,8 @@ const MapContainer = React.forwardRef(({
 }, ref) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const customClusterManagerRef = useRef(null);
+  const markersRef = useRef([]);
+  const clustererRef = useRef(null);
   const proximityCircleRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const resizeObserverRef = useRef(null);
@@ -285,13 +287,20 @@ const MapContainer = React.forwardRef(({
     }
   }, [mapCenter, proximityRange, theme]);
 
-  // Handle event markers with custom overlay system
+  // Handle event markers
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
-    // Clear existing overlays
-    if (customClusterManagerRef.current) {
-      customClusterManagerRef.current.clearOverlays();
+    markersRef.current.forEach(marker => {
+      if (marker.infoWindow) {
+        marker.infoWindow.close();
+      }
+      marker.setMap(null);
+    });
+    markersRef.current = [];
+
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
     }
 
     const validEvents = events.filter(event => {
@@ -316,51 +325,59 @@ const MapContainer = React.forwardRef(({
       return categoryMatch && dateMatch && hasValidLocation;
     });
 
-    // Convert events to custom marker format
-    const customMarkers = validEvents.map(event => {
+    const markers = validEvents.map(event => {
+      // Find the category for this event
       const eventCategory = categories.find(cat => cat.id === event.category) || categories[0];
       
-      return {
+      const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
-        category: eventCategory,
-        event: event,
-        onClick: () => onEventClick?.(event)
-      };
+        map: mapInstanceRef.current,
+        icon: createMarkerIcon(eventCategory.id, true, theme),
+        optimized: true,
+        title: event.title,
+        zIndex: event.id
+      });
+
+      // Add click listener to show event details
+      marker.addListener('click', () => {
+        onEventClick?.(event);
+      });
+
+      // Store event category with marker for cluster rendering
+      marker.category = eventCategory;
+
+      return marker;
     });
 
-    // Initialize or update custom cluster manager
-    if (!customClusterManagerRef.current) {
-      customClusterManagerRef.current = new CustomClusterManager(
-        mapInstanceRef.current,
-        customMarkers,
-        {
-          gridSize: 60,
-          maxZoom: 15
-        }
-      );
+    markersRef.current = markers;
+
+    if (markers.length > 0) {
+      // Use simple clustering without text labels
+      clustererRef.current = new MarkerClusterer({
+        map: mapInstanceRef.current,
+        markers: markers,
+        renderer: {
+          render: ({ count, position, markers }) => {
+            // Get ALL categories from markers for proper cluster rendering
+            const allMarkerCategories = markers.map(marker => marker.category);
+            
+            // Create a cluster marker
+            const clusterIcon = createClusterIcon(count, allMarkerCategories.map(cat => cat.id), theme);
+            
+            const marker = new google.maps.Marker({
+              position,
+              icon: clusterIcon,
+              zIndex: Number.MAX_SAFE_INTEGER,
+            });
+            
+            // No labels for clean icon-only appearance
+            marker.setLabel(null);
+            
+            return marker;
+          },
+        },
+      });
     }
-
-    // Add zoom change listener to update clusters
-    const zoomListener = google.maps.event.addListener(mapInstanceRef.current, 'zoom_changed', () => {
-      if (customClusterManagerRef.current) {
-        customClusterManagerRef.current.updateClusters();
-      }
-    });
-
-    // Add idle listener to update clusters after pan
-    const idleListener = google.maps.event.addListener(mapInstanceRef.current, 'idle', () => {
-      if (customClusterManagerRef.current) {
-        customClusterManagerRef.current.updateClusters();
-      }
-    });
-
-    customClusterManagerRef.current.addMarkers(customMarkers);
-
-    // Cleanup listeners
-    return () => {
-      google.maps.event.removeListener(zoomListener);
-      google.maps.event.removeListener(idleListener);
-    };
   }, [events, selectedCategory, selectedDate, theme]);
 
   // Determine background color based on theme
