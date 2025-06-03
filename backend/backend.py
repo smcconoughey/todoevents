@@ -305,70 +305,65 @@ def init_db():
                 
                 # Add migration for existing events to have start_time and end_time
                 try:
+                    # Use PostgreSQL-compatible column checking method with fallback
+                    def column_exists(table_name, column_name):
+                        try:
+                            # Try information_schema first
+                            c.execute("""
+                                SELECT column_name FROM information_schema.columns 
+                                WHERE table_name = %s AND column_name = %s
+                            """, (table_name, column_name))
+                            return c.fetchone() is not None
+                        except Exception:
+                            # Fallback: try to add column and catch error if it exists
+                            try:
+                                c.execute(f'ALTER TABLE {table_name} ADD COLUMN {column_name}_test_temp TEXT')
+                                c.execute(f'ALTER TABLE {table_name} DROP COLUMN {column_name}_test_temp')
+                                # If we got here, column doesn't exist
+                                return False
+                            except Exception:
+                                # If adding temp column failed, assume original column exists
+                                return True
+                    
                     # Check if we need to migrate old 'time' column to 'start_time'
-                    c.execute("""
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name = 'events' AND column_name = 'time'
-                    """)
-                    if c.fetchone():
+                    if column_exists('events', 'time'):
                         # Migrate old 'time' column to 'start_time'
                         c.execute('ALTER TABLE events RENAME COLUMN time TO start_time')
                         logger.info("✅ Migrated 'time' column to 'start_time'")
                         conn.commit()
                         
-                    # Check if start_time column exists (in case we need to add it)
-                    c.execute("""
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name = 'events' AND column_name = 'start_time'
-                    """)
-                    if not c.fetchone():
-                        # Add start_time column if it doesn't exist
+                    # Add start_time column if it doesn't exist
+                    if not column_exists('events', 'start_time'):
                         c.execute('ALTER TABLE events ADD COLUMN start_time TEXT DEFAULT \'12:00\'')
                         logger.info("✅ Added 'start_time' column")
                         conn.commit()
                         
                     # Add end_time column if it doesn't exist
-                    c.execute("""
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name = 'events' AND column_name = 'end_time'
-                    """)
-                    if not c.fetchone():
+                    if not column_exists('events', 'end_time'):
                         c.execute('ALTER TABLE events ADD COLUMN end_time TEXT')
                         logger.info("✅ Added 'end_time' column")
                         conn.commit()
                         
                     # Add end_date column if it doesn't exist
-                    c.execute("""
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name = 'events' AND column_name = 'end_date'
-                    """)
-                    if not c.fetchone():
+                    if not column_exists('events', 'end_date'):
                         c.execute('ALTER TABLE events ADD COLUMN end_date TEXT')
                         logger.info("✅ Added 'end_date' column")
                         conn.commit()
                     
                     # Add interest_count column if it doesn't exist
-                    c.execute("""
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name = 'events' AND column_name = 'interest_count'
-                    """)
-                    if not c.fetchone():
+                    if not column_exists('events', 'interest_count'):
                         c.execute('ALTER TABLE events ADD COLUMN interest_count INTEGER DEFAULT 0')
                         logger.info("✅ Added 'interest_count' column")
                         conn.commit()
                     
                     # Add view_count column if it doesn't exist
-                    c.execute("""
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name = 'events' AND column_name = 'view_count'
-                    """)
-                    if not c.fetchone():
+                    if not column_exists('events', 'view_count'):
                         c.execute('ALTER TABLE events ADD COLUMN view_count INTEGER DEFAULT 0')
                         logger.info("✅ Added 'view_count' column")
                         conn.commit()
                         
                 except Exception as migration_error:
-                    logger.error(f"❌ Migration error: {migration_error}")
+                    logger.error(f"❌ Schema fix error: {migration_error}")
                     # Don't fail the entire initialization, just log the error
                     try:
                         conn.rollback()
@@ -3251,53 +3246,62 @@ async def debug_schema():
         with get_db() as conn:
             c = conn.cursor()
             
-            # Check events table columns
+            # Check events table columns with fallback
             if IS_PRODUCTION and DB_URL:
-                c.execute("""
-                    SELECT column_name, data_type, is_nullable, column_default 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'events' 
-                    ORDER BY ordinal_position
-                """)
-                events_columns = c.fetchall()
-                
-                # Check if event_interests table exists
-                c.execute("""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_name = 'event_interests'
-                """)
-                interests_table = c.fetchone()
-                
-                # Check if event_views table exists
-                c.execute("""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_name = 'event_views'
-                """)
-                views_table = c.fetchone()
-                
-                # Get event_interests columns if table exists
-                interests_columns = []
-                if interests_table:
+                try:
                     c.execute("""
-                        SELECT column_name, data_type, is_nullable 
+                        SELECT column_name, data_type, is_nullable, column_default 
                         FROM information_schema.columns 
-                        WHERE table_name = 'event_interests' 
+                        WHERE table_name = 'events' 
                         ORDER BY ordinal_position
                     """)
-                    interests_columns = c.fetchall()
-                
-                # Get event_views columns if table exists
-                views_columns = []
-                if views_table:
+                    events_columns = c.fetchall()
+                    
+                    # Check if event_interests table exists
                     c.execute("""
-                        SELECT column_name, data_type, is_nullable 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'event_views' 
-                        ORDER BY ordinal_position
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name = 'event_interests'
                     """)
-                    views_columns = c.fetchall()
+                    interests_table = c.fetchone()
+                    
+                    # Check if event_views table exists
+                    c.execute("""
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name = 'event_views'
+                    """)
+                    views_table = c.fetchone()
+                    
+                    # Get event_interests columns if table exists
+                    interests_columns = []
+                    if interests_table:
+                        c.execute("""
+                            SELECT column_name, data_type, is_nullable 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'event_interests' 
+                            ORDER BY ordinal_position
+                        """)
+                        interests_columns = c.fetchall()
+                    
+                    # Get event_views columns if table exists
+                    views_columns = []
+                    if views_table:
+                        c.execute("""
+                            SELECT column_name, data_type, is_nullable 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'event_views' 
+                            ORDER BY ordinal_position
+                        """)
+                        views_columns = c.fetchall()
+                except Exception as e:
+                    # Fallback for information_schema issues
+                    logger.warning(f"information_schema query failed, using fallback: {e}")
+                    events_columns = [("schema_query_failed", "text", "YES", None)]
+                    interests_table = None
+                    views_table = None
+                    interests_columns = []
+                    views_columns = []
             else:
                 # SQLite
                 c.execute('PRAGMA table_info(events)')
