@@ -6,6 +6,7 @@ import LoginForm from "./LoginForm";
 import CalendarFilter from "./CalendarFilter";
 import MapContainer from "./MapContainer";
 import ShareCard from "./ShareCard";
+import FirstTimeSignInPopup from "../FirstTimeSignInPopup";
 
 import { getMarkerStyle, setMarkerStyle } from "./markerUtils";
 import categories, { getCategory } from "./categoryConfig";
@@ -649,6 +650,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [externalLinkDialog, setExternalLinkDialog] = useState({ isOpen: false, url: '' });
+  const [showFirstTimeSignInPopup, setShowFirstTimeSignInPopup] = useState(false);
   // Add new state for misc filters
   const [miscFilters, setMiscFilters] = useState({
     feeFilter: 'all' // 'all', 'free', 'paid'
@@ -802,6 +804,14 @@ const EventMap = ({ mapsLoaded = false }) => {
   useEffect(() => {
     fetchEvents();
   }, []); // Only fetch events once on component mount
+
+  // Track first-time sign-in to show welcome popup
+  useEffect(() => {
+    if (user && !localStorage.getItem('hasSeenFirstTimeSignIn')) {
+      setShowFirstTimeSignInPopup(true);
+      localStorage.setItem('hasSeenFirstTimeSignIn', 'true');
+    }
+  }, [user]);
 
   // Handle URL parameters for event deep linking
   useEffect(() => {
@@ -1544,9 +1554,9 @@ const EventMap = ({ mapsLoaded = false }) => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowWelcomePopup(true)}
+              onClick={() => user ? window.open('/hosts', '_blank') : setShowWelcomePopup(true)}
               className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
-              title="Help & Tutorial"
+              title={user ? "Hosting Guide" : "Help & Tutorial"}
             >
               <HelpCircle className="h-5 w-5" />
             </Button>
@@ -1580,8 +1590,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                   variant="ghost"
                   size="sm"
                   className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                  onClick={() => setShowWelcomePopup(true)}
-                  title="Help & Tutorial"
+                  onClick={() => user ? window.open('/hosts', '_blank') : setShowWelcomePopup(true)}
+                  title={user ? "Hosting Guide" : "Help & Tutorial"}
                 >
                   <HelpCircle className="w-4 h-4" />
                 </Button>
@@ -2254,8 +2264,8 @@ const EventMap = ({ mapsLoaded = false }) => {
                     variant="ghost"
                     size="sm"
                     className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                    onClick={() => setShowWelcomePopup(true)}
-                    title="Help & Tutorial"
+                    onClick={() => user ? window.open('/hosts', '_blank') : setShowWelcomePopup(true)}
+                    title={user ? "Hosting Guide" : "Help & Tutorial"}
                   >
                     <HelpCircle className="w-4 h-4" />
                   </Button>
@@ -3256,6 +3266,15 @@ const EventMap = ({ mapsLoaded = false }) => {
           forceShow={true}
         />
       )}
+
+      {/* First Time Sign In Popup */}
+      <FirstTimeSignInPopup
+        isOpen={showFirstTimeSignInPopup}
+        onClose={() => setShowFirstTimeSignInPopup(false)}
+        onCreateEvent={() => {
+          setIsCreateFormOpen(true);
+        }}
+      />
 
       {/* External Link Warning Dialog */}
       <ExternalLinkWarning
