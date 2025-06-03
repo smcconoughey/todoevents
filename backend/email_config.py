@@ -7,7 +7,7 @@ import logging
 
 # Email configuration
 EMAIL_CONFIG = {
-    'smtp_server': os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
+    'smtp_server': os.getenv('SMTP_SERVER', 'smtp.zoho.com'),
     'smtp_port': int(os.getenv('SMTP_PORT', '587')),
     'smtp_username': os.getenv('SMTP_USERNAME', 'support@todo-events.com'),
     'smtp_password': os.getenv('SMTP_PASSWORD', ''),
