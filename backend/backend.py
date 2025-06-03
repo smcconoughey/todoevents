@@ -2041,6 +2041,10 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
             cursor = conn.cursor()
             
             try:
+                # Disable autocommit for transaction control
+                if IS_PRODUCTION and DB_URL:
+                    conn.autocommit = False
+                
                 # Start transaction explicitly
                 cursor.execute("BEGIN")
                 
@@ -2135,6 +2139,10 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Commit the transaction
                 cursor.execute("COMMIT")
                 
+                # Restore autocommit for other operations
+                if IS_PRODUCTION and DB_URL:
+                    conn.autocommit = True
+                
                 # Convert to dict and process datetime objects
                 event_dict = dict(event_data)
                 
@@ -2160,6 +2168,13 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 except Exception as rollback_error:
                     logger.error(f"Transaction rollback failed: {str(rollback_error)}")
                 
+                # Restore autocommit for other operations
+                if IS_PRODUCTION and DB_URL:
+                    try:
+                        conn.autocommit = True
+                    except:
+                        pass
+                
                 # Pass through HTTP exceptions without modification
                 raise http_ex
             except Exception as e:
@@ -2168,6 +2183,13 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     cursor.execute("ROLLBACK")
                 except Exception as rollback_error:
                     logger.error(f"Transaction rollback failed: {str(rollback_error)}")
+                
+                # Restore autocommit for other operations
+                if IS_PRODUCTION and DB_URL:
+                    try:
+                        conn.autocommit = True
+                    except:
+                        pass
                 
                 # Log the detailed error
                 error_msg = str(e)
