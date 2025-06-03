@@ -3252,7 +3252,6 @@ const EventMap = ({ mapsLoaded = false }) => {
             mode={loginMode}
             onSuccess={() => {
               setShowLoginDialog(false);
-              setIsCreateFormOpen(true);
             }}
             onModeChange={(newMode) => setLoginMode(newMode)}
           />

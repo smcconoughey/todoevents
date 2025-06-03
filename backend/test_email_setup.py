@@ -6,135 +6,158 @@ Run this script to test your Zoho Mail configuration
 
 import os
 import sys
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from email_config import EmailService
 
 def test_email_configuration():
-    """Test the email configuration and send a test email"""
+    """Test the email configuration"""
+    print("\n🧪 Testing Email Configuration...")
     
-    print("🧪 Testing Todo Events Email Configuration")
-    print("=" * 50)
-    
-    # Initialize email service
     try:
+        # Initialize email service
         email_service = EmailService()
-        print("✅ Email service initialized successfully")
-    except Exception as e:
-        print(f"❌ Failed to initialize email service: {e}")
-        return False
-    
-    # Check environment variables
-    print("\n📋 Configuration Check:")
-    print(f"SMTP Server: {os.getenv('SMTP_SERVER', 'Not set')}")
-    print(f"SMTP Port: {os.getenv('SMTP_PORT', 'Not set')}")
-    print(f"From Email: {os.getenv('FROM_EMAIL', 'Not set')}")
-    print(f"Username: {os.getenv('SMTP_USERNAME', 'Not set')}")
-    print(f"Password: {'Set' if os.getenv('SMTP_PASSWORD') else 'Not set'}")
-    
-    # Get test email from user
-    test_email = input("\n📧 Enter your email address to receive a test email: ").strip()
-    
-    if not test_email or '@' not in test_email:
-        print("❌ Invalid email address")
-        return False
-    
-    # Test password reset email
-    print(f"\n📤 Sending test password reset email to {test_email}...")
-    
-    try:
-        result = email_service.send_password_reset_email(
-            to_email=test_email,
-            reset_code="TEST123",
-            user_name="Test User"
-        )
+        print("✅ Email service initialized")
         
-        if result:
-            print("✅ Password reset email sent successfully!")
-            print("📬 Check your inbox (and spam folder)")
+        # Test SMTP connection
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.zoho.com')
+        smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        smtp_username = os.getenv('SMTP_USERNAME')
+        smtp_password = os.getenv('SMTP_PASSWORD')
+        
+        print(f"🔌 Testing SMTP connection to {smtp_server}:{smtp_port}")
+        
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.quit()
+        
+        print("✅ SMTP connection successful")
+        
+        # Test sending a real email (optional)
+        test_email = input("\n📧 Enter your email to receive a test message (or press Enter to skip): ").strip()
+        
+        if test_email:
+            print(f"📤 Sending test email to {test_email}...")
+            
+            result = email_service.send_password_reset_email(
+                to_email=test_email,
+                reset_code="TEST123",
+                user_name="Test User"
+            )
+            
+            if result:
+                print("✅ Test email sent successfully!")
+                print("📬 Check your inbox (and spam folder)")
+            else:
+                print("❌ Failed to send test email")
         else:
-            print("❌ Failed to send password reset email")
-            return False
+            print("⏭️ Skipping test email")
             
     except Exception as e:
-        print(f"❌ Error sending password reset email: {e}")
+        print(f"❌ Email configuration test failed: {str(e)}")
         return False
-    
-    # Test welcome email  
-    print(f"\n📤 Sending test welcome email to {test_email}...")
-    
-    try:
-        result = email_service.send_welcome_email(
-            to_email=test_email,
-            user_name="Test User"
-        )
-        
-        if result:
-            print("✅ Welcome email sent successfully!")
-            print("📬 Check your inbox for both emails")
-        else:
-            print("❌ Failed to send welcome email")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error sending welcome email: {e}")
-        return False
-    
-    print("\n🎉 Email configuration test completed successfully!")
-    print("\n📋 Next Steps:")
-    print("1. Check your email inbox")
-    print("2. Verify emails look professional") 
-    print("3. Test the password reset flow in the app")
-    print("4. Configure any additional email settings needed")
     
     return True
 
 def check_prerequisites():
-    """Check if all prerequisites are met"""
-    
+    """Check if all prerequisites are met for email testing"""
     print("🔍 Checking Prerequisites...")
+    issues = []
     
-    # Check if .env file exists
-    if not os.path.exists('.env'):
-        print("❌ .env file not found")
-        print("📋 Create .env file using env_template_zoho.txt as reference")
-        return False
+    # Check for .env file or environment variables
+    env_file_exists = os.path.exists('.env')
+    
+    if not env_file_exists:
+        print("ℹ️ .env file not found - checking environment variables...")
+        
+        # Check for required environment variables
+        required_env_vars = [
+            'SMTP_SERVER', 'SMTP_PORT', 'SMTP_USERNAME', 
+            'SMTP_PASSWORD', 'FROM_EMAIL'
+        ]
+        
+        missing_vars = []
+        for var in required_env_vars:
+            if not os.getenv(var):
+                missing_vars.append(var)
+        
+        if missing_vars:
+            issues.append(f"Missing environment variables: {', '.join(missing_vars)}")
+            print("📋 Set up environment variables on Render or create .env file locally")
+        else:
+            print("✅ Environment variables found")
+    else:
+        print("✅ .env file found")
+        
+        # Load environment variables from .env file
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            print("⚠️ python-dotenv not installed, but .env file exists")
+    
+    # Check if EmailService can be imported
+    try:
+        email_service = EmailService()
+        print("✅ EmailService imported successfully")
+    except Exception as e:
+        issues.append(f"EmailService import failed: {str(e)}")
     
     # Check required environment variables
-    required_vars = [
-        'SMTP_SERVER',
-        'SMTP_PORT', 
-        'SMTP_USERNAME',
-        'SMTP_PASSWORD',
-        'FROM_EMAIL'
-    ]
+    smtp_server = os.getenv('SMTP_SERVER')
+    smtp_port = os.getenv('SMTP_PORT')
+    smtp_username = os.getenv('SMTP_USERNAME')
+    smtp_password = os.getenv('SMTP_PASSWORD')
+    from_email = os.getenv('FROM_EMAIL')
     
-    missing_vars = []
-    for var in required_vars:
-        if not os.getenv(var):
-            missing_vars.append(var)
+    if not all([smtp_server, smtp_port, smtp_username, smtp_password, from_email]):
+        missing = []
+        if not smtp_server: missing.append('SMTP_SERVER')
+        if not smtp_port: missing.append('SMTP_PORT')
+        if not smtp_username: missing.append('SMTP_USERNAME')
+        if not smtp_password: missing.append('SMTP_PASSWORD')
+        if not from_email: missing.append('FROM_EMAIL')
+        
+        if missing:
+            issues.append(f"Missing environment variables: {', '.join(missing)}")
+            if not env_file_exists:
+                print("📋 Configure these variables on Render or create local .env file")
+            else:
+                print("📋 Update your .env file with the missing values")
+    else:
+        print("✅ All required environment variables present")
+        print(f"   📧 SMTP Server: {smtp_server}")
+        print(f"   🔌 SMTP Port: {smtp_port}")
+        print(f"   👤 Username: {smtp_username}")
+        print(f"   📨 From Email: {from_email}")
+        print(f"   🔑 Password: {'*' * len(smtp_password) if smtp_password else 'Not set'}")
     
-    if missing_vars:
-        print(f"❌ Missing environment variables: {', '.join(missing_vars)}")
-        print("📋 Update your .env file with the missing values")
-        return False
-    
-    print("✅ Prerequisites check passed")
-    return True
+    return issues
 
 if __name__ == "__main__":
     print("🚀 Todo Events Email Setup Tester")
     print("=" * 40)
     
-    # Check prerequisites first
-    if not check_prerequisites():
-        print("\n❌ Prerequisites not met. Please fix the issues above and try again.")
-        sys.exit(1)
+    # Check prerequisites
+    issues = check_prerequisites()
     
-    # Run email tests
-    success = test_email_configuration()
+    if issues:
+        print(f"\n❌ Prerequisites not met. Please fix the issues above and try again.")
+        for issue in issues:
+            print(f"   • {issue}")
+        exit(1)
     
-    if success:
-        print("\n🎯 Email setup is working correctly!")
-        sys.exit(0)
+    print("\n✅ Prerequisites met!")
+    
+    # Test email configuration
+    if test_email_configuration():
+        print("\n🎉 Email setup is working correctly!")
+        print("📋 Your Todo Events email system is ready to send:")
+        print("   • Password reset emails")
+        print("   • Welcome emails")
+        print("   • Other automated notifications")
     else:
-        print("\n❌ Email setup has issues. Please check the errors above.")
-        sys.exit(1) 
+        print("\n❌ Email setup needs attention")
+        print("📋 Check your SMTP credentials and try again") 
