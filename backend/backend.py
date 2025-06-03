@@ -1777,15 +1777,32 @@ async def request_password_reset(request: PasswordResetRequest):
                 (request.email, reset_code, reset_expiry)
             )
             
-            # In a real production system, you would send an email with the reset code
-            # For demo purposes, we'll just log it
-            logger.info(f"Password reset code for {request.email}: {reset_code}")
+            # Send password reset email
+            try:
+                from email_config import email_service
+                
+                # Extract user name from email for personalization
+                user_name = request.email.split('@')[0].title()
+                
+                email_sent = email_service.send_password_reset_email(
+                    request.email, 
+                    reset_code, 
+                    user_name
+                )
+                
+                if email_sent:
+                    logger.info(f"✅ Password reset email sent to {request.email}")
+                else:
+                    logger.error(f"❌ Failed to send password reset email to {request.email}")
+                    
+            except Exception as e:
+                logger.error(f"❌ Email service error: {str(e)}")
             
-            # For development, return the reset code in the response
-            # In production, remove this and use proper email delivery
+            # For development, also log the reset code
             if not IS_PRODUCTION:
+                logger.info(f"Password reset code for {request.email}: {reset_code}")
                 return {
-                    "detail": "Reset code generated",
+                    "detail": "Reset code generated and email sent",
                     "reset_code": reset_code
                 }
             
