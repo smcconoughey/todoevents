@@ -17,13 +17,13 @@ const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) =>
     .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"');
   
   return `
-    <svg width="36" height="36" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
       <!-- Main icon with bright colors -->
-      <g transform="translate(0, 0)">
+      <g transform="translate(6, 6) scale(1)">
         ${cleanIconPath}
       </g>
       <!-- Strong outline for definition -->
-      <g transform="translate(0, 0)">
+      <g transform="translate(6, 6) scale(1)">
         ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')}
       </g>
     </svg>
@@ -36,36 +36,34 @@ const createStackedCluster = (categories, count, theme = THEME_DARK) => {
   const uniqueCategories = [...new Map(categories.map(cat => [cat.id, cat])).values()];
   const maxIcons = Math.min(4, uniqueCategories.length);
   
-  // Same size as individual markers - Snapchat style
-  const baseSize = 36;
-  const iconSize = 10; // Smaller to fit multiple
-  const center = baseSize / 2;
+  // Same size as individual markers - work in 36x36 space
+  const iconSize = 16; // Larger icons that will actually be visible
   
-  // Snapchat-style stacking/layering positions
+  // Snapchat-style stacking/layering positions (in 36x36 space)
   const positions = [];
   
   if (maxIcons === 1) {
-    positions.push({ x: center, y: center, depth: 0 });
+    positions.push({ x: 18, y: 18, depth: 0 });
   } else if (maxIcons === 2) {
-    // Stack them slightly offset like Snapchat
+    // Stack them with clear offset like Snapchat
     positions.push(
-      { x: center - 3, y: center - 2, depth: 0 },
-      { x: center + 3, y: center + 2, depth: 1 }
+      { x: 13, y: 15, depth: 0 },
+      { x: 23, y: 21, depth: 1 }
     );
   } else if (maxIcons === 3) {
-    // Layer them in a small stack
+    // Triangle formation with overlap
     positions.push(
-      { x: center - 4, y: center - 3, depth: 0 },
-      { x: center + 2, y: center - 1, depth: 1 },
-      { x: center - 1, y: center + 4, depth: 2 }
+      { x: 12, y: 14, depth: 0 },
+      { x: 24, y: 14, depth: 1 },
+      { x: 18, y: 24, depth: 2 }
     );
   } else {
-    // Dense 4-icon stack like Snapchat groups
+    // Dense 4-icon formation like Snapchat groups with proper spacing
     positions.push(
-      { x: center - 5, y: center - 4, depth: 0 },
-      { x: center + 3, y: center - 3, depth: 1 },
-      { x: center - 2, y: center + 3, depth: 2 },
-      { x: center + 4, y: center + 4, depth: 3 }
+      { x: 11, y: 13, depth: 0 },
+      { x: 25, y: 13, depth: 1 },
+      { x: 11, y: 25, depth: 2 },
+      { x: 25, y: 25, depth: 3 }
     );
   }
   
@@ -73,31 +71,40 @@ const createStackedCluster = (categories, count, theme = THEME_DARK) => {
   const createStackedIcon = (category, x, y, depth) => {
     const iconName = categoryIconMap[category.id] || 'MapPin';
     const iconPath = iconPaths[iconName] || iconPaths.MapPin;
-    const scale = iconSize / 24;
+    
+    // Background circle for each stacked icon
+    const backgroundRadius = iconSize / 2;
     
     return `
       <g transform="translate(${x - iconSize/2}, ${y - iconSize/2})">
-        <!-- Stacked mini icon with subtle depth -->
-        <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
+        <!-- Background circle for visibility -->
+        <circle cx="${iconSize/2}" cy="${iconSize/2}" r="${backgroundRadius + 1}" 
+                fill="${isDarkMode ? '#1a1a1a' : '#ffffff'}" 
+                stroke="${isDarkMode ? '#ffffff' : '#000000'}" 
+                stroke-width="1"/>
+        
+        <!-- Category icon scaled to fit -->
+        <g transform="translate(${iconSize/2 - 12}, ${iconSize/2 - 12}) scale(1)">
           ${iconPath
             .replace(/stroke="white"/g, `stroke="${category.markerColor}"`)
             .replace(/fill="white"/g, `fill="${category.markerColor}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"')
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')
           }
         </g>
-        <!-- White outline for stacked visibility -->
-        <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
+        
+        <!-- Icon outline for contrast -->
+        <g transform="translate(${iconSize/2 - 12}, ${iconSize/2 - 12}) scale(1)">
           ${iconPath
             .replace(/fill="white"/g, 'fill="none"')
-            .replace(/stroke="white"/g, `stroke="${isDarkMode ? '#FFFFFF' : '#000000'}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')
+            .replace(/stroke="white"/g, `stroke="${isDarkMode ? '#ffffff' : '#000000'}"`)
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="1"')
           }
         </g>
       </g>
     `;
   };
   
-  // Render icons in depth order (back to front)
+  // Render icons in depth order (back to front) for proper stacking
   const stackedIcons = uniqueCategories
     .slice(0, maxIcons)
     .map((category, index) => ({
