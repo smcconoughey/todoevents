@@ -35,8 +35,8 @@ const HostsPage = () => {
     },
     {
       icon: Heart,
-      title: 'Engagement Tracking',
-      description: 'See who\'s interested in your events and track attendance trends.'
+      title: 'Clean Social Media Integration',
+      description: 'Generate beautiful event cards and link directly to your event page for easy sharing across all platforms.'
     }
   ];
 
@@ -49,7 +49,7 @@ const HostsPage = () => {
     {
       title: 'Recurring Events',
       description: 'Create and manage recurring events with flexible scheduling options - weekly, monthly, or custom patterns.',
-      status: 'In Development'
+      status: 'Coming Soon'
     },
     {
       title: 'Priority Showcasing',
@@ -59,7 +59,7 @@ const HostsPage = () => {
     {
       title: 'Custom Event Banners',
       description: 'Upload custom banners, logos, and create beautifully branded event pages that stand out.',
-      status: 'Beta Testing'
+      status: 'Coming Soon'
     },
     {
       title: 'Native Ticket Sales',
@@ -192,11 +192,7 @@ const HostsPage = () => {
             {premiumFeatures.map((feature, index) => (
               <div key={index} className="p-6 bg-themed-surface rounded-xl border border-themed relative overflow-hidden group hover:bg-themed-surface-hover transition-all duration-300">
                 <div className="absolute top-4 right-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    feature.status === 'Beta Testing' ? 'bg-fresh-teal/20 text-fresh-teal' :
-                    feature.status === 'In Development' ? 'bg-vibrant-magenta/20 text-vibrant-magenta' :
-                    'bg-spark-yellow/20 text-spark-yellow'
-                  }`}>
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-spark-yellow/20 text-spark-yellow">
                     {feature.status}
                   </span>
                 </div>
