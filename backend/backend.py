@@ -3849,3 +3849,112 @@ async def bulk_create_events(
             status_code=500,
             detail=f"Critical error during bulk event creation: {str(e)}"
         )
+
+@app.get("/debug/database-info")
+async def debug_database_info():
+    """Debug endpoint to check database configuration and status"""
+    try:
+        db_info = {
+            "is_production": IS_PRODUCTION,
+            "database_url_set": bool(DB_URL),
+            "database_url_prefix": DB_URL[:20] + "..." if DB_URL else None,
+            "database_type": "postgresql" if IS_PRODUCTION and DB_URL else "sqlite",
+            "render_env": bool(os.getenv("RENDER", False)),
+        }
+        
+        # Test database connection and get table info
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL queries
+                cursor.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                """)
+                tables = [row[0] for row in cursor.fetchall()]
+                
+                # Check events table structure
+                cursor.execute("""
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'events'
+                    ORDER BY ordinal_position
+                """)
+                event_columns = [{"name": row[0], "type": row[1]} for row in cursor.fetchall()]
+                
+                # Count events
+                cursor.execute("SELECT COUNT(*) FROM events")
+                event_count = cursor.fetchone()[0]
+                
+                db_info.update({
+                    "tables": tables,
+                    "event_columns": event_columns,
+                    "event_count": event_count,
+                    "ux_fields_present": all(
+                        col["name"] in ["fee_required", "event_url", "host_name"] 
+                        for col in event_columns 
+                        if col["name"] in ["fee_required", "event_url", "host_name"]
+                    )
+                })
+                
+            else:
+                # SQLite queries
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = [row[0] for row in cursor.fetchall()]
+                
+                cursor.execute("PRAGMA table_info(events)")
+                event_columns = [{"name": row[1], "type": row[2]} for row in cursor.fetchall()]
+                
+                cursor.execute("SELECT COUNT(*) FROM events")
+                event_count = cursor.fetchone()[0]
+                
+                db_info.update({
+                    "tables": tables,
+                    "event_columns": event_columns,
+                    "event_count": event_count,
+                    "ux_fields_present": all(
+                        col["name"] in [c["name"] for c in event_columns]
+                        for col in event_columns 
+                        if col["name"] in ["fee_required", "event_url", "host_name"]
+                    )
+                })
+        
+        return db_info
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "is_production": IS_PRODUCTION,
+            "database_url_set": bool(DB_URL),
+            "database_type": "postgresql" if IS_PRODUCTION and DB_URL else "sqlite",
+        }
+
+@app.post("/admin/migrate-database")
+async def migrate_production_database():
+    """Trigger PostgreSQL database migration (production only)"""
+    try:
+        if not IS_PRODUCTION or not DB_URL:
+            return {
+                "status": "skipped",
+                "message": "Migration only available in production with PostgreSQL",
+                "is_production": IS_PRODUCTION,
+                "has_db_url": bool(DB_URL)
+            }
+        
+        # Import and run the migration
+        from migrate_production_postgres import main as migrate_db
+        migrate_db()
+        
+        return {
+            "status": "success", 
+            "message": "PostgreSQL database migration completed successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+        return {
+            "status": "error", 
+            "message": f"Migration failed: {str(e)}"
+        }
