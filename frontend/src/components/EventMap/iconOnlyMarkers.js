@@ -1,102 +1,87 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 
-// Snapchat-style icon marker system - all markers same size with stacked clustering
-// Individual markers and clusters are identical size, density shown by stacked icons
+// Clean icon-only marker system - larger icons with duplicate stacking (Snapchat style)
+// Shows duplicate icons of the dominant category rather than different categories
 
-// Helper function to create clean icon-only SVG markers without halos
+// Helper function to create clean icon-only SVG markers - no rings, bigger size
 const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
-  
-  // Simple colors for clean definition
   const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
   
-  // Enhanced icon path with good colors and proper strokes
+  // Clean icon path with better visibility
   const cleanIconPath = iconPath
     .replace(/stroke="white"/g, `stroke="${categoryColor}"`)
     .replace(/fill="white"/g, `fill="${categoryColor}"`)
-    .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"');
+    .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2.5"');
   
   return `
-    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-      <!-- Main icon with bright colors -->
-      <g transform="translate(6, 6) scale(1)">
+    <svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+      <!-- Main icon - larger and cleaner -->
+      <g transform="translate(10, 10) scale(1)">
         ${cleanIconPath}
       </g>
       <!-- Strong outline for definition -->
-      <g transform="translate(6, 6) scale(1)">
-        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')}
+      <g transform="translate(10, 10) scale(1)">
+        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="1.5"')}
       </g>
     </svg>
   `;
 };
 
-// Snapchat-style stacked cluster - same size as individual markers with layered icons
-const createStackedCluster = (categories, count, theme = THEME_DARK) => {
+// Snapchat-style duplicate stacking - show multiple copies of the SAME icon
+const createDuplicateStack = (dominantCategory, count, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
-  const uniqueCategories = [...new Map(categories.map(cat => [cat.id, cat])).values()];
-  const maxIcons = Math.min(4, uniqueCategories.length);
+  const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
   
-  // Same size as individual markers - work in 36x36 space
-  const iconSize = 16; // Larger icons that will actually be visible
+  // Determine how many duplicate icons to show (max 4)
+  const iconCount = Math.min(4, Math.max(2, Math.floor(count / 2)));
+  const iconSize = 18; // Larger individual icons
   
-  // Snapchat-style stacking/layering positions (in 36x36 space)
+  // Snapchat-style positions for duplicate icons (no rings, just stacked)
   const positions = [];
   
-  if (maxIcons === 1) {
-    positions.push({ x: 18, y: 18, depth: 0 });
-  } else if (maxIcons === 2) {
-    // Stack them with clear offset like Snapchat
+  if (iconCount === 2) {
     positions.push(
-      { x: 13, y: 15, depth: 0 },
-      { x: 23, y: 21, depth: 1 }
+      { x: 16, y: 14 },
+      { x: 28, y: 24 }
     );
-  } else if (maxIcons === 3) {
-    // Triangle formation with overlap
+  } else if (iconCount === 3) {
     positions.push(
-      { x: 12, y: 14, depth: 0 },
-      { x: 24, y: 14, depth: 1 },
-      { x: 18, y: 24, depth: 2 }
+      { x: 14, y: 12 },
+      { x: 30, y: 12 },
+      { x: 22, y: 28 }
     );
   } else {
-    // Dense 4-icon formation like Snapchat groups with proper spacing
+    // 4 icons in a loose formation
     positions.push(
-      { x: 11, y: 13, depth: 0 },
-      { x: 25, y: 13, depth: 1 },
-      { x: 11, y: 25, depth: 2 },
-      { x: 25, y: 25, depth: 3 }
+      { x: 13, y: 13 },
+      { x: 31, y: 13 },
+      { x: 13, y: 31 },
+      { x: 31, y: 31 }
     );
   }
   
-  // Create stacked mini-icons like Snapchat avatars
-  const createStackedIcon = (category, x, y, depth) => {
-    const iconName = categoryIconMap[category.id] || 'MapPin';
-    const iconPath = iconPaths[iconName] || iconPaths.MapPin;
-    
-    // Background circle for each stacked icon
-    const backgroundRadius = iconSize / 2;
-    
+  // Get the icon path for the dominant category
+  const iconName = categoryIconMap[dominantCategory.id] || 'MapPin';
+  const iconPath = iconPaths[iconName] || iconPaths.MapPin;
+  
+  // Create duplicate icons (same icon repeated)
+  const createDuplicateIcon = (x, y) => {
     return `
       <g transform="translate(${x - iconSize/2}, ${y - iconSize/2})">
-        <!-- Background circle for visibility -->
-        <circle cx="${iconSize/2}" cy="${iconSize/2}" r="${backgroundRadius + 1}" 
-                fill="${isDarkMode ? '#1a1a1a' : '#ffffff'}" 
-                stroke="${isDarkMode ? '#ffffff' : '#000000'}" 
-                stroke-width="1"/>
-        
-        <!-- Category icon scaled to fit -->
+        <!-- Pure icon without any background -->
         <g transform="translate(${iconSize/2 - 12}, ${iconSize/2 - 12}) scale(1)">
           ${iconPath
-            .replace(/stroke="white"/g, `stroke="${category.markerColor}"`)
-            .replace(/fill="white"/g, `fill="${category.markerColor}"`)
+            .replace(/stroke="white"/g, `stroke="${dominantCategory.markerColor}"`)
+            .replace(/fill="white"/g, `fill="${dominantCategory.markerColor}"`)
             .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')
           }
         </g>
-        
-        <!-- Icon outline for contrast -->
+        <!-- Clean outline -->
         <g transform="translate(${iconSize/2 - 12}, ${iconSize/2 - 12}) scale(1)">
           ${iconPath
             .replace(/fill="white"/g, 'fill="none"')
-            .replace(/stroke="white"/g, `stroke="${isDarkMode ? '#ffffff' : '#000000'}"`)
+            .replace(/stroke="white"/g, `stroke="${outlineColor}"`)
             .replace(/stroke-width="[\d.]+"/g, 'stroke-width="1"')
           }
         </g>
@@ -104,23 +89,13 @@ const createStackedCluster = (categories, count, theme = THEME_DARK) => {
     `;
   };
   
-  // Render icons in depth order (back to front) for proper stacking
-  const stackedIcons = uniqueCategories
-    .slice(0, maxIcons)
-    .map((category, index) => ({
-      category,
-      position: positions[index]
-    }))
-    .sort((a, b) => a.position.depth - b.position.depth) // Render back to front
-    .map(({ category, position }) => 
-      createStackedIcon(category, position.x, position.y, position.depth)
-    )
-    .join('');
+  // Generate all duplicate icons
+  const duplicateIcons = positions.map(pos => createDuplicateIcon(pos.x, pos.y)).join('');
   
-  // Same size as individual markers - just stacked content
+  // Same size as individual markers - just with duplicates
   return `
-    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-      ${stackedIcons}
+    <svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+      ${duplicateIcons}
     </svg>
   `;
 };
@@ -177,9 +152,9 @@ const categoryIconMap = {
   'networking': 'Laptop'
 };
 
-// Create clean icon-only marker without halos
+// Create larger, cleaner icon-only marker
 export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
-  console.log('Creating clean icon-only marker for category:', category);
+  console.log('Creating larger icon-only marker for category:', category);
   const iconName = categoryIconMap[category.id] || 'MapPin';
   const iconPath = iconPaths[iconName];
   
@@ -190,40 +165,38 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
     
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(36, 36),
+      scaledSize: new google.maps.Size(44, 44),
       origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(18, 18),
+      anchor: new google.maps.Point(22, 22),
       optimized: false
     };
   }
   
   const svg = createIconOnlyMarkerSVG(iconPath, category.markerColor, theme);
-  console.log('Generated clean SVG for', category.id, ':', svg.substring(0, 200) + '...');
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(36, 36),
+    scaledSize: new google.maps.Size(44, 44),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(18, 18),
+    anchor: new google.maps.Point(22, 22),
     optimized: false
   };
 };
 
-// Create Snapchat-style stacked cluster - same size as individual markers
+// Create duplicate-icon cluster - same size, shows duplicates of dominant category
 export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DARK) => {
-  console.log('Creating Snapchat-style stacked cluster with', count, 'events and categories:', categories?.map(c => c.id));
+  console.log('Creating duplicate-stack cluster with', count, 'events and categories:', categories?.map(c => c.id));
   
-  const validCategories = categories && categories.length > 0 ? categories : [
-    { id: 'all', markerColor: '#6B7280' }
-  ];
+  // Get the dominant (most common) category
+  const dominantCategory = categories && categories.length > 0 ? categories[0] : { id: 'all', markerColor: '#6B7280' };
   
-  const svg = createStackedCluster(validCategories, count, theme);
+  const svg = createDuplicateStack(dominantCategory, count, theme);
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(36, 36),
+    scaledSize: new google.maps.Size(44, 44),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(18, 18),
+    anchor: new google.maps.Point(22, 22),
     optimized: false
   };
 };
