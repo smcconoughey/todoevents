@@ -378,12 +378,12 @@ const MapContainer = React.forwardRef(({
             const clusterIcon = createClusterIcon(count, markerCategories.map(cat => cat.id), theme);
             
             // Check if we're using icon-only markers (they won't need labels)
-            const isIconOnlyMode = clusterIcon.url && clusterIcon.url.includes('width="44"');
+            const isIconOnlyMode = clusterIcon.url && (clusterIcon.url.includes('width="44"') || clusterIcon.url.includes('width="52"'));
             
             return new google.maps.Marker({
               position,
-              // Only show label for non-icon-only clusters
-              label: isIconOnlyMode ? null : {
+              // Never show labels for icon-only clusters
+              label: isIconOnlyMode ? undefined : {
                 text: String(count),
                 color: 'black',
                 fontSize: '13px',

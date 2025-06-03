@@ -3,8 +3,8 @@ import allCategories from './categoryConfig';
 import { createIconOnlyMarker, createIconOnlyClusterMarker } from './iconOnlyMarkers';
 
 // *** DYNAMIC MARKER STYLE SYSTEM ***
-// Default to diamond-pins (original approach), but allow runtime switching
-let currentMarkerStyle = 'diamond-pins'; // 'icon-only' or 'diamond-pins'
+// Default to icon-only (clean icon approach)
+let currentMarkerStyle = 'icon-only'; // 'icon-only' or 'diamond-pins'
 
 // Function to switch marker styles dynamically
 export const setMarkerStyle = (style) => {

@@ -6,7 +6,7 @@ import LoginForm from "./LoginForm";
 import CalendarFilter from "./CalendarFilter";
 import MapContainer from "./MapContainer";
 import ShareCard from "./ShareCard";
-import MarkerStyleToggle from "./MarkerStyleToggle";
+
 import { getMarkerStyle, setMarkerStyle } from "./markerUtils";
 import categories, { getCategory } from "./categoryConfig";
 import { CategoryIcon } from "./CategoryIcons";
@@ -602,7 +602,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [error, setError] = useState(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
-  const [useIconOnlyMarkers, setUseIconOnlyMarkers] = useState(getMarkerStyle() === 'icon-only');
+
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
@@ -1474,12 +1474,7 @@ const EventMap = ({ mapsLoaded = false }) => {
     { value: 9999, label: 'All', description: 'Show all events by distance' }
   ];
 
-  const handleMarkerStyleToggle = (useIconOnly) => {
-    setUseIconOnlyMarkers(useIconOnly);
-    setMarkerStyle(useIconOnly ? 'icon-only' : 'diamond-pins');
-    // Force map to re-render markers by toggling a dependency in MapContainer
-    setEvents(prevEvents => [...prevEvents]);
-  };
+
 
   return (
     <div className="h-screen w-full relative" style={{backgroundColor: 'var(--bg-main)'}}>
@@ -2114,11 +2109,6 @@ const EventMap = ({ mapsLoaded = false }) => {
                     <HelpCircle className="w-4 h-4" />
                   </Button>
                   <ThemeToggle />
-                  <MarkerStyleToggle 
-                    useIconOnly={useIconOnlyMarkers}
-                    onToggle={handleMarkerStyleToggle}
-                    className="w-8 h-8"
-                  />
                   {user ? (
                     <div className="flex items-center gap-2">
                       {user.role === 'admin' && (
@@ -2698,14 +2688,7 @@ const EventMap = ({ mapsLoaded = false }) => {
               />
 
               {/* Marker Style Toggle - Top Right Corner */}
-              {activeView === 'map' && (
-                <div className="absolute top-4 right-4 z-30">
-                  <MarkerStyleToggle 
-                    useIconOnly={useIconOnlyMarkers}
-                    onToggle={handleMarkerStyleToggle}
-                  />
-                </div>
-              )}
+
 
               {/* Desktop Event Details Panel */}
               <div className="hidden sm:block">
