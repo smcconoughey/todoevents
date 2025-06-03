@@ -378,20 +378,25 @@ const MapContainer = React.forwardRef(({
             const clusterIcon = createClusterIcon(count, markerCategories.map(cat => cat.id), theme);
             
             // Check if we're using icon-only markers (they won't need labels)
-            const isIconOnlyMode = clusterIcon.url && (clusterIcon.url.includes('width="44"') || clusterIcon.url.includes('width="52"'));
+            const isIconOnlyMode = clusterIcon.url && (clusterIcon.url.includes('width="44"') || clusterIcon.url.includes('width="52"') || clusterIcon.url.includes('width="64"'));
             
-            return new google.maps.Marker({
+            const marker = new google.maps.Marker({
               position,
-              // Never show labels for icon-only clusters
-              label: isIconOnlyMode ? undefined : {
+              icon: clusterIcon,
+              zIndex: Number.MAX_SAFE_INTEGER,
+            });
+            
+            // Explicitly ensure no labels for icon-only mode
+            if (!isIconOnlyMode) {
+              marker.setLabel({
                 text: String(count),
                 color: 'black',
                 fontSize: '13px',
                 fontWeight: 'bold'
-              },
-              icon: clusterIcon,
-              zIndex: Number.MAX_SAFE_INTEGER,
-            });
+              });
+            }
+            
+            return marker;
           },
         },
       });

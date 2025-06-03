@@ -163,8 +163,7 @@ export const createClusterIcon = (count, categoriesOrIds, theme = THEME_DARK) =>
       fillOpacity: 0.95,
       strokeColor: brandColors.stroke,
       strokeWeight: 3,
-      scale: Math.min(16 + Math.log2(count) * 3, 35),
-      labelOrigin: new google.maps.Point(0, 0),
+      scale: Math.min(20 + Math.log2(count) * 4, 50),
       // Add subtle glow for brand appeal
       anchor: new google.maps.Point(0, 0),
       zIndex: 2000
@@ -188,7 +187,6 @@ export const createClusterIcon = (count, categoriesOrIds, theme = THEME_DARK) =>
       strokeColor: brandColors.stroke,
       strokeWeight: 3.5,
       scale: pieSize,
-      labelOrigin: new google.maps.Point(0, 0),
       // Enhanced visual appeal
       anchor: new google.maps.Point(0, 0),
       zIndex: 2000
@@ -202,8 +200,7 @@ export const createClusterIcon = (count, categoriesOrIds, theme = THEME_DARK) =>
       fillOpacity: 0.9,
       strokeColor: brandColors.stroke,
       strokeWeight: 3,
-      scale: Math.min(12 + Math.log2(count) * 2, 28),
-      labelOrigin: new google.maps.Point(0, 0),
+      scale: Math.min(16 + Math.log2(count) * 3, 40),
       anchor: new google.maps.Point(0, 0),
       zIndex: 2000
     };

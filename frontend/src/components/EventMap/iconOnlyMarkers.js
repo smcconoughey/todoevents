@@ -15,13 +15,13 @@ const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) =>
     .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2.5"');
   
   return `
-    <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
       <!-- Main icon - larger and cleaner -->
-      <g transform="translate(14, 14) scale(1)">
+      <g transform="translate(20, 20) scale(1)">
         ${cleanIconPath}
       </g>
       <!-- Strong outline for definition -->
-      <g transform="translate(14, 14) scale(1)">
+      <g transform="translate(20, 20) scale(1)">
         ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="1.5"')}
       </g>
     </svg>
@@ -35,29 +35,29 @@ const createDuplicateStack = (dominantCategory, count, theme = THEME_DARK) => {
   
   // Determine how many duplicate icons to show (max 4)
   const iconCount = Math.min(4, Math.max(2, Math.floor(count / 2)));
-  const iconSize = 20; // Larger individual icons for 52px container
+  const iconSize = 24; // Larger individual icons for 64px container
   
   // Snapchat-style positions for duplicate icons (no rings, just stacked)
   const positions = [];
   
   if (iconCount === 2) {
     positions.push(
-      { x: 18, y: 16 },
-      { x: 34, y: 28 }
+      { x: 22, y: 20 },
+      { x: 42, y: 32 }
     );
   } else if (iconCount === 3) {
     positions.push(
-      { x: 16, y: 14 },
-      { x: 36, y: 14 },
-      { x: 26, y: 32 }
+      { x: 20, y: 18 },
+      { x: 44, y: 18 },
+      { x: 32, y: 40 }
     );
   } else {
     // 4 icons in a loose formation
     positions.push(
-      { x: 15, y: 15 },
-      { x: 37, y: 15 },
-      { x: 15, y: 37 },
-      { x: 37, y: 37 }
+      { x: 19, y: 19 },
+      { x: 45, y: 19 },
+      { x: 19, y: 45 },
+      { x: 45, y: 45 }
     );
   }
   
@@ -94,7 +94,7 @@ const createDuplicateStack = (dominantCategory, count, theme = THEME_DARK) => {
   
   // Same size as individual markers - just with duplicates
   return `
-    <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
       ${duplicateIcons}
     </svg>
   `;
@@ -165,9 +165,9 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
     
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(52, 52),
+      scaledSize: new google.maps.Size(64, 64),
       origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(26, 26),
+      anchor: new google.maps.Point(32, 32),
       optimized: false
     };
   }
@@ -176,9 +176,9 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(52, 52),
+    scaledSize: new google.maps.Size(64, 64),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(26, 26),
+    anchor: new google.maps.Point(32, 32),
     optimized: false
   };
 };
@@ -194,9 +194,9 @@ export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DAR
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(52, 52),
+    scaledSize: new google.maps.Size(64, 64),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(26, 26),
+    anchor: new google.maps.Point(32, 32),
     optimized: false
   };
 };
