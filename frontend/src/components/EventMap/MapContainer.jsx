@@ -378,7 +378,12 @@ const MapContainer = React.forwardRef(({
             const clusterIcon = createClusterIcon(count, markerCategories.map(cat => cat.id), theme);
             
             // Check if we're using icon-only markers (they won't need labels)
-            const isIconOnlyMode = clusterIcon.url && (clusterIcon.url.includes('width="44"') || clusterIcon.url.includes('width="52"') || clusterIcon.url.includes('width="64"'));
+            const isIconOnlyMode = clusterIcon.url && (
+              clusterIcon.url.includes('width="44"') || 
+              clusterIcon.url.includes('width="52"') || 
+              clusterIcon.url.includes('width="64"') || 
+              clusterIcon.url.includes('width="80"')
+            );
             
             const marker = new google.maps.Marker({
               position,
@@ -386,8 +391,21 @@ const MapContainer = React.forwardRef(({
               zIndex: Number.MAX_SAFE_INTEGER,
             });
             
-            // Explicitly ensure no labels for icon-only mode
-            if (!isIconOnlyMode) {
+            // Force remove any potential labels for icon-only mode
+            if (isIconOnlyMode) {
+              marker.setLabel(null);
+              // Also ensure no label property exists
+              if (marker.label) {
+                delete marker.label;
+              }
+              // BACKUP: If label still shows somehow, make it invisible
+              marker.setLabel({
+                text: String(count),
+                color: 'transparent', // Invisible text as backup
+                fontSize: '1px',      // Tiny size as backup
+                fontWeight: 'normal'
+              });
+            } else {
               marker.setLabel({
                 text: String(count),
                 color: 'black',

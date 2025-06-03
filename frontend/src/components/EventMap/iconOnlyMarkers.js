@@ -15,13 +15,13 @@ const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) =>
     .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2.5"');
   
   return `
-    <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
       <!-- Main icon - larger and cleaner -->
-      <g transform="translate(20, 20) scale(1)">
+      <g transform="translate(28, 28) scale(1)">
         ${cleanIconPath}
       </g>
       <!-- Strong outline for definition -->
-      <g transform="translate(20, 20) scale(1)">
+      <g transform="translate(28, 28) scale(1)">
         ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="1.5"')}
       </g>
     </svg>
@@ -35,29 +35,29 @@ const createDuplicateStack = (dominantCategory, count, theme = THEME_DARK) => {
   
   // Determine how many duplicate icons to show (max 4)
   const iconCount = Math.min(4, Math.max(2, Math.floor(count / 2)));
-  const iconSize = 24; // Larger individual icons for 64px container
+  const iconSize = 28; // Larger individual icons for 80px container
   
   // Snapchat-style positions for duplicate icons (no rings, just stacked)
   const positions = [];
   
   if (iconCount === 2) {
     positions.push(
-      { x: 22, y: 20 },
-      { x: 42, y: 32 }
+      { x: 26, y: 24 },
+      { x: 54, y: 40 }
     );
   } else if (iconCount === 3) {
     positions.push(
-      { x: 20, y: 18 },
-      { x: 44, y: 18 },
-      { x: 32, y: 40 }
+      { x: 24, y: 22 },
+      { x: 56, y: 22 },
+      { x: 40, y: 50 }
     );
   } else {
     // 4 icons in a loose formation
     positions.push(
-      { x: 19, y: 19 },
-      { x: 45, y: 19 },
-      { x: 19, y: 45 },
-      { x: 45, y: 45 }
+      { x: 23, y: 23 },
+      { x: 57, y: 23 },
+      { x: 23, y: 57 },
+      { x: 57, y: 57 }
     );
   }
   
@@ -94,7 +94,7 @@ const createDuplicateStack = (dominantCategory, count, theme = THEME_DARK) => {
   
   // Same size as individual markers - just with duplicates
   return `
-    <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
       ${duplicateIcons}
     </svg>
   `;
@@ -165,9 +165,9 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
     
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(64, 64),
+      scaledSize: new google.maps.Size(80, 80),
       origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(32, 32),
+      anchor: new google.maps.Point(40, 40),
       optimized: false
     };
   }
@@ -176,29 +176,58 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(64, 64),
+    scaledSize: new google.maps.Size(80, 80),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(32, 32),
+    anchor: new google.maps.Point(40, 40),
     optimized: false
   };
 };
 
-// Create duplicate-icon cluster - same size, shows duplicates of dominant category
+// Create cluster marker - only show duplicates if ALL events are the SAME category
 export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DARK) => {
-  console.log('Creating duplicate-stack cluster with', count, 'events and categories:', categories?.map(c => c.id));
+  console.log('Creating cluster with', count, 'events and categories:', categories?.map(c => c.id));
   
-  // Get the dominant (most common) category
-  const dominantCategory = categories && categories.length > 0 ? categories[0] : { id: 'all', markerColor: '#6B7280' };
+  if (!categories || categories.length === 0) {
+    // Fallback to single icon for unknown categories
+    const fallbackCategory = { id: 'all', markerColor: '#6B7280' };
+    const svg = createIconOnlyMarkerSVG(iconPaths.MapPin, fallbackCategory.markerColor, theme);
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(80, 80),
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(40, 40),
+      optimized: false
+    };
+  }
   
-  const svg = createDuplicateStack(dominantCategory, count, theme);
+  // Check if ALL events are the SAME category (for true duplicates)
+  const firstCategoryId = categories[0].id;
+  const allSameCategory = categories.every(cat => cat.id === firstCategoryId);
   
-  return {
-    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(64, 64),
-    origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(32, 32),
-    optimized: false
-  };
+  if (allSameCategory && count >= 2) {
+    // Show duplicate icons only when events are actually the same type
+    console.log('All events are same category (' + firstCategoryId + '), showing duplicates');
+    const svg = createDuplicateStack(categories[0], count, theme);
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(80, 80),
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(40, 40),
+      optimized: false
+    };
+  } else {
+    // Mixed categories - show single icon of most common category
+    console.log('Mixed categories, showing single icon for dominant category:', firstCategoryId);
+    const dominantCategory = categories[0];
+    const svg = createIconOnlyMarkerSVG(iconPaths[categoryIconMap[dominantCategory.id]] || iconPaths.MapPin, dominantCategory.markerColor, theme);
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(80, 80),
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(40, 40),
+      optimized: false
+    };
+  }
 };
 
 export default {
