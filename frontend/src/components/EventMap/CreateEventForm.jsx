@@ -45,7 +45,11 @@ const CreateEventForm = ({
     end_date: '',
     category: 'community',
     address: '',
-    location: null
+    location: null,
+    // New UX enhancement fields
+    fee_required: '',
+    event_url: '',
+    host_name: ''
   });
 
   // Reset form when initialEvent changes
@@ -65,7 +69,11 @@ const CreateEventForm = ({
             lat: initialEvent.lat,
             lng: initialEvent.lng,
             address: initialEvent.address
-          } : null
+          } : null,
+          // New UX enhancement fields
+          fee_required: initialEvent.fee_required || '',
+          event_url: initialEvent.event_url || '',
+          host_name: initialEvent.host_name || ''
         });
         setError(null);
         setConnectionError(false);
@@ -81,7 +89,11 @@ const CreateEventForm = ({
           end_date: '',
           category: '',
           address: '',
-          location: null
+          location: null,
+          // New UX enhancement fields
+          fee_required: '',
+          event_url: '',
+          host_name: ''
         });
         setError(null);
         setConnectionError(false);
@@ -235,7 +247,11 @@ const CreateEventForm = ({
         lat: formData.location.lat,
         lng: formData.location.lng,
         recurring: false,
-        frequency: null
+        frequency: null,
+        // New UX enhancement fields
+        fee_required: formData.fee_required.trim() || null,
+        event_url: formData.event_url.trim() || null,
+        host_name: formData.host_name.trim() || null
       };
 
       const url = initialEvent
@@ -429,6 +445,67 @@ const CreateEventForm = ({
                   onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
                   className="input-themed h-8 text-sm"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Event Details - UX Enhancement */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Additional Details <span className="text-xs text-themed-muted">(Optional)</span>
+            </h3>
+            
+            <div className="grid grid-cols-1 gap-3">
+              {/* Host Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-themed-secondary">
+                  Host/Organization Name
+                </label>
+                <Input
+                  type="text"
+                  value={formData.host_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, host_name: e.target.value }))}
+                  placeholder="e.g., Local Restaurant, Community Center"
+                  className="input-themed h-8 text-sm"
+                />
+                <p className="text-xs text-themed-muted">
+                  Let attendees know who's organizing this event
+                </p>
+              </div>
+
+              {/* Fee Information */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-themed-secondary">
+                  Tickets/Fees Required
+                </label>
+                <Input
+                  type="text"
+                  value={formData.fee_required}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fee_required: e.target.value }))}
+                  placeholder="e.g., Free, $10 entry, Tickets required"
+                  className="input-themed h-8 text-sm"
+                />
+                <p className="text-xs text-themed-muted">
+                  Inform attendees about entry requirements or costs
+                </p>
+              </div>
+
+              {/* Event URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-themed-secondary">
+                  Event Website/Link
+                </label>
+                <Input
+                  type="url"
+                  value={formData.event_url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, event_url: e.target.value }))}
+                  placeholder="https://example.com/event-details"
+                  className="input-themed h-8 text-sm"
+                />
+                <p className="text-xs text-themed-muted">
+                  Link to registration, tickets, or more information
+                </p>
               </div>
             </div>
           </div>

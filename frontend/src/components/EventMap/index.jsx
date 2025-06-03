@@ -42,7 +42,10 @@ import {
   Shield,
   Navigation,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Users,
+  DollarSign,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -58,6 +61,7 @@ import WelcomePopup from '../WelcomePopup';
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import EventInteractionComponents from './EventInteractionComponents';
+import ExternalLinkWarning from './ExternalLinkWarning';
 import { batchedSync } from '@/utils/batchedSync';
 
 
@@ -206,7 +210,7 @@ const getTimePeriod = (timeString) => {
   }
 };
 
-const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, setActiveTab, shareCardRef, downloadStatus, handleDownload, handleCopyLink, handleFacebookShare }) => {
+const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, setActiveTab, shareCardRef, downloadStatus, handleDownload, handleCopyLink, handleFacebookShare, setExternalLinkDialog }) => {
   // Add comprehensive null checks
   if (!event || typeof event !== 'object') {
     return (
@@ -376,6 +380,48 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
               {event.distance !== undefined && (
                 <div className="text-sm text-white/70 font-data">
                   📍 {event.distance.toFixed(1)} miles away
+                </div>
+              )}
+              
+              {/* New UX enhancement fields */}
+              {event.host_name && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-green-500/10">
+                    <Users className="w-4 h-4 text-green-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white/50">Hosted by</span>
+                    <span className="font-body">{event.host_name}</span>
+                  </div>
+                </div>
+              )}
+              
+              {event.fee_required && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-yellow-500/10">
+                    <DollarSign className="w-4 h-4 text-yellow-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white/50">Entry Requirements</span>
+                    <span className="font-body">{event.fee_required}</span>
+                  </div>
+                </div>
+              )}
+              
+              {event.event_url && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-blue-500/10">
+                    <ExternalLink className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="text-xs text-white/50">More Information</span>
+                    <button
+                      onClick={() => setExternalLinkDialog({ isOpen: true, url: event.event_url })}
+                      className="font-body text-blue-400 hover:text-blue-300 underline text-left transition-colors"
+                    >
+                      Visit Event Website
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -602,6 +648,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [error, setError] = useState(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [externalLinkDialog, setExternalLinkDialog] = useState({ isOpen: false, url: '' });
 
 
   const mapRef = useRef(null);
@@ -2713,6 +2760,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   handleDownload={handleDownload}
                   handleCopyLink={handleCopyLink}
                   handleFacebookShare={handleFacebookShare}
+                  setExternalLinkDialog={setExternalLinkDialog}
                 />
               </div>
             </div>
@@ -2829,6 +2877,48 @@ const EventMap = ({ mapsLoaded = false }) => {
                   {selectedEvent.distance !== undefined && (
                     <div className="text-sm text-white/70 font-data ml-8">
                       📍 {selectedEvent.distance.toFixed(1)} miles away
+                    </div>
+                  )}
+                  
+                  {/* New UX enhancement fields - Mobile */}
+                  {selectedEvent.host_name && (
+                    <div className="flex items-center gap-3 text-sm text-white/70">
+                      <div className="p-1.5 rounded-md bg-green-500/10 flex-shrink-0">
+                        <Users className="w-4 h-4 text-green-400" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-white/50">Hosted by</span>
+                        <span className="font-body">{selectedEvent.host_name}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedEvent.fee_required && (
+                    <div className="flex items-center gap-3 text-sm text-white/70">
+                      <div className="p-1.5 rounded-md bg-yellow-500/10 flex-shrink-0">
+                        <DollarSign className="w-4 h-4 text-yellow-400" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-white/50">Entry Requirements</span>
+                        <span className="font-body">{selectedEvent.fee_required}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedEvent.event_url && (
+                    <div className="flex items-center gap-3 text-sm text-white/70">
+                      <div className="p-1.5 rounded-md bg-blue-500/10 flex-shrink-0">
+                        <ExternalLink className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div className="flex flex-col flex-1">
+                        <span className="text-xs text-white/50">More Information</span>
+                        <button
+                          onClick={() => setExternalLinkDialog({ isOpen: true, url: selectedEvent.event_url })}
+                          className="font-body text-blue-400 hover:text-blue-300 underline text-left transition-colors"
+                        >
+                          Visit Event Website
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2959,6 +3049,14 @@ const EventMap = ({ mapsLoaded = false }) => {
           forceShow={true}
         />
       )}
+
+      {/* External Link Warning Dialog */}
+      <ExternalLinkWarning
+        isOpen={externalLinkDialog.isOpen}
+        onClose={() => setExternalLinkDialog({ isOpen: false, url: '' })}
+        onConfirm={() => window.open(externalLinkDialog.url, '_blank', 'noopener,noreferrer')}
+        url={externalLinkDialog.url}
+      />
     </div>
   );
 };

@@ -298,6 +298,9 @@ def init_db():
                         created_by INTEGER,
                         interest_count INTEGER DEFAULT 0,
                         view_count INTEGER DEFAULT 0,
+                        fee_required TEXT,
+                        event_url TEXT,
+                        host_name TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(created_by) REFERENCES users(id)
                     )
@@ -360,6 +363,22 @@ def init_db():
                     if not column_exists('events', 'view_count'):
                         c.execute('ALTER TABLE events ADD COLUMN view_count INTEGER DEFAULT 0')
                         logger.info("✅ Added 'view_count' column")
+                        conn.commit()
+                    
+                    # Add new UX enhancement columns
+                    if not column_exists('events', 'fee_required'):
+                        c.execute('ALTER TABLE events ADD COLUMN fee_required TEXT')
+                        logger.info("✅ Added 'fee_required' column")
+                        conn.commit()
+                    
+                    if not column_exists('events', 'event_url'):
+                        c.execute('ALTER TABLE events ADD COLUMN event_url TEXT')
+                        logger.info("✅ Added 'event_url' column")
+                        conn.commit()
+                    
+                    if not column_exists('events', 'host_name'):
+                        c.execute('ALTER TABLE events ADD COLUMN host_name TEXT')
+                        logger.info("✅ Added 'host_name' column")
                         conn.commit()
                         
                 except Exception as migration_error:
@@ -442,6 +461,9 @@ def init_db():
                                 created_by INTEGER,
                                 interest_count INTEGER DEFAULT 0,
                                 view_count INTEGER DEFAULT 0,
+                                fee_required TEXT,
+                                event_url TEXT,
+                                host_name TEXT,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                 FOREIGN KEY(created_by) REFERENCES users(id)
                             )''')
@@ -474,6 +496,19 @@ def init_db():
                     if 'view_count' not in columns:
                         c.execute('''ALTER TABLE events ADD COLUMN view_count INTEGER DEFAULT 0''')
                         logger.info("Added view_count column")
+                    
+                    # Add new UX enhancement columns for SQLite
+                    if 'fee_required' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN fee_required TEXT''')
+                        logger.info("Added fee_required column")
+                    
+                    if 'event_url' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN event_url TEXT''')
+                        logger.info("Added event_url column")
+                    
+                    if 'host_name' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN host_name TEXT''')
+                        logger.info("Added host_name column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1162,6 +1197,10 @@ class EventBase(BaseModel):
     lng: float
     recurring: bool = False
     frequency: Optional[str] = None
+    # New optional fields for enhanced UX
+    fee_required: Optional[str] = None  # Details about tickets/fees
+    event_url: Optional[str] = None     # External event URL
+    host_name: Optional[str] = None     # Organization/host name
 
     @validator('date')
     def validate_date(cls, v):
@@ -1202,6 +1241,51 @@ class EventBase(BaseModel):
             return v
         except ValueError:
             raise ValueError('End date must be in YYYY-MM-DD format')
+
+    @validator('fee_required')
+    def validate_fee_required(cls, v):
+        if v is None or v == "":
+            return v
+        # Limit fee description to reasonable length
+        if len(v) > 500:
+            raise ValueError('Fee description must be 500 characters or less')
+        return v.strip()
+
+    @validator('event_url')
+    def validate_event_url(cls, v):
+        if v is None or v == "":
+            return v
+        # Basic URL validation
+        if not v.startswith(('http://', 'https://')):
+            v = 'https://' + v  # Add https if missing
+        
+        # Simple URL pattern check
+        import re
+        url_pattern = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+        
+        if not url_pattern.match(v):
+            raise ValueError('Please enter a valid URL')
+        
+        # Limit URL length
+        if len(v) > 2000:
+            raise ValueError('URL must be 2000 characters or less')
+        
+        return v.strip()
+
+    @validator('host_name')
+    def validate_host_name(cls, v):
+        if v is None or v == "":
+            return v
+        # Limit host name to reasonable length
+        if len(v) > 200:
+            raise ValueError('Host name must be 200 characters or less')
+        return v.strip()
 
 class EventCreate(EventBase):
     pass
@@ -1998,11 +2082,11 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     INSERT INTO events (
                         title, description, date, start_time, end_time, end_date, category,
                         address, lat, lng, recurring, frequency,
-                        created_by, interest_count, view_count
+                        created_by, interest_count, view_count, fee_required, event_url, host_name
                     ) VALUES (
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, 0, 0
+                        {placeholder}, {placeholder}, 0, 0, {placeholder}, {placeholder}, {placeholder}
                     ) RETURNING id
                 """
                 
@@ -2019,7 +2103,10 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     lng_rounded, 
                     event.recurring,
                     event.frequency, 
-                    current_user["id"]
+                    current_user["id"],
+                    event.fee_required,
+                    event.event_url,
+                    event.host_name
                 )
                 
                 # For PostgreSQL, use RETURNING to get the ID in one step
@@ -2166,13 +2253,15 @@ async def update_event(
                     SET title={placeholder}, description={placeholder}, date={placeholder}, 
                         start_time={placeholder}, end_time={placeholder}, end_date={placeholder}, 
                         category={placeholder}, address={placeholder}, lat={placeholder}, lng={placeholder}, 
-                        recurring={placeholder}, frequency={placeholder}
+                        recurring={placeholder}, frequency={placeholder}, fee_required={placeholder}, 
+                        event_url={placeholder}, host_name={placeholder}
                     WHERE id={placeholder}
                 """
                 values = (
                     event.title, event.description, event.date, event.start_time, 
                     event.end_time, event.end_date, event.category, event.address, 
                     event.lat, event.lng, event.recurring, event.frequency, 
+                    event.fee_required, event.event_url, event.host_name,
                     event_id
                 )
                 
