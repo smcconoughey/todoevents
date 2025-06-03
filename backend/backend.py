@@ -2102,16 +2102,16 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 logger.info(f"  event.host_name: {event.host_name!r} (type: {type(event.host_name)})")
                 
                 # Insert the new event with rounded coordinates
-                # Note: Column order must match the actual database schema
+                # Fixed column order to match actual database schema
                 insert_query = f"""
                     INSERT INTO events (
                         title, description, date, start_time, category, address, 
                         lat, lng, recurring, frequency, end_date, created_by, end_time,
-                        interest_count, view_count, fee_required, event_url, host_name
+                        fee_required, event_url, host_name, interest_count, view_count
                     ) VALUES (
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, 0, 0, {placeholder}, {placeholder}, {placeholder}
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 0, 0
                     ) RETURNING id
                 """
                 
@@ -3876,16 +3876,16 @@ async def bulk_create_events(
                         continue
                     
                     # Insert the new event
-                    # Note: Column order must match the actual database schema
+                    # Fixed column order to match actual database schema
                     insert_query = f"""
                         INSERT INTO events (
                             title, description, date, start_time, category, address,
                             lat, lng, recurring, frequency, end_date, created_by, end_time,
-                            interest_count, view_count, fee_required, event_url, host_name
+                            fee_required, event_url, host_name, interest_count, view_count
                         ) VALUES (
                             {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                             {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                            {placeholder}, {placeholder}, 0, 0, {placeholder}, {placeholder}, {placeholder}
+                            {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 0, 0
                         ) RETURNING id
                     """
                     
