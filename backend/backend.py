@@ -1263,11 +1263,15 @@ class EventBase(BaseModel):
     def validate_event_url(cls, v):
         if v is None:
             return ""  # Convert None to empty string
-        if v == "":
-            return v
+        
+        # Strip whitespace and check if empty
+        v_stripped = v.strip() if isinstance(v, str) else ""
+        if v_stripped == "":
+            return ""  # Return empty string for None, empty, or whitespace-only values
+            
         # Basic URL validation
-        if not v.startswith(('http://', 'https://')):
-            v = 'https://' + v  # Add https if missing
+        if not v_stripped.startswith(('http://', 'https://')):
+            v_stripped = 'https://' + v_stripped  # Add https if missing
         
         # Simple URL pattern check
         import re
@@ -1279,14 +1283,14 @@ class EventBase(BaseModel):
             r'(?::\d+)?'  # optional port
             r'(?:/?|[/?]\S+)$', re.IGNORECASE)
         
-        if not url_pattern.match(v):
+        if not url_pattern.match(v_stripped):
             raise ValueError('Please enter a valid URL')
         
         # Limit URL length
-        if len(v) > 2000:
+        if len(v_stripped) > 2000:
             raise ValueError('URL must be 2000 characters or less')
         
-        return v.strip()
+        return v_stripped
 
     @validator('host_name')
     def validate_host_name(cls, v):
