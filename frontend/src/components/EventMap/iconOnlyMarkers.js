@@ -13,17 +13,17 @@ const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) =>
   const cleanIconPath = iconPath
     .replace(/stroke="white"/g, `stroke="${categoryColor}"`)
     .replace(/fill="white"/g, `fill="${categoryColor}"`)
-    .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3.5"');
+    .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"');
   
   return `
-    <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-      <!-- Main icon - larger and cleaner -->
-      <g transform="translate(56, 56) scale(2)">
+    <svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+      <!-- Main icon - much larger and cleaner -->
+      <g transform="translate(112, 112) scale(4)">
         ${cleanIconPath}
       </g>
       <!-- Strong outline for definition -->
-      <g transform="translate(56, 56) scale(2)">
-        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="2.5"')}
+      <g transform="translate(112, 112) scale(4)">
+        ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"')}
       </g>
     </svg>
   `;
@@ -36,28 +36,28 @@ const createDuplicateStack = (category, count, theme = THEME_DARK) => {
   
   // Determine how many duplicate icons to show (max 4)
   const iconCount = Math.min(4, Math.max(2, count));
-  const iconSize = 56; // Larger individual icons for 160px container (doubled)
+  const iconSize = 112; // Much larger individual icons for 320px container (4x)
   
-  // Position duplicate icons in formation (doubled coordinates)
+  // Position duplicate icons in formation (4x coordinates)
   const positions = [];
   
   if (iconCount === 2) {
     positions.push(
-      { x: 52, y: 48 },
-      { x: 108, y: 80 }
+      { x: 104, y: 96 },
+      { x: 216, y: 160 }
     );
   } else if (iconCount === 3) {
     positions.push(
-      { x: 48, y: 44 },
-      { x: 112, y: 44 },
-      { x: 80, y: 100 }
+      { x: 96, y: 88 },
+      { x: 224, y: 88 },
+      { x: 160, y: 200 }
     );
   } else if (iconCount === 4) {
     positions.push(
-      { x: 46, y: 46 },
-      { x: 114, y: 46 },
-      { x: 46, y: 114 },
-      { x: 114, y: 114 }
+      { x: 92, y: 92 },
+      { x: 228, y: 92 },
+      { x: 92, y: 228 },
+      { x: 228, y: 228 }
     );
   }
   
@@ -70,19 +70,19 @@ const createDuplicateStack = (category, count, theme = THEME_DARK) => {
     return `
       <g transform="translate(${x - iconSize/2}, ${y - iconSize/2})">
         <!-- Category icon -->
-        <g transform="translate(${iconSize/2 - 24}, ${iconSize/2 - 24}) scale(2)">
+        <g transform="translate(${iconSize/2 - 48}, ${iconSize/2 - 48}) scale(4)">
           ${iconPath
             .replace(/stroke="white"/g, `stroke="${category.markerColor}"`)
             .replace(/fill="white"/g, `fill="${category.markerColor}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"')
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"')
           }
         </g>
         <!-- Clean outline -->
-        <g transform="translate(${iconSize/2 - 24}, ${iconSize/2 - 24}) scale(2)">
+        <g transform="translate(${iconSize/2 - 48}, ${iconSize/2 - 48}) scale(4)">
           ${iconPath
             .replace(/fill="white"/g, 'fill="none"')
             .replace(/stroke="white"/g, `stroke="${outlineColor}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"')
           }
         </g>
       </g>
@@ -94,7 +94,7 @@ const createDuplicateStack = (category, count, theme = THEME_DARK) => {
   
   // Same size as individual markers - but with duplicates
   const svg = `
-    <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+    <svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
       ${duplicateIcons}
     </svg>
   `;
@@ -109,28 +109,28 @@ const createDiversityStack = (categoryIds, theme = THEME_DARK) => {
   
   // Determine positions based on how many different categories we're showing
   const iconCount = categoryIds.length;
-  const iconSize = 56; // Larger individual icons for 160px container (doubled)
+  const iconSize = 112; // Much larger individual icons for 320px container (4x)
   
-  // Position different category icons in formation (doubled coordinates)
+  // Position different category icons in formation (4x coordinates)
   const positions = [];
   
   if (iconCount === 2) {
     positions.push(
-      { x: 52, y: 48 },
-      { x: 108, y: 80 }
+      { x: 104, y: 96 },
+      { x: 216, y: 160 }
     );
   } else if (iconCount === 3) {
     positions.push(
-      { x: 48, y: 44 },
-      { x: 112, y: 44 },
-      { x: 80, y: 100 }
+      { x: 96, y: 88 },
+      { x: 224, y: 88 },
+      { x: 160, y: 200 }
     );
   } else if (iconCount === 4) {
     positions.push(
-      { x: 46, y: 46 },
-      { x: 114, y: 46 },
-      { x: 46, y: 114 },
-      { x: 114, y: 114 }
+      { x: 92, y: 92 },
+      { x: 228, y: 92 },
+      { x: 92, y: 228 },
+      { x: 228, y: 228 }
     );
   }
   
@@ -144,19 +144,19 @@ const createDiversityStack = (categoryIds, theme = THEME_DARK) => {
     return `
       <g transform="translate(${x - iconSize/2}, ${y - iconSize/2})">
         <!-- Category icon with its own color -->
-        <g transform="translate(${iconSize/2 - 24}, ${iconSize/2 - 24}) scale(2)">
+        <g transform="translate(${iconSize/2 - 48}, ${iconSize/2 - 48}) scale(4)">
           ${iconPath
             .replace(/stroke="white"/g, `stroke="${category.markerColor}"`)
             .replace(/fill="white"/g, `fill="${category.markerColor}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"')
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"')
           }
         </g>
         <!-- Clean outline -->
-        <g transform="translate(${iconSize/2 - 24}, ${iconSize/2 - 24}) scale(2)">
+        <g transform="translate(${iconSize/2 - 48}, ${iconSize/2 - 48}) scale(4)">
           ${iconPath
             .replace(/fill="white"/g, 'fill="none"')
             .replace(/stroke="white"/g, `stroke="${outlineColor}"`)
-            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="2"')
+            .replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"')
           }
         </g>
       </g>
@@ -170,7 +170,7 @@ const createDiversityStack = (categoryIds, theme = THEME_DARK) => {
   
   // Same size as individual markers - but with diverse category icons
   const svg = `
-    <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+    <svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
       ${diverseIcons}
     </svg>
   `;
