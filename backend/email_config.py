@@ -19,10 +19,36 @@ class EmailService:
     def __init__(self):
         self.config = EMAIL_CONFIG
         self.logger = logging.getLogger(__name__)
+        
+        # Validate configuration on initialization
+        self._validate_config()
+    
+    def _validate_config(self):
+        """Validate email configuration and warn about missing credentials"""
+        if not self.config['smtp_password']:
+            self.logger.warning("⚠️ SMTP_PASSWORD not set - email sending will fail")
+            self.logger.warning("📋 Set environment variables or create .env file for local development")
+        
+        if not os.getenv('SMTP_USERNAME'):
+            self.logger.warning("⚠️ Using default SMTP_USERNAME - may not work without proper setup")
+            
+        self.logger.info(f"📧 Email service initialized with server: {self.config['smtp_server']}")
+        self.logger.info(f"👤 Username: {self.config['smtp_username']}")
+        self.logger.info(f"📨 From: {self.config['from_email']}")
     
     def send_email(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
         """Send an email using SMTP"""
+        
+        # Check if credentials are available
+        if not self.config['smtp_password']:
+            self.logger.error("❌ Cannot send email: SMTP_PASSWORD not configured")
+            self.logger.error("📋 Set SMTP_PASSWORD environment variable or create .env file")
+            return False
+            
         try:
+            self.logger.info(f"📤 Attempting to send email to {to_email}")
+            self.logger.info(f"🔌 Connecting to {self.config['smtp_server']}:{self.config['smtp_port']}")
+            
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
@@ -40,15 +66,33 @@ class EmailService:
             
             # Connect to server and send email
             with smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port']) as server:
+                self.logger.info("🔐 Starting TLS encryption...")
                 server.starttls()
+                
+                self.logger.info(f"🔑 Authenticating with {self.config['smtp_username']}")
                 server.login(self.config['smtp_username'], self.config['smtp_password'])
+                
+                self.logger.info("📬 Sending message...")
                 server.send_message(msg)
             
-            self.logger.info(f"Email sent successfully to {to_email}")
+            self.logger.info(f"✅ Email sent successfully to {to_email}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            self.logger.error(f"❌ Failed to send email to {to_email}: {str(e)}")
+            
+            # Provide helpful debugging information
+            if "Name or service not known" in str(e):
+                self.logger.error("🔍 DNS resolution failed for SMTP server")
+                self.logger.error(f"   Server: {self.config['smtp_server']}")
+                self.logger.error("   Check internet connection and DNS settings")
+            elif "Authentication failed" in str(e) or "Invalid credentials" in str(e):
+                self.logger.error("🔑 SMTP authentication failed")
+                self.logger.error("   Check SMTP_USERNAME and SMTP_PASSWORD")
+            elif "Connection refused" in str(e):
+                self.logger.error("🚫 Connection refused by SMTP server")
+                self.logger.error(f"   Check SMTP_SERVER ({self.config['smtp_server']}) and SMTP_PORT ({self.config['smtp_port']})")
+            
             return False
     
     def send_password_reset_email(self, to_email: str, reset_code: str, user_name: Optional[str] = None) -> bool:

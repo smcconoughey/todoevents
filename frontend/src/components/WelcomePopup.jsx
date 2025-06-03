@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, ArrowRight, ArrowLeft, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const WelcomePopup = ({ onClose, forceShow = false }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (forceShow) {
@@ -153,31 +155,67 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
           </div>
 
           {/* Navigation */}
-          <div className="flex justify-between items-center pt-2 sm:pt-4 gap-2">
-            <Button
-              variant="ghost"
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className={`text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover min-h-[36px] sm:min-h-[44px] px-3 sm:px-4 text-xs sm:text-sm ${
-                currentStep === 0 ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              ← Previous
-            </Button>
+          <div className="space-y-3 pt-2 sm:pt-4">
+            {/* Event Creator & Host Options - Only show on last step */}
+            {currentStep === steps.length - 1 && (
+              <div className="space-y-3">
+                <p className="text-center text-xs sm:text-sm text-themed-tertiary">
+                  What type of events are you interested in?
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    onClick={() => {
+                      handleClose();
+                      navigate('/creators');
+                    }}
+                    variant="outline"
+                    className="border-themed text-themed-primary hover:bg-themed-surface-hover min-h-[36px] sm:min-h-[44px] text-xs sm:text-sm w-full"
+                  >
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    Individual Events
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      handleClose();
+                      navigate('/hosts');
+                    }}
+                    variant="outline"
+                    className="border-themed text-themed-primary hover:bg-themed-surface-hover min-h-[36px] sm:min-h-[44px] text-xs sm:text-sm w-full"
+                  >
+                    <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    Organization Events
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {/* Regular Navigation */}
+            <div className="flex justify-between items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+                className={`text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover min-h-[36px] sm:min-h-[44px] px-3 sm:px-4 text-xs sm:text-sm ${
+                  currentStep === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                ← Previous
+              </Button>
 
-            <Button
-              onClick={handleNext}
-              className="bg-spark-yellow text-neutral-900 hover:bg-spark-yellow/90 font-semibold min-h-[36px] sm:min-h-[44px] px-4 sm:px-6 text-xs sm:text-sm"
-            >
-              {currentStep === steps.length - 1 ? (
-                "Get Started!"
-              ) : (
-                <>
-                  Next
-                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
-                </>
-              )}
-            </Button>
+              <Button
+                onClick={currentStep === steps.length - 1 ? handleClose : handleNext}
+                className="bg-spark-yellow text-neutral-900 hover:bg-spark-yellow/90 font-semibold min-h-[36px] sm:min-h-[44px] px-4 sm:px-6 text-xs sm:text-sm"
+              >
+                {currentStep === steps.length - 1 ? (
+                  "Explore Events"
+                ) : (
+                  <>
+                    Next
+                    <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
