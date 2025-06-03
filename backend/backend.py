@@ -2082,11 +2082,11 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     INSERT INTO events (
                         title, description, date, start_time, end_time, end_date, category,
                         address, lat, lng, recurring, frequency,
-                        created_by, interest_count, view_count, fee_required, event_url, host_name
+                        created_by, fee_required, event_url, host_name, interest_count, view_count
                     ) VALUES (
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, 0, 0, {placeholder}, {placeholder}, {placeholder}
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 0, 0
                     ) RETURNING id
                 """
                 
@@ -3721,11 +3721,11 @@ async def bulk_create_events(
                         INSERT INTO events (
                             title, description, date, start_time, end_time, end_date, category,
                             address, lat, lng, recurring, frequency,
-                            created_by, interest_count, view_count
+                            created_by, fee_required, event_url, host_name, interest_count, view_count
                         ) VALUES (
                             {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                             {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                            {placeholder}, {placeholder}, 0, 0
+                            {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 0, 0
                         ) RETURNING id
                     """
                     
@@ -3742,7 +3742,10 @@ async def bulk_create_events(
                         lng_rounded, 
                         event.recurring,
                         event.frequency, 
-                        current_user["id"]
+                        current_user["id"],
+                        event.fee_required,
+                        event.event_url,
+                        event.host_name
                     )
                     
                     # For PostgreSQL, use RETURNING to get the ID in one step
