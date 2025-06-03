@@ -649,6 +649,10 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [externalLinkDialog, setExternalLinkDialog] = useState({ isOpen: false, url: '' });
+  // Add new state for misc filters
+  const [miscFilters, setMiscFilters] = useState({
+    feeFilter: 'all' // 'all', 'free', 'paid'
+  });
 
 
   const mapRef = useRef(null);
@@ -670,6 +674,9 @@ const EventMap = ({ mapsLoaded = false }) => {
     setSelectedTime('all');
     setSelectedCategory(['all']);
     setSelectedEvent(null);
+    setMiscFilters({
+      feeFilter: 'all'
+    });
     
     if (mapRef.current) {
       mapRef.current.resetView();
@@ -849,11 +856,11 @@ const EventMap = ({ mapsLoaded = false }) => {
     }
   };
 
+  // Filter events based on selected criteria
   const filteredEvents = events.filter(event => {
-    // Basic null/validity check
     if (!event || !event.id || event.lat == null || event.lng == null) return false;
     
-    // Filter out past events
+    // Filter out past events  
     if (isEventPast(event)) return false;
     
     // Category filter
@@ -870,7 +877,7 @@ const EventMap = ({ mapsLoaded = false }) => {
       if (eventTimePeriod !== selectedTime) return false;
     }
     
-    // Proximity filter - only apply if we have a selected location
+    // Proximity filter
     if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
       const distance = calculateDistance(
         selectedLocation.lat,
@@ -878,21 +885,17 @@ const EventMap = ({ mapsLoaded = false }) => {
         event.lat,
         event.lng
       );
-      
-      // Add distance to event for display purposes
-      event.distance = distance;
-      
-      // Filter by proximity range (unless "All" is selected)
       if (proximityRange !== 9999 && distance > proximityRange) return false;
     }
     
-    return true;
-  }).sort((a, b) => {
-    // Sort by distance if available, otherwise by date
-    if (a.distance != null && b.distance != null) {
-      return a.distance - b.distance;
+    // Misc filters - Fee filter
+    if (miscFilters.feeFilter !== 'all') {
+      const hasFee = event.fee_required && event.fee_required.trim() !== '';
+      if (miscFilters.feeFilter === 'free' && hasFee) return false;
+      if (miscFilters.feeFilter === 'paid' && !hasFee) return false;
     }
-    return new Date(a.date) - new Date(b.date);
+    
+    return true;
   });
 
   const handleEventClick = (event) => {
@@ -1765,6 +1768,16 @@ const EventMap = ({ mapsLoaded = false }) => {
                     >
                       🏷️ Type
                     </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'misc' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('misc')}
+                    >
+                      ⚙️ Misc
+                    </button>
                   </div>
 
                   {/* Date Filter Tab */}
@@ -1947,15 +1960,16 @@ const EventMap = ({ mapsLoaded = false }) => {
                               'veteran': 'border-pin-blue',
                               'cookout': 'border-vibrant-magenta',
                               'graduation': 'border-spark-yellow',
-                              'tech-education': 'border-fresh-teal'
+                              'tech-education': 'border-fresh-teal',
+                              'other': 'border-gray-400'
                             };
                             return colorMap[categoryId] || 'border-gray-400';
                           };
-                          
+
                           return (
                             <button
                               key={category.id}
-                              className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
+                              className={`relative p-2 rounded-md border-2 transition-all duration-200 text-left ${
                                 selectedCategory.includes(category.id)
                                   ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
                                   : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
@@ -1986,6 +2000,96 @@ const EventMap = ({ mapsLoaded = false }) => {
                             </button>
                           );
                         })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Misc Filter Tab */}
+                  {activeFilterTab === 'misc' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        ⚙️ Additional filters for event attributes
+                      </div>
+                      
+                      {/* Fee Filter */}
+                      <div className="space-y-1.5">
+                        <div className="text-xs text-white/70 dark:text-white/70 light:text-black/70 font-medium px-1">
+                          💰 Event Cost
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[
+                            { value: 'all', label: 'All Events', icon: '🎫', description: 'Free & Paid' },
+                            { value: 'free', label: 'Free', icon: '🆓', description: 'No cost' },
+                            { value: 'paid', label: 'Paid', icon: '💳', description: 'Requires fee' }
+                          ].map(feeOption => {
+                            // Calculate event count for this fee filter
+                            const eventCount = events.filter(event => {
+                              if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                              
+                              // Filter out past events
+                              if (isEventPast(event)) return false;
+                              
+                              // Apply other filters but not misc filter
+                              const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
+                              if (!categoryMatch) return false;
+                              
+                              const dateMatch = isDateInRange(event.date, selectedDate);
+                              if (!dateMatch) return false;
+                              
+                              // Time filter
+                              if (selectedTime !== 'all') {
+                                const eventTimePeriod = getTimePeriod(event.start_time);
+                                if (eventTimePeriod !== selectedTime) return false;
+                              }
+                              
+                              // Proximity filter
+                              if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                                const distance = calculateDistance(
+                                  selectedLocation.lat,
+                                  selectedLocation.lng,
+                                  event.lat,
+                                  event.lng
+                                );
+                                if (proximityRange !== 9999 && distance > proximityRange) return false;
+                              }
+                              
+                              // Fee filter for this specific option
+                              if (feeOption.value === 'all') return true;
+                              const hasFee = event.fee_required && event.fee_required.trim() !== '';
+                              if (feeOption.value === 'free' && hasFee) return false;
+                              if (feeOption.value === 'paid' && !hasFee) return false;
+                              
+                              return true;
+                            }).length;
+                            
+                            return (
+                              <button
+                                key={feeOption.value}
+                                className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
+                                  miscFilters.feeFilter === feeOption.value
+                                    ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
+                                    : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                                }`}
+                                onClick={() => setMiscFilters(prev => ({ ...prev, feeFilter: feeOption.value }))}
+                              >
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="text-sm">{feeOption.icon}</span>
+                                  <span className="text-xs font-medium">{feeOption.label}</span>
+                                </div>
+                                <div className={`text-xs transition-colors duration-200 ${
+                                  miscFilters.feeFilter === feeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                }`}>
+                                  {feeOption.description}
+                                </div>
+                                <div className={`text-xs mt-1 transition-colors duration-200 ${
+                                  miscFilters.feeFilter === feeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                }`}>
+                                  {eventCount} events
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2330,6 +2434,16 @@ const EventMap = ({ mapsLoaded = false }) => {
                     >
                       🏷️ Type
                     </button>
+                    <button
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                        activeFilterTab === 'misc' 
+                          ? 'bg-themed-surface-active text-themed-primary shadow-sm' 
+                          : 'text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover'
+                      }`}
+                      onClick={() => setActiveFilterTab('misc')}
+                    >
+                      ⚙️ Misc
+                    </button>
                   </div>
 
                   {/* Date Filter Tab */}
@@ -2512,15 +2626,16 @@ const EventMap = ({ mapsLoaded = false }) => {
                               'veteran': 'border-pin-blue',
                               'cookout': 'border-vibrant-magenta',
                               'graduation': 'border-spark-yellow',
-                              'tech-education': 'border-fresh-teal'
+                              'tech-education': 'border-fresh-teal',
+                              'other': 'border-gray-400'
                             };
                             return colorMap[categoryId] || 'border-gray-400';
                           };
-                          
+
                           return (
                             <button
                               key={category.id}
-                              className={`p-1.5 rounded-md border-2 transition-all duration-200 text-left relative ${
+                              className={`relative p-2 rounded-md border-2 transition-all duration-200 text-left ${
                                 selectedCategory.includes(category.id)
                                   ? `bg-white/20 dark:bg-white/20 light:bg-black/10 ${getBorderColor(category.id)} text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]`
                                   : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
@@ -2551,6 +2666,96 @@ const EventMap = ({ mapsLoaded = false }) => {
                             </button>
                           );
                         })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Misc Filter Tab */}
+                  {activeFilterTab === 'misc' && (
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
+                        ⚙️ Additional filters for event attributes
+                      </div>
+                      
+                      {/* Fee Filter */}
+                      <div className="space-y-1.5">
+                        <div className="text-xs text-white/70 dark:text-white/70 light:text-black/70 font-medium px-1">
+                          💰 Event Cost
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[
+                            { value: 'all', label: 'All Events', icon: '🎫', description: 'Free & Paid' },
+                            { value: 'free', label: 'Free', icon: '🆓', description: 'No cost' },
+                            { value: 'paid', label: 'Paid', icon: '💳', description: 'Requires fee' }
+                          ].map(feeOption => {
+                            // Calculate event count for this fee filter
+                            const eventCount = events.filter(event => {
+                              if (!event || !event.id || event.lat == null || event.lng == null) return false;
+                              
+                              // Filter out past events
+                              if (isEventPast(event)) return false;
+                              
+                              // Apply other filters but not misc filter
+                              const categoryMatch = selectedCategory.includes('all') || selectedCategory.some(categoryId => categoryId === event.category);
+                              if (!categoryMatch) return false;
+                              
+                              const dateMatch = isDateInRange(event.date, selectedDate);
+                              if (!dateMatch) return false;
+                              
+                              // Time filter
+                              if (selectedTime !== 'all') {
+                                const eventTimePeriod = getTimePeriod(event.start_time);
+                                if (eventTimePeriod !== selectedTime) return false;
+                              }
+                              
+                              // Proximity filter
+                              if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+                                const distance = calculateDistance(
+                                  selectedLocation.lat,
+                                  selectedLocation.lng,
+                                  event.lat,
+                                  event.lng
+                                );
+                                if (proximityRange !== 9999 && distance > proximityRange) return false;
+                              }
+                              
+                              // Fee filter for this specific option
+                              if (feeOption.value === 'all') return true;
+                              const hasFee = event.fee_required && event.fee_required.trim() !== '';
+                              if (feeOption.value === 'free' && hasFee) return false;
+                              if (feeOption.value === 'paid' && !hasFee) return false;
+                              
+                              return true;
+                            }).length;
+                            
+                            return (
+                              <button
+                                key={feeOption.value}
+                                className={`p-2 rounded-md border-2 transition-all duration-200 text-left ${
+                                  miscFilters.feeFilter === feeOption.value
+                                    ? 'bg-white/20 dark:bg-white/20 light:bg-black/10 border-pin-blue text-white dark:text-white light:text-black shadow-lg transform scale-[1.02]'
+                                    : 'bg-white/5 dark:bg-white/5 light:bg-black/5 border-white/20 dark:border-white/20 light:border-black/30 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/40'
+                                }`}
+                                onClick={() => setMiscFilters(prev => ({ ...prev, feeFilter: feeOption.value }))}
+                              >
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="text-sm">{feeOption.icon}</span>
+                                  <span className="text-xs font-medium">{feeOption.label}</span>
+                                </div>
+                                <div className={`text-xs transition-colors duration-200 ${
+                                  miscFilters.feeFilter === feeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                }`}>
+                                  {feeOption.description}
+                                </div>
+                                <div className={`text-xs mt-1 transition-colors duration-200 ${
+                                  miscFilters.feeFilter === feeOption.value ? 'text-white/80 dark:text-white/80 light:text-black/80' : 'text-white/50 dark:text-white/50 light:text-black/50'
+                                }`}>
+                                  {eventCount} events
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
