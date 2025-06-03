@@ -179,7 +179,7 @@ def migrate_ux_fields():
             AND column_name IN ('fee_required', 'event_url', 'host_name')
         """)
         
-        existing_fields = [row[0] for row in cursor.fetchall()]
+        existing_fields = [row['column_name'] for row in cursor.fetchall()]
         required_fields = ['fee_required', 'event_url', 'host_name']
         
         for field in required_fields:
@@ -205,7 +205,7 @@ def verify_database():
             FROM information_schema.tables 
             WHERE table_schema = 'public'
         """)
-        tables = [row[0] for row in cursor.fetchall()]
+        tables = [row['table_name'] for row in cursor.fetchall()]
         
         expected_tables = ['users', 'events', 'event_interest', 'event_views', 'password_reset_codes', 'activity_logs']
         
@@ -230,11 +230,11 @@ def verify_database():
         columns = cursor.fetchall()
         print("\n📋 Events table structure:")
         for col in columns:
-            print(f"  - {col[0]} ({col[1]})")
+            print(f"  - {col['column_name']} ({col['data_type']})")
         
         # Check if UX fields exist
         ux_fields = ['fee_required', 'event_url', 'host_name']
-        existing_ux_fields = [col[0] for col in columns if col[0] in ux_fields]
+        existing_ux_fields = [col['column_name'] for col in columns if col['column_name'] in ux_fields]
         
         print(f"\n🎨 UX Enhancement fields: {existing_ux_fields}")
         
