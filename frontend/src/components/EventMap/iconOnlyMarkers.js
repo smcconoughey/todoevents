@@ -1,7 +1,7 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 
-// Clean icon-only marker system with consistent sizing and no visual clutter
-// Individual markers and clusters are the same size for visual harmony
+// Clean icon-only marker system with larger clusters and no text elements
+// Individual markers 36px, clusters 48px for better density indication
 
 // Helper function to create clean icon-only SVG markers without halos
 const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) => {
@@ -30,45 +30,44 @@ const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) =>
   `;
 };
 
-// Simplified cluster showing just category icons without counts - same size as individual markers
-const createSimplifiedCluster = (categories, count, theme = THEME_DARK) => {
+// Larger cluster showing just category icons - NO TEXT ELEMENTS AT ALL
+const createLargeCluster = (categories, count, theme = THEME_DARK) => {
   const isDarkMode = theme === THEME_DARK;
   const uniqueCategories = [...new Map(categories.map(cat => [cat.id, cat])).values()];
   const maxIcons = Math.min(4, uniqueCategories.length);
   
-  // Same size as individual markers for consistency
-  const baseSize = 36;
-  const iconSize = 12; // Smaller icons to fit multiple in same space
-  const spacing = 10; // Tight spacing
-  
-  // Arrange icons compactly within the 36x36 space
-  const positions = [];
+  // Larger size for clusters to indicate density
+  const baseSize = 48;
+  const iconSize = 14; // Slightly larger icons
   const center = baseSize / 2;
+  
+  // Arrange icons within the 48x48 space
+  const positions = [];
   
   if (maxIcons === 1) {
     positions.push({ x: center, y: center });
   } else if (maxIcons === 2) {
     positions.push(
-      { x: center - 6, y: center },
-      { x: center + 6, y: center }
+      { x: center - 8, y: center },
+      { x: center + 8, y: center }
     );
   } else if (maxIcons === 3) {
     positions.push(
-      { x: center, y: center - 6 },
-      { x: center - 7, y: center + 5 },
-      { x: center + 7, y: center + 5 }
+      { x: center, y: center - 8 },
+      { x: center - 9, y: center + 6 },
+      { x: center + 9, y: center + 6 }
     );
   } else {
-    // 2x2 grid
+    // 2x2 grid with more space
     positions.push(
-      { x: center - 6, y: center - 6 },
-      { x: center + 6, y: center - 6 },
-      { x: center - 6, y: center + 6 },
-      { x: center + 6, y: center + 6 }
+      { x: center - 8, y: center - 8 },
+      { x: center + 8, y: center - 8 },
+      { x: center - 8, y: center + 8 },
+      { x: center + 8, y: center + 8 }
     );
   }
   
-  // Create compact mini-icons
+  // Create mini-icons with no backgrounds or text
   const createMiniIcon = (category, x, y) => {
     const iconName = categoryIconMap[category.id] || 'MapPin';
     const iconPath = iconPaths[iconName] || iconPaths.MapPin;
@@ -76,7 +75,7 @@ const createSimplifiedCluster = (categories, count, theme = THEME_DARK) => {
     
     return `
       <g transform="translate(${x - iconSize/2}, ${y - iconSize/2})">
-        <!-- Mini icon with category color -->
+        <!-- Mini icon with category color - NO BACKGROUNDS -->
         <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
           ${iconPath
             .replace(/stroke="white"/g, `stroke="${category.markerColor}"`)
@@ -84,7 +83,7 @@ const createSimplifiedCluster = (categories, count, theme = THEME_DARK) => {
             .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"')
           }
         </g>
-        <!-- White outline for definition -->
+        <!-- White outline for visibility -->
         <g transform="translate(${iconSize/2 - 12*scale}, ${iconSize/2 - 12*scale}) scale(${scale})">
           ${iconPath
             .replace(/fill="white"/g, 'fill="none"')
@@ -100,9 +99,9 @@ const createSimplifiedCluster = (categories, count, theme = THEME_DARK) => {
     createMiniIcon(category, positions[index].x, positions[index].y)
   ).join('');
   
+  // ABSOLUTELY NO TEXT ELEMENTS - just the icons
   return `
-    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-      <!-- Just the category icons, no counts, no backgrounds -->
+    <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       ${miniIcons}
     </svg>
   `;
@@ -192,21 +191,21 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
   };
 };
 
-// Create simplified cluster marker without counts - same size as individual markers
+// Create larger cluster marker with absolutely no text - 48x48 for better visibility
 export const createIconOnlyClusterMarker = (count, categories, theme = THEME_DARK) => {
-  console.log('Creating simplified cluster with', count, 'events and categories:', categories?.map(c => c.id));
+  console.log('Creating large cluster with', count, 'events and categories:', categories?.map(c => c.id));
   
   const validCategories = categories && categories.length > 0 ? categories : [
     { id: 'all', markerColor: '#6B7280' }
   ];
   
-  const svg = createSimplifiedCluster(validCategories, count, theme);
+  const svg = createLargeCluster(validCategories, count, theme);
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(36, 36),
+    scaledSize: new google.maps.Size(48, 48),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(18, 18),
+    anchor: new google.maps.Point(24, 24),
     optimized: false
   };
 };
