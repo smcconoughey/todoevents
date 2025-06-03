@@ -43,22 +43,27 @@ const HostsPage = () => {
   const premiumFeatures = [
     {
       title: 'Event Analytics Dashboard',
-      description: 'Detailed insights on event views, interests, and audience demographics.',
+      description: 'Comprehensive analytics with detailed insights on event views, interests, attendance trends, and audience demographics.',
       status: 'Coming Soon'
     },
     {
-      title: 'Promotional Tools',
-      description: 'Advanced marketing features including social media auto-posting and email campaigns.',
+      title: 'Recurring Events',
+      description: 'Create and manage recurring events with flexible scheduling options - weekly, monthly, or custom patterns.',
       status: 'In Development'
     },
     {
-      title: 'Custom Event Branding',
-      description: 'Upload custom logos, banners, and create branded event pages.',
+      title: 'Priority Showcasing',
+      description: 'Featured positioning in search results, map clusters, and event lists to maximize visibility.',
+      status: 'Coming Soon'
+    },
+    {
+      title: 'Custom Event Banners',
+      description: 'Upload custom banners, logos, and create beautifully branded event pages that stand out.',
       status: 'Beta Testing'
     },
     {
-      title: 'Priority Event Placement',
-      description: 'Featured positioning in search results and map display.',
+      title: 'Native Ticket Sales',
+      description: 'Sell tickets directly through our platform with integrated payment processing and attendee management.',
       status: 'Coming Soon'
     }
   ];
@@ -183,7 +188,7 @@ const HostsPage = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {premiumFeatures.map((feature, index) => (
               <div key={index} className="p-6 bg-themed-surface rounded-xl border border-themed relative overflow-hidden group hover:bg-themed-surface-hover transition-all duration-300">
                 <div className="absolute top-4 right-4">
