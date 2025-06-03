@@ -2943,31 +2943,33 @@ const EventMap = ({ mapsLoaded = false }) => {
 
 
               {/* Desktop Event Details Panel */}
-              <div className="hidden sm:block">
-                <EventDetailsPanel
-                  event={selectedEvent}
-                  user={user}
-                  onClose={() => setSelectedEvent(null)}
-                  onEdit={() => {
-                    setEditingEvent(selectedEvent);
-                    setIsCreateFormOpen(true);
-                    setSelectedLocation({
-                      lat: selectedEvent.lat,
-                      lng: selectedEvent.lng,
-                      address: selectedEvent.address
-                    });
-                  }}
-                  onDelete={handleEventDelete}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  shareCardRef={shareCardRef}
-                  downloadStatus={downloadStatus}
-                  handleDownload={handleDownload}
-                  handleCopyLink={handleCopyLink}
-                  handleFacebookShare={handleFacebookShare}
-                  setExternalLinkDialog={setExternalLinkDialog}
-                />
-              </div>
+              {selectedEvent && (
+                <div className="hidden sm:block">
+                  <EventDetailsPanel
+                    event={selectedEvent}
+                    user={user}
+                    onClose={() => setSelectedEvent(null)}
+                    onEdit={() => {
+                      setEditingEvent(selectedEvent);
+                      setIsCreateFormOpen(true);
+                      setSelectedLocation({
+                        lat: selectedEvent.lat,
+                        lng: selectedEvent.lng,
+                        address: selectedEvent.address
+                      });
+                    }}
+                    onDelete={handleEventDelete}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    shareCardRef={shareCardRef}
+                    downloadStatus={downloadStatus}
+                    handleDownload={handleDownload}
+                    handleCopyLink={handleCopyLink}
+                    handleFacebookShare={handleFacebookShare}
+                    setExternalLinkDialog={setExternalLinkDialog}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ) : (
