@@ -358,11 +358,11 @@ const MapContainer = React.forwardRef(({
         markers: markers,
         renderer: {
           render: ({ count, position, markers }) => {
-            // Get ALL categories from markers for proper cluster rendering
-            const allMarkerCategories = markers.map(marker => marker.category);
+            // Get ALL category IDs from markers for proper cluster rendering
+            const allMarkerCategoryIds = markers.map(marker => marker.category.id);
             
-            // Create a cluster marker
-            const clusterIcon = createClusterIcon(count, allMarkerCategories.map(cat => cat.id), theme);
+            // Create a cluster marker with proper category passing
+            const clusterIcon = createClusterIcon(count, allMarkerCategoryIds, theme);
             
             const marker = new google.maps.Marker({
               position,
