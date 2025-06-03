@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 
 // Theme options
 export const THEME_DARK = 'dark';
@@ -9,6 +9,15 @@ export const ThemeContext = createContext({
   theme: THEME_DARK,
   toggleTheme: () => {},
 });
+
+// Custom hook to use the theme context
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
 
 export const ThemeProvider = ({ children }) => {
   // Initialize theme from localStorage or use system preference
