@@ -385,11 +385,31 @@ const EventEditModal = ({ event, isOpen, onClose, onSave }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
             <input
               type="time"
-              value={editEvent.time || ''}
-              onChange={(e) => setEditEvent({ ...editEvent, time: e.target.value })}
+              value={editEvent.start_time || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, start_time: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">End Time (Optional)</label>
+            <input
+              type="time"
+              value={editEvent.end_time || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, end_time: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+            <input
+              type="date"
+              value={editEvent.end_date || ''}
+              onChange={(e) => setEditEvent({ ...editEvent, end_date: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -436,6 +456,83 @@ const EventEditModal = ({ event, isOpen, onClose, onSave }) => {
               onChange={(e) => setEditEvent({ ...editEvent, lng: parseFloat(e.target.value) })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+        </div>
+
+        {/* UX Enhancement Fields */}
+        <div className="border-t pt-4 mt-6">
+          <h4 className="text-lg font-medium text-gray-700 mb-4">Additional Event Information</h4>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fee Information (Optional)</label>
+              <input
+                type="text"
+                value={editEvent.fee_required || ''}
+                onChange={(e) => setEditEvent({ ...editEvent, fee_required: e.target.value })}
+                placeholder="e.g., Free admission, $10 entry fee, $5-15 per item"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Describe ticket prices, fees, or if the event is free</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Event Website (Optional)</label>
+              <input
+                type="url"
+                value={editEvent.event_url || ''}
+                onChange={(e) => setEditEvent({ ...editEvent, event_url: e.target.value })}
+                placeholder="https://example.com/event"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Link to event registration, tickets, or more information</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Host/Organization (Optional)</label>
+              <input
+                type="text"
+                value={editEvent.host_name || ''}
+                onChange={(e) => setEditEvent({ ...editEvent, host_name: e.target.value })}
+                placeholder="e.g., Downtown Business Association, City Recreation Department"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Name of the organization or host running this event</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Recurring Event Fields */}
+        <div className="border-t pt-4 mt-6">
+          <h4 className="text-lg font-medium text-gray-700 mb-4">Recurring Event Settings</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={editEvent.recurring || false}
+                  onChange={(e) => setEditEvent({ ...editEvent, recurring: e.target.checked })}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">This is a recurring event</span>
+              </label>
+            </div>
+
+            {editEvent.recurring && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
+                <select
+                  value={editEvent.frequency || ''}
+                  onChange={(e) => setEditEvent({ ...editEvent, frequency: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select frequency</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -535,7 +632,10 @@ const AdminDashboard = () => {
           "lat": 40.7829,
           "lng": -73.9654,
           "recurring": false,
-          "frequency": null
+          "frequency": null,
+          "fee_required": "$25 general admission, $15 students/seniors",
+          "event_url": "https://www.samplefestival.com",
+          "host_name": "NYC Parks & Recreation"
         },
         {
           "title": "Food Truck Rally",
@@ -543,11 +643,14 @@ const AdminDashboard = () => {
           "date": "2024-07-20",
           "start_time": "11:00",
           "end_time": "20:00",
-          "category": "food",
+          "category": "food-drink",
           "address": "Downtown Plaza, Los Angeles, CA, USA",
           "lat": 34.0522,
           "lng": -118.2437,
-          "recurring": false
+          "recurring": false,
+          "fee_required": "Free admission, food sold separately ($5-15 per item)",
+          "event_url": "https://www.lafoodtrucks.com/rally",
+          "host_name": "Downtown LA Business Association"
         },
         {
           "title": "Art Gallery Opening",
@@ -559,7 +662,10 @@ const AdminDashboard = () => {
           "address": "Metropolitan Art Gallery, Chicago, IL, USA",
           "lat": 41.8781,
           "lng": -87.6298,
-          "recurring": false
+          "recurring": false,
+          "fee_required": "Free admission, donations welcome",
+          "event_url": "",
+          "host_name": "Metropolitan Art Gallery"
         },
         {
           "title": "Weekly Basketball League",
@@ -572,7 +678,10 @@ const AdminDashboard = () => {
           "lat": 30.2672,
           "lng": -97.7431,
           "recurring": true,
-          "frequency": "weekly"
+          "frequency": "weekly",
+          "fee_required": "$50 season registration fee",
+          "event_url": "https://www.austinsports.com/basketball",
+          "host_name": "Austin Community Sports League"
         },
         {
           "title": "Community Garden Volunteer Day",
@@ -584,7 +693,10 @@ const AdminDashboard = () => {
           "address": "Riverside Park, Portland, OR, USA",
           "lat": 45.5152,
           "lng": -122.6784,
-          "recurring": false
+          "recurring": false,
+          "fee_required": "Free event",
+          "event_url": "",
+          "host_name": "Portland Community Gardens"
         },
         {
           "title": "Tech Professionals Networking Mixer",
@@ -596,7 +708,10 @@ const AdminDashboard = () => {
           "address": "Innovation Hub, San Francisco, CA, USA",
           "lat": 37.7749,
           "lng": -122.4194,
-          "recurring": false
+          "recurring": false,
+          "fee_required": "$20 admission includes drinks and appetizers",
+          "event_url": "https://www.sftech.org/networking",
+          "host_name": "SF Tech Professionals Association"
         },
         {
           "title": "Financial Literacy Workshop",
@@ -608,7 +723,10 @@ const AdminDashboard = () => {
           "address": "Public Library Main Branch, Seattle, WA, USA",
           "lat": 47.6062,
           "lng": -122.3321,
-          "recurring": false
+          "recurring": false,
+          "fee_required": "Free workshop",
+          "event_url": "https://www.seattlelibrary.org/workshops",
+          "host_name": "Seattle Public Library"
         },
         {
           "title": "Pet Adoption Drive",
@@ -726,8 +844,14 @@ const AdminDashboard = () => {
             
             <div className="mt-3 text-sm text-gray-600">
               <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
-              <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency</p>
-              <p><strong>Valid categories:</strong> music, food, arts, sports, community, networking, education, other</p>
+              <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency, fee_required, event_url, host_name</p>
+              <p><strong>UX Enhancement fields:</strong></p>
+              <ul className="ml-4 list-disc text-xs">
+                <li><strong>fee_required:</strong> Ticket/fee information (e.g., "Free admission", "$10 entry")</li>
+                <li><strong>event_url:</strong> External website URL for registration or details</li>
+                <li><strong>host_name:</strong> Organization or host name</li>
+              </ul>
+              <p><strong>Valid categories:</strong> food-drink, music, arts, sports, community, networking, education, automotive, airshows, vehicle-sports, religious, veteran, cookout, graduation</p>
               <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
               <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
               <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
