@@ -2149,6 +2149,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Clear event cache since a new event was created
                 event_cache.clear()
                 logger.info(f"Successfully created event {event_id}: {event.title}")
+                # UX fields fix: ensure fee_required, event_url, host_name are properly saved
                 
                 return event_dict
                 
