@@ -2111,17 +2111,17 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
             # For updates, exclude current event from check
             if placeholder == "?":
                 # SQLite style
-                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = ? AND id != ?", (base_slug, event_id))
+                cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ? AND id != ?", (base_slug, event_id))
             else:
-                # PostgreSQL style with numbered placeholders
-                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = $1 AND id != $2", (base_slug, event_id))
+                # PostgreSQL style (use %s with psycopg2)
+                cursor.execute("SELECT COUNT(*) FROM events WHERE slug = %s AND id != %s", (base_slug, event_id))
         else:
             if placeholder == "?":
                 # SQLite style
-                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = ?", (base_slug,))
+                cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ?", (base_slug,))
             else:
-                # PostgreSQL style
-                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = $1", (base_slug,))
+                # PostgreSQL style (use %s with psycopg2)
+                cursor.execute("SELECT COUNT(*) FROM events WHERE slug = %s", (base_slug,))
         
         count = cursor.fetchone()[0]
         
@@ -4100,15 +4100,15 @@ async def bulk_create_events(
                             AND category = ?
                         """
                     else:
-                        # PostgreSQL style
+                        # PostgreSQL style (use %s with psycopg2)
                         duplicate_check = """
                             SELECT id FROM events 
-                            WHERE TRIM(LOWER(title)) = TRIM(LOWER($1))
-                            AND date = $2 
-                            AND start_time = $3 
-                            AND ABS(lat - $4) < 0.000001
-                            AND ABS(lng - $5) < 0.000001
-                            AND category = $6
+                            WHERE TRIM(LOWER(title)) = TRIM(LOWER(%s))
+                            AND date = %s 
+                            AND start_time = %s 
+                            AND ABS(lat - %s) < 0.000001
+                            AND ABS(lng - %s) < 0.000001
+                            AND category = %s
                         """
                     
                     # Round coordinates for consistency
@@ -4220,8 +4220,8 @@ async def bulk_create_events(
                         # SQLite style
                         fetch_query = "SELECT * FROM events WHERE id = ?"
                     else:
-                        # PostgreSQL style
-                        fetch_query = "SELECT * FROM events WHERE id = $1"
+                        # PostgreSQL style (use %s with psycopg2)
+                        fetch_query = "SELECT * FROM events WHERE id = %s"
                     cursor.execute(fetch_query, (event_id,))
                     event_data = cursor.fetchone()
                     

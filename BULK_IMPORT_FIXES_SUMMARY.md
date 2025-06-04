@@ -14,7 +14,8 @@
 1. **Synchronized placeholder functions**: Made `database_schema.py` use the same environment detection logic as `backend.py`
 2. **Fixed ensure_unique_slug function**: Updated to use database-specific placeholders without string interpolation
 3. **Fixed bulk import queries**: Updated duplicate check and fetch queries to use proper database-specific syntax
-4. **Updated query generators**: Modified `generate_insert_query()` and `generate_update_query()` to use numbered placeholders for PostgreSQL
+4. **Updated query generators**: Modified `generate_insert_query()` and `generate_update_query()` to use `%s` placeholders for PostgreSQL (psycopg2 compatible)
+5. **PostgreSQL compatibility fix**: Changed from `$1`, `$2` style to `%s` style placeholders for proper psycopg2 driver compatibility
 
 ### 2. **Transaction Management Issues**
 **Problem**: Transaction rollback errors causing "current transaction is aborted" messages.
@@ -45,7 +46,7 @@
 
 | Feature | SQLite (Local) | PostgreSQL (Production) | Status |
 |---------|----------------|-------------------------|---------|
-| Placeholders | `?` | `$1`, `$2`, `$3`... | ✅ Fixed |
+| Placeholders | `?` | `%s` (psycopg2 style) | ✅ Fixed |
 | INSERT RETURNING | Not supported | Supported | ✅ Compatible |
 | Transactions | Basic | Advanced | ✅ Compatible |
 | Data Types | Flexible | Strict | ✅ Compatible |
@@ -57,16 +58,17 @@
 ❌ Error creating event: near "%": syntax error
 ❌ Error ensuring unique slug: syntax error at end of input
 ❌ current transaction is aborted, commands ignored
+❌ Error creating event: there is no parameter $1
 ```
 
-### After Fixes
+### After Final Fixes
 ```
 ✅ Bulk import completed successfully!
    Success count: 2
    Error count: 0
    Created events:
-     - ID 34: Test Event 1749073310 (slug: test-event-1749073310)
-     - ID 35: Test Event 1749073311 (slug: test-event-1749073311)
+     - ID 36: Test Event 1749076520 (slug: test-event-1749076520)
+     - ID 37: Test Event 1749076521 (slug: test-event-1749076521)
 🎉 All tests passed! Bulk import is working correctly.
 ```
 

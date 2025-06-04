@@ -96,8 +96,8 @@ def generate_insert_query(table_name: str = 'events',
         # SQLite: use ? for all placeholders
         placeholders = ', '.join(['?'] * len(fields))
     else:
-        # PostgreSQL: use numbered placeholders $1, $2, etc.
-        placeholders = ', '.join([f'${i+1}' for i in range(len(fields))])
+        # PostgreSQL: use %s for all placeholders (psycopg2 style)
+        placeholders = ', '.join(['%s'] * len(fields))
     field_list = ', '.join(fields)
     
     query = f"""
@@ -138,9 +138,9 @@ def generate_update_query(table_name: str = 'events',
         set_clauses = ', '.join([f"{field}=?" for field in fields])
         where_placeholder = "?"
     else:
-        # PostgreSQL: use numbered placeholders
-        set_clauses = ', '.join([f"{field}=${i+1}" for i, field in enumerate(fields)])
-        where_placeholder = f"${len(fields)+1}"
+        # PostgreSQL: use %s for all placeholders (psycopg2 style)
+        set_clauses = ', '.join([f"{field}=%s" for field in fields])
+        where_placeholder = "%s"
     
     query = f"""
         UPDATE {table_name} 
