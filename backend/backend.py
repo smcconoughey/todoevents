@@ -1224,7 +1224,7 @@ class EventBase(BaseModel):
     short_description: Optional[str] = None
     date: str
     start_time: str
-    end_time: str
+    end_time: Optional[str] = None
     end_date: Optional[str] = None
     category: str
     address: str
@@ -4367,6 +4367,16 @@ def convert_event_datetime_fields(event_dict):
     """Convert datetime objects to ISO format strings for API response"""
     from datetime import datetime, timezone
     
+    # Handle NULL end_time values specifically to prevent validation errors
+    if 'end_time' in event_dict and event_dict['end_time'] is None:
+        event_dict['end_time'] = ""  # Convert None to empty string
+    
+    # Handle other potential NULL string fields
+    string_fields = ['end_date', 'short_description', 'fee_required', 'event_url', 'host_name', 'organizer_url', 'slug']
+    for field in string_fields:
+        if field in event_dict and event_dict[field] is None:
+            event_dict[field] = ""  # Convert None to empty string for optional string fields
+    
     datetime_fields = ['created_at', 'updated_at', 'start_datetime', 'end_datetime']
     for field in datetime_fields:
         if field in event_dict and isinstance(event_dict[field], datetime):
@@ -4692,3 +4702,43 @@ async def validate_event_seo(event_id: int):
                 "Include host/organizer details"
             ] if issues else ["Event is SEO-ready!"]
         }
+
+@app.post("/api/fix/null-end-times")
+async def fix_null_end_times():
+    """Fix NULL end_time values in the database"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check how many events have NULL end_time
+            c.execute("SELECT COUNT(*) FROM events WHERE end_time IS NULL")
+            result = c.fetchone()
+            null_count = result[0] if isinstance(result, (tuple, list)) else result.get("COUNT(*)", 0) if result else 0
+            
+            if null_count == 0:
+                return {
+                    "status": "success",
+                    "message": "No NULL end_time values found",
+                    "updated_count": 0
+                }
+            
+            # Update NULL end_time values to empty string
+            c.execute("UPDATE events SET end_time = '' WHERE end_time IS NULL")
+            updated_count = c.rowcount
+            conn.commit()
+            
+            # Verify the fix
+            c.execute("SELECT COUNT(*) FROM events WHERE end_time IS NULL")
+            result = c.fetchone()
+            remaining_nulls = result[0] if isinstance(result, (tuple, list)) else result.get("COUNT(*)", 0) if result else 0
+            
+            return {
+                "status": "success",
+                "message": f"Fixed {updated_count} NULL end_time values",
+                "updated_count": updated_count,
+                "remaining_nulls": remaining_nulls
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fixing NULL end_time values: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fixing NULL end_time values: {str(e)}")
