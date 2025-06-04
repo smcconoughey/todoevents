@@ -2132,7 +2132,7 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
             else:
                 # For new events, append a timestamp-based suffix
                 import time
-                suffix = str(int(time.time()))[-4:]  # Last 4 digits of timestamp
+                suffix = str(int(time.time()))[-6:]  # Last 6 digits of timestamp
                 return f"{base_slug}-{suffix}"
         else:
             return base_slug
@@ -2141,6 +2141,27 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
         # Fallback: append current timestamp
         import time
         return f"{base_slug}-{int(time.time())}"
+
+def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
+    """Get actual columns that exist in the database table"""
+    try:
+        if IS_PRODUCTION and DB_URL:
+            # PostgreSQL: Use information_schema
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = %s 
+                ORDER BY ordinal_position
+            """, (table_name,))
+            return [row[0] for row in cursor.fetchall()]
+        else:
+            # SQLite: Use PRAGMA table_info
+            cursor.execute(f"PRAGMA table_info({table_name})")
+            return [row[1] for row in cursor.fetchall()]  # row[1] is column name
+    except Exception as e:
+        logger.error(f"Error getting table columns: {e}")
+        # Fallback to basic columns
+        return ['id', 'title', 'description', 'date', 'start_time', 'end_time', 
+                'category', 'address', 'lat', 'lng', 'recurring', 'created_by', 'created_at']
 
 def auto_populate_seo_fields(event_data: dict) -> dict:
     """Auto-populate SEO fields for new events using enhanced logic"""
@@ -4077,6 +4098,14 @@ async def bulk_create_events(
         with get_db() as conn:
             cursor = conn.cursor()
             
+            # Get actual columns that exist in the database
+            actual_columns = get_actual_table_columns(cursor, 'events')
+            
+            # Filter to only insertable columns (exclude auto-generated ones)
+            insertable_columns = [col for col in actual_columns if col not in ['id', 'created_at']]
+            
+            logger.info(f"Database has {len(actual_columns)} columns, {len(insertable_columns)} are insertable")
+            
             for i, event in enumerate(bulk_events.events):
                 try:
                     # Start transaction for each event - handle database-specific syntax
@@ -4138,13 +4167,7 @@ async def bulk_create_events(
                         })
                         continue
                     
-                    # Insert the new event using centralized helpers
-                    from database_schema import generate_insert_query
-                    from event_data_builder import build_event_values_for_insert
-                    
-                    insert_query = generate_insert_query(returning_id=True)
-                    
-                    # Convert event object to dict for the helper
+                    # Convert event object to dict for processing
                     event_dict = {
                         'title': event.title,
                         'description': event.description,
@@ -4172,7 +4195,10 @@ async def bulk_create_events(
                         'end_datetime': getattr(event, 'end_datetime', None),
                         'updated_at': None,
                         'interest_count': 0,
-                        'view_count': 0
+                        'view_count': 0,
+                        'lat': lat_rounded,
+                        'lng': lng_rounded,
+                        'created_by': current_user["id"]
                     }
                     
                     # **CRITICAL**: Auto-populate SEO fields just like frontend event creation
@@ -4190,16 +4216,54 @@ async def bulk_create_events(
                         event_dict['slug'] = unique_slug
                         logger.info(f"Bulk import - Generated unique slug for '{event.title}': {unique_slug}")
                     
-                    values = build_event_values_for_insert(event_dict, current_user["id"], lat_rounded, lng_rounded)
+                    # Build INSERT query for only columns that exist in the database
+                    filtered_data = {}
+                    for col in insertable_columns:
+                        if col in event_dict:
+                            filtered_data[col] = event_dict[col]
+                        else:
+                            # Provide sensible defaults for missing fields
+                            if col == 'interest_count':
+                                filtered_data[col] = 0
+                            elif col == 'view_count':
+                                filtered_data[col] = 0
+                            elif col == 'updated_at':
+                                filtered_data[col] = None
+                            elif col == 'frequency':
+                                filtered_data[col] = None
+                            elif col == 'end_time':
+                                filtered_data[col] = None
+                            elif col == 'end_date':
+                                filtered_data[col] = None
+                            else:
+                                filtered_data[col] = None
                     
-                    # For PostgreSQL, use RETURNING to get the ID in one step
+                    # Create INSERT query
+                    columns = list(filtered_data.keys())
+                    values = list(filtered_data.values())
+                    
+                    if placeholder == "?":
+                        placeholders = ', '.join(['?'] * len(columns))
+                    else:
+                        placeholders = ', '.join(['%s'] * len(columns))
+                    
+                    column_list = ', '.join(columns)
+                    
                     if IS_PRODUCTION and DB_URL:
+                        insert_query = f"""
+                            INSERT INTO events ({column_list}) 
+                            VALUES ({placeholders})
+                            RETURNING id
+                        """
                         cursor.execute(insert_query, values)
                         result = cursor.fetchone()
-                        event_id = result['id'] if result else None
+                        event_id = result[0] if result else None
                     else:
-                        # SQLite doesn't support RETURNING, so we use lastrowid
-                        cursor.execute(insert_query.replace(" RETURNING id", ""), values)
+                        insert_query = f"""
+                            INSERT INTO events ({column_list}) 
+                            VALUES ({placeholders})
+                        """
+                        cursor.execute(insert_query, values)
                         event_id = cursor.lastrowid
                     
                     if not event_id:
@@ -4255,83 +4319,81 @@ async def bulk_create_events(
                         })
                         continue
                     
-                    # Convert to dict and process datetime objects
-                    event_dict = dict(event_data)
+                    # Convert to EventResponse format with proper datetime handling
+                    if isinstance(event_data, dict):
+                        # PostgreSQL returns dict-like rows
+                        event_response_data = dict(event_data)
+                    else:
+                        # SQLite returns tuple-like rows - map to dict
+                        column_names = [desc[0] for desc in cursor.description]
+                        event_response_data = dict(zip(column_names, event_data))
                     
-                    # Convert ALL datetime objects to ISO format strings for Pydantic compatibility
-                    from datetime import datetime, timezone
-                    datetime_fields = ['created_at', 'updated_at', 'start_datetime', 'end_datetime']
+                    # Fix datetime fields for response
+                    event_response_data = convert_event_datetime_fields(event_response_data)
                     
-                    for field in datetime_fields:
-                        if field in event_dict and isinstance(event_dict[field], datetime):
-                            event_dict[field] = event_dict[field].isoformat()
-                        elif field in event_dict and event_dict[field] is None:
-                            # For required fields like created_at, use current time if None
-                            if field == 'created_at':
-                                event_dict[field] = datetime.now(timezone.utc).isoformat()
-                            else:
-                                # For optional datetime fields, leave as None
-                                event_dict[field] = None
+                    # Ensure all required fields exist for EventResponse
+                    required_fields = ['id', 'title', 'description', 'date', 'start_time', 'category', 
+                                     'address', 'lat', 'lng', 'recurring', 'created_by', 'created_at']
+                    for field in required_fields:
+                        if field not in event_response_data:
+                            event_response_data[field] = None
                     
-                    # Ensure counters are integers (not None)
-                    event_dict['interest_count'] = event_dict.get('interest_count') or 0
-                    event_dict['view_count'] = event_dict.get('view_count') or 0
+                    # Set default values for optional fields
+                    event_response_data.setdefault('short_description', None)
+                    event_response_data.setdefault('end_time', None)
+                    event_response_data.setdefault('end_date', None)
+                    event_response_data.setdefault('city', None)
+                    event_response_data.setdefault('state', None)
+                    event_response_data.setdefault('country', 'USA')
+                    event_response_data.setdefault('frequency', None)
+                    event_response_data.setdefault('fee_required', None)
+                    event_response_data.setdefault('price', 0.0)
+                    event_response_data.setdefault('currency', 'USD')
+                    event_response_data.setdefault('event_url', None)
+                    event_response_data.setdefault('host_name', None)
+                    event_response_data.setdefault('organizer_url', None)
+                    event_response_data.setdefault('slug', None)
+                    event_response_data.setdefault('is_published', True)
+                    event_response_data.setdefault('start_datetime', None)
+                    event_response_data.setdefault('end_datetime', None)
+                    event_response_data.setdefault('updated_at', None)
+                    event_response_data.setdefault('interest_count', 0)
+                    event_response_data.setdefault('view_count', 0)
                     
-                    created_events.append(event_dict)
+                    created_events.append(EventResponse(**event_response_data))
                     success_count += 1
-                    
                     logger.info(f"Successfully created event: {event.title} (ID: {event_id})")
                     
-                except HTTPException as http_ex:
-                    # Attempt to roll back the transaction
-                    try:
-                        cursor.execute("ROLLBACK")
-                    except:
-                        pass
-                    
-                    error_count += 1
-                    errors.append({
-                        "index": i,
-                        "event_title": event.title,
-                        "error": http_ex.detail
-                    })
-                    
                 except Exception as e:
-                    # Attempt to roll back the transaction
                     try:
                         cursor.execute("ROLLBACK")
                     except:
                         pass
-                    
                     error_count += 1
-                    error_msg = str(e)
+                    logger.error(f"Error creating event {i} ({event.title}): {e}")
                     errors.append({
                         "index": i,
                         "event_title": event.title,
-                        "error": f"Database error: {error_msg}"
+                        "error": str(e)
                     })
-                    logger.error(f"Error creating event {i} ({event.title}): {error_msg}")
             
-            # Clear event cache since new events were created
+            # Clear cache after bulk creating events
             if success_count > 0:
-                event_cache.clear()
+                cache.clear()
                 logger.info(f"Cleared event cache after bulk creating {success_count} events")
             
-            logger.info(f"Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
-            
-            return BulkEventResponse(
-                success_count=success_count,
-                error_count=error_count,
-                errors=errors,
-                created_events=created_events
-            )
-            
     except Exception as e:
-        logger.error(f"Critical error in bulk event creation: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Critical error during bulk event creation: {str(e)}"
-        )
+        logger.error(f"Bulk event creation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Bulk event creation failed: {str(e)}")
+    
+    logger.info(f"Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+    
+    return BulkEventResponse(
+        success_count=success_count,
+        error_count=error_count,
+        errors=errors,
+        created_events=created_events
+    )
 
 @app.get("/debug/database-info")
 async def debug_database_info():
