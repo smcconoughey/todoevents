@@ -6,7 +6,7 @@ import { useEventInteraction } from '../hooks/useEventInteraction';
 import ShareCard from './EventMap/ShareCard';
 import { InterestButton } from './EventMap/InterestButton';
 import { ViewCounter } from './EventMap/ViewCounter';
-import { ExternalLinkWarning } from './EventMap/ExternalLinkWarning';
+import ExternalLinkWarning from './EventMap/ExternalLinkWarning';
 import { getCategory } from './EventMap/categoryConfig';
 
 const EventDetailPage = () => {
