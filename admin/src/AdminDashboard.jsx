@@ -734,11 +734,74 @@ const AdminDashboard = () => {
           "date": "2024-07-30",
           "start_time": "10:00",
           "end_time": "16:00",
-          "category": "other",
+          "category": "community",
           "address": "Central Mall Parking Lot, Denver, CO, USA",
           "lat": 39.7392,
           "lng": -104.9903,
-          "recurring": false
+          "recurring": false,
+          "fee_required": "Free adoption event, $50-150 adoption fees",
+          "event_url": "https://www.denverpetrescue.org/adoption-events",
+          "host_name": "Denver Pet Rescue"
+        },
+        {
+          "title": "Veterans Day Ceremony",
+          "description": "Honor our local veterans with a commemorative ceremony featuring guest speakers, flag presentation, and community recognition.",
+          "date": "2024-11-11",
+          "start_time": "10:00",
+          "end_time": "12:00",
+          "category": "veteran",
+          "address": "Veterans Memorial Park, Phoenix, AZ, USA",
+          "lat": 33.4484,
+          "lng": -112.0740,
+          "recurring": false,
+          "fee_required": "Free public ceremony",
+          "event_url": "",
+          "host_name": "Phoenix Veterans Association"
+        },
+        {
+          "title": "Annual Car Show",
+          "description": "Classic and exotic car showcase featuring over 200 vehicles, awards ceremony, and vendor booths. All makes and models welcome.",
+          "date": "2024-08-15",
+          "start_time": "08:00",
+          "end_time": "16:00",
+          "category": "automotive",
+          "address": "Fairgrounds Expo Center, Miami, FL, USA",
+          "lat": 25.7617,
+          "lng": -80.1918,
+          "recurring": false,
+          "fee_required": "$15 entry, $25 vehicle registration",
+          "event_url": "https://www.miamicarshow.org",
+          "host_name": "Miami Classic Car Club"
+        },
+        {
+          "title": "Thunderbirds Air Show",
+          "description": "Watch the spectacular U.S. Air Force Thunderbirds perform aerial demonstrations and see static aircraft displays.",
+          "date": "2024-09-20",
+          "start_time": "09:00",
+          "end_time": "17:00",
+          "category": "airshows",
+          "address": "Luke Air Force Base, Glendale, AZ, USA",
+          "lat": 33.5347,
+          "lng": -112.3831,
+          "recurring": false,
+          "fee_required": "Free admission, parking $10",
+          "event_url": "https://www.luke.af.mil/airshow",
+          "host_name": "Luke Air Force Base"
+        },
+        {
+          "title": "Graduation Celebration BBQ",
+          "description": "Community graduation celebration honoring all 2024 graduates with BBQ, music, and awards ceremony.",
+          "date": "2024-06-15",
+          "start_time": "15:00",
+          "end_time": "20:00",
+          "category": "graduation",
+          "address": "City Park Pavilion, Boulder, CO, USA",
+          "lat": 40.0150,
+          "lng": -105.2705,
+          "recurring": false,
+          "fee_required": "Free event, bring a side dish to share",
+          "event_url": "",
+          "host_name": "Boulder Community Education Foundation"
         }
       ]
     };
@@ -767,23 +830,57 @@ const AdminDashboard = () => {
       try {
         const jsonData = JSON.parse(jsonInput);
         
+        // Validate JSON structure
+        if (!jsonData.events || !Array.isArray(jsonData.events)) {
+          setBulkError('JSON must contain an "events" array. Please check the template format.');
+          return;
+        }
+
+        if (jsonData.events.length === 0) {
+          setBulkError('Events array is empty. Please add at least one event to import.');
+          return;
+        }
+
+        if (jsonData.events.length > 100) {
+          setBulkError('Too many events. Please limit to 100 events per batch for optimal performance.');
+          return;
+        }
+
+        // Validate required fields for each event
+        const requiredFields = ['title', 'description', 'date', 'start_time', 'category', 'address', 'lat', 'lng'];
+        const validationErrors = [];
+
+        jsonData.events.forEach((event, index) => {
+          const missingFields = requiredFields.filter(field => !event[field]);
+          if (missingFields.length > 0) {
+            validationErrors.push(`Event ${index + 1}: Missing required fields: ${missingFields.join(', ')}`);
+          }
+        });
+
+        if (validationErrors.length > 0) {
+          setBulkError(`Validation errors found:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? '\n...and more' : ''}`);
+          return;
+        }
+        
         const response = await fetchData('/admin/events/bulk', 'POST', jsonData);
         
         if (response) {
           setImportResults(response);
           if (response.success_count > 0) {
-            setSuccess(`Successfully imported ${response.success_count} events!`);
-            setJsonInput(''); // Clear input on success
+            setSuccess(`Successfully imported ${response.success_count} events!${response.error_count > 0 ? ` ${response.error_count} events had errors.` : ''}`);
+            if (response.error_count === 0) {
+              setJsonInput(''); // Clear input only on complete success
+            }
           }
-          if (response.error_count > 0) {
-            setBulkError(`${response.error_count} events failed to import. Check results below.`);
+          if (response.error_count > 0 && response.success_count === 0) {
+            setBulkError(`All ${response.error_count} events failed to import. Check errors below.`);
           }
         }
       } catch (error) {
         if (error instanceof SyntaxError) {
-          setBulkError('Invalid JSON format. Please check your JSON syntax.');
+          setBulkError('Invalid JSON format. Please check your JSON syntax and ensure all quotes and brackets are properly closed.');
         } else {
-          setBulkError('Failed to import events: ' + (error.message || 'Unknown error'));
+          setBulkError('Failed to import events: ' + (error.message || 'Unknown error occurred. Please try again.'));
         }
       } finally {
         setIsLoading(false);
@@ -804,13 +901,15 @@ const AdminDashboard = () => {
           {/* Success/Error Messages */}
           {success && (
             <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-              {success}
+              <div className="font-medium mb-1">✅ Import Completed</div>
+              <div>{success}</div>
             </div>
           )}
           
           {bulkError && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {bulkError}
+              <div className="font-medium mb-1">❌ Import Error</div>
+              <pre className="whitespace-pre-wrap text-sm">{bulkError}</pre>
             </div>
           )}
           
@@ -843,33 +942,49 @@ const AdminDashboard = () => {
             )}
             
             <div className="mt-3 text-sm text-gray-600">
-              <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
-              <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency, fee_required, event_url, host_name</p>
-              <p><strong>UX Enhancement fields:</strong></p>
-              <ul className="ml-4 list-disc text-xs">
-                <li><strong>fee_required:</strong> Ticket/fee information (e.g., "Free admission", "$10 entry")</li>
-                <li><strong>event_url:</strong> External website URL for registration or details</li>
-                <li><strong>host_name:</strong> Organization or host name</li>
-              </ul>
-              <p><strong>Valid categories:</strong> food-drink, music, arts, sports, community, networking, education, automotive, airshows, vehicle-sports, religious, veteran, cookout, graduation</p>
-              <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
-              <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
-              <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
+                  <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency, fee_required, event_url, host_name</p>
+                  <p><strong>UX Enhancement fields:</strong></p>
+                  <ul className="ml-4 list-disc text-xs">
+                    <li><strong>fee_required:</strong> Ticket/fee information (e.g., "Free admission", "$10 entry")</li>
+                    <li><strong>event_url:</strong> External website URL for registration or details</li>
+                    <li><strong>host_name:</strong> Organization or host name</li>
+                  </ul>
+                </div>
+                <div>
+                  <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, graduation, networking</p>
+                  <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
+                  <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
+                  <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
+                  <p><strong>Batch size:</strong> Maximum 100 events per import for optimal performance</p>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* JSON Input */}
-          <div className="space-y-4">
+                      <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                JSON Data (Paste your event data here)
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  JSON Data (Paste your event data here)
+                </label>
+                <div className="text-xs text-gray-500">
+                  {jsonInput.length > 0 && `${jsonInput.length} characters`}
+                </div>
+              </div>
               <textarea
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
-                className="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                className="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-y"
                 placeholder="Paste your JSON data here or use the template above..."
+                spellCheck="false"
               />
+              <div className="mt-1 text-xs text-gray-500">
+                💡 Tip: Use the "Copy Template" button above to get started with proper formatting
+              </div>
             </div>
 
             <div className="flex space-x-4">
