@@ -4527,29 +4527,43 @@ async def get_event_share_card(event_id: int):
 
 @app.post("/api/seo/migrate-events")
 async def migrate_events_for_seo(background_tasks: BackgroundTasks):
-    """Trigger SEO migration for existing events"""
+    """Trigger production SEO migration for existing events"""
     
     def run_migration():
         try:
-            import subprocess
-            result = subprocess.run(
-                ["python", "migrate_seo_schema.py"], 
-                capture_output=True, 
-                text=True,
-                cwd=os.path.dirname(__file__)
-            )
-            logger.info(f"SEO migration result: {result.stdout}")
-            if result.stderr:
-                logger.error(f"SEO migration errors: {result.stderr}")
+            from production_seo_migration import migrate_production_seo_fields
+            result = migrate_production_seo_fields()
+            logger.info(f"Production SEO migration completed: {result}")
         except Exception as e:
-            logger.error(f"SEO migration failed: {e}")
+            logger.error(f"Production SEO migration failed: {e}")
     
     background_tasks.add_task(run_migration)
     
     return {
-        "message": "SEO migration started in background",
-        "status": "processing"
+        "message": "Production SEO migration started in background",
+        "status": "processing",
+        "info": "Processing all existing events to populate missing SEO fields including slugs"
     }
+
+@app.post("/api/seo/migrate-events-sync")
+async def migrate_events_for_seo_sync():
+    """Execute production SEO migration synchronously with real-time results"""
+    try:
+        from production_seo_migration import migrate_production_seo_fields
+        result = migrate_production_seo_fields()
+        
+        return {
+            "success": True,
+            "message": "Production SEO migration completed successfully",
+            "result": result
+        }
+        
+    except Exception as e:
+        logger.error(f"Production SEO migration failed: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Migration failed: {str(e)}"
+        )
 
 @app.get("/api/seo/sitemap/events")
 async def get_events_sitemap():

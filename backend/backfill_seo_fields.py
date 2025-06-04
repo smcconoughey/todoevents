@@ -69,7 +69,9 @@ def backfill_seo_fields():
                 
                 # Extract city/state if missing
                 if not event_dict.get('city') or not event_dict.get('state'):
-                    city, state = extract_city_state_enhanced(event_dict['address'])
+                    location_data = extract_city_state_enhanced(event_dict['address'])
+                    city = location_data.get('city')
+                    state = location_data.get('state')
                     if city and not event_dict.get('city'):
                         updates['city'] = city
                         print(f"  🏙️ Extracted city: {city}")
