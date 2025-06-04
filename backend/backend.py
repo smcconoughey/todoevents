@@ -11,6 +11,14 @@ from enum import Enum
 import asyncio
 import threading
 
+# Import SEO utilities
+try:
+    from seo_utils import SEOEventProcessor, generate_event_json_ld, generate_seo_metadata, slugify
+except ImportError:
+    print("⚠️ SEO utilities not available - install seo_utils.py for full SEO features")
+    def slugify(text): return text.lower().replace(' ', '-')
+    SEOEventProcessor = None
+
 import uvicorn
 from dotenv import load_dotenv
 
@@ -1198,20 +1206,31 @@ class PasswordValidator:
 class EventBase(BaseModel):
     title: str
     description: str
+    short_description: Optional[str] = None
     date: str
     start_time: str
     end_time: Optional[str] = None
     end_date: Optional[str] = None
     category: str
     address: str
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = "USA"
     lat: float
     lng: float
     recurring: bool = False
     frequency: Optional[str] = None
-    # New optional fields for enhanced UX
+    # Pricing fields
     fee_required: Optional[str] = None  # Details about tickets/fees
+    price: Optional[float] = 0.0        # Normalized price
+    currency: Optional[str] = "USD"     # Currency code
+    # Organization fields
     event_url: Optional[str] = None     # External event URL
     host_name: Optional[str] = None     # Organization/host name
+    organizer_url: Optional[str] = None # Organizer website
+    # SEO fields
+    slug: Optional[str] = None          # URL-friendly slug
+    is_published: Optional[bool] = True # Publication status
 
     @validator('date')
     def validate_date(cls, v):
@@ -1315,6 +1334,9 @@ class EventResponse(EventBase):
     id: int
     created_by: int
     created_at: str
+    updated_at: Optional[str] = None
+    start_datetime: Optional[str] = None
+    end_datetime: Optional[str] = None
     interest_count: Optional[int] = 0
     view_count: Optional[int] = 0
 
@@ -4157,3 +4179,268 @@ def sanitize_ux_field(value):
     result = value if value is not None else ""
     logger.info(f"sanitize_ux_field returning: {result!r} (type: {type(result)})")
     return result
+
+# ===== SEO ENDPOINTS =====
+
+@app.get("/api/seo/events/{event_id}")
+async def get_event_seo_data(event_id: int):
+    """Get complete SEO data package for event"""
+    
+    if not SEOEventProcessor:
+        raise HTTPException(status_code=501, detail="SEO utilities not available")
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        # Get event with all SEO fields
+        cursor.execute('''
+            SELECT 
+                id, title, slug, description, short_description,
+                date, start_time, end_time, end_date,
+                start_datetime, end_datetime,
+                category, address, city, state, country,
+                lat, lng, price, currency, fee_required,
+                event_url, host_name, organizer_url,
+                created_by, created_at, updated_at,
+                interest_count, view_count, is_published
+            FROM events 
+            WHERE id = ? AND is_published = 1
+        ''', (event_id,))
+        
+        event_row = cursor.fetchone()
+        if not event_row:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        # Convert to dict
+        event_dict = dict(event_row)
+        
+        # Generate SEO data
+        processor = SEOEventProcessor(base_url="https://todo-events.com")
+        seo_data = processor.generate_full_seo_data(event_dict)
+        
+        return seo_data
+
+@app.get("/api/seo/events/by-slug/{slug}")
+async def get_event_by_slug(slug: str):
+    """Get event data by SEO slug"""
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                id, title, slug, description, short_description,
+                date, start_time, end_time, end_date,
+                start_datetime, end_datetime,
+                category, address, city, state, country,
+                lat, lng, price, currency, fee_required,
+                event_url, host_name, organizer_url,
+                created_by, created_at, updated_at,
+                interest_count, view_count, is_published
+            FROM events 
+            WHERE slug = ? AND is_published = 1
+        ''', (slug,))
+        
+        event_row = cursor.fetchone()
+        if not event_row:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        event_dict = dict(event_row)
+        return event_dict
+
+@app.get("/api/seo/events/location/{state}/{city}")
+async def get_events_by_location(
+    state: str, 
+    city: str,
+    limit: int = 20,
+    offset: int = 0
+):
+    """Get events by state and city for geographic SEO"""
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                id, title, slug, description, short_description,
+                date, start_time, end_time, start_datetime, end_datetime,
+                category, address, city, state, country,
+                lat, lng, price, currency,
+                host_name, interest_count, view_count
+            FROM events 
+            WHERE LOWER(state) = ? 
+            AND LOWER(city) = ? 
+            AND is_published = 1
+            AND date >= date('now')
+            ORDER BY date ASC, start_time ASC
+            LIMIT ? OFFSET ?
+        ''', (state.lower(), city.lower(), limit, offset))
+        
+        events = [dict(row) for row in cursor.fetchall()]
+        
+        # Get total count
+        cursor.execute('''
+            SELECT COUNT(*) FROM events 
+            WHERE LOWER(state) = ? 
+            AND LOWER(city) = ? 
+            AND is_published = 1
+            AND date >= date('now')
+        ''', (state.lower(), city.lower()))
+        
+        total = cursor.fetchone()[0]
+        
+        return {
+            "events": events,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "location": {
+                "city": city.title(),
+                "state": state.upper(),
+                "slug": f"{state.lower()}/{city.lower()}"
+            }
+        }
+
+@app.get("/api/events/{event_id}/share-card")
+async def get_event_share_card(event_id: int):
+    """Generate auto-generated share card for social media"""
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT title, description, date, start_time, city, state, category
+            FROM events 
+            WHERE id = ? AND is_published = 1
+        ''', (event_id,))
+        
+        event_row = cursor.fetchone()
+        if not event_row:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        event_dict = dict(event_row)
+        
+        # For now, return JSON data that could be used to generate an image
+        # In a full implementation, this would generate an actual image
+        return {
+            "title": event_dict["title"],
+            "date": event_dict["date"],
+            "time": event_dict["start_time"],
+            "location": f"{event_dict.get('city', '')}, {event_dict.get('state', '')}".strip(', '),
+            "category": event_dict["category"],
+            "description": event_dict["description"][:100] + "..." if len(event_dict["description"]) > 100 else event_dict["description"],
+            "generated_url": f"https://todo-events.com/api/events/{event_id}/share-card",
+            "type": "auto_generated_share_card"
+        }
+
+@app.post("/api/seo/migrate-events")
+async def migrate_events_for_seo(background_tasks: BackgroundTasks):
+    """Trigger SEO migration for existing events"""
+    
+    def run_migration():
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["python", "migrate_seo_schema.py"], 
+                capture_output=True, 
+                text=True,
+                cwd=os.path.dirname(__file__)
+            )
+            logger.info(f"SEO migration result: {result.stdout}")
+            if result.stderr:
+                logger.error(f"SEO migration errors: {result.stderr}")
+        except Exception as e:
+            logger.error(f"SEO migration failed: {e}")
+    
+    background_tasks.add_task(run_migration)
+    
+    return {
+        "message": "SEO migration started in background",
+        "status": "processing"
+    }
+
+@app.get("/api/seo/sitemap/events")
+async def get_events_sitemap():
+    """Get sitemap XML for events with proper SEO URLs"""
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT slug, city, state, updated_at, date
+            FROM events 
+            WHERE is_published = 1 
+            AND slug IS NOT NULL
+            AND date >= date('now', '-30 days')
+            ORDER BY updated_at DESC
+        ''')
+        
+        events = cursor.fetchall()
+        
+        # Generate sitemap XML
+        sitemap_entries = []
+        for event in events:
+            slug, city, state, updated_at, event_date = event
+            
+            # Generate URL based on location
+            if city and state:
+                url = f"https://todo-events.com/us/{state.lower()}/{slugify(city)}/events/{slug}"
+            else:
+                url = f"https://todo-events.com/events/{slug}"
+            
+            # Use updated_at or event date for lastmod
+            lastmod = updated_at or event_date
+            
+            sitemap_entries.append({
+                "url": url,
+                "lastmod": lastmod,
+                "changefreq": "weekly",
+                "priority": "0.8"
+            })
+        
+        return {
+            "entries": sitemap_entries,
+            "count": len(sitemap_entries),
+            "generated_at": datetime.now().isoformat()
+        }
+
+@app.get("/api/seo/validate/{event_id}")
+async def validate_event_seo(event_id: int):
+    """Validate event SEO completeness"""
+    
+    if not SEOEventProcessor:
+        return {"error": "SEO utilities not available"}
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                id, title, slug, description, short_description,
+                date, start_time, end_time, category, address, 
+                city, state, lat, lng, host_name, is_published
+            FROM events 
+            WHERE id = ?
+        ''', (event_id,))
+        
+        event_row = cursor.fetchone()
+        if not event_row:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        event_dict = dict(event_row)
+        
+        # Import validation function
+        from seo_utils import validate_event_data
+        issues = validate_event_data(event_dict)
+        
+        return {
+            "event_id": event_id,
+            "is_seo_ready": len(issues) == 0,
+            "issues": issues,
+            "suggestions": [
+                "Add missing required fields",
+                "Generate SEO slug if missing", 
+                "Add geographic information",
+                "Include host/organizer details"
+            ] if issues else ["Event is SEO-ready!"]
+        }
