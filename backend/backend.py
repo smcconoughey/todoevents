@@ -2103,12 +2103,20 @@ async def read_event(event_id: int):
 def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
     """Ensure slug uniqueness by appending event ID if needed"""
     try:
+        # Use database-agnostic placeholder
+        placeholder = get_placeholder()
+        
         # Check if slug already exists
         if event_id:
             # For updates, exclude current event from check
-            cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ? AND id != ?", (base_slug, event_id))
+            if placeholder == "?":
+                # SQLite style
+                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = {placeholder} AND id != {placeholder}", (base_slug, event_id))
+            else:
+                # PostgreSQL style
+                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = {placeholder} AND id != %s", (base_slug, event_id))
         else:
-            cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ?", (base_slug,))
+            cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = {placeholder}", (base_slug,))
         
         count = cursor.fetchone()[0]
         

@@ -123,6 +123,7 @@ Duplicates are detected using:
 Each imported event automatically gets:
 - **URL-friendly slug generation** - Creates SEO-friendly URLs like `/e/coffee-competition-orlando`
 - **Unique slug enforcement** - Handles duplicates with ID suffixes like `/e/coffee-competition-orlando-175`
+- **Database compatibility** - Works correctly with both PostgreSQL (production) and SQLite (local)
 - **City/state extraction** - Automatically parses address to extract location data
 - **Price normalization** - Converts fee descriptions to structured pricing data
 - **Short description generation** - Creates 160-character previews for search engines
