@@ -799,18 +799,18 @@ class AutomatedTaskManager:
                     # PostgreSQL
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
-                               address, lat, lng, created_at
+                               address, lat, lng, created_at, slug, is_published
                         FROM events 
-                        WHERE date >= CURRENT_DATE
+                        WHERE date >= CURRENT_DATE AND is_published = 1
                         ORDER BY date, start_time
                     """)
                 else:
                     # SQLite
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
-                               address, lat, lng, created_at
+                               address, lat, lng, created_at, slug, is_published
                         FROM events 
-                        WHERE date >= date('now')
+                        WHERE date >= date('now') AND is_published = 1
                         ORDER BY date, start_time
                     """)
                 return [dict(row) for row in c.fetchall()]
@@ -869,10 +869,25 @@ class AutomatedTaskManager:
     <priority>{priority}</priority>
   </url>'''
         
-        # Add individual event pages
+        # Add individual event pages with SEO-friendly URLs
         for event in events[:100]:  # Limit to avoid huge sitemaps
-            event_date = event.get('date', current_date)
-            sitemap += f'''
+            # Check if event has a slug for SEO-friendly URL
+            if event.get('slug'):
+                event_url = f"{domain}/e/{event['slug']}"
+                event_date = event.get('date', current_date)
+                priority = '0.7'  # Higher priority for SEO pages
+                
+                sitemap += f'''
+  <url>
+    <loc>{event_url}</loc>
+    <lastmod>{event_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>{priority}</priority>
+  </url>'''
+            else:
+                # Fallback to query parameter URL for events without slugs
+                event_date = event.get('date', current_date)
+                sitemap += f'''
   <url>
     <loc>{domain}/?event={event['id']}</loc>
     <lastmod>{event_date}</lastmod>
@@ -1209,7 +1224,7 @@ class EventBase(BaseModel):
     short_description: Optional[str] = None
     date: str
     start_time: str
-    end_time: Optional[str] = None
+    end_time: str
     end_date: Optional[str] = None
     category: str
     address: str
@@ -2085,6 +2100,35 @@ async def read_event(event_id: int):
         logger.error(f"Error retrieving event {event_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving event")
 
+def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
+    """Ensure slug uniqueness by appending event ID if needed"""
+    try:
+        # Check if slug already exists
+        if event_id:
+            # For updates, exclude current event from check
+            cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ? AND id != ?", (base_slug, event_id))
+        else:
+            cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ?", (base_slug,))
+        
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            # Slug exists, append a number or event ID
+            if event_id:
+                return f"{base_slug}-{event_id}"
+            else:
+                # For new events, append a timestamp-based suffix
+                import time
+                suffix = str(int(time.time()))[-4:]  # Last 4 digits of timestamp
+                return f"{base_slug}-{suffix}"
+        else:
+            return base_slug
+    except Exception as e:
+        logger.error(f"Error ensuring unique slug: {e}")
+        # Fallback: append current timestamp
+        import time
+        return f"{base_slug}-{int(time.time())}"
+
 def auto_populate_seo_fields(event_data: dict) -> dict:
     """Auto-populate SEO fields for new events using enhanced logic"""
     import re
@@ -2174,7 +2218,7 @@ def auto_populate_seo_fields(event_data: dict) -> dict:
         return 0.0
     
     def build_datetimes_local(date_str, start_time_str, end_time_str, end_date_str=None):
-        """Enhanced datetime building"""
+        """Enhanced datetime building with end_time inference"""
         if not date_str or not start_time_str:
             return None, None
         
@@ -2182,13 +2226,22 @@ def auto_populate_seo_fields(event_data: dict) -> dict:
             # Build start datetime
             start_dt_str = f"{date_str}T{start_time_str}:00"
             
-            # Build end datetime
-            end_dt_str = None
-            if end_time_str:
-                if end_date_str:
-                    end_dt_str = f"{end_date_str}T{end_time_str}:00"
-                else:
-                    end_dt_str = f"{date_str}T{end_time_str}:00"
+            # Build end datetime - ensure we always have an end_time
+            if not end_time_str:
+                # Infer end_time as 2 hours after start_time
+                from datetime import datetime, timedelta
+                try:
+                    start_time_obj = datetime.strptime(start_time_str, "%H:%M")
+                    end_time_obj = start_time_obj + timedelta(hours=2)
+                    end_time_str = end_time_obj.strftime("%H:%M")
+                except:
+                    end_time_str = "18:00"  # fallback
+            
+            # Now build the end datetime string
+            if end_date_str:
+                end_dt_str = f"{end_date_str}T{end_time_str}:00"
+            else:
+                end_dt_str = f"{date_str}T{end_time_str}:00"
             
             return start_dt_str, end_dt_str
         except Exception:
@@ -2216,7 +2269,8 @@ def auto_populate_seo_fields(event_data: dict) -> dict:
     
     # Generate slug
     city = event_data.get('city', '') or ''
-    event_data['slug'] = slugify_local(event_data.get('title', ''), city)
+    base_slug = slugify_local(event_data.get('title', ''), city)
+    event_data['slug'] = base_slug  # Will be made unique later if needed
     
     # Extract city/state from address
     if not event_data.get('city') or not event_data.get('state'):
@@ -2316,6 +2370,13 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                         status_code=409, 
                         detail="An event with these details already exists at this location and time"
                     )
+                
+                # Ensure unique slug before inserting
+                base_slug = event_data.get('slug', '')
+                if base_slug:
+                    unique_slug = ensure_unique_slug(cursor, base_slug)
+                    event_data['slug'] = unique_slug
+                    logger.info(f"Generated unique slug: {unique_slug}")
                 
                 # Use centralized schema and helper to generate INSERT query and values
                 from database_schema import generate_insert_query
@@ -2474,6 +2535,13 @@ async def update_event(
                     current_user['role'] != UserRole.ADMIN):
                     cursor.execute("ROLLBACK")
                     raise HTTPException(status_code=403, detail="Not authorized to update this event")
+                
+                # Ensure unique slug before updating
+                base_slug = event_data.get('slug', '')
+                if base_slug:
+                    unique_slug = ensure_unique_slug(cursor, base_slug, event_id)
+                    event_data['slug'] = unique_slug
+                    logger.info(f"Generated unique slug for update: {unique_slug}")
                 
                 # Use centralized schema and helper for UPDATE
                 from database_schema import generate_update_query, EVENT_FIELDS

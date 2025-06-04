@@ -189,6 +189,19 @@ const CreateEventForm = ({
       setError('Please select an event start time');
       return false;
     }
+    if (!formData.end_time) {
+      setError('Please select an event end time');
+      return false;
+    }
+    // Validate end_time is after start_time (if same day)
+    if (isSameDay && formData.start_time && formData.end_time) {
+      const startTime = new Date(`2000-01-01T${formData.start_time}`);
+      const endTime = new Date(`2000-01-01T${formData.end_time}`);
+      if (endTime <= startTime) {
+        setError('End time must be after start time');
+        return false;
+      }
+    }
     if (selectedDate < now) {
       setError('Event cannot be scheduled in the past');
       return false;
@@ -443,13 +456,14 @@ const CreateEventForm = ({
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-themed-secondary">
-                  End Time <span className="text-themed-muted">(optional)</span>
+                  End Time
                 </label>
                 <Input
                   type="time"
                   value={formData.end_time}
                   onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
                   className="input-themed h-8 text-sm"
+                  required
                 />
               </div>
             </div>

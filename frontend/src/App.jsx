@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './components/EventMap/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
 import EventMap from './components/EventMap';
 import HostsPage from './components/HostsPage';
 import EventCreatorPage from './components/EventCreatorPage';
+import EventDetailPage from './components/EventDetailPage';
 import WelcomePopup from './components/WelcomePopup';
 import { initGoogleMaps } from './googleMapsLoader';
 import { testApiUrl } from './config';
@@ -124,16 +126,19 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<EventMap mapsLoaded={mapsLoaded} />} />
-          <Route path="/hosts" element={<HostsPage />} />
-          <Route path="/creators" element={<EventCreatorPage />} />
-        </Routes>
-        <WelcomePopup />
-      </AuthProvider>
-    </ThemeProvider>
+    <HelmetProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            <Route path="/hosts" element={<HostsPage />} />
+            <Route path="/creators" element={<EventCreatorPage />} />
+            <Route path="/e/:slug" element={<EventDetailPage />} />
+          </Routes>
+          <WelcomePopup />
+        </AuthProvider>
+      </ThemeProvider>
+    </HelmetProvider>
   );
 }
 

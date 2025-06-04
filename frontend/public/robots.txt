@@ -32,10 +32,13 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /backend/
 
-# Allow important directories
+# Allow important directories and pages
 Allow: /images/
 Allow: /favicon.ico
 Allow: /sitemap.xml
+Allow: /e/
+Allow: /hosts
+Allow: /creators
 
 # Sitemap location
 Sitemap: https://todo-events.com/sitemap.xml

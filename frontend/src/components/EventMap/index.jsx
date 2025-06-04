@@ -432,6 +432,17 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             {/* Add event interaction components to the details panel */}
             <EventInteractionComponents eventId={String(event.id)} />
             
+            {/* View Full Details Button */}
+            <div className="pt-4 border-t border-white/10">
+              <Button
+                onClick={() => window.open(`/e/${event.slug}`, '_blank')}
+                className="w-full bg-pin-blue hover:bg-pin-blue/80 text-white font-medium transition-all duration-200 hover:scale-[1.02]"
+              >
+                View Full Details
+                <ExternalLink className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+            
             {user && (user.id === event.created_by || user.role === 'admin') && (
               <div className="pt-4 space-y-3 border-t border-white/10">
                 <Button
@@ -953,7 +964,13 @@ const EventMap = ({ mapsLoaded = false }) => {
     return true;
   });
 
-  const handleEventClick = (event) => {
+  const handleEventClick = (event, openInNewTab = false) => {
+    // If opening in new tab or user specifically wants the detail page
+    if (openInNewTab) {
+      window.open(`/e/${event.slug}`, '_blank');
+      return;
+    }
+
     setSelectedEvent(event);
     
     if (activeView === 'list') {
