@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ThemeContext } from "../ThemeContext";
 import { AuthContext } from "./AuthContext";
 import CreateEventForm from "./CreateEventForm";
@@ -638,6 +639,8 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
 
 
 const EventMap = ({ mapsLoaded = false }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, token, logout } = useContext(AuthContext);
   const { theme } = useContext(ThemeContext);
 
@@ -689,7 +692,7 @@ const EventMap = ({ mapsLoaded = false }) => {
     setSelectedDate(null);
     setSelectedTime('all');
     setSelectedCategory(['all']);
-    setSelectedEvent(null);
+    handleCloseEventDetails(); // Use helper to also restore URL
     setMiscFilters({
       feeFilter: 'all'
     });
@@ -826,6 +829,19 @@ const EventMap = ({ mapsLoaded = false }) => {
       localStorage.setItem('hasSeenFirstTimeSignIn', 'true');
     }
   }, [user]);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      // If we're back to the home page, clear selected event
+      if (location.pathname === '/') {
+        setSelectedEvent(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [location.pathname]);
 
   // Handle URL parameters for event deep linking and create trigger
   useEffect(() => {
@@ -964,6 +980,13 @@ const EventMap = ({ mapsLoaded = false }) => {
     return true;
   });
 
+  // Helper function to close event details and restore URL
+  const handleCloseEventDetails = () => {
+    setSelectedEvent(null);
+    // Restore URL to home page
+    window.history.replaceState(null, '', '/');
+  };
+
   const handleEventClick = (event, openInNewTab = false) => {
     // If opening in new tab or user specifically wants the detail page
     if (openInNewTab) {
@@ -972,6 +995,15 @@ const EventMap = ({ mapsLoaded = false }) => {
     }
 
     setSelectedEvent(event);
+    
+    // Update the browser URL to reflect the event being viewed
+    if (event.slug) {
+      // Use replaceState to update URL without adding to history
+      window.history.replaceState(null, '', `/e/${event.slug}`);
+    } else {
+      // Fallback to old format for events without slugs
+      window.history.replaceState(null, '', `/?event=${event.id}`);
+    }
     
     if (activeView === 'list') {
       setActiveView('map');
@@ -1095,7 +1127,7 @@ const EventMap = ({ mapsLoaded = false }) => {
       });
 
       await fetchEvents();
-      setSelectedEvent(null);
+      handleCloseEventDetails(); // Use helper to also restore URL
     } catch (error) {
       console.error('Error deleting event:', error);
       if (error.message && error.message.includes('401')) {
@@ -1353,7 +1385,15 @@ const EventMap = ({ mapsLoaded = false }) => {
 
   // Copy event link
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/?event=${selectedEvent.id}`;
+    // Generate URL using the new slug format, with fallback to old format if no slug
+    let url;
+    if (selectedEvent.slug) {
+      url = `${window.location.origin}/e/${selectedEvent.slug}`;
+    } else {
+      // Fallback to old format for events without slugs
+      url = `${window.location.origin}/?event=${selectedEvent.id}`;
+    }
+    
     navigator.clipboard.writeText(url);
     setDownloadStatus('Link copied!');
     setTimeout(() => setDownloadStatus(''), 1500);
@@ -1557,7 +1597,13 @@ const EventMap = ({ mapsLoaded = false }) => {
         }
 
         // Open Facebook with event URL and helpful text
-        const eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
+        // Generate URL using the new slug format, with fallback to old format
+        let eventUrl;
+        if (selectedEvent.slug) {
+          eventUrl = `${window.location.origin}/e/${selectedEvent.slug}`;
+        } else {
+          eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
+        }
         const encodedUrl = encodeURIComponent(eventUrl);
         const shareText = encodeURIComponent(`Check out this amazing event: ${selectedEvent.title}!\n\n📅 ${selectedEvent.date} at ${selectedEvent.time}\n📍 ${selectedEvent.address}\n\n${selectedEvent.description}\n\nFind more local events at todo-events.com`);
         
@@ -1580,7 +1626,13 @@ const EventMap = ({ mapsLoaded = false }) => {
     } catch (error) {
       console.error('Facebook share error:', error);
       // Fallback to simple URL sharing
-      const url = encodeURIComponent(`${window.location.origin}/?event=${selectedEvent.id}`);
+      let fallbackUrl;
+      if (selectedEvent.slug) {
+        fallbackUrl = `${window.location.origin}/e/${selectedEvent.slug}`;
+      } else {
+        fallbackUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
+      }
+      const url = encodeURIComponent(fallbackUrl);
       const shareText = encodeURIComponent(`Check out this event: ${selectedEvent.title}!`);
       window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${shareText}`, '_blank');
       setDownloadStatus('❌ Facebook opened. Use "Download Image" button to get the image separately.');
@@ -3021,7 +3073,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <EventDetailsPanel
                     event={selectedEvent}
                     user={user}
-                    onClose={() => setSelectedEvent(null)}
+                    onClose={handleCloseEventDetails}
                     onEdit={() => {
                       setEditingEvent(selectedEvent);
                       setIsCreateFormOpen(true);
@@ -3098,7 +3150,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0"
-                onClick={() => setSelectedEvent(null)}
+                onClick={handleCloseEventDetails}
               >
                 <X className="h-4 w-4" />
               </Button>
