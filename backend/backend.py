@@ -2057,12 +2057,13 @@ async def read_event(event_id: int):
     try:
         with get_db() as conn:
             c = conn.cursor()
-            # Use COALESCE to handle NULL values and include UX fields
-            c.execute(f"""SELECT id, title, description, date, start_time, end_time, end_date, 
-                         category, address, lat, lng, recurring, frequency, created_by, created_at,
+            # Use COALESCE to handle NULL values and include all fields
+            c.execute(f"""SELECT id, title, description, short_description, date, start_time, end_time, end_date, 
+                         category, address, city, state, country, lat, lng, recurring, frequency, created_by, created_at,
                          COALESCE(interest_count, 0) as interest_count,
                          COALESCE(view_count, 0) as view_count,
-                         fee_required, event_url, host_name
+                         fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
+                         start_datetime, end_datetime, updated_at
                          FROM events WHERE id = {placeholder}""", (event_id,))
             event = c.fetchone()
             
@@ -2072,13 +2073,8 @@ async def read_event(event_id: int):
             # Convert to dict and handle datetime fields
             event_dict = dict(event)
             
-            # Convert datetime to string for serialization
-            if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
-                event_dict['created_at'] = event_dict['created_at'].isoformat()
-            
-            # Ensure counters are integers (not None)
-            event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
-            event_dict['view_count'] = event_dict.get('view_count', 0) or 0
+            # Convert datetime objects and ensure proper field types
+            event_dict = convert_event_datetime_fields(event_dict)
             
             return event_dict
             
@@ -2320,53 +2316,12 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                         detail="An event with these details already exists at this location and time"
                     )
                 
-                # Insert the new event with all SEO fields
-                insert_query = f"""
-                    INSERT INTO events (
-                        title, description, short_description, date, start_time, end_time, end_date, 
-                        category, address, city, state, country, lat, lng, recurring, frequency,
-                        fee_required, price, currency, event_url, host_name, organizer_url,
-                        slug, is_published, start_datetime, end_datetime, updated_at,
-                        created_by, interest_count, view_count
-                    ) VALUES (
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, 0, 0
-                    ) RETURNING id
-                """
+                # Use centralized schema and helper to generate INSERT query and values
+                from database_schema import generate_insert_query
+                from event_data_builder import build_event_values_for_insert
                 
-                values = (
-                    event_data['title'].strip(), 
-                    event_data['description'].strip(), 
-                    event_data.get('short_description', ''),
-                    event_data['date'],
-                    event_data['start_time'], 
-                    event_data.get('end_time'),
-                    event_data.get('end_date'),
-                    event_data['category'], 
-                    event_data['address'].strip(),
-                    event_data.get('city'),
-                    event_data.get('state'),
-                    event_data.get('country', 'USA'),
-                    lat_rounded, 
-                    lng_rounded, 
-                    event_data.get('recurring', False),
-                    event_data.get('frequency'), 
-                    event_data.get('fee_required'),
-                    event_data.get('price', 0.0),
-                    event_data.get('currency', 'USD'),
-                    event_data.get('event_url'),
-                    event_data.get('host_name'),
-                    event_data.get('organizer_url'),
-                    event_data.get('slug'),
-                    event_data.get('is_published', True),
-                    event_data.get('start_datetime'),
-                    event_data.get('end_datetime'),
-                    event_data.get('updated_at'),
-                    current_user["id"]
-                )
+                insert_query = generate_insert_query(returning_id=True)
+                values = build_event_values_for_insert(event_data, current_user["id"], lat_rounded, lng_rounded)
                 
                 # For PostgreSQL, use RETURNING to get the ID in one step
                 if IS_PRODUCTION and DB_URL:
@@ -2397,15 +2352,8 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Convert to dict and process datetime objects
                 event_dict = dict(created_event_data)
                 
-                # Convert datetime objects to ISO format strings
-                if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
-                    event_dict['created_at'] = event_dict['created_at'].isoformat()
-                if 'updated_at' in event_dict and isinstance(event_dict['updated_at'], datetime):
-                    event_dict['updated_at'] = event_dict['updated_at'].isoformat()
-                
-                # Ensure counters are integers
-                event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
-                event_dict['view_count'] = event_dict.get('view_count', 0) or 0
+                # Convert datetime objects and ensure proper field types
+                event_dict = convert_event_datetime_fields(event_dict)
                 
                 # Clear event cache since a new event was created
                 event_cache.clear()
@@ -2520,33 +2468,14 @@ async def update_event(
                     cursor.execute("ROLLBACK")
                     raise HTTPException(status_code=403, detail="Not authorized to update this event")
                 
-                # Prepare comprehensive update query with all SEO fields
-                query = f"""
-                    UPDATE events 
-                    SET title={placeholder}, description={placeholder}, short_description={placeholder}, 
-                        date={placeholder}, start_time={placeholder}, end_time={placeholder}, end_date={placeholder}, 
-                        category={placeholder}, address={placeholder}, city={placeholder}, state={placeholder}, 
-                        country={placeholder}, lat={placeholder}, lng={placeholder}, recurring={placeholder}, 
-                        frequency={placeholder}, fee_required={placeholder}, price={placeholder}, currency={placeholder},
-                        event_url={placeholder}, host_name={placeholder}, organizer_url={placeholder},
-                        slug={placeholder}, is_published={placeholder}, start_datetime={placeholder}, 
-                        end_datetime={placeholder}, updated_at={placeholder}
-                    WHERE id={placeholder}
-                """
-                values = (
-                    event_data['title'], event_data['description'], event_data.get('short_description', ''),
-                    event_data['date'], event_data['start_time'], event_data.get('end_time'), 
-                    event_data.get('end_date'), event_data['category'], event_data['address'], 
-                    event_data.get('city'), event_data.get('state'), event_data.get('country', 'USA'),
-                    event_data['lat'], event_data['lng'], event_data.get('recurring', False), 
-                    event_data.get('frequency'), event_data.get('fee_required'), 
-                    event_data.get('price', 0.0), event_data.get('currency', 'USD'),
-                    event_data.get('event_url'), event_data.get('host_name'), 
-                    event_data.get('organizer_url'), event_data.get('slug'), 
-                    event_data.get('is_published', True), event_data.get('start_datetime'), 
-                    event_data.get('end_datetime'), event_data.get('updated_at'),
-                    event_id
-                )
+                # Use centralized schema and helper for UPDATE
+                from database_schema import generate_update_query, EVENT_FIELDS
+                from event_data_builder import build_event_values_for_update
+                
+                update_fields = [field[0] for field in EVENT_FIELDS 
+                               if field[0] not in ['id', 'created_at', 'created_by']]
+                query = generate_update_query(fields=update_fields)
+                values = build_event_values_for_update(event_data, event_id)
                 
                 cursor.execute(query, values)
                 
@@ -2564,9 +2493,8 @@ async def update_event(
                 # Convert to dict and handle datetime objects
                 event_dict = dict(updated_event)
                 
-                # Convert datetime to string for serialization
-                if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
-                    event_dict['created_at'] = event_dict['created_at'].isoformat()
+                # Convert datetime objects and ensure proper field types
+                event_dict = convert_event_datetime_fields(event_dict)
                 
                 # Clear event cache since an event was updated
                 event_cache.clear()
@@ -3855,35 +3783,18 @@ async def debug_test_ux_fields():
                 sanitized_url = sanitize_ux_field(test_data["event_url"])
                 sanitized_host = sanitize_ux_field(test_data["host_name"])
                 
-                # Insert test event
-                insert_query = f"""
-                    INSERT INTO events (
-                        title, description, date, start_time, category,
-                        address, lat, lng, created_by,
-                        fee_required, event_url, host_name,
-                        interest_count, view_count
-                    ) VALUES (
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}
-                    ) RETURNING id
-                """
+                # Insert test event using centralized helpers
+                from database_schema import generate_insert_query
+                from event_data_builder import build_test_event_values
                 
-                values = (
-                    f"Debug UX Test {i+1}",
-                    "Debug test event for UX fields",
-                    "2024-12-31",
-                    "12:00",
-                    "community",
-                    "Debug Address",
-                    37.7749,
-                    -122.4194,
-                    1,  # created_by
-                    sanitized_fee,
-                    sanitized_url,
-                    sanitized_host,
-                    0,  # interest_count
-                    0   # view_count
+                insert_query = generate_insert_query(returning_id=True)
+                values = build_test_event_values(
+                    title=f"Debug UX Test {i+1}",
+                    description="Debug test event for UX fields",
+                    created_by=1,
+                    fee_required=sanitized_fee,
+                    event_url=sanitized_url,
+                    host_name=sanitized_host
                 )
                 
                 logger.info(f"Final insert values (UX part): {values[-5:-2]}")
@@ -4118,38 +4029,43 @@ async def bulk_create_events(
                         })
                         continue
                     
-                    # Insert the new event
-                    # Fixed column order to match actual database schema
-                    insert_query = f"""
-                        INSERT INTO events (
-                            title, description, date, start_time, category, address,
-                            lat, lng, recurring, frequency, end_date, created_by, end_time,
-                            fee_required, event_url, host_name, interest_count, view_count
-                        ) VALUES (
-                            {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                            {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                            {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 0, 0
-                        ) RETURNING id
-                    """
+                    # Insert the new event using centralized helpers
+                    from database_schema import generate_insert_query
+                    from event_data_builder import build_event_values_for_insert
                     
-                    values = (
-                        event.title.strip(), 
-                        event.description.strip(), 
-                        event.date,
-                        event.start_time, 
-                        event.category, 
-                        event.address.strip(),
-                        lat_rounded, 
-                        lng_rounded, 
-                        event.recurring,
-                        event.frequency, 
-                        event.end_date,
-                        current_user["id"],
-                        event.end_time,
-                        event.fee_required,
-                        event.event_url,
-                        event.host_name
-                    )
+                    insert_query = generate_insert_query(returning_id=True)
+                    
+                    # Convert event object to dict for the helper
+                    event_dict = {
+                        'title': event.title,
+                        'description': event.description,
+                        'short_description': getattr(event, 'short_description', None),
+                        'date': event.date,
+                        'start_time': event.start_time,
+                        'end_time': event.end_time,
+                        'end_date': event.end_date,
+                        'category': event.category,
+                        'address': event.address,
+                        'city': getattr(event, 'city', None),
+                        'state': getattr(event, 'state', None),
+                        'country': getattr(event, 'country', 'USA'),
+                        'recurring': event.recurring,
+                        'frequency': event.frequency,
+                        'fee_required': event.fee_required,
+                        'price': getattr(event, 'price', 0.0),
+                        'currency': getattr(event, 'currency', 'USD'),
+                        'event_url': event.event_url,
+                        'host_name': event.host_name,
+                        'organizer_url': getattr(event, 'organizer_url', None),
+                        'slug': getattr(event, 'slug', None),
+                        'is_published': getattr(event, 'is_published', True),
+                        'start_datetime': getattr(event, 'start_datetime', None),
+                        'end_datetime': getattr(event, 'end_datetime', None),
+                        'updated_at': None,
+                        'interest_count': 0,
+                        'view_count': 0
+                    }
+                    values = build_event_values_for_insert(event_dict, current_user["id"], lat_rounded, lng_rounded)
                     
                     # For PostgreSQL, use RETURNING to get the ID in one step
                     if IS_PRODUCTION and DB_URL:
@@ -4371,6 +4287,25 @@ def sanitize_ux_field(value):
     result = value if value is not None else ""
     logger.info(f"sanitize_ux_field returning: {result!r} (type: {type(result)})")
     return result
+
+def convert_event_datetime_fields(event_dict):
+    """Convert datetime objects to ISO format strings for API response"""
+    datetime_fields = ['created_at', 'updated_at', 'start_datetime', 'end_datetime']
+    for field in datetime_fields:
+        if field in event_dict and isinstance(event_dict[field], datetime):
+            event_dict[field] = event_dict[field].isoformat()
+        elif field in event_dict and event_dict[field] is not None and not isinstance(event_dict[field], str):
+            # Convert any non-string datetime-like values to strings
+            try:
+                event_dict[field] = str(event_dict[field])
+            except:
+                event_dict[field] = None
+    
+    # Ensure counters are integers
+    event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
+    event_dict['view_count'] = event_dict.get('view_count', 0) or 0
+    
+    return event_dict
 
 # ===== SEO ENDPOINTS =====
 

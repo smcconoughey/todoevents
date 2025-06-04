@@ -73,31 +73,21 @@ def test_ux_fields_insertion():
             sanitized_url = sanitize_ux_field(test_data['event_url'])
             sanitized_host = sanitize_ux_field(test_data['host_name'])
             
-            # Insert into database
-            insert_query = """
-                INSERT INTO events (
-                    title, description, date, start_time, category,
-                    address, lat, lng, created_by,
-                    fee_required, event_url, host_name,
-                    interest_count, view_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
+            # Use centralized helpers for INSERT
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from database_schema import generate_insert_query
+            from event_data_builder import build_test_event_values
             
-            values = (
-                test_data['title'],
-                test_data['description'],
-                '2024-12-31',  # date
-                '12:00',       # start_time
-                'community',   # category
-                'Test Address',# address
-                37.7749,       # lat
-                -122.4194,     # lng
-                1,             # created_by (assuming user ID 1 exists)
-                sanitized_fee,
-                sanitized_url,
-                sanitized_host,
-                0,             # interest_count
-                0              # view_count
+            insert_query = generate_insert_query(returning_id=False)
+            values = build_test_event_values(
+                title=test_data['title'],
+                description=test_data['description'],
+                created_by=1,
+                fee_required=sanitized_fee,
+                event_url=sanitized_url,
+                host_name=sanitized_host
             )
             
             logger.info(f"Final insert values (UX fields): {values[-5:-2]}")
