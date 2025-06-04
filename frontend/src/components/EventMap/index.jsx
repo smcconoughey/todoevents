@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ThemeContext } from "../ThemeContext";
 import { AuthContext } from "./AuthContext";
 import CreateEventForm from "./CreateEventForm";
@@ -641,6 +641,7 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
 const EventMap = ({ mapsLoaded = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { slug } = useParams();
   const { user, token, logout } = useContext(AuthContext);
   const { theme } = useContext(ThemeContext);
 
@@ -850,7 +851,32 @@ const EventMap = ({ mapsLoaded = false }) => {
       const eventId = urlParams.get('event');
       const shouldCreate = urlParams.get('create');
       
-      if (eventId && events.length > 0 && !selectedEvent) {
+      // Handle slug-based URLs (/e/{slug})
+      if (slug && events.length > 0 && !selectedEvent) {
+        const targetEvent = events.find(event => event.slug === slug);
+        
+        if (targetEvent) {
+          console.log('Found event from slug:', targetEvent.title);
+          setSelectedEvent(targetEvent);
+          setActiveTab('details'); // Start with details tab
+          
+          // If the event has coordinates, center the map on it
+          if (targetEvent.lat && targetEvent.lng) {
+            setSelectedLocation({
+              lat: targetEvent.lat,
+              lng: targetEvent.lng,
+              address: targetEvent.address
+            });
+          }
+        } else {
+          console.warn(`Event with slug "${slug}" not found in current events list`);
+          // Optionally redirect to home page if event not found
+          // navigate('/');
+        }
+      }
+      
+      // Handle old-style event ID URLs (?event=123) for backward compatibility
+      else if (eventId && events.length > 0 && !selectedEvent) {
         const targetEvent = events.find(event => event.id.toString() === eventId.toString());
         
         if (targetEvent) {
@@ -922,7 +948,7 @@ const EventMap = ({ mapsLoaded = false }) => {
         }
       }
     }
-  }, [events.length, user]); // Depend on both events.length and user
+  }, [events.length, user, slug]); // Depend on events.length, user, and slug
 
   const handleAddressSelect = (data) => {
     setSelectedLocation({
