@@ -2102,6 +2102,11 @@ async def read_event(event_id: int):
 
 def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
     """Ensure slug uniqueness by appending event ID if needed"""
+    if not base_slug:
+        # Generate a fallback slug if none provided
+        import time
+        return f"event-{int(time.time())}"
+    
     try:
         # Use database-agnostic placeholder
         placeholder = get_placeholder()
@@ -2123,7 +2128,8 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
                 # PostgreSQL style (use %s with psycopg2)
                 cursor.execute("SELECT COUNT(*) FROM events WHERE slug = %s", (base_slug,))
         
-        count = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        count = result[0] if result else 0
         
         if count > 0:
             # Slug exists, append a number or event ID
@@ -2136,32 +2142,84 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
                 return f"{base_slug}-{suffix}"
         else:
             return base_slug
+            
     except Exception as e:
-        logger.error(f"Error ensuring unique slug: {e}")
+        logger.error(f"Error ensuring unique slug for '{base_slug}': {str(e)}")
         # Fallback: append current timestamp
         import time
-        return f"{base_slug}-{int(time.time())}"
+        timestamp_suffix = str(int(time.time()))[-6:]
+        fallback_slug = f"{base_slug}-{timestamp_suffix}" if base_slug else f"event-{timestamp_suffix}"
+        logger.info(f"Using fallback slug: {fallback_slug}")
+        return fallback_slug
 
 def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
-    """Get actual columns that exist in the database table"""
+    """Get actual columns that exist in the database table with better error handling"""
     try:
         if IS_PRODUCTION and DB_URL:
-            # PostgreSQL: Use information_schema
-            cursor.execute("""
-                SELECT column_name FROM information_schema.columns 
-                WHERE table_name = %s 
-                ORDER BY ordinal_position
-            """, (table_name,))
-            return [row[0] for row in cursor.fetchall()]
+            # PostgreSQL: Try multiple approaches for column detection
+            try:
+                # Method 1: Use information_schema
+                cursor.execute("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name = %s AND table_schema = 'public'
+                    ORDER BY ordinal_position
+                """, (table_name,))
+                columns = [row[0] for row in cursor.fetchall()]
+                if columns:
+                    logger.info(f"Got {len(columns)} columns from information_schema")
+                    return columns
+            except Exception as e:
+                logger.warning(f"information_schema query failed: {e}")
+            
+            try:
+                # Method 2: Use PostgreSQL system catalogs
+                cursor.execute("""
+                    SELECT a.attname
+                    FROM pg_class c
+                    JOIN pg_attribute a ON a.attrelid = c.oid
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE c.relname = %s 
+                    AND n.nspname = 'public'
+                    AND a.attnum > 0 
+                    AND NOT a.attisdropped
+                    ORDER BY a.attnum
+                """, (table_name,))
+                columns = [row[0] for row in cursor.fetchall()]
+                if columns:
+                    logger.info(f"Got {len(columns)} columns from pg_class")
+                    return columns
+            except Exception as e:
+                logger.warning(f"pg_class query failed: {e}")
+                
+            try:
+                # Method 3: Try a simple SELECT to get column names
+                cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
+                columns = [desc[0] for desc in cursor.description]
+                if columns:
+                    logger.info(f"Got {len(columns)} columns from SELECT LIMIT 0")
+                    return columns
+            except Exception as e:
+                logger.warning(f"SELECT LIMIT 0 query failed: {e}")
         else:
             # SQLite: Use PRAGMA table_info
             cursor.execute(f"PRAGMA table_info({table_name})")
-            return [row[1] for row in cursor.fetchall()]  # row[1] is column name
+            columns = [row[1] for row in cursor.fetchall()]  # row[1] is column name
+            if columns:
+                logger.info(f"Got {len(columns)} columns from PRAGMA table_info")
+                return columns
+                
     except Exception as e:
-        logger.error(f"Error getting table columns: {e}")
-        # Fallback to basic columns
-        return ['id', 'title', 'description', 'date', 'start_time', 'end_time', 
-                'category', 'address', 'lat', 'lng', 'recurring', 'created_by', 'created_at']
+        logger.error(f"Error getting table columns for {table_name}: {e}")
+    
+    # Ultimate fallback to essential columns
+    fallback_columns = [
+        'id', 'title', 'description', 'date', 'start_time', 'end_time', 
+        'category', 'address', 'lat', 'lng', 'recurring', 'created_by', 'created_at',
+        'short_description', 'end_date', 'city', 'state', 'country', 'frequency',
+        'updated_at', 'interest_count', 'view_count'
+    ]
+    logger.warning(f"Using fallback columns ({len(fallback_columns)}) for {table_name}")
+    return fallback_columns
 
 def auto_populate_seo_fields(event_data: dict) -> dict:
     """Auto-populate SEO fields for new events using enhanced logic"""
@@ -3857,11 +3915,11 @@ async def debug_test_tracking(event_id: int):
             }
             
     except Exception as e:
-                    return {
-                "success": False,
-                "error": str(e),
-                "error_type": type(e).__name__
-            }
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
 
 @app.post("/debug/test-ux-fields")
 async def debug_test_ux_fields():
