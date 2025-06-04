@@ -40,7 +40,7 @@ import {
   Menu,
   Filter,
   Search,
-  Shield,
+
   Navigation,
   AlertCircle,
   HelpCircle,
@@ -64,6 +64,7 @@ import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import EventInteractionComponents from './EventInteractionComponents';
 import ExternalLinkWarning from './ExternalLinkWarning';
+import EmailContactPopup from './EmailContactPopup';
 import { batchedSync } from '@/utils/batchedSync';
 
 
@@ -652,6 +653,7 @@ const EventMap = ({ mapsLoaded = false }) => {
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [externalLinkDialog, setExternalLinkDialog] = useState({ isOpen: false, url: '' });
   const [showFirstTimeSignInPopup, setShowFirstTimeSignInPopup] = useState(false);
+  const [showEmailContactPopup, setShowEmailContactPopup] = useState(false);
   // Add new state for misc filters
   const [miscFilters, setMiscFilters] = useState({
     feeFilter: 'all' // 'all', 'free', 'paid'
@@ -1633,7 +1635,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   variant="ghost"
                   size="sm"
                   className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                  onClick={() => window.open('mailto:support@todo-events.com', '_blank')}
+                  onClick={() => setShowEmailContactPopup(true)}
                   title="Contact Support"
                 >
                   <Mail className="w-4 h-4" />
@@ -1650,17 +1652,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                 <ThemeToggle />
                 {user ? (
                   <div className="flex items-center gap-2">
-                    {user.role === 'admin' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                        onClick={() => window.open('/admin', '_blank')}
-                        title="Admin Dashboard"
-                      >
-                        <Shield className="w-4 h-4" />
-                      </Button>
-                    )}
+
                     <Button
                       variant="ghost"
                       size="sm"
@@ -2316,7 +2308,10 @@ const EventMap = ({ mapsLoaded = false }) => {
                     variant="ghost"
                     size="sm"
                     className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                    onClick={() => window.open('mailto:support@todo-events.com', '_blank')}
+                    onClick={() => {
+                      setShowEmailContactPopup(true);
+                      setIsMobileMenuOpen(false);
+                    }}
                     title="Contact Support"
                   >
                     <Mail className="w-4 h-4" />
@@ -2333,17 +2328,7 @@ const EventMap = ({ mapsLoaded = false }) => {
                   <ThemeToggle />
                   {user ? (
                     <div className="flex items-center gap-2">
-                      {user.role === 'admin' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                          onClick={() => window.open('/admin', '_blank')}
-                          title="Admin Dashboard"
-                        >
-                          <Shield className="w-4 h-4" />
-                        </Button>
-                      )}
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -2382,10 +2367,10 @@ const EventMap = ({ mapsLoaded = false }) => {
               </div>
             </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="p-4 space-y-4 max-w-full">
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 space-y-4">
                 {/* Location Section - Compact */}
-                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20 max-w-full overflow-hidden">
+                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
@@ -3342,6 +3327,12 @@ const EventMap = ({ mapsLoaded = false }) => {
         onClose={() => setExternalLinkDialog({ isOpen: false, url: '' })}
         onConfirm={() => window.open(externalLinkDialog.url, '_blank', 'noopener,noreferrer')}
         url={externalLinkDialog.url}
+      />
+
+      {/* Email Contact Popup */}
+      <EmailContactPopup
+        isOpen={showEmailContactPopup}
+        onClose={() => setShowEmailContactPopup(false)}
       />
     </div>
   );

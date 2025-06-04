@@ -401,21 +401,17 @@ body {
   body {
     font-size: 15px;
     line-height: 1.5;
-    overflow-x: hidden; /* Prevent horizontal scroll */
   }
   
   .map-container {
     height: calc(100vh - 60px);
-    width: 100vw;
-    max-width: 100%;
-    overflow: hidden;
   }
   
   h1 { font-size: 1.375rem; line-height: 1.3; font-weight: 500; }
   h2 { font-size: 1.25rem; line-height: 1.3; font-weight: 500; }
   h3 { font-size: 1.125rem; line-height: 1.3; font-weight: 500; }
   
-  /* Better touch targets - Warm design */
+  /* Better touch targets */
   .btn-primary, .btn-secondary {
     min-height: 44px;
     padding: 12px 16px;
@@ -424,21 +420,13 @@ body {
     font-weight: 500;
   }
   
-  /* Mobile modal and sheet improvements - Fixed overflow */
+  /* Mobile modal and sheet improvements */
   [role="dialog"] {
     max-height: 90vh;
-    max-width: calc(100vw - 24px);
-    margin: 12px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    overflow: hidden;
   }
   
   .mobile-sheet {
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
     max-width: 100vw;
-    overflow-x: hidden;
   }
   
   /* Better mobile touch targets */
@@ -448,7 +436,7 @@ body {
     border-radius: 8px;
   }
   
-  /* Mobile typography scale - Readable */
+  /* Mobile typography scale */
   .text-xs { font-size: 0.8rem; }
   .text-sm { font-size: 0.9rem; }
   .text-base { font-size: 0.95rem; }
@@ -456,7 +444,7 @@ body {
   .text-xl { font-size: 1.15rem; }
   .text-2xl { font-size: 1.3rem; }
   
-  /* Mobile spacing scale - Comfortable */
+  /* Mobile spacing scale */
   .p-1 { padding: 0.25rem; }
   .p-2 { padding: 0.5rem; }
   .p-3 { padding: 0.625rem; }
@@ -481,14 +469,13 @@ body {
   .space-y-4 > * + * { margin-top: 0.875rem; }
   .space-y-6 > * + * { margin-top: 1.25rem; }
   
-  /* Mobile event card improvements - Warm */
+  /* Mobile event card improvements */
   .event-card {
     padding: 14px;
     margin: 10px;
     border-radius: 10px;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
-    max-width: calc(100vw - 40px);
   }
   
   .mobile-nav {
@@ -497,7 +484,7 @@ body {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   }
   
-  /* Mobile form elements - Comfortable */
+  /* Mobile form elements */
   input, textarea, select {
     font-size: 16px;
     padding: 12px 14px;
@@ -505,32 +492,28 @@ body {
     min-height: 44px;
     border: 1px solid var(--border-color);
     font-weight: 400;
-    max-width: 100%;
-    box-sizing: border-box;
   }
   
-  /* Mobile header adjustments - Warm */
+  /* Mobile header adjustments */
   .mobile-header {
     padding: 10px 16px;
     min-height: 56px;
     border-radius: 0 0 12px 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    max-width: 100vw;
   }
   
-  /* Mobile icon sizing - Balanced */
+  /* Mobile icon sizing */
   .icon-sm { width: 0.9rem; height: 0.9rem; }
   .icon-md { width: 1.1rem; height: 1.1rem; }
   .icon-lg { width: 1.3rem; height: 1.3rem; }
   
-  /* Mobile list items - Comfortable */
+  /* Mobile list items */
   .mobile-list-item {
     padding: 14px 16px;
     min-height: 58px;
     border-radius: 8px;
     margin-bottom: 6px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    max-width: calc(100vw - 32px);
   }
   
   .border { border-width: 1px; }
@@ -540,142 +523,12 @@ body {
   .rounded-lg { border-radius: 0.625rem; }
   .rounded-xl { border-radius: 0.875rem; }
   
-  /* Mobile font weights - Natural */
+  /* Mobile font weights */
   .font-light { font-weight: 300; }
   .font-normal { font-weight: 400; }
   .font-medium { font-weight: 500; }
   .font-semibold { font-weight: 500; }
   .font-bold { font-weight: 500; }
-  
-  /* Fix mobile sheet overflow and positioning */
-  [data-state="open"][data-side="bottom"] {
-    max-height: 85vh;
-    width: 100vw;
-    max-width: 100vw;
-    left: 0 !important;
-    right: 0 !important;
-    margin: 0 !important;
-    border-radius: 16px 16px 0 0;
-    overflow: hidden;
-  }
-  
-  /* Ensure content containers don't overflow */
-  .flex-1 {
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-  
-  /* Fix search/filter containers */
-  .space-y-2 > *, .space-y-3 > *, .space-y-4 > * {
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-  
-  /* Additional mobile fixes for specific components */
-  .grid.grid-cols-3, .grid.grid-cols-2 {
-    max-width: 100%;
-    gap: 0.25rem;
-  }
-  
-  .grid.grid-cols-3 > * {
-    min-width: 0;
-    max-width: calc(33.333% - 0.25rem);
-    flex-shrink: 1;
-  }
-  
-  .grid.grid-cols-2 > * {
-    min-width: 0;
-    max-width: calc(50% - 0.25rem);
-    flex-shrink: 1;
-  }
-  
-  /* Ensure filter containers don't overflow */
-  .space-y-2 {
-    width: 100%;
-    max-width: 100%;
-  }
-  
-  /* Fix address input width */
-  .pac-container {
-    max-width: calc(100vw - 48px) !important;
-    left: 12px !important;
-    right: 12px !important;
-    width: auto !important;
-  }
-  
-  /* Prevent text from causing overflow */
-  .truncate {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  /* Make sure flex containers behave properly */
-  .flex-wrap {
-    max-width: 100%;
-  }
-  
-  /* Fix mobile dialog padding */
-  .dialog-themed {
-    padding: 1rem !important;
-    max-width: calc(100vw - 2rem) !important;
-    max-height: calc(100vh - 2rem) !important;
-  }
-  
-  /* Ensure buttons don't overflow their containers */
-  button {
-    max-width: 100%;
-    word-break: break-word;
-    overflow-wrap: break-word;
-  }
-  
-  /* Fix mobile sheet content scrolling */
-  [data-side="bottom"] .flex-1.overflow-y-auto {
-    max-height: calc(85vh - 200px);
-    overflow-x: hidden;
-  }
-  
-  /* Ensure location search elements are properly sized */
-  [class*="bg-white/5"], [class*="bg-black/5"] {
-    max-width: 100%;
-    overflow: hidden;
-  }
-  
-  /* Mobile header and overlay improvements */
-  .mobile-header, [data-side="left"] .border-b {
-    background: var(--background-color) !important;
-    border-color: var(--border-color) !important;
-  }
-  
-  /* Improve mobile sheet header visibility */
-  .sm\\:hidden .SheetHeader, 
-  [data-side="left"] .SheetHeader {
-    background: rgba(var(--background-rgb), 0.95) !important;
-    backdrop-filter: blur(8px) !important;
-  }
-  
-  /* Fix mobile navigation background */
-  .fixed.top-0.z-50 {
-    background: rgba(var(--background-rgb), 0.9) !important;
-    backdrop-filter: blur(12px) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-  }
-  
-  /* Ensure proper contrast for mobile text */
-  .sm\\:hidden h2, 
-  .sm\\:hidden .text-white {
-    color: var(--text-color) !important;
-  }
-  
-  /* Mobile sheet overlay adjustments */
-  [data-state="open"] .SheetOverlay {
-    background: rgba(0, 0, 0, 0.15) !important;
-  }
-  
-  [data-theme="light"] [data-state="open"] .SheetOverlay {
-    background: rgba(0, 0, 0, 0.08) !important;
-  }
 }
 
 /* Tablet responsive adjustments */
@@ -1081,80 +934,4 @@ body {
   color: var(--text-secondary) !important;
 }
 
-/* Mobile-specific improvements */
-@media (max-width: 640px) {
-  /* Mobile bottom sheets and dialogs */
-  .fixed.bottom-0 {
-    background-color: var(--bg-card) !important;
-    border-color: var(--border-color) !important;
-  }
-  
-  /* Mobile headers */
-  .fixed.top-0 {
-    background-color: var(--bg-card) !important;
-    border-color: var(--border-color) !important;
-  }
-}
-
-/* Theme-aware background overrides with higher specificity */
-.bg-neutral-950,
-.bg-neutral-900,
-.bg-neutral-800 {
-  background-color: var(--bg-card) !important;
-}
-
-/* Border color overrides */
-.border-white\/10,
-.border-white\/20 {
-  border-color: var(--border-color) !important;
-}
-
-/* Final mobile fixes and viewport constraints */
-@media screen and (max-width: 640px) {
-  /* Ensure the entire viewport is properly constrained */
-  html, body {
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-  
-  /* Fix any remaining overflow issues with specific components */
-  .fixed, .absolute {
-    max-width: 100vw;
-  }
-  
-  /* Ensure all containers respect the viewport */
-  .container, .w-full, .w-screen {
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-  
-  /* Fix mobile sheet positioning and sizing */
-  [role="dialog"][data-state="open"] {
-    position: fixed !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    left: 0 !important;
-    right: 0 !important;
-    margin: 0 !important;
-  }
-  
-  /* Ensure location filter buttons are properly sized */
-  .grid > button {
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0.5rem 0.25rem;
-    font-size: 0.75rem;
-  }
-  
-  /* Fix flex container overflow issues */
-  .flex {
-    min-width: 0;
-  }
-  
-  .flex-1 {
-    min-width: 0;
-    flex-basis: 0;
-  }
-} 
+ 
