@@ -1968,13 +1968,14 @@ async def list_events(
             if where_conditions:
                 where_clause = "WHERE " + " AND ".join(where_conditions)
             
-            # Optimized query with specific columns and LIMIT, including UX fields
+            # Optimized query with specific columns and LIMIT, including ALL fields
             base_query = f"""
-                SELECT id, title, description, date, start_time, end_time, end_date, 
-                       category, address, lat, lng, recurring, frequency, created_by, created_at,
+                SELECT id, title, description, short_description, date, start_time, end_time, end_date, 
+                       category, address, city, state, country, lat, lng, recurring, frequency, created_by, created_at,
                        COALESCE(interest_count, 0) as interest_count,
                        COALESCE(view_count, 0) as view_count,
-                       fee_required, event_url, host_name
+                       fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
+                       start_datetime, end_datetime, updated_at
                        {location_select}
                 FROM events 
                 {where_clause}
@@ -1998,21 +1999,21 @@ async def list_events(
                     elif isinstance(event, dict):
                         event_dict = dict(event)
                     else:
-                        # Handle tuple/list results with known schema including UX fields
+                        # Handle tuple/list results with known schema including ALL fields
                         column_names = [
-                            'id', 'title', 'description', 'date', 'start_time', 'end_time',
-                            'end_date', 'category', 'address', 'lat', 'lng', 'recurring',
+                            'id', 'title', 'description', 'short_description', 'date', 'start_time', 'end_time',
+                            'end_date', 'category', 'address', 'city', 'state', 'country', 'lat', 'lng', 'recurring',
                             'frequency', 'created_by', 'created_at', 'interest_count', 'view_count',
-                            'fee_required', 'event_url', 'host_name'
+                            'fee_required', 'price', 'currency', 'event_url', 'host_name', 'organizer_url', 'slug', 'is_published',
+                            'start_datetime', 'end_datetime', 'updated_at'
                         ]
                         if location_select:
                             column_names.append('distance_miles')
                         
                         event_dict = dict(zip(column_names, event))
                     
-                    # Ensure datetime is properly formatted
-                    if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
-                        event_dict['created_at'] = event_dict['created_at'].isoformat()
+                    # Convert datetime objects and ensure proper field types
+                    event_dict = convert_event_datetime_fields(event_dict)
                     
                     # Ensure counters are integers
                     event_dict['interest_count'] = int(event_dict.get('interest_count', 0) or 0)
@@ -4498,6 +4499,28 @@ async def migrate_events_for_seo_sync():
         raise HTTPException(
             status_code=500, 
             detail=f"Migration failed: {str(e)}"
+        )
+
+@app.post("/api/seo/populate-production-fields")
+async def populate_production_seo_fields():
+    """Populate SEO fields for all events in production PostgreSQL database"""
+    try:
+        from populate_production_seo_fields import populate_seo_data
+        
+        # Call the population function directly 
+        populate_seo_data()
+        
+        return {
+            "success": True,
+            "message": "Production SEO field population completed successfully",
+            "info": "All events have been updated with slugs, city/state, and other SEO fields"
+        }
+        
+    except Exception as e:
+        logger.error(f"Production SEO population failed: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"SEO population failed: {str(e)}"
         )
 
 @app.get("/api/seo/sitemap/events")
