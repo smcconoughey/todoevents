@@ -2088,21 +2088,195 @@ async def read_event(event_id: int):
         logger.error(f"Error retrieving event {event_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving event")
 
+def auto_populate_seo_fields(event_data: dict) -> dict:
+    """Auto-populate SEO fields for new events using enhanced logic"""
+    import re
+    import unicodedata
+    
+    def slugify_local(title, city=""):
+        """Enhanced slugify function using title and city"""
+        if not title:
+            return ""
+        
+        # Combine title and city for better uniqueness
+        base = f"{title} {city}".lower() if city else title.lower()
+        
+        # Normalize Unicode characters
+        base = unicodedata.normalize('NFKD', base)
+        
+        # Remove non-word characters (keep letters, numbers, spaces, hyphens)
+        base = re.sub(r'[^\w\s-]', '', base)
+        
+        # Replace multiple spaces/underscores/hyphens with single hyphen
+        base = re.sub(r'[\s_-]+', '-', base)
+        
+        # Remove leading/trailing hyphens
+        return base.strip('-')
+    
+    def extract_city_state_local(address):
+        """Enhanced city/state extraction from address"""
+        if not address:
+            return None, None
+        
+        # Strategy A: [City], [STATE], USA format
+        match = re.search(r'([^,]+),\s*([A-Z]{2}),?\s*USA?$', address, re.IGNORECASE)
+        if match:
+            return match.group(1).strip(), match.group(2).upper()
+        
+        # Strategy B: [City], [STATE] format (without USA)
+        match = re.search(r'([^,]+),\s*([A-Z]{2})$', address, re.IGNORECASE)
+        if match:
+            return match.group(1).strip(), match.group(2).upper()
+        
+        # Strategy C: Find any 2-letter state code
+        match = re.search(r'\b([A-Z]{2})\b', address)
+        if match:
+            state = match.group(1)
+            # Try to find city before state
+            city_pattern = r'([^,\d]+)(?:,\s*)?' + re.escape(state)
+            city_match = re.search(city_pattern, address, re.IGNORECASE)
+            if city_match:
+                city = city_match.group(1).strip()
+                # Clean up city name
+                city = re.sub(r'^\d+\s+', '', city)  # Remove leading numbers
+                return city, state
+        
+        return None, None
+    
+    def normalize_price_local(fee_required):
+        """Enhanced price normalization"""
+        if not fee_required or not isinstance(fee_required, str):
+            return 0.0
+        
+        fee_lower = fee_required.lower().strip()
+        
+        # Check for free indicators
+        free_indicators = ['free', 'no charge', 'no cost', 'gratis', 'complimentary', 'n/a', 'none']
+        if any(indicator in fee_lower for indicator in free_indicators):
+            return 0.0
+        
+        # Extract numeric values with various currency symbols
+        currency_pattern = r'[\$€£¥₹]?[\s]*([0-9]+(?:[.,][0-9]{1,2})?)'
+        match = re.search(currency_pattern, fee_required)
+        if match:
+            price_str = match.group(1).replace(',', '')
+            try:
+                return float(price_str)
+            except ValueError:
+                pass
+        
+        # Try to find "number dollars/euros/etc" pattern
+        word_pattern = r'([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars?|euros?|pounds?|bucks?)'
+        match = re.search(word_pattern, fee_lower)
+        if match:
+            try:
+                return float(match.group(1))
+            except ValueError:
+                pass
+        
+        return 0.0
+    
+    def build_datetimes_local(date_str, start_time_str, end_time_str, end_date_str=None):
+        """Enhanced datetime building"""
+        if not date_str or not start_time_str:
+            return None, None
+        
+        try:
+            # Build start datetime
+            start_dt_str = f"{date_str}T{start_time_str}:00"
+            
+            # Build end datetime
+            end_dt_str = None
+            if end_time_str:
+                if end_date_str:
+                    end_dt_str = f"{end_date_str}T{end_time_str}:00"
+                else:
+                    end_dt_str = f"{date_str}T{end_time_str}:00"
+            
+            return start_dt_str, end_dt_str
+        except Exception:
+            return None, None
+    
+    def make_short_description_local(description):
+        """Enhanced short description generation"""
+        if not description:
+            return ""
+        
+        # Remove extra whitespace and normalize
+        cleaned = ' '.join(description.split())
+        
+        # If short enough, return as-is
+        if len(cleaned) <= 160:
+            return cleaned
+        
+        # Truncate at word boundary near 157 characters
+        truncated = cleaned[:157]
+        last_space = truncated.rfind(' ')
+        if last_space > 120:  # Only truncate at word if reasonable
+            return cleaned[:last_space] + "..."
+        else:
+            return cleaned[:157] + "..."
+    
+    # Generate slug
+    city = event_data.get('city', '') or ''
+    event_data['slug'] = slugify_local(event_data.get('title', ''), city)
+    
+    # Extract city/state from address
+    if not event_data.get('city') or not event_data.get('state'):
+        city, state = extract_city_state_local(event_data.get('address', ''))
+        if city:
+            event_data['city'] = city
+        if state:
+            event_data['state'] = state
+    
+    # Normalize price
+    event_data['price'] = normalize_price_local(event_data.get('fee_required', ''))
+    
+    # Generate datetime fields
+    start_dt, end_dt = build_datetimes_local(
+        event_data.get('date', ''),
+        event_data.get('start_time', ''),
+        event_data.get('end_time', ''),
+        event_data.get('end_date')
+    )
+    event_data['start_datetime'] = start_dt
+    event_data['end_datetime'] = end_dt
+    
+    # Generate short description
+    if not event_data.get('short_description'):
+        event_data['short_description'] = make_short_description_local(
+            event_data.get('description', '')
+        )
+    
+    # Set defaults
+    event_data['currency'] = event_data.get('currency', 'USD')
+    event_data['country'] = event_data.get('country', 'USA')
+    event_data['is_published'] = event_data.get('is_published', True)
+    event_data['updated_at'] = datetime.utcnow().isoformat()
+    
+    return event_data
+
 @app.post("/events", response_model=EventResponse)
 async def create_event(event: EventCreate, current_user: dict = Depends(get_current_user)):
     """
     Create a new event. Requires user authentication.
+    Auto-populates SEO fields using enhanced migration logic.
     """
     placeholder = get_placeholder()
     
-    # Log the event data for debugging
-    logger.info(f"Creating event: {event.dict()}")
+    # Convert Pydantic model to dict for processing
+    event_data = event.dict()
     
-    # Log UX fields specifically for debugging
-    logger.info(f"UX Fields Debug - Raw Pydantic values:")
-    logger.info(f"  fee_required: {event.fee_required!r} (type: {type(event.fee_required)})")
-    logger.info(f"  event_url: {event.event_url!r} (type: {type(event.event_url)})")
-    logger.info(f"  host_name: {event.host_name!r} (type: {type(event.host_name)})")
+    # Log the original event data for debugging
+    logger.info(f"Creating event: {event_data}")
+    
+    # Auto-populate SEO fields
+    try:
+        event_data = auto_populate_seo_fields(event_data)
+        logger.info(f"Auto-populated SEO fields: slug={event_data.get('slug')}, city={event_data.get('city')}, state={event_data.get('state')}, price={event_data.get('price')}")
+    except Exception as e:
+        logger.warning(f"SEO auto-population failed: {e}")
+        # Continue with original data if auto-population fails
     
     try:
         # Use database connection with proper transaction control
@@ -2115,8 +2289,8 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 
                 # More robust duplicate check with coordinate tolerance (1 meter)
                 # Round coordinates to 6 decimal places (~1 meter precision)
-                lat_rounded = round(event.lat, 6)
-                lng_rounded = round(event.lng, 6)
+                lat_rounded = round(event_data['lat'], 6)
+                lng_rounded = round(event_data['lng'], 6)
                 
                 duplicate_check = f"""
                     SELECT id FROM events 
@@ -2129,66 +2303,70 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 """
                 
                 cursor.execute(duplicate_check, (
-                    event.title.strip(), 
-                    event.date, 
-                    event.start_time, 
+                    event_data['title'].strip(), 
+                    event_data['date'], 
+                    event_data['start_time'], 
                     lat_rounded, 
                     lng_rounded, 
-                    event.category
+                    event_data['category']
                 ))
                 
                 duplicate = cursor.fetchone()
                 if duplicate:
                     cursor.execute("ROLLBACK")
-                    logger.warning(f"Duplicate event prevented: {event.title} by user {current_user['id']}")
+                    logger.warning(f"Duplicate event prevented: {event_data['title']} by user {current_user['id']}")
                     raise HTTPException(
                         status_code=409, 
                         detail="An event with these details already exists at this location and time"
                     )
                 
-                # UX fields are now handled by Pydantic validators (None -> "")
-                logger.info(f"UX Fields Debug - Post-validation values:")
-                logger.info(f"  event.fee_required: {event.fee_required!r} (type: {type(event.fee_required)})")
-                logger.info(f"  event.event_url: {event.event_url!r} (type: {type(event.event_url)})")
-                logger.info(f"  event.host_name: {event.host_name!r} (type: {type(event.host_name)})")
-                
-                # Insert the new event with rounded coordinates
-                # Fixed column order to match actual database schema
+                # Insert the new event with all SEO fields
                 insert_query = f"""
                     INSERT INTO events (
-                        title, description, date, start_time, category, address, 
-                        lat, lng, recurring, frequency, end_date, created_by, end_time,
-                        fee_required, event_url, host_name, interest_count, view_count
+                        title, description, short_description, date, start_time, end_time, end_date, 
+                        category, address, city, state, country, lat, lng, recurring, frequency,
+                        fee_required, price, currency, event_url, host_name, organizer_url,
+                        slug, is_published, start_datetime, end_datetime, updated_at,
+                        created_by, interest_count, view_count
                     ) VALUES (
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
+                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
                         {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder},
-                        {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 0, 0
+                        {placeholder}, 0, 0
                     ) RETURNING id
                 """
                 
                 values = (
-                    event.title.strip(), 
-                    event.description.strip(), 
-                    event.date,
-                    event.start_time, 
-                    event.category, 
-                    event.address.strip(),
+                    event_data['title'].strip(), 
+                    event_data['description'].strip(), 
+                    event_data.get('short_description', ''),
+                    event_data['date'],
+                    event_data['start_time'], 
+                    event_data.get('end_time'),
+                    event_data.get('end_date'),
+                    event_data['category'], 
+                    event_data['address'].strip(),
+                    event_data.get('city'),
+                    event_data.get('state'),
+                    event_data.get('country', 'USA'),
                     lat_rounded, 
                     lng_rounded, 
-                    event.recurring,
-                    event.frequency, 
-                    event.end_date,
-                    current_user["id"],
-                    event.end_time,
-                    event.fee_required,
-                    event.event_url,
-                    event.host_name
+                    event_data.get('recurring', False),
+                    event_data.get('frequency'), 
+                    event_data.get('fee_required'),
+                    event_data.get('price', 0.0),
+                    event_data.get('currency', 'USD'),
+                    event_data.get('event_url'),
+                    event_data.get('host_name'),
+                    event_data.get('organizer_url'),
+                    event_data.get('slug'),
+                    event_data.get('is_published', True),
+                    event_data.get('start_datetime'),
+                    event_data.get('end_datetime'),
+                    event_data.get('updated_at'),
+                    current_user["id"]
                 )
-                
-                # Log the final values being inserted
-                logger.info(f"UX Fields Debug - Final insert values (last 3 items):")
-                logger.info(f"  Insert tuple values[-3:]: {values[-3:]}")
-                logger.info(f"  Full insert values: {values}")
                 
                 # For PostgreSQL, use RETURNING to get the ID in one step
                 if IS_PRODUCTION and DB_URL:
@@ -2207,28 +2385,23 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Fetch the created event
                 fetch_query = f"SELECT * FROM events WHERE id = {placeholder}"
                 cursor.execute(fetch_query, (event_id,))
-                event_data = cursor.fetchone()
+                created_event_data = cursor.fetchone()
                 
-                if not event_data:
+                if not created_event_data:
                     cursor.execute("ROLLBACK")
                     raise ValueError("Created event not found")
-                
-                # Log the fetched event data to check UX fields
-                event_dict = dict(event_data)
-                logger.info(f"UX Fields Debug - Fetched from DB after insert:")
-                logger.info(f"  DB fee_required: {event_dict.get('fee_required')!r} (type: {type(event_dict.get('fee_required'))})")
-                logger.info(f"  DB event_url: {event_dict.get('event_url')!r} (type: {type(event_dict.get('event_url'))})")
-                logger.info(f"  DB host_name: {event_dict.get('host_name')!r} (type: {type(event_dict.get('host_name'))})")
                 
                 # Commit the transaction
                 cursor.execute("COMMIT")
                 
                 # Convert to dict and process datetime objects
-                event_dict = dict(event_data)
+                event_dict = dict(created_event_data)
                 
                 # Convert datetime objects to ISO format strings
                 if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
                     event_dict['created_at'] = event_dict['created_at'].isoformat()
+                if 'updated_at' in event_dict and isinstance(event_dict['updated_at'], datetime):
+                    event_dict['updated_at'] = event_dict['updated_at'].isoformat()
                 
                 # Ensure counters are integers
                 event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
@@ -2236,8 +2409,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 
                 # Clear event cache since a new event was created
                 event_cache.clear()
-                logger.info(f"Successfully created event {event_id}: {event.title}")
-                # UX fields fix: ensure fee_required, event_url, host_name are properly saved
+                logger.info(f"Successfully created event {event_id}: {event_data['title']} with SEO fields populated")
                 
                 return event_dict
                 
@@ -2311,8 +2483,20 @@ async def update_event(
     """
     Update an existing event.
     Only the event creator or an admin can update the event.
+    Auto-updates SEO fields based on new data.
     """
     placeholder = get_placeholder()
+    
+    # Convert Pydantic model to dict for processing
+    event_data = event.dict()
+    
+    # Auto-populate SEO fields
+    try:
+        event_data = auto_populate_seo_fields(event_data)
+        logger.info(f"Auto-populated SEO fields for update: slug={event_data.get('slug')}, city={event_data.get('city')}, state={event_data.get('state')}, price={event_data.get('price')}")
+    except Exception as e:
+        logger.warning(f"SEO auto-population failed during update: {e}")
+        # Continue with original data if auto-population fails
     
     try:
         with get_db() as conn:
@@ -2336,23 +2520,31 @@ async def update_event(
                     cursor.execute("ROLLBACK")
                     raise HTTPException(status_code=403, detail="Not authorized to update this event")
                 
-                # Prepare update query
+                # Prepare comprehensive update query with all SEO fields
                 query = f"""
                     UPDATE events 
-                    SET title={placeholder}, description={placeholder}, date={placeholder}, 
-                        start_time={placeholder}, end_time={placeholder}, end_date={placeholder}, 
-                        category={placeholder}, address={placeholder}, lat={placeholder}, lng={placeholder}, 
-                        recurring={placeholder}, frequency={placeholder}, fee_required={placeholder}, 
-                        event_url={placeholder}, host_name={placeholder}
+                    SET title={placeholder}, description={placeholder}, short_description={placeholder}, 
+                        date={placeholder}, start_time={placeholder}, end_time={placeholder}, end_date={placeholder}, 
+                        category={placeholder}, address={placeholder}, city={placeholder}, state={placeholder}, 
+                        country={placeholder}, lat={placeholder}, lng={placeholder}, recurring={placeholder}, 
+                        frequency={placeholder}, fee_required={placeholder}, price={placeholder}, currency={placeholder},
+                        event_url={placeholder}, host_name={placeholder}, organizer_url={placeholder},
+                        slug={placeholder}, is_published={placeholder}, start_datetime={placeholder}, 
+                        end_datetime={placeholder}, updated_at={placeholder}
                     WHERE id={placeholder}
                 """
                 values = (
-                    event.title, event.description, event.date, event.start_time, 
-                    event.end_time, event.end_date, event.category, event.address, 
-                    event.lat, event.lng, event.recurring, event.frequency, 
-                    event.fee_required,
-                    event.event_url,
-                    event.host_name,
+                    event_data['title'], event_data['description'], event_data.get('short_description', ''),
+                    event_data['date'], event_data['start_time'], event_data.get('end_time'), 
+                    event_data.get('end_date'), event_data['category'], event_data['address'], 
+                    event_data.get('city'), event_data.get('state'), event_data.get('country', 'USA'),
+                    event_data['lat'], event_data['lng'], event_data.get('recurring', False), 
+                    event_data.get('frequency'), event_data.get('fee_required'), 
+                    event_data.get('price', 0.0), event_data.get('currency', 'USD'),
+                    event_data.get('event_url'), event_data.get('host_name'), 
+                    event_data.get('organizer_url'), event_data.get('slug'), 
+                    event_data.get('is_published', True), event_data.get('start_datetime'), 
+                    event_data.get('end_datetime'), event_data.get('updated_at'),
                     event_id
                 )
                 
