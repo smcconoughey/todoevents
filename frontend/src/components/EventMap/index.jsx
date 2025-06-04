@@ -2305,7 +2305,7 @@ const EventMap = ({ mapsLoaded = false }) => {
       <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
         <SheetContent
           side="left"
-          className="w-full sm:w-[400px] p-0 border-r border-white/10 bg-neutral-900/80 backdrop-blur-sm"
+          className="w-full sm:w-[400px] max-w-[100vw] p-0 border-r border-white/10 bg-neutral-900/80 backdrop-blur-sm overflow-hidden"
         >
           <div className="flex flex-col h-full">
             <SheetHeader className="px-4 py-4 border-b border-white/10">
@@ -2382,10 +2382,10 @@ const EventMap = ({ mapsLoaded = false }) => {
               </div>
             </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="p-4 space-y-4 max-w-full">
                 {/* Location Section - Compact */}
-                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20 max-w-full overflow-hidden">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
