@@ -2416,8 +2416,14 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
-            # Convert to list of dictionaries
-            return [dict(event) for event in events]
+            # Convert to list of dictionaries and apply datetime conversion
+            event_list = []
+            for event in events:
+                event_dict = dict(event)
+                event_dict = convert_event_datetime_fields(event_dict)
+                event_list.append(event_dict)
+            
+            return event_list
             
     except Exception as e:
         logger.error(f"Error retrieving user events: {str(e)}")
@@ -4291,6 +4297,8 @@ def sanitize_ux_field(value):
 
 def convert_event_datetime_fields(event_dict):
     """Convert datetime objects to ISO format strings for API response"""
+    from datetime import datetime, timezone
+    
     datetime_fields = ['created_at', 'updated_at', 'start_datetime', 'end_datetime']
     for field in datetime_fields:
         if field in event_dict and isinstance(event_dict[field], datetime):
@@ -4300,6 +4308,14 @@ def convert_event_datetime_fields(event_dict):
             try:
                 event_dict[field] = str(event_dict[field])
             except:
+                event_dict[field] = None
+        elif field in event_dict and event_dict[field] is None:
+            # Handle NULL values - set a default for required fields
+            if field == 'created_at':
+                # For created_at, use current timestamp if None
+                event_dict[field] = datetime.now(timezone.utc).isoformat()
+            else:
+                # For optional fields, keep as None
                 event_dict[field] = None
     
     # Ensure counters are integers
