@@ -4140,6 +4140,22 @@ async def bulk_create_events(
                         'interest_count': 0,
                         'view_count': 0
                     }
+                    
+                    # **CRITICAL**: Auto-populate SEO fields just like frontend event creation
+                    try:
+                        event_dict = auto_populate_seo_fields(event_dict)
+                        logger.info(f"Bulk import - Auto-populated SEO fields for '{event.title}': slug={event_dict.get('slug')}, city={event_dict.get('city')}, state={event_dict.get('state')}, price={event_dict.get('price')}")
+                    except Exception as seo_error:
+                        logger.warning(f"Bulk import - SEO auto-population failed for '{event.title}': {seo_error}")
+                        # Continue with original data if auto-population fails
+                    
+                    # Ensure unique slug before inserting (same as regular event creation)
+                    base_slug = event_dict.get('slug', '')
+                    if base_slug:
+                        unique_slug = ensure_unique_slug(cursor, base_slug)
+                        event_dict['slug'] = unique_slug
+                        logger.info(f"Bulk import - Generated unique slug for '{event.title}': {unique_slug}")
+                    
                     values = build_event_values_for_insert(event_dict, current_user["id"], lat_rounded, lng_rounded)
                     
                     # For PostgreSQL, use RETURNING to get the ID in one step

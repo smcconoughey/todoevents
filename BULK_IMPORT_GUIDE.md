@@ -79,11 +79,13 @@ The Admin Bulk Import feature allows administrators to efficiently import multip
 
 ### Auto-Generated Fields
 The system automatically generates these SEO and organizational fields:
-- `slug` - URL-friendly slug based on title and city
-- `short_description` - Truncated description for previews
-- `city`, `state` - Extracted from address
-- `price` - Normalized from fee_required
-- `start_datetime`, `end_datetime` - Combined date/time fields
+- `slug` - URL-friendly slug based on title and city (e.g., "coffee-competition-orlando")
+- `short_description` - Truncated description for previews (160 characters max)
+- `city`, `state` - Extracted from address using smart parsing
+- `price` - Normalized from fee_required (converts "$25 admission" to 25.0)
+- `start_datetime`, `end_datetime` - Combined date/time fields with timezone info
+
+**Note**: These fields are generated using the same logic as frontend event creation, ensuring consistency across all event creation methods.
 
 ## Valid Categories
 
@@ -119,11 +121,12 @@ Duplicates are detected using:
 
 ### SEO Auto-Population
 Each imported event automatically gets:
-- URL-friendly slug generation
-- City/state extraction from address
-- Price normalization from fee descriptions
-- Short description generation
-- Unique slug enforcement
+- **URL-friendly slug generation** - Creates SEO-friendly URLs like `/e/coffee-competition-orlando`
+- **Unique slug enforcement** - Handles duplicates with ID suffixes like `/e/coffee-competition-orlando-175`
+- **City/state extraction** - Automatically parses address to extract location data
+- **Price normalization** - Converts fee descriptions to structured pricing data
+- **Short description generation** - Creates 160-character previews for search engines
+- **Same processing as frontend** - Uses identical logic to individual event creation
 
 ## Performance & Limits
 
