@@ -91,6 +91,16 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
 
     console.log(`Attempting to ${mode === 'login' ? 'login' : 'register'} with email: ${form.email}`);
 
+    // Safety timeout to ensure loading state is cleared
+    const safetyTimeout = setTimeout(() => {
+      console.warn('Safety timeout triggered - clearing loading state');
+      setIsLoading(false);
+      if (mode === 'register') {
+        setRegistrationStep('error');
+      }
+      setError('Request timeout. Please try again.');
+    }, 45000); // 45 second safety timeout
+
     try {
       if (mode === 'register') {
         if (form.password !== form.confirmPassword) {
@@ -114,6 +124,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           onSuccess();
         } else {
           setRegistrationStep('error');
+          setError('Registration failed. Please try again.');
         }
       } else {
         // Call login function - fetchWithTimeout is now implemented in AuthContext
@@ -121,18 +132,25 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         
         if (success) {
           onSuccess();
+        } else {
+          setError('Login failed. Please check your credentials and try again.');
         }
       }
     } catch (err) {
       console.error(`${mode === 'login' ? 'Login' : 'Registration'} error:`, err);
       setError(err.message || 'Authentication failed');
-      setIsLoading(false);
-      setRegistrationStep('error');
+      if (mode === 'register') {
+        setRegistrationStep('error');
+      }
       
       // If this is a timeout error on registration, show fallback option
       if (mode === 'register' && err.message && err.message.includes('timeout')) {
         setShowFallbackOption(true);
       }
+    } finally {
+      // Always clear the safety timeout and loading state
+      clearTimeout(safetyTimeout);
+      setIsLoading(false);
     }
   };
 

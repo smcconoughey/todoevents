@@ -117,7 +117,10 @@ const EventCreatorPage = () => {
                 For Organizations
               </Button>
               <Button
-                onClick={() => navigate('/')}
+                onClick={() => {
+                  // Navigate to home and open create form with URL parameter
+                  window.location.href = '/?create=true';
+                }}
                 className="btn-yellow-themed"
               >
                 Create Event
@@ -284,7 +287,10 @@ const EventCreatorPage = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                // Navigate to home and open create form with URL parameter
+                window.location.href = '/?create=true';
+              }}
               className="btn-yellow-themed text-lg px-8 py-3 min-h-[48px]"
             >
               Create Your Event Now

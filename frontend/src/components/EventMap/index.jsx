@@ -46,7 +46,8 @@ import {
   HelpCircle,
   Users,
   DollarSign,
-  ExternalLink
+  ExternalLink,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -813,11 +814,12 @@ const EventMap = ({ mapsLoaded = false }) => {
     }
   }, [user]);
 
-  // Handle URL parameters for event deep linking
+  // Handle URL parameters for event deep linking and create trigger
   useEffect(() => {
     const handleUrlParams = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const eventId = urlParams.get('event');
+      const shouldCreate = urlParams.get('create');
       
       if (eventId && events.length > 0 && !selectedEvent) {
         const targetEvent = events.find(event => event.id.toString() === eventId.toString());
@@ -844,13 +846,54 @@ const EventMap = ({ mapsLoaded = false }) => {
           console.warn(`Event with ID ${eventId} not found in current events list`);
         }
       }
+      
+      // Handle create parameter to open create form
+      if (shouldCreate === 'true') {
+        // Clear the URL parameter first
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('create');
+        window.history.replaceState({}, '', newUrl.pathname + newUrl.search);
+        
+        // If user is logged in, open create form immediately
+        if (user) {
+          setEditingEvent(null);
+          setSelectedEvent(null);
+          setIsCreateFormOpen(true);
+        } else {
+          // If not logged in, show login dialog first
+          setLoginMode('login');
+          setShowLoginDialog(true);
+        }
+      }
     };
 
-    // Only run after events are loaded and we don't already have a selected event
+    // Run on component mount and when events are loaded
     if (events.length > 0) {
       handleUrlParams();
+    } else {
+      // Also check for create parameter even when no events loaded
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldCreate = urlParams.get('create');
+      
+      if (shouldCreate === 'true') {
+        // Clear the URL parameter first
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('create');
+        window.history.replaceState({}, '', newUrl.pathname + newUrl.search);
+        
+        // If user is logged in, open create form immediately
+        if (user) {
+          setEditingEvent(null);
+          setSelectedEvent(null);
+          setIsCreateFormOpen(true);
+        } else {
+          // If not logged in, show login dialog first
+          setLoginMode('login');
+          setShowLoginDialog(true);
+        }
+      }
     }
-  }, [events.length]); // Only depend on events.length, not the entire events array
+  }, [events.length, user]); // Depend on both events.length and user
 
   const handleAddressSelect = (data) => {
     setSelectedLocation({
@@ -1590,6 +1633,15 @@ const EventMap = ({ mapsLoaded = false }) => {
                   variant="ghost"
                   size="sm"
                   className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  onClick={() => window.open('mailto:support@todo-events.com', '_blank')}
+                  title="Contact Support"
+                >
+                  <Mail className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                   onClick={() => user ? window.open('/hosts', '_blank') : setShowWelcomePopup(true)}
                   title={user ? "Hosting Guide" : "Help & Tutorial"}
                 >
@@ -2260,6 +2312,15 @@ const EventMap = ({ mapsLoaded = false }) => {
               <div className="flex items-center justify-between">
                 <SheetTitle className="text-white font-display font-bold">todo-events</SheetTitle>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                    onClick={() => window.open('mailto:support@todo-events.com', '_blank')}
+                    title="Contact Support"
+                  >
+                    <Mail className="w-4 h-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

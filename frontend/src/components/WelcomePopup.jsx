@@ -162,6 +162,11 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
                 <p className="text-center text-xs sm:text-sm text-themed-tertiary">
                   What type of events are you interested in?
                 </p>
+                <div className="bg-pin-blue/10 border border-pin-blue/20 rounded-lg p-3 mb-3">
+                  <p className="text-xs sm:text-sm text-themed-secondary text-center">
+                    💡 <strong>Tip:</strong> You can access this guide anytime by clicking the <strong>?</strong> button in the top left corner of the main page.
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Button
                     onClick={() => {

@@ -215,7 +215,10 @@ const HostsPage = () => {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button 
-                onClick={() => window.open('/', '_self')}
+                onClick={() => {
+                  // Navigate to home and open create form with URL parameter
+                  window.location.href = '/?create=true';
+                }}
                 className="px-8 py-3 bg-spark-yellow text-black font-semibold rounded-lg hover:bg-spark-yellow/90 transition-colors duration-200"
               >
                 Create Your First Event
