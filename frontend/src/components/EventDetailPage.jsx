@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from './EventMap/AuthContext';
 import { useEventInteraction } from '../hooks/useEventInteraction';
-import { ShareCard } from './EventMap/ShareCard';
+import ShareCard from './EventMap/ShareCard';
 import { InterestButton } from './EventMap/InterestButton';
 import { ViewCounter } from './EventMap/ViewCounter';
 import { ExternalLinkWarning } from './EventMap/ExternalLinkWarning';
