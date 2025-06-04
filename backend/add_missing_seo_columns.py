@@ -366,8 +366,7 @@ def populate_seo_data():
                 param_index = 1
                 
                 for field in ['slug', 'city', 'state', 'short_description', 'start_datetime', 'end_datetime', 'country', 'currency', 'is_published']:
-                    set_clauses.append(f"{field} = ${param_index}")
-                    param_index += 1
+                    set_clauses.append(f"{field} = %s")
                 
                 set_clauses.append("updated_at = CURRENT_TIMESTAMP")
                 values.append(event_id)
@@ -375,7 +374,7 @@ def populate_seo_data():
                 update_query = f"""
                     UPDATE events 
                     SET {', '.join(set_clauses)}
-                    WHERE id = ${param_index}
+                    WHERE id = %s
                 """
                 
                 cursor.execute(update_query, values)
