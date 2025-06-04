@@ -2111,12 +2111,17 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
             # For updates, exclude current event from check
             if placeholder == "?":
                 # SQLite style
-                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = {placeholder} AND id != {placeholder}", (base_slug, event_id))
+                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = ? AND id != ?", (base_slug, event_id))
+            else:
+                # PostgreSQL style with numbered placeholders
+                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = $1 AND id != $2", (base_slug, event_id))
+        else:
+            if placeholder == "?":
+                # SQLite style
+                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = ?", (base_slug,))
             else:
                 # PostgreSQL style
-                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = {placeholder} AND id != %s", (base_slug, event_id))
-        else:
-            cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = {placeholder}", (base_slug,))
+                cursor.execute(f"SELECT COUNT(*) FROM events WHERE slug = $1", (base_slug,))
         
         count = cursor.fetchone()[0]
         
@@ -4074,19 +4079,37 @@ async def bulk_create_events(
             
             for i, event in enumerate(bulk_events.events):
                 try:
-                    # Start transaction for each event
-                    cursor.execute("BEGIN")
+                    # Start transaction for each event - handle database-specific syntax
+                    if placeholder == "?":
+                        # SQLite
+                        cursor.execute("BEGIN")
+                    else:
+                        # PostgreSQL
+                        cursor.execute("BEGIN")
                     
-                    # Check for duplicates
-                    duplicate_check = f"""
-                        SELECT id FROM events 
-                        WHERE TRIM(LOWER(title)) = TRIM(LOWER({placeholder}))
-                        AND date = {placeholder} 
-                        AND start_time = {placeholder} 
-                        AND ABS(lat - {placeholder}) < 0.000001
-                        AND ABS(lng - {placeholder}) < 0.000001
-                        AND category = {placeholder}
-                    """
+                    # Check for duplicates - use database-specific placeholders
+                    if placeholder == "?":
+                        # SQLite style
+                        duplicate_check = """
+                            SELECT id FROM events 
+                            WHERE TRIM(LOWER(title)) = TRIM(LOWER(?))
+                            AND date = ? 
+                            AND start_time = ? 
+                            AND ABS(lat - ?) < 0.000001
+                            AND ABS(lng - ?) < 0.000001
+                            AND category = ?
+                        """
+                    else:
+                        # PostgreSQL style
+                        duplicate_check = """
+                            SELECT id FROM events 
+                            WHERE TRIM(LOWER(title)) = TRIM(LOWER($1))
+                            AND date = $2 
+                            AND start_time = $3 
+                            AND ABS(lat - $4) < 0.000001
+                            AND ABS(lng - $5) < 0.000001
+                            AND category = $6
+                        """
                     
                     # Round coordinates for consistency
                     lat_rounded = round(event.lat, 6)
@@ -4103,7 +4126,10 @@ async def bulk_create_events(
                     
                     duplicate = cursor.fetchone()
                     if duplicate:
-                        cursor.execute("ROLLBACK")
+                        try:
+                            cursor.execute("ROLLBACK")
+                        except Exception as rollback_error:
+                            logger.warning(f"Rollback failed for duplicate check: {rollback_error}")
                         error_count += 1
                         errors.append({
                             "index": i,
@@ -4177,7 +4203,10 @@ async def bulk_create_events(
                         event_id = cursor.lastrowid
                     
                     if not event_id:
-                        cursor.execute("ROLLBACK")
+                        try:
+                            cursor.execute("ROLLBACK")
+                        except Exception as rollback_error:
+                            logger.warning(f"Rollback failed for event ID check: {rollback_error}")
                         error_count += 1
                         errors.append({
                             "index": i,
@@ -4186,13 +4215,21 @@ async def bulk_create_events(
                         })
                         continue
                     
-                    # Fetch the created event
-                    fetch_query = f"SELECT * FROM events WHERE id = {placeholder}"
+                    # Fetch the created event - use database-specific placeholders
+                    if placeholder == "?":
+                        # SQLite style
+                        fetch_query = "SELECT * FROM events WHERE id = ?"
+                    else:
+                        # PostgreSQL style
+                        fetch_query = "SELECT * FROM events WHERE id = $1"
                     cursor.execute(fetch_query, (event_id,))
                     event_data = cursor.fetchone()
                     
                     if not event_data:
-                        cursor.execute("ROLLBACK")
+                        try:
+                            cursor.execute("ROLLBACK")
+                        except Exception as rollback_error:
+                            logger.warning(f"Rollback failed for event fetch check: {rollback_error}")
                         error_count += 1
                         errors.append({
                             "index": i,
@@ -4202,18 +4239,43 @@ async def bulk_create_events(
                         continue
                     
                     # Commit the transaction
-                    cursor.execute("COMMIT")
+                    try:
+                        cursor.execute("COMMIT")
+                    except Exception as commit_error:
+                        logger.error(f"Failed to commit transaction for event {i}: {commit_error}")
+                        try:
+                            cursor.execute("ROLLBACK")
+                        except:
+                            pass
+                        error_count += 1
+                        errors.append({
+                            "index": i,
+                            "event_title": event.title,
+                            "error": f"Failed to commit transaction: {commit_error}"
+                        })
+                        continue
                     
                     # Convert to dict and process datetime objects
                     event_dict = dict(event_data)
                     
-                    # Convert datetime objects to ISO format strings
-                    if 'created_at' in event_dict and isinstance(event_dict['created_at'], datetime):
-                        event_dict['created_at'] = event_dict['created_at'].isoformat()
+                    # Convert ALL datetime objects to ISO format strings for Pydantic compatibility
+                    from datetime import datetime, timezone
+                    datetime_fields = ['created_at', 'updated_at', 'start_datetime', 'end_datetime']
                     
-                    # Ensure counters are integers
-                    event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
-                    event_dict['view_count'] = event_dict.get('view_count', 0) or 0
+                    for field in datetime_fields:
+                        if field in event_dict and isinstance(event_dict[field], datetime):
+                            event_dict[field] = event_dict[field].isoformat()
+                        elif field in event_dict and event_dict[field] is None:
+                            # For required fields like created_at, use current time if None
+                            if field == 'created_at':
+                                event_dict[field] = datetime.now(timezone.utc).isoformat()
+                            else:
+                                # For optional datetime fields, leave as None
+                                event_dict[field] = None
+                    
+                    # Ensure counters are integers (not None)
+                    event_dict['interest_count'] = event_dict.get('interest_count') or 0
+                    event_dict['view_count'] = event_dict.get('view_count') or 0
                     
                     created_events.append(event_dict)
                     success_count += 1

@@ -65,8 +65,14 @@ REQUIRED_INSERT_FIELDS = [field[0] for field in EVENT_FIELDS
 
 def get_placeholder():
     """Get appropriate SQL placeholder for the database type"""
-    is_production = bool(os.getenv('DATABASE_URL'))
-    return '%s' if is_production else '?'
+    # Use same logic as backend.py
+    IS_PRODUCTION = os.getenv('IS_PRODUCTION', 'False').lower() == 'true'
+    DB_URL = os.getenv('DATABASE_URL')
+    
+    if IS_PRODUCTION and DB_URL:
+        return "%s"  # PostgreSQL uses %s
+    else:
+        return "?"   # SQLite uses ?
 
 def generate_insert_query(table_name: str = 'events', 
                          fields: List[str] = None,
@@ -86,7 +92,12 @@ def generate_insert_query(table_name: str = 'events',
         fields = INSERTABLE_EVENT_FIELDS
     
     placeholder = get_placeholder()
-    placeholders = ', '.join([placeholder] * len(fields))
+    if placeholder == "?":
+        # SQLite: use ? for all placeholders
+        placeholders = ', '.join(['?'] * len(fields))
+    else:
+        # PostgreSQL: use numbered placeholders $1, $2, etc.
+        placeholders = ', '.join([f'${i+1}' for i in range(len(fields))])
     field_list = ', '.join(fields)
     
     query = f"""
@@ -122,12 +133,19 @@ def generate_update_query(table_name: str = 'events',
                  if field[0] not in ['id', 'created_at', 'created_by']]
     
     placeholder = get_placeholder()
-    set_clauses = ', '.join([f"{field}={placeholder}" for field in fields])
+    if placeholder == "?":
+        # SQLite: use ? for all placeholders
+        set_clauses = ', '.join([f"{field}=?" for field in fields])
+        where_placeholder = "?"
+    else:
+        # PostgreSQL: use numbered placeholders
+        set_clauses = ', '.join([f"{field}=${i+1}" for i, field in enumerate(fields)])
+        where_placeholder = f"${len(fields)+1}"
     
     query = f"""
         UPDATE {table_name} 
         SET {set_clauses}
-        WHERE {where_field}={placeholder}
+        WHERE {where_field}={where_placeholder}
     """
     
     return query
