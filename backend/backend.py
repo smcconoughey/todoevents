@@ -4438,6 +4438,53 @@ class BulkEventResponse(BaseModel):
     errors: List[dict]
     created_events: List[EventResponse]
 
+@app.post("/admin/events/bulk-simple", response_model=BulkEventResponse)  
+async def bulk_create_events_simple(
+    bulk_events: BulkEventCreate, 
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    SIMPLIFIED Bulk create events using individual event creation (admin-only) - Workaround
+    """
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized. Admin access required.")
+    
+    success_count = 0
+    error_count = 0
+    errors = []
+    created_events = []
+    
+    logger.info(f"Admin {current_user['email']} initiating SIMPLE bulk event creation for {len(bulk_events.events)} events")
+    
+    # Use individual event creation to bypass bulk import issues
+    for i, event_data in enumerate(bulk_events.events):
+        try:
+            # Create event using the proven single event creation function
+            response_event = await create_event(event_data, current_user)
+            created_events.append(response_event)
+            success_count += 1
+            logger.info(f"✅ Successfully created event {i+1}: '{event_data.title}' (ID: {response_event.id})")
+            
+        except Exception as e:
+            error_count += 1
+            error_msg = str(e)
+            logger.error(f"❌ Error creating event {i+1} ({event_data.title}): {error_msg}")
+            errors.append({
+                "event_index": i + 1,
+                "event_title": event_data.title,
+                "error": error_msg
+            })
+            continue
+    
+    logger.info(f"✅ Simple bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+    
+    return BulkEventResponse(
+        success_count=success_count,
+        error_count=error_count,
+        errors=errors,
+        created_events=created_events
+    )
+
 @app.post("/admin/events/bulk", response_model=BulkEventResponse)
 async def bulk_create_events(
     bulk_events: BulkEventCreate, 
@@ -4563,65 +4610,45 @@ async def bulk_create_events(
                             insert_values.append(value)
                             placeholders.append(placeholder)
                     
-                    # Execute insert
-                    insert_query = f"""
-                        INSERT INTO events ({', '.join(insert_columns)}) 
-                        VALUES ({', '.join(placeholders)})
-                    """
-                    
-                    logger.info(f"Executing insert for '{event_dict['title']}' with {len(insert_columns)} columns")
-                    logger.debug(f"Insert query: {insert_query}")
-                    logger.debug(f"Insert values: {insert_values}")
-                    
-                    cursor.execute(insert_query, insert_values)
-                    
-                    # Get the inserted event ID with enhanced error handling
+                    # Execute insert with proper ID retrieval
                     event_id = None
                     try:
                         if IS_PRODUCTION and DB_URL:
-                            # PostgreSQL: Try multiple methods to get the inserted ID
-                            try:
-                                # Method 1: Use RETURNING clause if possible (requires modifying query)
-                                cursor.execute("SELECT currval(pg_get_serial_sequence('events', 'id'))")
-                                result = cursor.fetchone()
-                                if result and result[0] is not None:
-                                    event_id = int(result[0])
-                                    logger.debug(f"✅ Got event ID via currval: {event_id}")
-                                else:
-                                    raise Exception("currval returned no result")
-                            except Exception as e:
-                                logger.warning(f"⚠️ currval method failed: {e}")
+                            # PostgreSQL: Use RETURNING clause for reliable ID retrieval
+                            insert_query = f"""
+                                INSERT INTO events ({', '.join(insert_columns)}) 
+                                VALUES ({', '.join(placeholders)})
+                                RETURNING id
+                            """
+                            
+                            logger.info(f"Executing PostgreSQL insert for '{event_dict['title']}' with {len(insert_columns)} columns")
+                            logger.debug(f"Insert query: {insert_query}")
+                            logger.debug(f"Insert values: {insert_values}")
+                            
+                            cursor.execute(insert_query, insert_values)
+                            
+                            # Get ID from RETURNING clause
+                            result = cursor.fetchone()
+                            if result and result[0] is not None:
+                                event_id = int(result[0])
+                                logger.debug(f"✅ Got event ID via RETURNING: {event_id}")
+                            else:
+                                raise Exception("RETURNING clause returned no result")
                                 
-                                try:
-                                    # Method 2: Use lastval() as backup
-                                    cursor.execute("SELECT lastval()")
-                                    result = cursor.fetchone()
-                                    if result and result[0] is not None:
-                                        event_id = int(result[0])
-                                        logger.debug(f"✅ Got event ID via lastval: {event_id}")
-                                    else:
-                                        raise Exception("lastval returned no result")
-                                except Exception as e2:
-                                    logger.warning(f"⚠️ lastval method failed: {e2}")
-                                    
-                                    # Method 3: Query by unique fields as last resort
-                                    try:
-                                        cursor.execute("""
-                                            SELECT id FROM events 
-                                            WHERE title = %s AND created_by = %s 
-                                            ORDER BY created_at DESC LIMIT 1
-                                        """, (event_dict['title'], current_user['id']))
-                                        result = cursor.fetchone()
-                                        if result and result[0] is not None:
-                                            event_id = int(result[0])
-                                            logger.debug(f"✅ Got event ID via title search: {event_id}")
-                                        else:
-                                            raise Exception("Title search returned no result")
-                                    except Exception as e3:
-                                        logger.error(f"❌ All PostgreSQL ID retrieval methods failed: {e3}")
-                                        raise Exception(f"Could not retrieve inserted event ID: {e}, {e2}, {e3}")
                         else:
-                            # SQLite: Use last_insert_rowid()
+                            # SQLite: Use standard insert + last_insert_rowid()
+                            insert_query = f"""
+                                INSERT INTO events ({', '.join(insert_columns)}) 
+                                VALUES ({', '.join(placeholders)})
+                            """
+                            
+                            logger.info(f"Executing SQLite insert for '{event_dict['title']}' with {len(insert_columns)} columns")
+                            logger.debug(f"Insert query: {insert_query}")
+                            logger.debug(f"Insert values: {insert_values}")
+                            
+                            cursor.execute(insert_query, insert_values)
+                            
+                            # Get ID from last_insert_rowid()
                             cursor.execute("SELECT last_insert_rowid()")
                             result = cursor.fetchone()
                             if result and result[0] is not None:

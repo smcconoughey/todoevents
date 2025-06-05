@@ -1,175 +1,288 @@
 #!/usr/bin/env python3
 """
-Test script to verify bulk import fix works with production database schema
+Test script for the production bulk import fix
+==============================================
+
+This script tests the new bulk import functionality to ensure it works
+with the PostgreSQL RETURNING clause fix.
 """
 
 import requests
 import json
-import random
-import time
+import os
+import logging
+from datetime import datetime, timedelta
 
-def test_create_admin_user():
-    """Test admin user creation/login"""
-    url = "https://todo-events-backend.onrender.com"
-    
-    # Try to register (will fail if exists, which is fine)
-    register_data = {
-        "email": "test@admin.com",
-        "password": "TestPassword123!",
-        "role": "admin"
-    }
-    
-    response = requests.post(f"{url}/users", json=register_data)
-    print(f"Registration: {response.status_code}")
-    
-    return True
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-def test_login():
-    """Test login and get token"""
-    url = "https://todo-events-backend.onrender.com"
+# Configuration
+BASE_URL = os.getenv('API_BASE_URL', 'https://todoevents-backend.onrender.com')
+TEST_ADMIN_EMAIL = os.getenv('TEST_ADMIN_EMAIL', 'admin@todoevents.com')
+TEST_ADMIN_PASSWORD = os.getenv('TEST_ADMIN_PASSWORD', 'admin123!@#')
+
+def get_auth_token():
+    """Get authentication token for admin user"""
+    logger.info(f"🔐 Authenticating as {TEST_ADMIN_EMAIL}")
     
     login_data = {
-        "username": "test@admin.com",
-        "password": "TestPassword123!"
+        'username': TEST_ADMIN_EMAIL,
+        'password': TEST_ADMIN_PASSWORD
     }
     
-    response = requests.post(f"{url}/token", data=login_data)
-    print(f"Login: {response.status_code}")
+    response = requests.post(
+        f"{BASE_URL}/token", 
+        data=login_data,
+        headers={'Content-Type': 'application/x-www-form-urlencoded'}
+    )
     
     if response.status_code == 200:
-        token = response.json()["access_token"]
-        print("✅ Login successful")
+        token = response.json()['access_token']
+        logger.info("✅ Authentication successful")
         return token
     else:
-        print("❌ Login failed")
-        print(response.text)
+        logger.error(f"❌ Authentication failed: {response.status_code} - {response.text}")
         return None
 
-def test_bulk_import_with_actual_schema(token):
-    """Test bulk import with the fix to handle actual database schema"""
-    if not token:
-        print("❌ No token available")
-        return
+def test_simple_bulk_import(token):
+    """Test the simplified bulk import endpoint"""
+    logger.info("🧪 Testing simplified bulk import endpoint")
     
-    url = "https://todo-events-backend.onrender.com"
+    # Create test events
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
     
-    # Generate unique test events
-    suffix = str(int(time.time()))[-6:]
     test_events = [
         {
-            "title": f"Test Event Schema Fix {suffix}",
-            "description": "Testing database schema compatibility fix",
-            "date": "2024-12-31",
-            "start_time": "12:00",
-            "end_time": "14:00",
-            "category": "community",
-            "address": "Test Address, Test City, OH, USA",
-            "lat": 39.9612,
-            "lng": -82.9988,
-            "recurring": False,
+            "title": "Test Event 1 - Bulk Import Fix",
+            "description": "Testing the new bulk import with RETURNING clause",
+            "date": tomorrow,
+            "start_time": "14:00",
+            "end_time": "16:00",
+            "category": "conference",
+            "address": "123 Test St, Test City, FL 32801",
+            "lat": 28.5383,
+            "lng": -81.3792,
             "fee_required": "Free",
-            "event_url": "https://example.com",
-            "host_name": "Test Host"
+            "host_name": "Test Organization",
+            "event_url": "https://test.example.com"
         },
         {
-            "title": f"Test Event Schema Fix {suffix}B",
-            "description": "Another test event for schema compatibility",
-            "date": "2024-12-31",
-            "start_time": "15:00",
-            "end_time": "17:00",
-            "category": "education",
-            "address": "Another Address, Test City, CA, USA",
-            "lat": 37.7749,
-            "lng": -122.4194,
-            "recurring": False,
+            "title": "Test Event 2 - Database Fix",
+            "description": "Second test event for PostgreSQL bulk import",
+            "date": tomorrow,
+            "start_time": "18:00",
+            "end_time": "20:00",
+            "category": "music",
+            "address": "456 Music Ave, Concert City, CA 90210",
+            "lat": 34.0522,
+            "lng": -118.2437,
             "fee_required": "$25",
-            "event_url": "https://example2.com",
-            "host_name": "Test Host 2"
+            "host_name": "Music Venue",
+            "event_url": "https://music.example.com"
         }
     ]
     
-    bulk_data = {
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
         "events": test_events
     }
     
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+    # Test the simplified bulk import
+    logger.info("🚀 Sending bulk import request (simple method)")
+    response = requests.post(
+        f"{BASE_URL}/admin/events/bulk-simple",
+        headers=headers,
+        json=payload
+    )
     
-    print(f"🚀 Testing bulk import with {len(test_events)} events...")
-    
-    response = requests.post(f"{url}/admin/events/bulk", json=bulk_data, headers=headers)
-    
-    print(f"Status: {response.status_code}")
+    logger.info(f"📊 Response status: {response.status_code}")
     
     if response.status_code == 200:
         result = response.json()
-        print(f"✅ Bulk import successful!")
-        print(f"   Success count: {result.get('success_count', 0)}")
-        print(f"   Error count: {result.get('error_count', 0)}")
+        logger.info(f"✅ Simple bulk import successful!")
+        logger.info(f"   Success count: {result['success_count']}")
+        logger.info(f"   Error count: {result['error_count']}")
         
-        if result.get('errors'):
-            print("   Errors:")
+        if result['errors']:
+            logger.warning("⚠️ Some errors occurred:")
             for error in result['errors']:
-                print(f"     - {error}")
+                logger.warning(f"   - {error}")
         
-        if result.get('created_events'):
-            print(f"   Created {len(result['created_events'])} events")
-            for event in result['created_events']:
-                slug = event.get('slug', 'no-slug')
-                print(f"     - {event['title']} (slug: {slug})")
-        
-        return result.get('success_count', 0) > 0
+        # Return created event IDs for cleanup
+        return [event['id'] for event in result['created_events']]
     else:
-        print("❌ Bulk import failed")
-        print(f"Response: {response.text}")
-        return False
+        logger.error(f"❌ Simple bulk import failed: {response.text}")
+        return []
 
-def test_debug_schema():
-    """Test the debug endpoint to see actual database schema"""
-    url = "https://todo-events-backend.onrender.com"
+def test_standard_bulk_import(token):
+    """Test the standard bulk import endpoint with RETURNING fix"""
+    logger.info("🧪 Testing standard bulk import endpoint (with RETURNING fix)")
     
-    response = requests.get(f"{url}/debug/schema")
-    print(f"Debug schema: {response.status_code}")
+    # Create test events
+    tomorrow = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d')
+    
+    test_events = [
+        {
+            "title": "Standard Bulk Test 1",
+            "description": "Testing the fixed standard bulk import",
+            "date": tomorrow,
+            "start_time": "10:00",
+            "end_time": "12:00",
+            "category": "sports",
+            "address": "789 Sports Complex, Athletic City, TX 75001",
+            "lat": 32.7767,
+            "lng": -96.7970,
+            "fee_required": "$15",
+            "host_name": "Sports Center"
+        },
+        {
+            "title": "Standard Bulk Test 2",
+            "description": "Second test for PostgreSQL RETURNING clause",
+            "date": tomorrow,
+            "start_time": "15:00",
+            "end_time": "17:00",
+            "category": "arts",
+            "address": "321 Art Gallery, Creative City, NY 10001",
+            "lat": 40.7128,
+            "lng": -74.0060,
+            "fee_required": "Free",
+            "host_name": "Art Gallery"
+        }
+    ]
+    
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "events": test_events
+    }
+    
+    # Test the standard bulk import
+    logger.info("🚀 Sending bulk import request (standard method with RETURNING fix)")
+    response = requests.post(
+        f"{BASE_URL}/admin/events/bulk",
+        headers=headers,
+        json=payload
+    )
+    
+    logger.info(f"📊 Response status: {response.status_code}")
     
     if response.status_code == 200:
-        schema_info = response.json()
-        print("Database Schema Information:")
-        if 'production_schema' in schema_info:
-            print(f"Production columns: {len(schema_info['production_schema']['columns'])}")
-            print("Columns:", ", ".join(schema_info['production_schema']['columns']))
-        return True
+        result = response.json()
+        logger.info(f"✅ Standard bulk import successful!")
+        logger.info(f"   Success count: {result['success_count']}")
+        logger.info(f"   Error count: {result['error_count']}")
+        
+        if result['errors']:
+            logger.warning("⚠️ Some errors occurred:")
+            for error in result['errors']:
+                logger.warning(f"   - {error}")
+        
+        # Return created event IDs for cleanup
+        return [event['id'] for event in result['created_events']]
     else:
-        print("❌ Could not get schema info")
-        return False
+        logger.error(f"❌ Standard bulk import failed: {response.text}")
+        return []
+
+def cleanup_test_events(token, event_ids):
+    """Clean up test events"""
+    if not event_ids:
+        return
+    
+    logger.info(f"🧹 Cleaning up {len(event_ids)} test events")
+    
+    headers = {
+        'Authorization': f'Bearer {token}'
+    }
+    
+    for event_id in event_ids:
+        try:
+            response = requests.delete(
+                f"{BASE_URL}/events/{event_id}",
+                headers=headers
+            )
+            if response.status_code == 200:
+                logger.info(f"   ✅ Deleted event {event_id}")
+            else:
+                logger.warning(f"   ⚠️ Failed to delete event {event_id}: {response.status_code}")
+        except Exception as e:
+            logger.error(f"   ❌ Error deleting event {event_id}: {e}")
+
+def test_database_info(token):
+    """Test the database info endpoint"""
+    logger.info("🧪 Testing database info endpoint")
+    
+    headers = {
+        'Authorization': f'Bearer {token}'
+    }
+    
+    response = requests.get(
+        f"{BASE_URL}/debug/database-info",
+        headers=headers
+    )
+    
+    if response.status_code == 200:
+        info = response.json()
+        logger.info("✅ Database info retrieved:")
+        logger.info(f"   Database type: {info.get('database_type')}")
+        logger.info(f"   Is production: {info.get('is_production')}")
+        logger.info(f"   Event count: {info.get('event_count')}")
+        logger.info(f"   UX fields present: {info.get('ux_fields_present')}")
+        logger.info(f"   Table count: {len(info.get('tables', []))}")
+        return info
+    else:
+        logger.error(f"❌ Failed to get database info: {response.status_code} - {response.text}")
+        return None
 
 def main():
-    """Run all tests"""
-    print("🧪 Testing Bulk Import Production Schema Fix")
-    print("=" * 50)
+    """Main test function"""
+    logger.info("🚀 Starting bulk import production fix test")
+    logger.info(f"   Target URL: {BASE_URL}")
     
-    # Test sequence
+    # Authenticate
+    token = get_auth_token()
+    if not token:
+        logger.error("❌ Cannot proceed without authentication")
+        return
+    
+    all_created_ids = []
+    
     try:
-        test_create_admin_user()
-        token = test_login()
+        # Test database info
+        db_info = test_database_info(token)
         
-        if token:
-            print("\n📊 Testing database schema debug...")
-            test_debug_schema()
-            
-            print("\n🎯 Testing bulk import with schema fix...")
-            success = test_bulk_import_with_actual_schema(token)
-            
-            if success:
-                print("\n🎉 All tests passed! Bulk import fix is working.")
-            else:
-                print("\n❌ Bulk import test failed")
+        # Test simple bulk import
+        simple_ids = test_simple_bulk_import(token)
+        all_created_ids.extend(simple_ids)
+        
+        # Test standard bulk import 
+        standard_ids = test_standard_bulk_import(token)
+        all_created_ids.extend(standard_ids)
+        
+        # Report results
+        logger.info("📊 Test Results Summary:")
+        logger.info(f"   Total events created: {len(all_created_ids)}")
+        
+        if len(all_created_ids) >= 4:
+            logger.info("🎉 All bulk import tests PASSED!")
+        elif len(all_created_ids) >= 2:
+            logger.warning("⚠️ Partial success - some bulk import methods working")
         else:
-            print("❌ Could not get authentication token")
-            
-    except Exception as e:
-        print(f"❌ Test failed with error: {e}")
+            logger.error("❌ Bulk import tests FAILED - no events created")
+        
+    finally:
+        # Clean up test events
+        if all_created_ids:
+            cleanup_test_events(token, all_created_ids)
+    
+    logger.info("✅ Test completed")
 
 if __name__ == "__main__":
     main() 
