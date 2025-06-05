@@ -4419,7 +4419,7 @@ async def bulk_create_events(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Bulk create events (admin-only endpoint)
+    ROBUST Bulk create events (admin-only endpoint) - Production Ready
     """
     if current_user['role'] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized. Admin access required.")
@@ -4430,259 +4430,164 @@ async def bulk_create_events(
     errors = []
     created_events = []
     
-    logger.info(f"Admin {current_user['email']} initiating bulk event creation for {len(bulk_events.events)} events")
+    logger.info(f"Admin {current_user['email']} initiating ROBUST bulk event creation for {len(bulk_events.events)} events")
     
     try:
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Get actual columns that exist in the database
-            actual_columns = get_actual_table_columns(cursor, 'events')
+            # First, get the actual table columns to avoid schema issues
+            try:
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL - Get columns from information_schema
+                    cursor.execute("""
+                        SELECT column_name, data_type 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'events' 
+                        ORDER BY ordinal_position
+                    """)
+                else:
+                    # SQLite - Get columns from PRAGMA
+                    cursor.execute("PRAGMA table_info(events)")
+                
+                columns_info = cursor.fetchall()
+                available_columns = [col[0] if IS_PRODUCTION else col[1] for col in columns_info]
+                logger.info(f"Available database columns: {available_columns}")
+                
+            except Exception as e:
+                logger.error(f"Could not get table schema: {e}")
+                # Fallback to basic columns
+                available_columns = ['id', 'title', 'description', 'date', 'start_time', 'end_time', 
+                                   'category', 'address', 'lat', 'lng', 'created_by', 'created_at']
             
-            # Filter to only insertable columns (exclude auto-generated ones)
-            insertable_columns = [col for col in actual_columns if col not in ['id', 'created_at']]
-            
-            logger.info(f"Database has {len(actual_columns)} columns, {len(insertable_columns)} are insertable")
-            
-            for i, event in enumerate(bulk_events.events):
+            # Process each event
+            for i, event_data in enumerate(bulk_events.events):
                 try:
-                    # Start transaction for each event - handle database-specific syntax
-                    if placeholder == "?":
-                        # SQLite
-                        cursor.execute("BEGIN")
-                    else:
-                        # PostgreSQL
-                        cursor.execute("BEGIN")
+                    # Auto-populate SEO fields first
+                    event_dict = auto_populate_seo_fields(event_data.dict())
+                    logger.info(f"Bulk import - Auto-populated SEO fields for '{event_dict['title']}': slug={event_dict.get('slug')}, city={event_dict.get('city')}, state={event_dict.get('state')}, price={event_dict.get('price')}")
                     
-                    # Check for duplicates - use database-specific placeholders
-                    if placeholder == "?":
-                        # SQLite style
-                        duplicate_check = """
-                            SELECT id FROM events 
-                            WHERE TRIM(LOWER(title)) = TRIM(LOWER(?))
-                            AND date = ? 
-                            AND start_time = ? 
-                            AND ABS(lat - ?) < 0.000001
-                            AND ABS(lng - ?) < 0.000001
-                            AND category = ?
-                        """
-                    else:
-                        # PostgreSQL style (use %s with psycopg2)
-                        duplicate_check = """
-                            SELECT id FROM events 
-                            WHERE TRIM(LOWER(title)) = TRIM(LOWER(%s))
-                            AND date = %s 
-                            AND start_time = %s 
-                            AND ABS(lat - %s) < 0.000001
-                            AND ABS(lng - %s) < 0.000001
-                            AND category = %s
-                        """
+                    # Generate safe unique slug
+                    base_slug = event_dict.get('slug', 'event')
+                    try:
+                        unique_slug = ensure_unique_slug_failsafe(cursor, base_slug, placeholder)
+                        event_dict['slug'] = unique_slug
+                        logger.info(f"Bulk import - Generated unique slug for '{event_dict['title']}': {unique_slug}")
+                    except Exception as slug_error:
+                        logger.error(f"Slug generation failed for '{event_dict['title']}': {slug_error}")
+                        fallback_slug = f"{base_slug}-{int(time.time())}"
+                        event_dict['slug'] = fallback_slug
+                        logger.info(f"Using emergency fallback slug: {fallback_slug}")
                     
-                    # Round coordinates for consistency
-                    lat_rounded = round(event.lat, 6)
-                    lng_rounded = round(event.lng, 6)
+                    # Build insert query dynamically based on available columns
+                    insert_columns = []
+                    insert_values = []
+                    placeholders = []
                     
-                    cursor.execute(duplicate_check, (
-                        event.title.strip(), 
-                        event.date, 
-                        event.start_time, 
-                        lat_rounded, 
-                        lng_rounded, 
-                        event.category
-                    ))
-                    
-                    duplicate = cursor.fetchone()
-                    if duplicate:
-                        try:
-                            cursor.execute("ROLLBACK")
-                        except Exception as rollback_error:
-                            logger.warning(f"Rollback failed for duplicate check: {rollback_error}")
-                        error_count += 1
-                        errors.append({
-                            "index": i,
-                            "event_title": event.title,
-                            "error": "Duplicate event - event with these exact details already exists"
-                        })
-                        continue
-                    
-                    # Convert event object to dict for processing
-                    event_dict = {
-                        'title': event.title,
-                        'description': event.description,
-                        'short_description': getattr(event, 'short_description', None),
-                        'date': event.date,
-                        'start_time': event.start_time,
-                        'end_time': event.end_time,
-                        'end_date': event.end_date,
-                        'category': event.category,
-                        'address': event.address,
-                        'city': getattr(event, 'city', None),
-                        'state': getattr(event, 'state', None),
-                        'country': getattr(event, 'country', 'USA'),
-                        'recurring': event.recurring,
-                        'frequency': event.frequency,
-                        'fee_required': event.fee_required,
-                        'price': getattr(event, 'price', 0.0),
-                        'currency': getattr(event, 'currency', 'USD'),
-                        'event_url': event.event_url,
-                        'host_name': event.host_name,
-                        'organizer_url': getattr(event, 'organizer_url', None),
-                        'slug': getattr(event, 'slug', None),
-                        'is_published': getattr(event, 'is_published', True),
-                        'start_datetime': getattr(event, 'start_datetime', None),
-                        'end_datetime': getattr(event, 'end_datetime', None),
-                        'updated_at': None,
-                        'interest_count': 0,
-                        'view_count': 0,
-                        'lat': lat_rounded,
-                        'lng': lng_rounded,
-                        'created_by': current_user["id"]
+                    # Core required fields
+                    core_fields = {
+                        'title': event_dict['title'],
+                        'description': event_dict['description'], 
+                        'date': event_dict['date'],
+                        'start_time': event_dict['start_time'],
+                        'category': event_dict['category'],
+                        'address': event_dict['address'],
+                        'lat': event_dict['lat'],
+                        'lng': event_dict['lng'],
+                        'created_by': current_user['id'],
+                        'created_at': datetime.utcnow().isoformat()
                     }
                     
-                    # **CRITICAL**: Auto-populate SEO fields just like frontend event creation
-                    try:
-                        event_dict = auto_populate_seo_fields(event_dict)
-                        logger.info(f"Bulk import - Auto-populated SEO fields for '{event.title}': slug={event_dict.get('slug')}, city={event_dict.get('city')}, state={event_dict.get('state')}, price={event_dict.get('price')}")
-                    except Exception as seo_error:
-                        logger.warning(f"Bulk import - SEO auto-population failed for '{event.title}': {seo_error}")
-                        # Continue with original data if auto-population fails
+                    # Optional fields that may exist
+                    optional_fields = {
+                        'end_time': event_dict.get('end_time'),
+                        'end_date': event_dict.get('end_date'),
+                        'short_description': event_dict.get('short_description'),
+                        'city': event_dict.get('city'),
+                        'state': event_dict.get('state'),
+                        'country': event_dict.get('country', 'USA'),
+                        'fee_required': event_dict.get('fee_required'),
+                        'event_url': event_dict.get('event_url'),
+                        'host_name': event_dict.get('host_name'),
+                        'organizer_url': event_dict.get('organizer_url'),
+                        'slug': event_dict.get('slug'),
+                        'price': event_dict.get('price', 0.0),
+                        'currency': event_dict.get('currency', 'USD'),
+                        'start_datetime': event_dict.get('start_datetime'),
+                        'end_datetime': event_dict.get('end_datetime'),
+                        'updated_at': datetime.utcnow().isoformat()
+                    }
                     
-                    # FAILSAFE: Ensure unique slug with error-resistant approach
-                    base_slug = event_dict.get('slug', '')
-                    if base_slug:
-                        try:
-                            unique_slug = ensure_unique_slug_failsafe(cursor, base_slug, placeholder)
-                            event_dict['slug'] = unique_slug
-                            logger.info(f"Bulk import - Generated unique slug for '{event.title}': {unique_slug}")
-                        except Exception as slug_error:
-                            logger.error(f"Bulk import - Slug generation failed for '{event.title}': {slug_error}")
-                            # Use fallback slug with timestamp
-                            import time
-                            fallback_slug = f"{base_slug}-{int(time.time())}"
-                            event_dict['slug'] = fallback_slug
-                            logger.info(f"Bulk import - Using emergency fallback slug: {fallback_slug}")
-                    
-                    # Build INSERT query for only columns that exist in the database
-                    filtered_data = {}
-                    for col in insertable_columns:
-                        if col in event_dict:
-                            filtered_data[col] = event_dict[col]
+                    # Handle boolean field properly
+                    if 'is_published' in available_columns:
+                        if IS_PRODUCTION and DB_URL:
+                            optional_fields['is_published'] = True  # PostgreSQL boolean
                         else:
-                            # Provide sensible defaults for missing fields
-                            if col == 'interest_count':
-                                filtered_data[col] = 0
-                            elif col == 'view_count':
-                                filtered_data[col] = 0
-                            elif col == 'updated_at':
-                                filtered_data[col] = None
-                            elif col == 'frequency':
-                                filtered_data[col] = None
-                            elif col == 'end_time':
-                                filtered_data[col] = None
-                            elif col == 'end_date':
-                                filtered_data[col] = None
-                            else:
-                                filtered_data[col] = None
+                            optional_fields['is_published'] = 1     # SQLite integer
                     
-                    # Create INSERT query
-                    columns = list(filtered_data.keys())
-                    values = list(filtered_data.values())
+                    # Add all fields that exist in database
+                    for field, value in core_fields.items():
+                        if field in available_columns:
+                            insert_columns.append(field)
+                            insert_values.append(value)
+                            placeholders.append(placeholder)
                     
-                    if placeholder == "?":
-                        placeholders = ', '.join(['?'] * len(columns))
-                    else:
-                        placeholders = ', '.join(['%s'] * len(columns))
+                    for field, value in optional_fields.items():
+                        if field in available_columns and value is not None:
+                            insert_columns.append(field)
+                            insert_values.append(value)
+                            placeholders.append(placeholder)
                     
-                    column_list = ', '.join(columns)
+                    # Execute insert
+                    insert_query = f"""
+                        INSERT INTO events ({', '.join(insert_columns)}) 
+                        VALUES ({', '.join(placeholders)})
+                    """
                     
+                    logger.info(f"Executing insert for '{event_dict['title']}' with {len(insert_columns)} columns")
+                    cursor.execute(insert_query, insert_values)
+                    
+                    # Get the inserted event ID
                     if IS_PRODUCTION and DB_URL:
-                        insert_query = f"""
-                            INSERT INTO events ({column_list}) 
-                            VALUES ({placeholders})
-                            RETURNING id
-                        """
-                        cursor.execute(insert_query, values)
-                        result = cursor.fetchone()
-                        event_id = result[0] if result else None
+                        cursor.execute("SELECT lastval()")
                     else:
-                        insert_query = f"""
-                            INSERT INTO events ({column_list}) 
-                            VALUES ({placeholders})
-                        """
-                        cursor.execute(insert_query, values)
-                        event_id = cursor.lastrowid
+                        cursor.execute("SELECT last_insert_rowid()")
                     
-                    if not event_id:
-                        try:
-                            cursor.execute("ROLLBACK")
-                        except Exception as rollback_error:
-                            logger.warning(f"Rollback failed for event ID check: {rollback_error}")
-                        error_count += 1
-                        errors.append({
-                            "index": i,
-                            "event_title": event.title,
-                            "error": "Failed to create event - database insert returned no ID"
-                        })
-                        continue
+                    event_id = cursor.fetchone()[0]
                     
-                    # Commit the transaction
-                    try:
-                        cursor.execute("COMMIT")
-                    except Exception as commit_error:
-                        logger.warning(f"Commit failed for '{event.title}': {commit_error}")
-                        try:
-                            cursor.execute("ROLLBACK")
-                        except Exception as rollback_error:
-                            logger.warning(f"Rollback after commit failure: {rollback_error}")
-                        error_count += 1
-                        errors.append({
-                            "index": i,
-                            "event_title": event.title,
-                            "error": f"Database commit failed: {commit_error}"
-                        })
-                        continue
+                    # Create response event
+                    response_event = EventResponse(
+                        id=event_id,
+                        **event_dict,
+                        created_by=current_user['id'],
+                        created_at=datetime.utcnow().isoformat(),
+                        interest_count=0,
+                        view_count=0
+                    )
                     
-                    # Create response object
-                    created_event_dict = {
-                        'id': event_id,
-                        'created_by': current_user["id"],
-                        'created_at': datetime.utcnow().isoformat() + 'Z',
-                        **{k: v for k, v in event_dict.items() if k != 'created_by'}
-                    }
-                    
-                    created_events.append(EventResponse(**created_event_dict))
+                    created_events.append(response_event)
                     success_count += 1
-                    
-                    logger.info(f"Successfully created event {event_id}: '{event.title}'")
+                    logger.info(f"✅ Successfully created event {i+1}: '{event_dict['title']}' (ID: {event_id})")
                     
                 except Exception as e:
-                    # Ensure we rollback any open transaction
-                    try:
-                        cursor.execute("ROLLBACK")
-                    except Exception as rollback_error:
-                        logger.warning(f"Rollback failed during exception handling: {rollback_error}")
-                    
-                    error_message = str(e) if str(e) else str(type(e).__name__)
-                    logger.error(f"Error creating event {i} ({event.title}): {error_message}")
                     error_count += 1
+                    error_msg = str(e)
+                    logger.error(f"❌ Error creating event {i+1} ({event_data.title}): {error_msg}")
                     errors.append({
-                        "index": i,
-                        "event_title": event.title,
-                        "error": f"Unexpected error during creation: {error_message}"
+                        "event_index": i + 1,
+                        "event_title": event_data.title,
+                        "error": error_msg,
+                        "details": f"Database columns available: {len(available_columns)}"
                     })
                     continue
+            
+            # Commit transaction
+            conn.commit()
+            logger.info(f"✅ Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
     
     except Exception as e:
-        logger.error(f"Fatal error in bulk event creation: {e}")
-        raise HTTPException(status_code=500, detail=f"Database connection error: {str(e)}")
-    
-    logger.info(f"Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
-    
-    # Log activity for admin
-    details = f"Created {success_count} events"
-    if error_count > 0:
-        details += f", {error_count} failed"
-    log_activity(current_user["id"], "bulk_event_creation", details)
+        logger.error(f"❌ Fatal error during bulk event creation: {e}")
+        raise HTTPException(status_code=500, detail=f"Bulk import failed: {str(e)}")
     
     return BulkEventResponse(
         success_count=success_count,
@@ -4932,19 +4837,37 @@ async def get_event_by_slug(slug: str):
     with get_db() as conn:
         cursor = conn.cursor()
         
-        cursor.execute('''
-            SELECT 
-                id, title, slug, description, short_description,
-                date, start_time, end_time, end_date,
-                start_datetime, end_datetime,
-                category, address, city, state, country,
-                lat, lng, price, currency, fee_required,
-                event_url, host_name, organizer_url,
-                created_by, created_at, updated_at,
-                interest_count, view_count, is_published
-            FROM events 
-            WHERE slug = ? AND is_published = 1
-        ''', (slug,))
+        # Use database-specific syntax for is_published
+        if IS_PRODUCTION and DB_URL:
+            # PostgreSQL - use boolean true
+            cursor.execute('''
+                SELECT 
+                    id, title, slug, description, short_description,
+                    date, start_time, end_time, end_date,
+                    start_datetime, end_datetime,
+                    category, address, city, state, country,
+                    lat, lng, price, currency, fee_required,
+                    event_url, host_name, organizer_url,
+                    created_by, created_at, updated_at,
+                    interest_count, view_count, is_published
+                FROM events 
+                WHERE slug = %s AND (is_published = true OR is_published IS NULL)
+            ''', (slug,))
+        else:
+            # SQLite - use integer 1
+            cursor.execute('''
+                SELECT 
+                    id, title, slug, description, short_description,
+                    date, start_time, end_time, end_date,
+                    start_datetime, end_datetime,
+                    category, address, city, state, country,
+                    lat, lng, price, currency, fee_required,
+                    event_url, host_name, organizer_url,
+                    created_by, created_at, updated_at,
+                    interest_count, view_count, is_published
+                FROM events 
+                WHERE slug = ? AND (is_published = 1 OR is_published IS NULL)
+            ''', (slug,))
         
         event_row = cursor.fetchone()
         if not event_row:
@@ -4965,32 +4888,63 @@ async def get_events_by_location(
     with get_db() as conn:
         cursor = conn.cursor()
         
-        cursor.execute('''
-            SELECT 
-                id, title, slug, description, short_description,
-                date, start_time, end_time, start_datetime, end_datetime,
-                category, address, city, state, country,
-                lat, lng, price, currency,
-                host_name, interest_count, view_count
-            FROM events 
-            WHERE LOWER(state) = ? 
-            AND LOWER(city) = ? 
-            AND is_published = 1
-            AND date >= date('now')
-            ORDER BY date ASC, start_time ASC
-            LIMIT ? OFFSET ?
-        ''', (state.lower(), city.lower(), limit, offset))
+        # Use database-specific syntax for location queries
+        if IS_PRODUCTION and DB_URL:
+            # PostgreSQL
+            cursor.execute('''
+                SELECT 
+                    id, title, slug, description, short_description,
+                    date, start_time, end_time, start_datetime, end_datetime,
+                    category, address, city, state, country,
+                    lat, lng, price, currency,
+                    host_name, interest_count, view_count
+                FROM events 
+                WHERE LOWER(state) = %s 
+                AND LOWER(city) = %s 
+                AND (is_published = true OR is_published IS NULL)
+                AND CAST(date AS DATE) >= CURRENT_DATE
+                ORDER BY date ASC, start_time ASC
+                LIMIT %s OFFSET %s
+            ''', (state.lower(), city.lower(), limit, offset))
+        else:
+            # SQLite
+            cursor.execute('''
+                SELECT 
+                    id, title, slug, description, short_description,
+                    date, start_time, end_time, start_datetime, end_datetime,
+                    category, address, city, state, country,
+                    lat, lng, price, currency,
+                    host_name, interest_count, view_count
+                FROM events 
+                WHERE LOWER(state) = ? 
+                AND LOWER(city) = ? 
+                AND (is_published = 1 OR is_published IS NULL)
+                AND date >= date('now')
+                ORDER BY date ASC, start_time ASC
+                LIMIT ? OFFSET ?
+            ''', (state.lower(), city.lower(), limit, offset))
         
         events = [dict(row) for row in cursor.fetchall()]
         
-        # Get total count
-        cursor.execute('''
-            SELECT COUNT(*) FROM events 
-            WHERE LOWER(state) = ? 
-            AND LOWER(city) = ? 
-            AND is_published = 1
-            AND date >= date('now')
-        ''', (state.lower(), city.lower()))
+        # Get total count with database-specific syntax
+        if IS_PRODUCTION and DB_URL:
+            # PostgreSQL
+            cursor.execute('''
+                SELECT COUNT(*) FROM events 
+                WHERE LOWER(state) = %s 
+                AND LOWER(city) = %s 
+                AND (is_published = true OR is_published IS NULL)
+                AND CAST(date AS DATE) >= CURRENT_DATE
+            ''', (state.lower(), city.lower()))
+        else:
+            # SQLite
+            cursor.execute('''
+                SELECT COUNT(*) FROM events 
+                WHERE LOWER(state) = ? 
+                AND LOWER(city) = ? 
+                AND (is_published = 1 OR is_published IS NULL)
+                AND date >= date('now')
+            ''', (state.lower(), city.lower()))
         
         total = cursor.fetchone()[0]
         
@@ -5013,11 +4967,21 @@ async def get_event_share_card(event_id: int):
     with get_db() as conn:
         cursor = conn.cursor()
         
-        cursor.execute('''
-            SELECT title, description, date, start_time, city, state, category
-            FROM events 
-            WHERE id = ? AND is_published = 1
-        ''', (event_id,))
+        # Use database-specific syntax for share card
+        if IS_PRODUCTION and DB_URL:
+            # PostgreSQL
+            cursor.execute('''
+                SELECT title, description, date, start_time, city, state, category
+                FROM events 
+                WHERE id = %s AND (is_published = true OR is_published IS NULL)
+            ''', (event_id,))
+        else:
+            # SQLite
+            cursor.execute('''
+                SELECT title, description, date, start_time, city, state, category
+                FROM events 
+                WHERE id = ? AND (is_published = 1 OR is_published IS NULL)
+            ''', (event_id,))
         
         event_row = cursor.fetchone()
         if not event_row:

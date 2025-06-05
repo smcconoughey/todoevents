@@ -82,6 +82,12 @@ function createFallbackSitemap() {
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://todo-events.com/flyer</loc>
+    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
 </urlset>`;
 
     fs.writeFileSync(FRONTEND_SITEMAP_PATH, fallbackSitemap, 'utf8');
