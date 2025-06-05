@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm install tailwindcss-animate && vite build",
+    "build": "npm run sync-sitemap && npm install tailwindcss-animate && vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
+    "sync-sitemap": "node sync-sitemap.cjs",
+    "verify-sitemap": "node verify-sitemap-sync.cjs",
     "build:render": "npm install tailwindcss-animate && vite build --mode production",
     "start": "npx serve -s dist",
     "generate-sitemap": "node generate-sitemap.js",
