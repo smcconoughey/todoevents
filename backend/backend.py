@@ -796,13 +796,14 @@ class AutomatedTaskManager:
                 
                 # Use proper date comparison for both PostgreSQL and SQLite
                 if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL - use proper boolean comparison
+                    # PostgreSQL - cast date text to date for comparison
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published
                         FROM events 
-                        WHERE date >= CURRENT_DATE AND (is_published = true OR is_published IS NULL)
-                        ORDER BY date, start_time
+                        WHERE CAST(date AS DATE) >= (CURRENT_DATE - INTERVAL '30 days')::DATE 
+                        AND (is_published = true OR is_published IS NULL)
+                        ORDER BY CAST(date AS DATE), start_time
                     """)
                 else:
                     # SQLite
@@ -2373,7 +2374,7 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
             return base_slug
             
     except Exception as e:
-        logger.error(f"Error ensuring unique slug for '{base_slug}': {str(e)}")
+        logger.error(f"Error ensuring unique slug for '{base_slug}': {type(e).__name__}: {str(e)}")
         # Fallback: append current timestamp
         import time
         timestamp_suffix = str(int(time.time()))[-6:]
@@ -5111,13 +5112,13 @@ async def get_events_sitemap():
         
         # Use proper database-specific syntax
         if IS_PRODUCTION and DB_URL:
-            # PostgreSQL
+            # PostgreSQL - cast date text to date for comparison
             cursor.execute('''
                 SELECT slug, city, state, updated_at, date
                 FROM events 
                 WHERE (is_published = true OR is_published IS NULL)
                 AND slug IS NOT NULL
-                AND date >= CURRENT_DATE - INTERVAL '30 days'
+                AND CAST(date AS DATE) >= (CURRENT_DATE - INTERVAL '30 days')::DATE
                 ORDER BY updated_at DESC
             ''')
         else:
