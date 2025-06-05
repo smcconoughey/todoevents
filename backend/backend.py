@@ -4547,12 +4547,20 @@ async def bulk_create_events(
                         logger.warning(f"Bulk import - SEO auto-population failed for '{event.title}': {seo_error}")
                         # Continue with original data if auto-population fails
                     
-                    # Ensure unique slug before inserting (same as regular event creation)
+                    # FAILSAFE: Ensure unique slug with error-resistant approach
                     base_slug = event_dict.get('slug', '')
                     if base_slug:
-                        unique_slug = ensure_unique_slug(cursor, base_slug)
-                        event_dict['slug'] = unique_slug
-                        logger.info(f"Bulk import - Generated unique slug for '{event.title}': {unique_slug}")
+                        try:
+                            unique_slug = ensure_unique_slug_failsafe(cursor, base_slug, placeholder)
+                            event_dict['slug'] = unique_slug
+                            logger.info(f"Bulk import - Generated unique slug for '{event.title}': {unique_slug}")
+                        except Exception as slug_error:
+                            logger.error(f"Bulk import - Slug generation failed for '{event.title}': {slug_error}")
+                            # Use fallback slug with timestamp
+                            import time
+                            fallback_slug = f"{base_slug}-{int(time.time())}"
+                            event_dict['slug'] = fallback_slug
+                            logger.info(f"Bulk import - Using emergency fallback slug: {fallback_slug}")
                     
                     # Build INSERT query for only columns that exist in the database
                     filtered_data = {}
@@ -4613,30 +4621,7 @@ async def bulk_create_events(
                         errors.append({
                             "index": i,
                             "event_title": event.title,
-                            "error": "Failed to get ID of created event"
-                        })
-                        continue
-                    
-                    # Fetch the created event - use database-specific placeholders
-                    if placeholder == "?":
-                        # SQLite style
-                        fetch_query = "SELECT * FROM events WHERE id = ?"
-                    else:
-                        # PostgreSQL style (use %s with psycopg2)
-                        fetch_query = "SELECT * FROM events WHERE id = %s"
-                    cursor.execute(fetch_query, (event_id,))
-                    event_data = cursor.fetchone()
-                    
-                    if not event_data:
-                        try:
-                            cursor.execute("ROLLBACK")
-                        except Exception as rollback_error:
-                            logger.warning(f"Rollback failed for event fetch check: {rollback_error}")
-                        error_count += 1
-                        errors.append({
-                            "index": i,
-                            "event_title": event.title,
-                            "error": "Created event not found"
+                            "error": "Failed to create event - database insert returned no ID"
                         })
                         continue
                     
@@ -4644,87 +4629,60 @@ async def bulk_create_events(
                     try:
                         cursor.execute("COMMIT")
                     except Exception as commit_error:
-                        logger.error(f"Failed to commit transaction for event {i}: {commit_error}")
+                        logger.warning(f"Commit failed for '{event.title}': {commit_error}")
                         try:
                             cursor.execute("ROLLBACK")
-                        except:
-                            pass
+                        except Exception as rollback_error:
+                            logger.warning(f"Rollback after commit failure: {rollback_error}")
                         error_count += 1
                         errors.append({
                             "index": i,
                             "event_title": event.title,
-                            "error": f"Failed to commit transaction: {commit_error}"
+                            "error": f"Database commit failed: {commit_error}"
                         })
                         continue
                     
-                    # Convert to EventResponse format with proper datetime handling
-                    if isinstance(event_data, dict):
-                        # PostgreSQL returns dict-like rows
-                        event_response_data = dict(event_data)
-                    else:
-                        # SQLite returns tuple-like rows - map to dict
-                        column_names = [desc[0] for desc in cursor.description]
-                        event_response_data = dict(zip(column_names, event_data))
+                    # Create response object
+                    created_event_dict = {
+                        'id': event_id,
+                        'created_by': current_user["id"],
+                        'created_at': datetime.utcnow().isoformat() + 'Z',
+                        **{k: v for k, v in event_dict.items() if k != 'created_by'}
+                    }
                     
-                    # Fix datetime fields for response
-                    event_response_data = convert_event_datetime_fields(event_response_data)
-                    
-                    # Ensure all required fields exist for EventResponse
-                    required_fields = ['id', 'title', 'description', 'date', 'start_time', 'category', 
-                                     'address', 'lat', 'lng', 'recurring', 'created_by', 'created_at']
-                    for field in required_fields:
-                        if field not in event_response_data:
-                            event_response_data[field] = None
-                    
-                    # Set default values for optional fields
-                    event_response_data.setdefault('short_description', None)
-                    event_response_data.setdefault('end_time', None)
-                    event_response_data.setdefault('end_date', None)
-                    event_response_data.setdefault('city', None)
-                    event_response_data.setdefault('state', None)
-                    event_response_data.setdefault('country', 'USA')
-                    event_response_data.setdefault('frequency', None)
-                    event_response_data.setdefault('fee_required', None)
-                    event_response_data.setdefault('price', 0.0)
-                    event_response_data.setdefault('currency', 'USD')
-                    event_response_data.setdefault('event_url', None)
-                    event_response_data.setdefault('host_name', None)
-                    event_response_data.setdefault('organizer_url', None)
-                    event_response_data.setdefault('slug', None)
-                    event_response_data.setdefault('is_published', True)
-                    event_response_data.setdefault('start_datetime', None)
-                    event_response_data.setdefault('end_datetime', None)
-                    event_response_data.setdefault('updated_at', None)
-                    event_response_data.setdefault('interest_count', 0)
-                    event_response_data.setdefault('view_count', 0)
-                    
-                    created_events.append(EventResponse(**event_response_data))
+                    created_events.append(EventResponse(**created_event_dict))
                     success_count += 1
-                    logger.info(f"Successfully created event: {event.title} (ID: {event_id})")
+                    
+                    logger.info(f"Successfully created event {event_id}: '{event.title}'")
                     
                 except Exception as e:
+                    # Ensure we rollback any open transaction
                     try:
                         cursor.execute("ROLLBACK")
-                    except:
-                        pass
+                    except Exception as rollback_error:
+                        logger.warning(f"Rollback failed during exception handling: {rollback_error}")
+                    
+                    error_message = str(e) if str(e) else str(type(e).__name__)
+                    logger.error(f"Error creating event {i} ({event.title}): {error_message}")
                     error_count += 1
-                    logger.error(f"Error creating event {i} ({event.title}): {e}")
                     errors.append({
                         "index": i,
                         "event_title": event.title,
-                        "error": str(e)
+                        "error": f"Unexpected error during creation: {error_message}"
                     })
-            
-            # Clear cache after bulk creating events
-            if success_count > 0:
-                cache.clear()
-                logger.info(f"Cleared event cache after bulk creating {success_count} events")
-            
+                    continue
+    
     except Exception as e:
-        logger.error(f"Bulk event creation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Bulk event creation failed: {str(e)}")
+        logger.error(f"Fatal error in bulk event creation: {e}")
+        raise HTTPException(status_code=500, detail=f"Database connection error: {str(e)}")
     
     logger.info(f"Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+    
+    # Log activity for admin
+    details = f"Created {success_count} events"
+    if error_count > 0:
+        details += f", {error_count} failed"
+    log_activity(current_user["id"], "bulk_event_creation", details)
     
     return BulkEventResponse(
         success_count=success_count,
@@ -4732,6 +4690,45 @@ async def bulk_create_events(
         errors=errors,
         created_events=created_events
     )
+
+def ensure_unique_slug_failsafe(cursor, base_slug: str, placeholder: str) -> str:
+    """Failsafe slug uniqueness check with better error handling"""
+    if not base_slug:
+        import time
+        return f"event-{int(time.time())}"
+    
+    try:
+        # Simple approach: check if slug exists
+        if placeholder == "?":
+            cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ?", (base_slug,))
+        else:
+            cursor.execute("SELECT COUNT(*) FROM events WHERE slug = %s", (base_slug,))
+        
+        result = cursor.fetchone()
+        
+        # Handle various result formats safely
+        if result is None:
+            count = 0
+        elif isinstance(result, (list, tuple)) and len(result) > 0:
+            count = int(result[0]) if result[0] is not None else 0
+        elif hasattr(result, '__getitem__'):
+            count = int(result[0]) if result[0] is not None else 0
+        else:
+            count = int(result) if result is not None else 0
+        
+        if count > 0:
+            # Slug exists, append timestamp
+            import time
+            suffix = str(int(time.time()))[-6:]
+            return f"{base_slug}-{suffix}"
+        else:
+            return base_slug
+            
+    except Exception as e:
+        logger.error(f"Failsafe slug check failed for '{base_slug}': {e}")
+        # Emergency fallback
+        import time
+        return f"{base_slug}-{int(time.time())}"
 
 @app.get("/debug/database-info")
 async def debug_database_info():
