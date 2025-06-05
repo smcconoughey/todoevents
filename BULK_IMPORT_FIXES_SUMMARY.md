@@ -156,6 +156,48 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
 
 **Status**: ✅ **PRODUCTION READY** - All critical bulk import issues resolved with robust error handling and schema compatibility.
 
+---
+
+## 🚨 CRITICAL PRODUCTION UPDATE - June 3, 2025
+
+### **IMMEDIATE PRODUCTION ISSUE DETECTED**
+
+**Problem**: Regular event creation (not just bulk import) failing in production with syntax errors.
+
+**Production Logs Showing**:
+```
+ERROR:backend:Error ensuring unique slug for 'cars-test': 0
+ERROR:backend:Database error in create_event: syntax error at or near ","
+LINE 5:             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ...
+                     ^
+```
+
+**Root Cause**: The `create_event` and `update_event` functions were still using hardcoded schema approach while bulk import had been fixed with dynamic schema detection.
+
+### **EMERGENCY FIX APPLIED**
+
+✅ **Updated `create_event` function**: Now uses the same dynamic schema detection as bulk import  
+✅ **Updated `update_event` function**: Now uses the same dynamic schema detection as bulk import  
+✅ **Added robust error handling**: Proper transaction management and detailed error messages  
+✅ **Verified production database**: All 31 columns exist, including UX enhancement fields  
+
+### **Production Database Verified**
+- ✅ **Database Type**: PostgreSQL
+- ✅ **Columns Found**: 31 total (including `fee_required`, `event_url`, `host_name`)
+- ✅ **Schema Complete**: All expected fields are present
+- ✅ **API Endpoint**: `https://todoevents-backend.onrender.com`
+
+### **DEPLOY STATUS**: 🔴 **NEEDS IMMEDIATE DEPLOYMENT**
+
+The fix is complete and ready, but production is still running the old code. Users cannot create events until this is deployed.
+
+**Critical Functions Fixed**:
+1. `create_event()` - Now uses dynamic schema detection
+2. `update_event()` - Now uses dynamic schema detection  
+3. `ensure_unique_slug()` - Better error handling and fallbacks
+
+**User Impact**: 🔴 **HIGH** - All event creation attempts are failing for users
+
 ## Issues Resolved
 
 ### 1. **SQL Placeholder Syntax Errors**

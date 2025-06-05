@@ -2470,12 +2470,43 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                     event_data['slug'] = unique_slug
                     logger.info(f"Generated unique slug: {unique_slug}")
                 
-                # Use centralized schema and helper to generate INSERT query and values
-                from database_schema import generate_insert_query
-                from event_data_builder import build_event_values_for_insert
+                # Use dynamic schema detection to handle different database structures
+                actual_columns = get_actual_table_columns(cursor, 'events')
+                logger.debug(f"Detected {len(actual_columns)} columns in events table")
                 
-                insert_query = generate_insert_query(returning_id=True)
-                values = build_event_values_for_insert(event_data, current_user["id"], lat_rounded, lng_rounded)
+                # Filter event data to only include fields that exist in the actual database
+                filtered_event_data = {}
+                for key, value in event_data.items():
+                    if key in actual_columns:
+                        filtered_event_data[key] = value
+                    else:
+                        logger.debug(f"Skipping field '{key}' - not in database schema")
+                
+                # Add required fields that might be missing from the form data
+                filtered_event_data['created_by'] = current_user["id"]
+                filtered_event_data['created_at'] = datetime.now().isoformat()
+                if 'lat' not in filtered_event_data:
+                    filtered_event_data['lat'] = lat_rounded
+                if 'lng' not in filtered_event_data:
+                    filtered_event_data['lng'] = lng_rounded
+                if 'interest_count' not in filtered_event_data and 'interest_count' in actual_columns:
+                    filtered_event_data['interest_count'] = 0
+                if 'view_count' not in filtered_event_data and 'view_count' in actual_columns:
+                    filtered_event_data['view_count'] = 0
+                
+                # Build dynamic INSERT query
+                columns = [col for col in filtered_event_data.keys() if col in actual_columns]
+                placeholders_str = ', '.join([placeholder] * len(columns))
+                columns_str = ', '.join(columns)
+                
+                if IS_PRODUCTION and DB_URL:
+                    insert_query = f"INSERT INTO events ({columns_str}) VALUES ({placeholders_str}) RETURNING id"
+                else:
+                    insert_query = f"INSERT INTO events ({columns_str}) VALUES ({placeholders_str})"
+                
+                values = [filtered_event_data[col] for col in columns]
+                
+                logger.debug(f"Dynamic INSERT with {len(columns)} columns: {columns[:5]}{'...' if len(columns) > 5 else ''}")
                 
                 # For PostgreSQL, use RETURNING to get the ID in one step
                 if IS_PRODUCTION and DB_URL:
@@ -2635,14 +2666,33 @@ async def update_event(
                     event_data['slug'] = unique_slug
                     logger.info(f"Generated unique slug for update: {unique_slug}")
                 
-                # Use centralized schema and helper for UPDATE
-                from database_schema import generate_update_query, EVENT_FIELDS
-                from event_data_builder import build_event_values_for_update
+                # Use dynamic schema detection for update as well
+                actual_columns = get_actual_table_columns(cursor, 'events')
+                logger.debug(f"Detected {len(actual_columns)} columns for update")
                 
-                update_fields = [field[0] for field in EVENT_FIELDS 
-                               if field[0] not in ['id', 'created_at', 'created_by']]
-                query = generate_update_query(fields=update_fields)
-                values = build_event_values_for_update(event_data, event_id)
+                # Filter event data to only include fields that exist in the actual database
+                # Exclude fields that shouldn't be updated
+                excluded_fields = {'id', 'created_at', 'created_by'}
+                filtered_event_data = {}
+                for key, value in event_data.items():
+                    if key in actual_columns and key not in excluded_fields:
+                        filtered_event_data[key] = value
+                    elif key in excluded_fields:
+                        logger.debug(f"Skipping field '{key}' - excluded from updates")
+                    else:
+                        logger.debug(f"Skipping field '{key}' - not in database schema")
+                
+                # Add updated_at timestamp if the column exists
+                if 'updated_at' in actual_columns:
+                    filtered_event_data['updated_at'] = datetime.now().isoformat()
+                
+                # Build dynamic UPDATE query
+                update_columns = list(filtered_event_data.keys())
+                set_clause = ', '.join([f"{col} = {placeholder}" for col in update_columns])
+                query = f"UPDATE events SET {set_clause} WHERE id = {placeholder}"
+                values = list(filtered_event_data.values()) + [event_id]
+                
+                logger.debug(f"Dynamic UPDATE with {len(update_columns)} columns: {update_columns[:5]}{'...' if len(update_columns) > 5 else ''}")
                 
                 cursor.execute(query, values)
                 
