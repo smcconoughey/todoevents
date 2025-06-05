@@ -4,6 +4,7 @@ import sqlite3
 import logging
 import time
 import json
+import traceback
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from contextlib import contextmanager
@@ -2383,30 +2384,38 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
         return fallback_slug
 
 def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
-    """Get actual columns that exist in the database table with better error handling"""
+    """Get actual columns that exist in the database table with enhanced error handling for production"""
     try:
         if IS_PRODUCTION and DB_URL:
-            # PostgreSQL: Try multiple approaches for column detection
+            # PostgreSQL: Enhanced approach with better error handling
             try:
-                # Method 1: Use information_schema
+                # Method 1: Direct column query with table existence check
                 cursor.execute("""
-                    SELECT column_name FROM information_schema.columns 
-                    WHERE table_name = %s AND table_schema = 'public'
+                    SELECT column_name, data_type, is_nullable 
+                    FROM information_schema.columns 
+                    WHERE table_name = %s 
+                    AND table_schema = 'public'
                     ORDER BY ordinal_position
                 """, (table_name,))
-                columns = [row[0] for row in cursor.fetchall()]
-                if columns:
-                    logger.info(f"Got {len(columns)} columns from information_schema")
+                
+                columns_info = cursor.fetchall()
+                if columns_info:
+                    columns = [row[0] for row in columns_info]
+                    logger.info(f"✅ PostgreSQL schema detection: Found {len(columns)} columns via information_schema")
+                    logger.debug(f"Column details: {[(row[0], row[1], row[2]) for row in columns_info]}")
                     return columns
+                else:
+                    logger.warning("⚠️ information_schema query returned no results")
             except Exception as e:
-                logger.warning(f"information_schema query failed: {e}")
+                logger.error(f"❌ information_schema query failed: {e}")
             
             try:
-                # Method 2: Use PostgreSQL system catalogs
+                # Method 2: Use PostgreSQL system catalogs with error handling
                 cursor.execute("""
-                    SELECT a.attname
+                    SELECT a.attname, t.typname, NOT a.attnotnull as is_nullable
                     FROM pg_class c
                     JOIN pg_attribute a ON a.attrelid = c.oid
+                    JOIN pg_type t ON t.oid = a.atttypid
                     JOIN pg_namespace n ON n.oid = c.relnamespace
                     WHERE c.relname = %s 
                     AND n.nspname = 'public'
@@ -2414,41 +2423,57 @@ def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
                     AND NOT a.attisdropped
                     ORDER BY a.attnum
                 """, (table_name,))
-                columns = [row[0] for row in cursor.fetchall()]
-                if columns:
-                    logger.info(f"Got {len(columns)} columns from pg_class")
+                
+                columns_info = cursor.fetchall()
+                if columns_info:
+                    columns = [row[0] for row in columns_info]
+                    logger.info(f"✅ PostgreSQL schema detection: Found {len(columns)} columns via pg_class")
+                    logger.debug(f"System catalog columns: {[(row[0], row[1], row[2]) for row in columns_info]}")
                     return columns
+                else:
+                    logger.warning("⚠️ pg_class query returned no results")
             except Exception as e:
-                logger.warning(f"pg_class query failed: {e}")
+                logger.error(f"❌ pg_class query failed: {e}")
                 
             try:
-                # Method 3: Try a simple SELECT to get column names
+                # Method 3: Simple table existence and structure check
                 cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
-                columns = [desc[0] for desc in cursor.description]
-                if columns:
-                    logger.info(f"Got {len(columns)} columns from SELECT LIMIT 0")
+                if cursor.description:
+                    columns = [desc[0] for desc in cursor.description]
+                    logger.info(f"✅ PostgreSQL schema detection: Found {len(columns)} columns via SELECT LIMIT 0")
                     return columns
+                else:
+                    logger.error("❌ No column description available from SELECT query")
             except Exception as e:
-                logger.warning(f"SELECT LIMIT 0 query failed: {e}")
+                logger.error(f"❌ SELECT LIMIT 0 query failed: {e}")
         else:
-            # SQLite: Use PRAGMA table_info
-            cursor.execute(f"PRAGMA table_info({table_name})")
-            columns = [row[1] for row in cursor.fetchall()]  # row[1] is column name
-            if columns:
-                logger.info(f"Got {len(columns)} columns from PRAGMA table_info")
-                return columns
+            # SQLite: Use PRAGMA table_info with enhanced error handling
+            try:
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns_info = cursor.fetchall()
+                if columns_info:
+                    columns = [row[1] for row in columns_info]  # row[1] is column name
+                    logger.info(f"✅ SQLite schema detection: Found {len(columns)} columns")
+                    return columns
+                else:
+                    logger.warning(f"⚠️ PRAGMA table_info returned no results for {table_name}")
+            except Exception as e:
+                logger.error(f"❌ SQLite PRAGMA query failed: {e}")
                 
     except Exception as e:
-        logger.error(f"Error getting table columns for {table_name}: {e}")
+        logger.error(f"❌ Critical error in get_actual_table_columns for {table_name}: {e}")
     
-    # Ultimate fallback to essential columns
+    # Enhanced fallback with all known columns
     fallback_columns = [
         'id', 'title', 'description', 'date', 'start_time', 'end_time', 
-        'category', 'address', 'lat', 'lng', 'recurring', 'created_by', 'created_at',
-        'short_description', 'end_date', 'city', 'state', 'country', 'frequency',
-        'updated_at', 'interest_count', 'view_count'
+        'category', 'address', 'lat', 'lng', 'recurring', 'frequency',
+        'created_by', 'created_at', 'updated_at', 'end_date',
+        'short_description', 'city', 'state', 'country', 
+        'interest_count', 'view_count', 'fee_required', 'event_url', 
+        'host_name', 'organizer_url', 'slug', 'price', 'currency',
+        'start_datetime', 'end_datetime', 'geo_hash', 'is_published'
     ]
-    logger.warning(f"Using fallback columns ({len(fallback_columns)}) for {table_name}")
+    logger.warning(f"🔄 Using enhanced fallback columns ({len(fallback_columns)}) for {table_name}")
     return fallback_columns
 
 def auto_populate_seo_fields(event_data: dict) -> dict:
@@ -4550,23 +4575,67 @@ async def bulk_create_events(
                     
                     cursor.execute(insert_query, insert_values)
                     
-                    # Get the inserted event ID
+                    # Get the inserted event ID with enhanced error handling
+                    event_id = None
                     try:
                         if IS_PRODUCTION and DB_URL:
-                            cursor.execute("SELECT lastval()")
+                            # PostgreSQL: Try multiple methods to get the inserted ID
+                            try:
+                                # Method 1: Use RETURNING clause if possible (requires modifying query)
+                                cursor.execute("SELECT currval(pg_get_serial_sequence('events', 'id'))")
+                                result = cursor.fetchone()
+                                if result and result[0] is not None:
+                                    event_id = int(result[0])
+                                    logger.debug(f"✅ Got event ID via currval: {event_id}")
+                                else:
+                                    raise Exception("currval returned no result")
+                            except Exception as e:
+                                logger.warning(f"⚠️ currval method failed: {e}")
+                                
+                                try:
+                                    # Method 2: Use lastval() as backup
+                                    cursor.execute("SELECT lastval()")
+                                    result = cursor.fetchone()
+                                    if result and result[0] is not None:
+                                        event_id = int(result[0])
+                                        logger.debug(f"✅ Got event ID via lastval: {event_id}")
+                                    else:
+                                        raise Exception("lastval returned no result")
+                                except Exception as e2:
+                                    logger.warning(f"⚠️ lastval method failed: {e2}")
+                                    
+                                    # Method 3: Query by unique fields as last resort
+                                    try:
+                                        cursor.execute("""
+                                            SELECT id FROM events 
+                                            WHERE title = %s AND created_by = %s 
+                                            ORDER BY created_at DESC LIMIT 1
+                                        """, (event_dict['title'], current_user['id']))
+                                        result = cursor.fetchone()
+                                        if result and result[0] is not None:
+                                            event_id = int(result[0])
+                                            logger.debug(f"✅ Got event ID via title search: {event_id}")
+                                        else:
+                                            raise Exception("Title search returned no result")
+                                    except Exception as e3:
+                                        logger.error(f"❌ All PostgreSQL ID retrieval methods failed: {e3}")
+                                        raise Exception(f"Could not retrieve inserted event ID: {e}, {e2}, {e3}")
                         else:
+                            # SQLite: Use last_insert_rowid()
                             cursor.execute("SELECT last_insert_rowid()")
+                            result = cursor.fetchone()
+                            if result and result[0] is not None:
+                                event_id = int(result[0])
+                                logger.debug(f"✅ Got event ID via last_insert_rowid: {event_id}")
+                            else:
+                                raise Exception("last_insert_rowid returned no result")
                         
-                        result = cursor.fetchone()
-                        if result is None:
-                            raise Exception("Failed to get inserted event ID - no result returned")
-                        
-                        event_id = result[0]
-                        if event_id is None:
-                            raise Exception("Failed to get inserted event ID - null ID returned")
+                        # Final validation
+                        if event_id is None or event_id <= 0:
+                            raise Exception(f"Invalid event ID retrieved: {event_id}")
                             
                     except Exception as id_error:
-                        logger.error(f"Failed to get event ID after insert: {id_error}")
+                        logger.error(f"❌ Failed to get event ID after insert: {type(id_error).__name__}: {id_error}")
                         raise Exception(f"Database insertion failed to return event ID: {str(id_error)}")
                     
                     # Create response event
@@ -4616,43 +4685,67 @@ async def bulk_create_events(
     )
 
 def ensure_unique_slug_failsafe(cursor, base_slug: str, placeholder: str) -> str:
-    """Failsafe slug uniqueness check with better error handling"""
+    """Enhanced failsafe slug uniqueness check with production-ready error handling"""
+    import time
+    
     if not base_slug:
-        import time
-        return f"event-{int(time.time())}"
+        fallback_slug = f"event-{int(time.time())}"
+        logger.warning(f"🔄 Empty base_slug provided, using fallback: {fallback_slug}")
+        return fallback_slug
     
     try:
-        # Simple approach: check if slug exists
+        # Enhanced approach: check if slug exists with better error handling
+        logger.debug(f"🔍 Checking slug uniqueness for: '{base_slug}'")
+        
         if placeholder == "?":
             cursor.execute("SELECT COUNT(*) FROM events WHERE slug = ?", (base_slug,))
         else:
             cursor.execute("SELECT COUNT(*) FROM events WHERE slug = %s", (base_slug,))
         
         result = cursor.fetchone()
+        logger.debug(f"🔍 Slug query result: {result} (type: {type(result)})")
         
-        # Handle various result formats safely
+        # Enhanced result handling with better validation
+        count = 0
         if result is None:
+            logger.debug("🔍 Query returned None, assuming count = 0")
             count = 0
         elif isinstance(result, (list, tuple)) and len(result) > 0:
-            count = int(result[0]) if result[0] is not None else 0
+            raw_value = result[0]
+            count = int(raw_value) if raw_value is not None else 0
+            logger.debug(f"🔍 Extracted count from tuple/list: {count}")
         elif hasattr(result, '__getitem__'):
-            count = int(result[0]) if result[0] is not None else 0
+            try:
+                raw_value = result[0]
+                count = int(raw_value) if raw_value is not None else 0
+                logger.debug(f"🔍 Extracted count from indexable: {count}")
+            except (IndexError, KeyError, TypeError):
+                logger.warning(f"⚠️ Could not extract count from indexable result: {result}")
+                count = 0
         else:
-            count = int(result) if result is not None else 0
+            try:
+                count = int(result) if result is not None else 0
+                logger.debug(f"🔍 Used result directly as count: {count}")
+            except (ValueError, TypeError):
+                logger.warning(f"⚠️ Could not convert result to int: {result}")
+                count = 0
         
         if count > 0:
-            # Slug exists, append timestamp
-            import time
-            suffix = str(int(time.time()))[-6:]
-            return f"{base_slug}-{suffix}"
+            # Slug exists, create unique variant
+            suffix = str(int(time.time()))[-6:]  # Last 6 digits for brevity
+            unique_slug = f"{base_slug}-{suffix}"
+            logger.info(f"✅ Slug '{base_slug}' exists ({count} times), generated unique: '{unique_slug}'")
+            return unique_slug
         else:
+            logger.info(f"✅ Slug '{base_slug}' is unique, using as-is")
             return base_slug
             
     except Exception as e:
-        logger.error(f"Failsafe slug check failed for '{base_slug}': {e}")
-        # Emergency fallback
-        import time
-        return f"{base_slug}-{int(time.time())}"
+        logger.error(f"❌ Slug uniqueness check failed for '{base_slug}': {type(e).__name__}: {e}")
+        # Enhanced emergency fallback with more detail
+        emergency_slug = f"{base_slug}-{int(time.time())}"
+        logger.warning(f"🚨 Using emergency fallback slug: '{emergency_slug}'")
+        return emergency_slug
 
 @app.get("/debug/database-info")
 async def debug_database_info():
@@ -4761,6 +4854,118 @@ async def migrate_production_database():
         return {
             "status": "error", 
             "message": f"Migration failed: {str(e)}"
+        }
+
+@app.post("/admin/fix-production-database")
+async def fix_production_database():
+    """Fix critical production database schema issues causing bulk import failures"""
+    try:
+        if not IS_PRODUCTION or not DB_URL:
+            return {
+                "status": "skipped",
+                "message": "Database fix only available in production with PostgreSQL",
+                "is_production": IS_PRODUCTION,
+                "has_db_url": bool(DB_URL)
+            }
+        
+        logger.info("🚀 Starting production database schema fix via API")
+        
+        # Run the database fix directly
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check current schema
+            try:
+                cursor.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'events' AND table_schema = 'public'
+                """)
+                current_columns = [row[0] for row in cursor.fetchall()]
+                logger.info(f"📊 Current table has {len(current_columns)} columns")
+            except Exception as e:
+                logger.error(f"❌ Could not check current schema: {e}")
+                current_columns = []
+            
+            # Define missing columns to add
+            required_columns = {
+                'fee_required': 'TEXT',
+                'event_url': 'TEXT', 
+                'host_name': 'TEXT',
+                'organizer_url': 'TEXT',
+                'price': 'DECIMAL(10,2) DEFAULT 0.0',
+                'currency': 'VARCHAR(3) DEFAULT \'USD\'',
+                'slug': 'TEXT',
+                'short_description': 'TEXT',
+                'city': 'VARCHAR(100)',
+                'state': 'VARCHAR(50)',
+                'country': 'VARCHAR(50) DEFAULT \'USA\'',
+                'geo_hash': 'VARCHAR(20)',
+                'is_published': 'BOOLEAN DEFAULT TRUE',
+                'start_datetime': 'TIMESTAMP',
+                'end_datetime': 'TIMESTAMP',
+                'updated_at': 'TIMESTAMP',
+                'interest_count': 'INTEGER DEFAULT 0',
+                'view_count': 'INTEGER DEFAULT 0'
+            }
+            
+            added_columns = []
+            failed_columns = []
+            
+            # Add missing columns
+            for column_name, column_spec in required_columns.items():
+                if column_name not in current_columns:
+                    try:
+                        sql = f"ALTER TABLE events ADD COLUMN {column_name} {column_spec}"
+                        logger.info(f"🔧 Adding column: {column_name}")
+                        cursor.execute(sql)
+                        added_columns.append(column_name)
+                    except Exception as e:
+                        logger.error(f"❌ Failed to add column {column_name}: {e}")
+                        failed_columns.append(column_name)
+            
+            # Update NULL values
+            null_updates = [
+                "UPDATE events SET fee_required = '' WHERE fee_required IS NULL",
+                "UPDATE events SET event_url = '' WHERE event_url IS NULL",
+                "UPDATE events SET host_name = '' WHERE host_name IS NULL",
+                "UPDATE events SET short_description = '' WHERE short_description IS NULL",
+                "UPDATE events SET interest_count = 0 WHERE interest_count IS NULL",
+                "UPDATE events SET view_count = 0 WHERE view_count IS NULL",
+                "UPDATE events SET is_published = TRUE WHERE is_published IS NULL"
+            ]
+            
+            updated_fields = []
+            for sql in null_updates:
+                try:
+                    cursor.execute(sql)
+                    if cursor.rowcount > 0:
+                        field = sql.split("SET ")[1].split(" =")[0]
+                        updated_fields.append(f"{field}({cursor.rowcount})")
+                except Exception as e:
+                    logger.warning(f"⚠️ NULL update failed: {e}")
+            
+            # Commit changes
+            conn.commit()
+            logger.info("✅ Database schema fix completed and committed")
+            
+        return {
+            "status": "success",
+            "message": "Production database schema fixed successfully",
+            "details": {
+                "columns_added": added_columns,
+                "columns_failed": failed_columns,
+                "null_updates": updated_fields,
+                "total_columns_after": len(current_columns) + len(added_columns)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Database fix failed: {e}")
+        logger.error(f"📝 Traceback: {traceback.format_exc()}")
+        return {
+            "status": "error", 
+            "message": f"Database fix failed: {str(e)}"
         }
 
 def sanitize_ux_field(value):
