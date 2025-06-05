@@ -135,8 +135,8 @@ const FlyerPage = () => {
         </div>
       </header>
 
-      {/* Flyer Content - Optimized for single page */}
-      <div className="max-w-4xl mx-auto p-8 print:p-4 print:max-w-none print:mx-0">
+      {/* Flyer Content - Optimized for single page with 2:3 aspect ratio */}
+      <div className="max-w-6xl mx-auto p-8 print:p-4 print:max-w-none print:mx-0">
         
         {/* Header Section */}
         <div className="text-center mb-8 print:mb-6">
@@ -155,8 +155,8 @@ const FlyerPage = () => {
           </p>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="grid md:grid-cols-2 gap-8 mb-8 print:gap-4 print:mb-4">
+        {/* Two Column Layout - Wider for 2:3 ratio */}
+        <div className="grid lg:grid-cols-2 gap-12 mb-8 print:gap-6 print:mb-4">
           
           {/* Left Column - Why Host Events */}
           <div>
@@ -212,7 +212,7 @@ const FlyerPage = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center print:text-xl print:mb-2">
             Real Success Stories
           </h2>
-          <div className="grid md:grid-cols-3 gap-4 print:gap-2">
+          <div className="grid lg:grid-cols-3 gap-6 print:gap-2">
             {successStories.map((story, index) => (
               <div key={index} className="text-center p-4 bg-gray-50 rounded-lg print:p-2">
                 <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2 print:w-6 print:h-6 print:mb-1" />
@@ -232,7 +232,7 @@ const FlyerPage = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center print:text-xl print:mb-2">
             6 Tips for Event Success
           </h2>
-          <div className="grid md:grid-cols-2 gap-3 print:gap-1">
+          <div className="grid lg:grid-cols-2 gap-4 print:gap-1">
             {tips.map((tip, index) => (
               <div key={index} className="flex items-start gap-2">
                 <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold print:w-5 print:h-5 print:text-xs">
@@ -256,7 +256,7 @@ const FlyerPage = () => {
               Creating events is completely free with optional, non-intrusive premium features coming soon.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center print:gap-2">
+            <div className="flex flex-col lg:flex-row gap-4 justify-center items-center print:gap-2">
               <div className="text-center">
                 <p className="font-semibold text-gray-900 print:text-sm">Visit: todo-events.com</p>
                 <p className="text-gray-600 text-sm print:text-xs">Create your first event in minutes</p>
@@ -290,7 +290,7 @@ const FlyerPage = () => {
         @media print {
           @page {
             margin: 0.5in;
-            size: letter;
+            size: landscape;
           }
           
           body {
