@@ -812,7 +812,7 @@ class AutomatedTaskManager:
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published
                         FROM events 
-                        WHERE date >= date('now') AND (is_published = 1 OR is_published IS NULL)
+                        WHERE date::date >= CURRENT_DATE AND (is_published = 1 OR is_published IS NULL)
                         ORDER BY date, start_time
                     """)
                 return [dict(row) for row in c.fetchall()]
@@ -2343,7 +2343,7 @@ async def list_events(
                 {where_clause}
                 ORDER BY 
                     CASE 
-                        WHEN date >= DATE('now') THEN 0  -- Future/today events first
+                        WHEN date::date >= CURRENT_DATE THEN 0  -- Future/today events first
                         ELSE 1                           -- Past events later  
                     END,
                     date ASC, start_time ASC
@@ -3580,7 +3580,7 @@ async def get_local_events_for_ai(
                 SELECT id, title, description, date, start_time, end_time, end_date, category, 
                        address, lat, lng, created_at, fee_required, event_url, host_name
                 FROM events 
-                WHERE date >= date('now')
+                WHERE date::date >= CURRENT_DATE
             """
             params = []
             
@@ -5402,7 +5402,7 @@ async def get_events_by_location(
                 WHERE LOWER(state) = ? 
                 AND LOWER(city) = ? 
                 AND (is_published = 1 OR is_published IS NULL)
-                AND date >= date('now')
+                AND date::date >= CURRENT_DATE
                 ORDER BY date ASC, start_time ASC
                 LIMIT ? OFFSET ?
             ''', (state.lower(), city.lower(), limit, offset))
@@ -5426,7 +5426,7 @@ async def get_events_by_location(
                 WHERE LOWER(state) = ? 
                 AND LOWER(city) = ? 
                 AND (is_published = 1 OR is_published IS NULL)
-                AND date >= date('now')
+                AND date::date >= CURRENT_DATE
             ''', (state.lower(), city.lower()))
         
         total = cursor.fetchone()[0]
@@ -5572,7 +5572,7 @@ async def get_events_sitemap():
                 FROM events 
                 WHERE (is_published = 1 OR is_published IS NULL)
                 AND slug IS NOT NULL
-                AND date >= date('now', '-30 days')
+                AND date::date >= CURRENT_DATE - INTERVAL '30 days'
                 ORDER BY updated_at DESC
             ''')
         
