@@ -796,12 +796,12 @@ class AutomatedTaskManager:
                 
                 # Use proper date comparison for both PostgreSQL and SQLite
                 if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL
+                    # PostgreSQL - use proper boolean comparison
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published
                         FROM events 
-                        WHERE date >= CURRENT_DATE AND is_published = 1
+                        WHERE date >= CURRENT_DATE AND (is_published = true OR is_published IS NULL)
                         ORDER BY date, start_time
                     """)
                 else:
@@ -810,7 +810,7 @@ class AutomatedTaskManager:
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published
                         FROM events 
-                        WHERE date >= date('now') AND is_published = 1
+                        WHERE date >= date('now') AND (is_published = 1 OR is_published IS NULL)
                         ORDER BY date, start_time
                     """)
                 return [dict(row) for row in c.fetchall()]
@@ -5109,14 +5109,27 @@ async def get_events_sitemap():
     with get_db() as conn:
         cursor = conn.cursor()
         
-        cursor.execute('''
-            SELECT slug, city, state, updated_at, date
-            FROM events 
-            WHERE is_published = 1 
-            AND slug IS NOT NULL
-            AND date >= date('now', '-30 days')
-            ORDER BY updated_at DESC
-        ''')
+        # Use proper database-specific syntax
+        if IS_PRODUCTION and DB_URL:
+            # PostgreSQL
+            cursor.execute('''
+                SELECT slug, city, state, updated_at, date
+                FROM events 
+                WHERE (is_published = true OR is_published IS NULL)
+                AND slug IS NOT NULL
+                AND date >= CURRENT_DATE - INTERVAL '30 days'
+                ORDER BY updated_at DESC
+            ''')
+        else:
+            # SQLite
+            cursor.execute('''
+                SELECT slug, city, state, updated_at, date
+                FROM events 
+                WHERE (is_published = 1 OR is_published IS NULL)
+                AND slug IS NOT NULL
+                AND date >= date('now', '-30 days')
+                ORDER BY updated_at DESC
+            ''')
         
         events = cursor.fetchall()
         
