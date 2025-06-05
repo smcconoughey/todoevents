@@ -4527,10 +4527,15 @@ async def bulk_create_events(
                 logger.info(f"Available database columns: {available_columns}")
                 
             except Exception as e:
-                logger.error(f"Could not get table schema: {e}")
-                # Fallback to basic columns
-                available_columns = ['id', 'title', 'description', 'date', 'start_time', 'end_time', 
-                                   'category', 'address', 'lat', 'lng', 'created_by', 'created_at']
+                logger.warning(f"⚠️ Could not get table schema, using fallback: {e}")
+                # Enhanced fallback with all expected columns
+                available_columns = [
+                    'id', 'title', 'description', 'short_description', 'date', 'start_time', 'end_time', 
+                    'end_date', 'category', 'address', 'city', 'state', 'country', 'lat', 'lng', 
+                    'created_by', 'created_at', 'updated_at', 'fee_required', 'event_url', 'host_name',
+                    'organizer_url', 'slug', 'price', 'currency', 'start_datetime', 'end_datetime', 
+                    'is_published', 'recurring', 'frequency'
+                ]
             
             # Process each event
             for i, event_data in enumerate(bulk_events.events):
