@@ -4627,11 +4627,32 @@ async def bulk_create_events(
                             
                             cursor.execute(insert_query, insert_values)
                             
-                            # Get ID from RETURNING clause
+                            # Get ID from RETURNING clause (handle PostgreSQL RealDictRow)
                             result = cursor.fetchone()
-                            if result and result[0] is not None:
-                                event_id = int(result[0])
-                                logger.debug(f"✅ Got event ID via RETURNING: {event_id}")
+                            logger.debug(f"🔍 RETURNING result: {result} (type: {type(result)})")
+                            
+                            if result is not None:
+                                try:
+                                    # Try different ways to extract the ID
+                                    if hasattr(result, 'get') and 'id' in result:
+                                        # RealDictRow with get method
+                                        event_id = int(result['id'])
+                                        logger.debug(f"✅ Got event ID via RealDictRow['id']: {event_id}")
+                                    elif hasattr(result, '__getitem__'):
+                                        # Try accessing by index
+                                        event_id = int(result[0])
+                                        logger.debug(f"✅ Got event ID via result[0]: {event_id}")
+                                    else:
+                                        # Fallback: convert result directly
+                                        event_id = int(result)
+                                        logger.debug(f"✅ Got event ID via direct conversion: {event_id}")
+                                        
+                                    if event_id <= 0:
+                                        raise ValueError(f"Invalid event ID: {event_id}")
+                                        
+                                except (KeyError, IndexError, ValueError, TypeError) as extract_error:
+                                    logger.error(f"❌ Failed to extract ID from result: {extract_error}")
+                                    raise Exception(f"Could not extract ID from RETURNING result: {result}")
                             else:
                                 raise Exception("RETURNING clause returned no result")
                                 
@@ -4993,6 +5014,87 @@ async def fix_production_database():
         return {
             "status": "error", 
             "message": f"Database fix failed: {str(e)}"
+        }
+
+@app.post("/admin/test-bulk-import-fix")
+async def test_bulk_import_fix():
+    """Test the PostgreSQL RETURNING clause fix for bulk import (admin only)"""
+    try:
+        if not IS_PRODUCTION or not DB_URL:
+            return {
+                "status": "skipped",
+                "message": "Test only available in production with PostgreSQL",
+                "is_production": IS_PRODUCTION,
+                "has_db_url": bool(DB_URL)
+            }
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Test RETURNING clause with a simple insert
+            test_query = """
+                INSERT INTO events (title, description, date, start_time, category, address, lat, lng, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """
+            
+            test_values = [
+                "BULK IMPORT TEST EVENT",
+                "Test event to verify RETURNING clause works",
+                (datetime.utcnow() + timedelta(days=30)).strftime('%Y-%m-%d'),
+                "12:00",
+                "Educational & Business",
+                "Test Address, Test City, TS 12345",
+                40.7128,
+                -74.0060,
+                1  # Assuming admin user ID 1 exists
+            ]
+            
+            cursor.execute(test_query, test_values)
+            result = cursor.fetchone()
+            
+            if result is not None:
+                try:
+                    if hasattr(result, 'get') and 'id' in result:
+                        event_id = int(result['id'])
+                        method = "RealDictRow['id']"
+                    elif hasattr(result, '__getitem__'):
+                        event_id = int(result[0])
+                        method = "result[0]"
+                    else:
+                        event_id = int(result)
+                        method = "direct conversion"
+                    
+                    # Clean up test event
+                    cursor.execute("DELETE FROM events WHERE id = %s", (event_id,))
+                    conn.commit()
+                    
+                    return {
+                        "status": "success",
+                        "message": f"RETURNING clause fix working correctly! Got ID: {event_id} via {method}",
+                        "event_id": event_id,
+                        "extraction_method": method,
+                        "result_type": str(type(result))
+                    }
+                    
+                except Exception as extract_error:
+                    return {
+                        "status": "error",
+                        "message": f"Failed to extract ID from result: {extract_error}",
+                        "result": str(result),
+                        "result_type": str(type(result))
+                    }
+            else:
+                return {
+                    "status": "error", 
+                    "message": "RETURNING clause returned no result"
+                }
+                
+    except Exception as e:
+        logger.error(f"Bulk import test failed: {e}")
+        return {
+            "status": "error",
+            "message": f"Test failed: {str(e)}"
         }
 
 def sanitize_ux_field(value):
