@@ -2270,7 +2270,7 @@ async def reset_password(request: PasswordReset):
 async def list_events(
     category: Optional[str] = None,
     date: Optional[str] = None,
-    limit: Optional[int] = 50,  # Add pagination
+    limit: Optional[int] = 100,  # Increased default limit
     offset: Optional[int] = 0,  # Add pagination
     lat: Optional[float] = None,  # Add location filtering
     lng: Optional[float] = None,  # Add location filtering
@@ -2283,8 +2283,8 @@ async def list_events(
     """
     placeholder = get_placeholder()
     
-    # Validate and limit pagination parameters
-    limit = min(max(limit or 50, 1), 100)  # Between 1 and 100
+    # Validate and limit pagination parameters  
+    limit = min(max(limit or 100, 1), 200)  # Between 1 and 200
     offset = max(offset or 0, 0)
     
     # Create cache key for this request
@@ -2341,7 +2341,12 @@ async def list_events(
                        {location_select}
                 FROM events 
                 {where_clause}
-                ORDER BY date ASC, start_time ASC
+                ORDER BY 
+                    CASE 
+                        WHEN date >= DATE('now') THEN 0  -- Future/today events first
+                        ELSE 1                           -- Past events later  
+                    END,
+                    date ASC, start_time ASC
                 LIMIT {placeholder} OFFSET {placeholder}
             """
             
