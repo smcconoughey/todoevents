@@ -1122,7 +1122,7 @@ const EventMap = ({
     }
   };
 
-  // Filter events based on selected criteria
+  // Filter events based on selected criteria and sort by distance when location is set
   const filteredEvents = events.filter(event => {
     if (!event || !event.id || event.lat == null || event.lng == null) return false;
     
@@ -1162,6 +1162,28 @@ const EventMap = ({
     }
     
     return true;
+  }).sort((a, b) => {
+    // If address is set, sort by distance (closest first)
+    if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+      const distanceA = calculateDistance(
+        selectedLocation.lat,
+        selectedLocation.lng,
+        a.lat,
+        a.lng
+      );
+      const distanceB = calculateDistance(
+        selectedLocation.lat,
+        selectedLocation.lng,
+        b.lat,
+        b.lng
+      );
+      return distanceA - distanceB;
+    }
+    
+    // Otherwise, sort by date and time (earliest first)
+    const dateA = new Date(`${a.date} ${a.start_time}`);
+    const dateB = new Date(`${b.date} ${b.start_time}`);
+    return dateA - dateB;
   });
 
   // Helper function to close event details and restore URL
@@ -2454,7 +2476,15 @@ const EventMap = ({
 
                 {/* Event Count & Quick Actions */}
                 <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
-                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                  <div className="flex items-center gap-2">
+                    <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                    {selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null && (
+                      <span className="text-xs text-pin-blue bg-pin-blue/10 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Navigation className="w-3 h-3" />
+                        sorted by distance
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Event List */}
@@ -3122,7 +3152,15 @@ const EventMap = ({
 
                 {/* Event Count & Quick Actions */}
                 <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
-                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                  <div className="flex items-center gap-2">
+                    <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                    {selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null && (
+                      <span className="text-xs text-pin-blue bg-pin-blue/10 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Navigation className="w-3 h-3" />
+                        sorted by distance
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Event List */}
@@ -3303,16 +3341,25 @@ const EventMap = ({
 
       {/* Mobile Event Details Bottom Sheet */}
       {selectedEvent && (
-        <div className={`
-          fixed bottom-0 left-0 right-0 
-          dialog-themed backdrop-blur-sm
-          border-t border-themed
-          rounded-t-lg z-40
-          sm:hidden
-          transform transition-transform duration-300
-          max-h-[80vh] overflow-y-auto shadow-2xl
-          ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
-        `}>
+        <>
+          {/* Backdrop overlay for mobile */}
+          <div 
+            className="fixed inset-0 bg-black/30 sm:hidden z-40"
+            onClick={handleCloseEventDetails}
+          />
+          
+          <div className={`
+            fixed bottom-0 left-0 right-0 
+            dialog-themed backdrop-blur-sm
+            border-t border-themed
+            rounded-t-lg z-50
+            sm:hidden
+            transform transition-transform duration-300
+            max-h-[80vh] overflow-y-auto shadow-2xl
+            ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
+          `}
+          onClick={(e) => e.stopPropagation()}
+          >
           <div className="p-3 space-y-3 pb-6">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -3333,10 +3380,18 @@ const EventMap = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0"
-                onClick={handleCloseEventDetails}
+                className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0 touch-manipulation"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCloseEventDetails();
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
             
@@ -3506,6 +3561,7 @@ const EventMap = ({
             )}
           </div>
         </div>
+        </>
       )}
 
       {/* Create Event Form Dialog */}
