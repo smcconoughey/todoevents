@@ -4545,15 +4545,29 @@ async def bulk_create_events(
                     """
                     
                     logger.info(f"Executing insert for '{event_dict['title']}' with {len(insert_columns)} columns")
+                    logger.debug(f"Insert query: {insert_query}")
+                    logger.debug(f"Insert values: {insert_values}")
+                    
                     cursor.execute(insert_query, insert_values)
                     
                     # Get the inserted event ID
-                    if IS_PRODUCTION and DB_URL:
-                        cursor.execute("SELECT lastval()")
-                    else:
-                        cursor.execute("SELECT last_insert_rowid()")
-                    
-                    event_id = cursor.fetchone()[0]
+                    try:
+                        if IS_PRODUCTION and DB_URL:
+                            cursor.execute("SELECT lastval()")
+                        else:
+                            cursor.execute("SELECT last_insert_rowid()")
+                        
+                        result = cursor.fetchone()
+                        if result is None:
+                            raise Exception("Failed to get inserted event ID - no result returned")
+                        
+                        event_id = result[0]
+                        if event_id is None:
+                            raise Exception("Failed to get inserted event ID - null ID returned")
+                            
+                    except Exception as id_error:
+                        logger.error(f"Failed to get event ID after insert: {id_error}")
+                        raise Exception(f"Database insertion failed to return event ID: {str(id_error)}")
                     
                     # Create response event
                     response_event = EventResponse(
@@ -4582,8 +4596,13 @@ async def bulk_create_events(
                     continue
             
             # Commit transaction
-            conn.commit()
-            logger.info(f"✅ Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+            if success_count > 0:
+                conn.commit()
+                logger.info(f"✅ Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+            else:
+                logger.warning(f"⚠️ No events were successfully created. Success: {success_count}, Errors: {error_count}")
+                # Still commit to ensure any partial changes are cleaned up
+                conn.commit()
     
     except Exception as e:
         logger.error(f"❌ Fatal error during bulk event creation: {e}")
