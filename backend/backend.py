@@ -1156,28 +1156,125 @@ class AutomatedTaskManager:
                     logger.warning(f"⚠️ Failed to ping search engine: {url} - Error: {str(e)}")
     
     async def cleanup_expired_events(self):
-        """Remove events that are older than 30 days"""
+        """Enhanced cleanup of expired events with 24-hour archive"""
         try:
+            logger.info("🧹 Starting enhanced automated event cleanup...")
+            
             with get_db() as conn:
-                c = conn.cursor()
-                cutoff_date = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
+                cursor = conn.cursor()
                 placeholder = get_placeholder()
                 
-                c.execute(f"DELETE FROM events WHERE date < {placeholder}", (cutoff_date,))
-                deleted_count = c.rowcount
-                conn.commit()
+                # Get current date and 24-hour archive cutoff
+                current_date = datetime.now().date()
+                archive_cutoff = current_date - timedelta(days=1)  # 24-hour archive
                 
-                if deleted_count > 0:
-                    logger.info(f"🧹 Cleaned up {deleted_count} expired events")
+                logger.info(f"Current date: {current_date}")
+                logger.info(f"Archive cutoff: {archive_cutoff} (events before this will be deleted)")
+                
+                # First, get expired events for logging
+                if placeholder == "?":
+                    cursor.execute("""
+                        SELECT id, title, date, created_at 
+                        FROM events 
+                        WHERE date < ? 
+                        ORDER BY date DESC
+                    """, (str(archive_cutoff),))
+                else:
+                    cursor.execute("""
+                        SELECT id, title, date, created_at 
+                        FROM events 
+                        WHERE date < %s 
+                        ORDER BY date DESC
+                    """, (str(archive_cutoff),))
+                
+                expired_events = cursor.fetchall()
+                
+                if not expired_events:
+                    logger.info("✅ No expired events found beyond 24-hour archive period")
+                    return
+                
+                logger.info(f"📊 Found {len(expired_events)} events beyond 24-hour archive:")
+                for event in expired_events[:5]:  # Log first 5
+                    if isinstance(event, dict):
+                        event_data = event
+                    else:
+                        event_data = {
+                            'id': event[0], 'title': event[1], 
+                            'date': event[2], 'created_at': event[3]
+                        }
+                    logger.info(f"  - ID {event_data['id']}: '{event_data['title']}' (Date: {event_data['date']})")
+                
+                if len(expired_events) > 5:
+                    logger.info(f"  ... and {len(expired_events) - 5} more")
+                
+                # Delete expired events and related data
+                expired_ids = [event[0] if not isinstance(event, dict) else event['id'] for event in expired_events]
+                
+                # Delete in transaction for data integrity
+                cursor.execute("BEGIN")
+                
+                try:
+                    # Delete related data first (to avoid foreign key issues)
+                    for event_id in expired_ids:
+                        # Delete event interests
+                        if placeholder == "?":
+                            cursor.execute("DELETE FROM event_interests WHERE event_id = ?", (event_id,))
+                            cursor.execute("DELETE FROM event_views WHERE event_id = ?", (event_id,))
+                        else:
+                            cursor.execute("DELETE FROM event_interests WHERE event_id = %s", (event_id,))
+                            cursor.execute("DELETE FROM event_views WHERE event_id = %s", (event_id,))
                     
+                    # Delete the events themselves
+                    if placeholder == "?":
+                        placeholders = ",".join(["?" for _ in expired_ids])
+                        cursor.execute(f"DELETE FROM events WHERE id IN ({placeholders})", expired_ids)
+                    else:
+                        placeholders = ",".join(["%s" for _ in expired_ids])
+                        cursor.execute(f"DELETE FROM events WHERE id IN ({placeholders})", expired_ids)
+                    
+                    # Commit the transaction
+                    cursor.execute("COMMIT")
+                    
+                    # Clear caches
+                    event_cache.clear()
+                    
+                    logger.info(f"✅ Successfully cleaned up {len(expired_events)} expired events")
+                    logger.info(f"🧹 Cleared event cache after cleanup")
+                    
+                    # Log archive policy
+                    if placeholder == "?":
+                        cursor.execute("""
+                            SELECT COUNT(*) 
+                            FROM events 
+                            WHERE date >= ? AND date < ?
+                        """, (str(archive_cutoff), str(current_date)))
+                    else:
+                        cursor.execute("""
+                            SELECT COUNT(*) 
+                            FROM events 
+                            WHERE date >= %s AND date < %s
+                        """, (str(archive_cutoff), str(current_date)))
+                    
+                    archived_count = cursor.fetchone()[0]
+                    logger.info(f"📁 {archived_count} events in 24-hour archive (from {archive_cutoff} to {current_date})")
+                    
+                except Exception as cleanup_error:
+                    cursor.execute("ROLLBACK")
+                    logger.error(f"❌ Event cleanup failed, transaction rolled back: {cleanup_error}")
+                    raise
+                
         except Exception as e:
-            logger.error(f"Error cleaning up expired events: {str(e)}")
-    
+            logger.error(f"❌ Event cleanup automation error: {e}")
+
     async def update_search_index(self):
-        """Update search index for better performance"""
-        # Placeholder for search index updates
-        # Could implement Elasticsearch, Solr, or simple database indexes
-        logger.info("📊 Search index update completed")
+        """Update search index after cleanup"""
+        try:
+            logger.info("🔍 Updating search index after event cleanup...")
+            # Trigger sitemap regeneration to exclude deleted events
+            await self.generate_sitemap_automatically()
+            logger.info("✅ Search index updated successfully")
+        except Exception as e:
+            logger.error(f"❌ Search index update error: {e}")
     
     async def cache_popular_queries(self):
         """Cache responses for popular AI queries"""
@@ -1297,6 +1394,24 @@ class AutomatedTaskManager:
                 replace_existing=True
             )
             
+            # Event cleanup with 24-hour archive - every 6 hours (offset by 3 hours)
+            def run_event_cleanup():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(self.cleanup_expired_events())
+                    loop.close()
+                except Exception as e:
+                    logger.error(f"Scheduled event cleanup failed: {e}")
+            
+            self.scheduler.add_job(
+                func=run_event_cleanup,
+                trigger=IntervalTrigger(hours=6, start_date=datetime.utcnow() + timedelta(hours=3)),
+                id='event_cleanup',
+                name='Event Cleanup (24h Archive)',
+                replace_existing=True
+            )
+            
             # Health check - every hour
             self.scheduler.add_job(
                 func=self.health_check,
@@ -1311,6 +1426,7 @@ class AutomatedTaskManager:
             logger.info("📅 Next sitemap generation: 6 hours")
             logger.info("📅 Next event refresh: 8 hours") 
             logger.info("📅 Next AI sync: 10 hours")
+            logger.info("📅 Next event cleanup: 9 hours (24-hour archive policy)")
             
         except Exception as e:
             logger.error(f"Failed to start scheduler: {str(e)}")
@@ -3624,7 +3740,8 @@ async def trigger_automated_task(task_name: str, background_tasks: BackgroundTas
     task_functions = {
         "sitemap": task_manager.generate_sitemap_automatically,
         "events": task_manager.refresh_event_data,
-        "ai_sync": task_manager.sync_with_ai_tools
+        "ai_sync": task_manager.sync_with_ai_tools,
+        "cleanup": task_manager.cleanup_expired_events
     }
     
     if task_name not in task_functions:
@@ -4720,7 +4837,10 @@ async def bulk_create_events(
             # Commit transaction
             if success_count > 0:
                 conn.commit()
+                # CRITICAL FIX: Clear event cache after bulk import
+                event_cache.clear()
                 logger.info(f"✅ Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+                logger.info(f"🧹 Cleared event cache to ensure new events appear in API")
             else:
                 logger.warning(f"⚠️ No events were successfully created. Success: {success_count}, Errors: {error_count}")
                 # Still commit to ensure any partial changes are cleaned up
