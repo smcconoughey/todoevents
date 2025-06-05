@@ -627,10 +627,16 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
 );
 
 
-const EventMap = ({ mapsLoaded = false }) => {
+const EventMap = ({ 
+  mapsLoaded = false, 
+  eventSlug = false,
+  presetCategory = false,
+  presetFilters = {}
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { slug } = useParams();
+  const params = useParams();
+  const { slug, city, state, year, month, day, category } = params;
   const { user, token, logout } = useContext(AuthContext);
   const { theme } = useContext(ThemeContext);
 
@@ -811,6 +817,169 @@ const EventMap = ({ mapsLoaded = false }) => {
   useEffect(() => {
     fetchEvents();
   }, []); // Only fetch events once on component mount
+
+  // Handle preset filters from URL routing
+  useEffect(() => {
+    // Handle individual event slug routes
+    if (eventSlug && slug) {
+      // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
+      handleEventFromSlug(slug);
+      return;
+    }
+
+    // Handle preset category routes like /events/music
+    if (presetCategory && category) {
+      setSelectedCategory([category]);
+      return;
+    }
+
+    // Handle preset filters from URL patterns
+    if (Object.keys(presetFilters).length > 0) {
+      applyPresetFilters(presetFilters);
+    }
+  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state]);
+
+  const handleEventFromSlug = async (eventSlug) => {
+    try {
+      // Try to find event by slug in current events
+      const event = events.find(e => e.slug === eventSlug);
+      if (event) {
+        setSelectedEvent(event);
+        return;
+      }
+
+      // If not found in current events, try to fetch from API
+      const response = await fetchWithTimeout(`${API_URL}/api/seo/events/by-slug/${eventSlug}`);
+      if (response && response.id) {
+        setSelectedEvent(response);
+        // Also add to events list if not there
+        if (!events.find(e => e.id === response.id)) {
+          setEvents(prev => [response, ...prev]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching event by slug:', error);
+    }
+  };
+
+  const applyPresetFilters = (filters) => {
+    // Handle time-based filters
+    if (filters.timeFilter) {
+      setSelectedTime(filters.timeFilter);
+      
+      // Convert timeFilter to date for weekend/week filters
+      if (filters.timeFilter === 'this-weekend') {
+        // Set date range for this weekend
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const saturday = new Date(today);
+        saturday.setDate(today.getDate() + (6 - dayOfWeek));
+        const sunday = new Date(saturday);
+        sunday.setDate(saturday.getDate() + 1);
+        
+        setSelectedDate({
+          from: saturday,
+          to: sunday
+        });
+      } else if (filters.timeFilter === 'this-week') {
+        // Set date range for this week
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - dayOfWeek + 1);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        
+        setSelectedDate({
+          from: monday,
+          to: sunday
+        });
+      } else if (filters.timeFilter === 'today') {
+        setSelectedDate(new Date());
+      } else if (filters.timeFilter === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setSelectedDate(tomorrow);
+      }
+    }
+
+    // Handle category filters
+    if (filters.category) {
+      setSelectedCategory([filters.category]);
+    }
+
+    // Handle location-based filters
+    if (filters.locationBased && city) {
+      // Convert city param to search location
+      const cityName = city.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      setSearchValue(cityName);
+      // Try to geocode and set location
+      geocodeCityForFilters(cityName);
+    }
+
+    // Handle state-based filters
+    if (filters.stateBased && state) {
+      const stateName = state.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      setSearchValue(stateName);
+      geocodeCityForFilters(stateName);
+    }
+
+    // Handle city-state filters
+    if (filters.cityState && city && state) {
+      const cityName = city.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const stateName = state.toUpperCase();
+      const locationQuery = `${cityName}, ${stateName}`;
+      setSearchValue(locationQuery);
+      geocodeCityForFilters(locationQuery);
+    }
+
+    // Handle free events filter
+    if (filters.freeOnly) {
+      setMiscFilters(prev => ({
+        ...prev,
+        feeFilter: 'free'
+      }));
+    }
+
+    // Handle "near me" filters
+    if (filters.nearMe) {
+      // Try to get user's location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setSelectedLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+            setProximityRange(25); // Set a reasonable radius
+          },
+          (error) => {
+            console.warn('Could not get user location for "near me" filter:', error);
+          }
+        );
+      }
+    }
+  };
+
+  const geocodeCityForFilters = async (query) => {
+    try {
+      if (window.google && window.google.maps) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ address: query }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            const location = results[0].geometry.location;
+            setSelectedLocation({
+              lat: location.lat(),
+              lng: location.lng()
+            });
+            setProximityRange(25); // Set reasonable search radius
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Geocoding failed for preset filter:', error);
+    }
+  };
 
   // Track first-time sign-in to show welcome popup
   useEffect(() => {

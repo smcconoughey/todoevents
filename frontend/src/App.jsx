@@ -129,10 +129,75 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Routes>
+            {/* Main Routes */}
             <Route path="/" element={<EventMap mapsLoaded={mapsLoaded} />} />
             <Route path="/hosts" element={<HostsPage />} />
             <Route path="/creators" element={<EventCreatorPage />} />
-            <Route path="/e/:slug" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            
+            {/* Individual Event Pages - both old and new format */}
+            <Route path="/e/:slug" element={<EventMap mapsLoaded={mapsLoaded} eventSlug={true} />} />
+            <Route path="/event/:slug" element={<EventMap mapsLoaded={mapsLoaded} eventSlug={true} />} />
+            
+            {/* Date-indexed event URLs: /events/2025/06/06/slug-id */}
+            <Route path="/events/:year/:month/:day/:slug" element={<EventMap mapsLoaded={mapsLoaded} eventSlug={true} />} />
+            
+            {/* Category-based SEO routes */}
+            <Route path="/events/:category" element={<EventMap mapsLoaded={mapsLoaded} presetCategory={true} />} />
+            
+            {/* Location-based SEO routes - "This weekend in [city]" */}
+            <Route path="/this-weekend-in-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'this-weekend', locationBased: true }} />} />
+            <Route path="/events-this-weekend-in-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'this-weekend', locationBased: true }} />} />
+            
+            {/* Free events routes - "Free events in [city]" */}
+            <Route path="/free-events-in-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ freeOnly: true, locationBased: true }} />} />
+            <Route path="/free-events-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ freeOnly: true, locationBased: true }} />} />
+            
+            {/* Time-based event routes */}
+            <Route path="/events-today" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'today' }} />} />
+            <Route path="/events-tonight" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'today', timeOfDay: 'evening' }} />} />
+            <Route path="/events-this-weekend" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'this-weekend' }} />} />
+            <Route path="/events-this-week" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'this-week' }} />} />
+            <Route path="/events-tomorrow" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'tomorrow' }} />} />
+            
+            {/* Location-based routes */}
+            <Route path="/local-events-near-me" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ nearMe: true }} />} />
+            <Route path="/near-me" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ nearMe: true }} />} />
+            
+            {/* Category-specific routes */}
+            <Route path="/live-music-near-me" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ category: 'music', nearMe: true }} />} />
+            <Route path="/food-festivals-near-me" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ category: 'food-drink', nearMe: true }} />} />
+            <Route path="/art-events-near-me" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ category: 'arts', nearMe: true }} />} />
+            <Route path="/outdoor-events" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ category: 'outdoors' }} />} />
+            <Route path="/family-friendly-events" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ familyFriendly: true }} />} />
+            <Route path="/free-events-near-me" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ freeOnly: true, nearMe: true }} />} />
+            
+            {/* State-based filters */}
+            <Route path="/events-in-:state" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ stateBased: true }} />} />
+            
+            {/* City in state format: /events-in-chicago-il */}
+            <Route path="/events-in-:city-:state" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ cityState: true }} />} />
+            
+            {/* Tonight in city routes */}
+            <Route path="/tonight-in-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'today', timeOfDay: 'evening', locationBased: true }} />} />
+            <Route path="/events-tonight-in-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'today', timeOfDay: 'evening', locationBased: true }} />} />
+            
+            {/* Today in city routes */}
+            <Route path="/today-in-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'today', locationBased: true }} />} />
+            <Route path="/events-today-in-:city" element={<EventMap mapsLoaded={mapsLoaded} presetFilters={{ timeFilter: 'today', locationBased: true }} />} />
+            
+            {/* Generic discovery routes */}
+            <Route path="/discover" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            
+            {/* Static/Info pages - will show EventMap but can be expanded later */}
+            <Route path="/about" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            <Route path="/how-it-works" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            <Route path="/create-event" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            <Route path="/contact" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            <Route path="/privacy" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            <Route path="/terms" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            
+            {/* Fallback for unknown routes */}
+            <Route path="*" element={<EventMap mapsLoaded={mapsLoaded} />} />
           </Routes>
           <WelcomePopup />
         </AuthProvider>

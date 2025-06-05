@@ -838,67 +838,296 @@ class AutomatedTaskManager:
       <image:loc>{domain}/images/pin-logo.svg</image:loc>
       <image:caption>todo-events logo - Local event discovery platform</image:caption>
     </image:image>
+  </url>
+
+  <!-- Main navigation pages -->
+  <url>
+    <loc>{domain}/hosts</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{domain}/creators</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>'''
         
-        # Add static category pages
-        categories = ['food-drink', 'music', 'arts', 'sports', 'community']
+        # Add category pages - both query param and SEO-friendly formats
+        categories = ['food-drink', 'music', 'arts', 'sports', 'community', 'networking', 'education', 'family', 'automotive', 'gaming', 'health', 'outdoors', 'shopping', 'technology', 'travel', 'other']
+        
+        sitemap += f'''
+
+  <!-- Category pages -->'''
+        
         for category in categories:
             sitemap += f'''
   <url>
-    <loc>{domain}/?category={category}</loc>
+    <loc>{domain}/events/{category}</loc>
     <lastmod>{current_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>'''
         
-        # Add AI-optimized pages
-        ai_pages = [
-            ('/local-events-near-me', 'daily', '0.9'),
-            ('/events-today', 'hourly', '0.9'),
-            ('/events-this-weekend', 'daily', '0.9'),
-            ('/events-tonight', 'hourly', '0.8'),
-            ('/free-events-near-me', 'daily', '0.8')
-        ]
+        # Add individual event pages with multiple URL formats
+        sitemap += f'''
+
+  <!-- Individual Event Pages -->'''
         
-        for page, freq, priority in ai_pages:
-            sitemap += f'''
-  <url>
-    <loc>{domain}{page}</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>{freq}</changefreq>
-    <priority>{priority}</priority>
-  </url>'''
-        
-        # Add individual event pages with SEO-friendly URLs
         for event in events[:100]:  # Limit to avoid huge sitemaps
+            # Get dynamic lastmod date from event
+            event_lastmod = current_date
+            if event.get('updated_at'):
+                try:
+                    parsed_date = datetime.fromisoformat(str(event['updated_at']).replace('Z', '+00:00'))
+                    event_lastmod = parsed_date.strftime('%Y-%m-%d')
+                except:
+                    pass
+            elif event.get('created_at'):
+                try:
+                    parsed_date = datetime.fromisoformat(str(event['created_at']).replace('Z', '+00:00'))
+                    event_lastmod = parsed_date.strftime('%Y-%m-%d')
+                except:
+                    pass
+            
             # Check if event has a slug for SEO-friendly URL
             if event.get('slug'):
-                event_url = f"{domain}/e/{event['slug']}"
-                event_date = event.get('date', current_date)
-                priority = '0.7'  # Higher priority for SEO pages
+                event_slug = event['slug']
                 
+                # Add main event URL (new format)
                 sitemap += f'''
   <url>
-    <loc>{event_url}</loc>
-    <lastmod>{event_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>{priority}</priority>
+    <loc>{domain}/event/{event_slug}</loc>
+    <lastmod>{event_lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
   </url>'''
-            else:
-                # Fallback to query parameter URL for events without slugs
-                event_date = event.get('date', current_date)
+                
+                # Add legacy URL format for compatibility
                 sitemap += f'''
   <url>
-    <loc>{domain}/?event={event['id']}</loc>
-    <lastmod>{event_date}</lastmod>
+    <loc>{domain}/e/{event_slug}</loc>
+    <lastmod>{event_lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>'''
+                
+                # Add date-indexed URL if we have event date
+                try:
+                    event_date_obj = datetime.fromisoformat(str(event.get('date', current_date)))
+                    year = event_date_obj.strftime('%Y')
+                    month = event_date_obj.strftime('%m')
+                    day = event_date_obj.strftime('%d')
+                    
+                    sitemap += f'''
+  <url>
+    <loc>{domain}/events/{year}/{month}/{day}/{event_slug}</loc>
+    <lastmod>{event_lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>'''
+                except:
+                    pass  # Skip date-indexed URL if date parsing fails
+        
+        # Add time-based event discovery pages
+        sitemap += f'''
+
+  <!-- Time-based Event Discovery -->
+  <url>
+    <loc>{domain}/events-today</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{domain}/events-tonight</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{domain}/events-this-weekend</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{domain}/events-tomorrow</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{domain}/events-this-week</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>'''
+
+        # Add location-based discovery pages for major cities
+        major_cities = [
+            'new-york', 'los-angeles', 'chicago', 'houston', 'phoenix', 'philadelphia',
+            'san-antonio', 'san-diego', 'dallas', 'san-jose', 'austin', 'jacksonville',
+            'fort-worth', 'columbus', 'charlotte', 'san-francisco', 'indianapolis',
+            'seattle', 'denver', 'washington', 'boston', 'nashville', 'detroit',
+            'portland', 'memphis', 'las-vegas', 'miami', 'atlanta', 'milwaukee'
+        ]
+
+        sitemap += f'''
+
+  <!-- "This Weekend in [City]" Pages -->'''
+        
+        for city in major_cities[:25]:  # Limit to top 25 cities
+            sitemap += f'''
+  <url>
+    <loc>{domain}/this-weekend-in-{city}</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.75</priority>
+  </url>'''
+
+        sitemap += f'''
+
+  <!-- "Free Events in [City]" Pages -->'''
+        
+        for city in major_cities[:25]:  # Limit to top 25 cities
+            sitemap += f'''
+  <url>
+    <loc>{domain}/free-events-in-{city}</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>'''
+
+        sitemap += f'''
+
+  <!-- "Today in [City]" Pages -->'''
+        
+        for city in major_cities[:15]:  # Limit to top 15 cities for today
+            sitemap += f'''
+  <url>
+    <loc>{domain}/today-in-{city}</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>'''
+
+        sitemap += f'''
+
+  <!-- "Tonight in [City]" Pages -->'''
+        
+        for city in major_cities[:15]:  # Limit to top 15 cities for tonight
+            sitemap += f'''
+  <url>
+    <loc>{domain}/tonight-in-{city}</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.75</priority>
+  </url>'''
+
+        # Add general discovery and AI-optimized pages
+        sitemap += f'''
+
+  <!-- General Discovery Pages -->
+  <url>
+    <loc>{domain}/local-events-near-me</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{domain}/near-me</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{domain}/free-events-near-me</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{domain}/live-music-near-me</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{domain}/food-festivals-near-me</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{domain}/art-events-near-me</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{domain}/outdoor-events</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{domain}/family-friendly-events</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{domain}/discover</loc>
+    <lastmod>{current_date}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
-  </url>'''
-        
-        sitemap += '''
-  
-  <!-- Note: This sitemap was automatically generated -->
-</urlset>'''
+  </url>
+
+  <!-- Static Pages -->
+  <url>
+    <loc>{domain}/about</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>{domain}/how-it-works</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>{domain}/create-event</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{domain}/contact</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>{domain}/privacy</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>{domain}/terms</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+</urlset>
+
+<!-- Note: This sitemap was automatically generated on {current_date} -->
+<!-- Contains {len(events)} individual events and comprehensive SEO URLs -->
+'''
         
         return sitemap
     
