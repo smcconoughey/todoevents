@@ -4613,247 +4613,43 @@ async def bulk_create_events(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    ROBUST Bulk create events (admin-only endpoint) - Production Ready
+    ROBUST Bulk create events (admin-only endpoint) - Uses proven create_event logic
     """
     if current_user['role'] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized. Admin access required.")
     
-    placeholder = get_placeholder()
     success_count = 0
     error_count = 0
     errors = []
     created_events = []
     
-    logger.info(f"Admin {current_user['email']} initiating ROBUST bulk event creation for {len(bulk_events.events)} events")
+    logger.info(f"Admin {current_user['email']} initiating ROBUST bulk event creation for {len(bulk_events.events)} events using proven create_event logic")
     
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
+    # Use the proven single event creation logic for each event
+    for i, event_data in enumerate(bulk_events.events):
+        try:
+            # Create event using the proven single event creation function
+            response_event = await create_event(event_data, current_user)
+            created_events.append(response_event)
+            success_count += 1
+            logger.info(f"✅ Successfully created event {i+1}: '{event_data.title}' (ID: {response_event.id})")
             
-            # First, get the actual table columns to avoid schema issues
-            try:
-                if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL - Get columns from information_schema
-                    cursor.execute("""
-                        SELECT column_name, data_type 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'events' 
-                        ORDER BY ordinal_position
-                    """)
-                else:
-                    # SQLite - Get columns from PRAGMA
-                    cursor.execute("PRAGMA table_info(events)")
-                
-                columns_info = cursor.fetchall()
-                available_columns = [col[0] if IS_PRODUCTION else col[1] for col in columns_info]
-                logger.info(f"Available database columns: {available_columns}")
-                
-            except Exception as e:
-                logger.warning(f"⚠️ Could not get table schema, using fallback: {e}")
-                # Enhanced fallback with all expected columns
-                available_columns = [
-                    'id', 'title', 'description', 'short_description', 'date', 'start_time', 'end_time', 
-                    'end_date', 'category', 'address', 'city', 'state', 'country', 'lat', 'lng', 
-                    'created_by', 'created_at', 'updated_at', 'fee_required', 'event_url', 'host_name',
-                    'organizer_url', 'slug', 'price', 'currency', 'start_datetime', 'end_datetime', 
-                    'is_published', 'recurring', 'frequency'
-                ]
-            
-            # Process each event
-            for i, event_data in enumerate(bulk_events.events):
-                try:
-                    # Auto-populate SEO fields first
-                    event_dict = auto_populate_seo_fields(event_data.dict())
-                    logger.info(f"Bulk import - Auto-populated SEO fields for '{event_dict['title']}': slug={event_dict.get('slug')}, city={event_dict.get('city')}, state={event_dict.get('state')}, price={event_dict.get('price')}")
-                    
-                    # Generate safe unique slug
-                    base_slug = event_dict.get('slug', 'event')
-                    try:
-                        unique_slug = ensure_unique_slug_failsafe(cursor, base_slug, placeholder)
-                        event_dict['slug'] = unique_slug
-                        logger.info(f"Bulk import - Generated unique slug for '{event_dict['title']}': {unique_slug}")
-                    except Exception as slug_error:
-                        logger.error(f"Slug generation failed for '{event_dict['title']}': {slug_error}")
-                        fallback_slug = f"{base_slug}-{int(time.time())}"
-                        event_dict['slug'] = fallback_slug
-                        logger.info(f"Using emergency fallback slug: {fallback_slug}")
-                    
-                    # Build insert query dynamically based on available columns
-                    insert_columns = []
-                    insert_values = []
-                    placeholders = []
-                    
-                    # Core required fields
-                    core_fields = {
-                        'title': event_dict['title'],
-                        'description': event_dict['description'], 
-                        'date': event_dict['date'],
-                        'start_time': event_dict['start_time'],
-                        'category': event_dict['category'],
-                        'address': event_dict['address'],
-                        'lat': event_dict['lat'],
-                        'lng': event_dict['lng'],
-                        'created_by': current_user['id'],
-                        'created_at': datetime.utcnow().isoformat()
-                    }
-                    
-                    # Optional fields that may exist
-                    optional_fields = {
-                        'end_time': event_dict.get('end_time'),
-                        'end_date': event_dict.get('end_date'),
-                        'short_description': event_dict.get('short_description'),
-                        'city': event_dict.get('city'),
-                        'state': event_dict.get('state'),
-                        'country': event_dict.get('country', 'USA'),
-                        'fee_required': event_dict.get('fee_required'),
-                        'event_url': event_dict.get('event_url'),
-                        'host_name': event_dict.get('host_name'),
-                        'organizer_url': event_dict.get('organizer_url'),
-                        'slug': event_dict.get('slug'),
-                        'price': event_dict.get('price', 0.0),
-                        'currency': event_dict.get('currency', 'USD'),
-                        'start_datetime': event_dict.get('start_datetime'),
-                        'end_datetime': event_dict.get('end_datetime'),
-                        'updated_at': datetime.utcnow().isoformat()
-                    }
-                    
-                    # Handle boolean field properly
-                    if 'is_published' in available_columns:
-                        if IS_PRODUCTION and DB_URL:
-                            optional_fields['is_published'] = True  # PostgreSQL boolean
-                        else:
-                            optional_fields['is_published'] = 1     # SQLite integer
-                    
-                    # Add all fields that exist in database
-                    for field, value in core_fields.items():
-                        if field in available_columns:
-                            insert_columns.append(field)
-                            insert_values.append(value)
-                            placeholders.append(placeholder)
-                    
-                    for field, value in optional_fields.items():
-                        if field in available_columns and value is not None:
-                            insert_columns.append(field)
-                            insert_values.append(value)
-                            placeholders.append(placeholder)
-                    
-                    # Execute insert with proper ID retrieval
-                    event_id = None
-                    try:
-                        if IS_PRODUCTION and DB_URL:
-                            # PostgreSQL: Use RETURNING clause for reliable ID retrieval
-                            insert_query = f"""
-                                INSERT INTO events ({', '.join(insert_columns)}) 
-                                VALUES ({', '.join(placeholders)})
-                                RETURNING id
-                            """
-                            
-                            logger.info(f"Executing PostgreSQL insert for '{event_dict['title']}' with {len(insert_columns)} columns")
-                            logger.debug(f"Insert query: {insert_query}")
-                            logger.debug(f"Insert values: {insert_values}")
-                            
-                            cursor.execute(insert_query, insert_values)
-                            
-                            # Get ID from RETURNING clause (handle PostgreSQL RealDictRow)
-                            result = cursor.fetchone()
-                            logger.debug(f"🔍 RETURNING result: {result} (type: {type(result)})")
-                            
-                            if result is not None:
-                                try:
-                                    # Try different ways to extract the ID
-                                    if hasattr(result, 'get') and 'id' in result:
-                                        # RealDictRow with get method
-                                        event_id = int(result['id'])
-                                        logger.debug(f"✅ Got event ID via RealDictRow['id']: {event_id}")
-                                    elif hasattr(result, '__getitem__'):
-                                        # Try accessing by index
-                                        event_id = int(result[0])
-                                        logger.debug(f"✅ Got event ID via result[0]: {event_id}")
-                                    else:
-                                        # Fallback: convert result directly
-                                        event_id = int(result)
-                                        logger.debug(f"✅ Got event ID via direct conversion: {event_id}")
-                                        
-                                    if event_id <= 0:
-                                        raise ValueError(f"Invalid event ID: {event_id}")
-                                        
-                                except (KeyError, IndexError, ValueError, TypeError) as extract_error:
-                                    logger.error(f"❌ Failed to extract ID from result: {extract_error}")
-                                    raise Exception(f"Could not extract ID from RETURNING result: {result}")
-                            else:
-                                raise Exception("RETURNING clause returned no result")
-                                
-                        else:
-                            # SQLite: Use standard insert + last_insert_rowid()
-                            insert_query = f"""
-                                INSERT INTO events ({', '.join(insert_columns)}) 
-                                VALUES ({', '.join(placeholders)})
-                            """
-                            
-                            logger.info(f"Executing SQLite insert for '{event_dict['title']}' with {len(insert_columns)} columns")
-                            logger.debug(f"Insert query: {insert_query}")
-                            logger.debug(f"Insert values: {insert_values}")
-                            
-                            cursor.execute(insert_query, insert_values)
-                            
-                            # Get ID from last_insert_rowid()
-                            cursor.execute("SELECT last_insert_rowid()")
-                            result = cursor.fetchone()
-                            if result and result[0] is not None:
-                                event_id = int(result[0])
-                                logger.debug(f"✅ Got event ID via last_insert_rowid: {event_id}")
-                            else:
-                                raise Exception("last_insert_rowid returned no result")
-                        
-                        # Final validation
-                        if event_id is None or event_id <= 0:
-                            raise Exception(f"Invalid event ID retrieved: {event_id}")
-                            
-                    except Exception as id_error:
-                        logger.error(f"❌ Failed to get event ID after insert: {type(id_error).__name__}: {id_error}")
-                        raise Exception(f"Database insertion failed to return event ID: {str(id_error)}")
-                    
-                    # Create response event
-                    response_event = EventResponse(
-                        id=event_id,
-                        **event_dict,
-                        created_by=current_user['id'],
-                        created_at=datetime.utcnow().isoformat(),
-                        interest_count=0,
-                        view_count=0
-                    )
-                    
-                    created_events.append(response_event)
-                    success_count += 1
-                    logger.info(f"✅ Successfully created event {i+1}: '{event_dict['title']}' (ID: {event_id})")
-                    
-                except Exception as e:
-                    error_count += 1
-                    error_msg = str(e)
-                    logger.error(f"❌ Error creating event {i+1} ({event_data.title}): {error_msg}")
-                    errors.append({
-                        "event_index": i + 1,
-                        "event_title": event_data.title,
-                        "error": error_msg,
-                        "details": f"Database columns available: {len(available_columns)}"
-                    })
-                    continue
-            
-            # Commit transaction
-            if success_count > 0:
-                conn.commit()
-                # CRITICAL FIX: Clear event cache after bulk import
-                event_cache.clear()
-                logger.info(f"✅ Bulk event creation completed. Success: {success_count}, Errors: {error_count}")
-                logger.info(f"🧹 Cleared event cache to ensure new events appear in API")
-            else:
-                logger.warning(f"⚠️ No events were successfully created. Success: {success_count}, Errors: {error_count}")
-                # Still commit to ensure any partial changes are cleaned up
-                conn.commit()
+        except Exception as e:
+            error_count += 1
+            error_msg = str(e)
+            logger.error(f"❌ Error creating event {i+1} ({event_data.title}): {error_msg}")
+            errors.append({
+                "event_index": i + 1,
+                "event_title": event_data.title,
+                "error": error_msg
+            })
+            continue
     
-    except Exception as e:
-        logger.error(f"❌ Fatal error during bulk event creation: {e}")
-        raise HTTPException(status_code=500, detail=f"Bulk import failed: {str(e)}")
+    logger.info(f"✅ Robust bulk event creation completed. Success: {success_count}, Errors: {error_count}")
+    
+    # Clear event cache after bulk import
+    event_cache.clear()
+    logger.info(f"🧹 Cleared event cache to ensure new events appear in API")
     
     return BulkEventResponse(
         success_count=success_count,
