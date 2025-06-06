@@ -48,7 +48,8 @@ import {
   Users,
   DollarSign,
   ExternalLink,
-  Mail
+  Mail,
+  Tag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -71,6 +72,12 @@ import { batchedSync } from '@/utils/batchedSync';
 
 const normalizeDate = (date) => {
   if (!date) return null;
+  // Parse date as local date to avoid timezone issues
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // For YYYY-MM-DD format, parse as local date
+    const [year, month, day] = date.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
   // Create date at noon to avoid timezone issues
   const normalized = new Date(date);
   normalized.setHours(12, 0, 0, 0);
@@ -81,7 +88,7 @@ const isDateInRange = (dateStr, range) => {
   if (!range || (!range.from && !range.to)) return true;
 
   // Parse the event date string and normalize it
-  const eventDate = normalizeDate(new Date(dateStr));
+  const eventDate = normalizeDate(dateStr);
   
   if (range.from) {
     const fromDate = normalizeDate(range.from);
@@ -104,13 +111,13 @@ const isEventPast = (event) => {
     
     // If the event has an end date, use that for comparison
     if (event.end_date) {
-      const endDate = new Date(event.end_date);
+      const endDate = normalizeDate(event.end_date);
       endDate.setHours(23, 59, 59, 999); // End of the end date
       return endDate < now;
     }
     
     // If no end date, check if the event date has passed
-    const eventDate = new Date(event.date);
+    const eventDate = normalizeDate(event.date);
     eventDate.setHours(23, 59, 59, 999); // End of the event date
     return eventDate < now;
   } catch (error) {
@@ -228,8 +235,9 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
     if (!event.date) return 'Date not specified';
     
     try {
-      const startDate = new Date(event.date);
-      const endDate = event.end_date ? new Date(event.end_date) : null;
+      // Use normalizeDate to parse dates correctly
+      const startDate = normalizeDate(event.date);
+      const endDate = event.end_date ? normalizeDate(event.end_date) : null;
       
       if (endDate && event.end_date !== event.date) {
         return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
@@ -276,12 +284,13 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
     if (!event.date) return 'Date not specified';
     
     try {
-      const startDate = new Date(event.date);
+      // Use normalizeDate to parse dates correctly
+      const startDate = normalizeDate(event.date);
       let dateRange = startDate.toLocaleDateString();
       
       // Only add end date if it exists and is different from start date
       if (event.end_date && event.end_date !== event.date) {
-        const endDate = new Date(event.end_date);
+        const endDate = normalizeDate(event.end_date);
         dateRange += ` - ${endDate.toLocaleDateString()}`;
       }
       
@@ -390,6 +399,19 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                 </div>
                 <span className="font-body">{event.address || 'No address provided'}</span>
               </div>
+              
+              {/* Secondary Category Display */}
+              {event.secondary_category && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-spark-yellow/10">
+                    <Tag className="w-4 h-4 text-spark-yellow" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white/50">Also in</span>
+                    <span className="font-body">{getCategory(event.secondary_category).name}</span>
+                  </div>
+                </div>
+              )}
               {event.distance !== undefined && (
                 <div className="text-sm text-white/70 font-data">
                   📍 {event.distance.toFixed(1)} miles away
@@ -520,11 +542,12 @@ const formatEventDate = (event) => {
   if (!event?.date) return 'Date not specified';
   
   try {
-    const startDate = new Date(event.date);
+    // Use normalizeDate to parse dates correctly
+    const startDate = normalizeDate(event.date);
     let dateStr = startDate.toLocaleDateString();
     
     if (event.end_date && event.end_date !== event.date) {
-      const endDate = new Date(event.end_date);
+      const endDate = normalizeDate(event.end_date);
       dateStr += ` - ${endDate.toLocaleDateString()}`;
     }
     

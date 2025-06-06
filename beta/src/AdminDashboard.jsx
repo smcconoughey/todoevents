@@ -562,6 +562,7 @@ const BetaDashboard = () => {
           "start_time": "11:00",
           "end_time": "20:00",
           "category": "food-drink",
+          "secondary_category": "community",
           "address": "Downtown Plaza, Los Angeles, CA, USA",
           "lat": 34.0522,
           "lng": -118.2437,
@@ -746,6 +747,7 @@ const BetaDashboard = () => {
               <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
               <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency</p>
               <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, other</p>
+              <p><strong>Optional secondary category:</strong> Use the same category IDs as above. Adds more descriptive categorization to events.</p>
               <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
               <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
               <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>

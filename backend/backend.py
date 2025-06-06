@@ -357,6 +357,7 @@ def init_db():
                         end_time TEXT,
                         end_date TEXT,
                         category TEXT NOT NULL,
+                        secondary_category TEXT,
                         address TEXT NOT NULL,
                         lat REAL NOT NULL,
                         lng REAL NOT NULL,
@@ -447,6 +448,12 @@ def init_db():
                         c.execute('ALTER TABLE events ADD COLUMN host_name TEXT')
                         logger.info("✅ Added 'host_name' column")
                         conn.commit()
+                    
+                    # Add secondary_category column if it doesn't exist
+                    if not column_exists('events', 'secondary_category'):
+                        c.execute('ALTER TABLE events ADD COLUMN secondary_category TEXT')
+                        logger.info("✅ Added 'secondary_category' column")
+                        conn.commit()
                         
                 except Exception as migration_error:
                     logger.error(f"❌ Schema fix error: {migration_error}")
@@ -520,6 +527,7 @@ def init_db():
                                 end_time TEXT,
                                 end_date TEXT,
                                 category TEXT NOT NULL,
+                                secondary_category TEXT,
                                 address TEXT NOT NULL,
                                 lat REAL NOT NULL,
                                 lng REAL NOT NULL,
@@ -576,6 +584,11 @@ def init_db():
                     if 'host_name' not in columns:
                         c.execute('''ALTER TABLE events ADD COLUMN host_name TEXT''')
                         logger.info("Added host_name column")
+                    
+                    # Add secondary_category column if it doesn't exist  
+                    if 'secondary_category' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN secondary_category TEXT''')
+                        logger.info("Added secondary_category column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1583,6 +1596,7 @@ class EventBase(BaseModel):
     end_time: Optional[str] = None
     end_date: Optional[str] = None
     category: str
+    secondary_category: Optional[str] = None
     address: str
     city: Optional[str] = None
     state: Optional[str] = None
@@ -1708,6 +1722,24 @@ class EventBase(BaseModel):
             raise ValueError('Address cannot be empty')
         
         return trimmed_address
+    
+    @validator('secondary_category')
+    def validate_secondary_category(cls, v):
+        if v is None or v == "":
+            return None  # Allow empty/null secondary category
+        
+        # Use the same categories list as the main category
+        categories = [
+            'food-drink', 'music', 'arts', 'sports', 'automotive', 'airshows', 'vehicle-sports', 
+            'community', 'religious', 'education', 'veteran', 'cookout', 'networking',
+            'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
+            'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
+        ]
+        
+        if v not in categories:
+            raise ValueError(f'Secondary category must be one of: {", ".join(categories)}')
+        
+        return v
 
 class EventCreate(EventBase):
     pass
@@ -5608,3 +5640,4 @@ async def debug_clear_cache():
     except Exception as e:
         logger.error(f"Failed to clear cache: {str(e)}")
         return {"error": str(e)}
+

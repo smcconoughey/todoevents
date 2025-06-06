@@ -44,6 +44,7 @@ const CreateEventForm = ({
     end_time: '',
     end_date: '',
     category: 'community',
+    secondary_category: '',
     address: '',
     location: null,
     // New UX enhancement fields
@@ -64,6 +65,7 @@ const CreateEventForm = ({
           end_time: initialEvent.end_time || '',
           end_date: initialEvent.end_date || '',
           category: initialEvent.category || '',
+          secondary_category: initialEvent.secondary_category || '',
           address: initialEvent.address || '',
           location: initialEvent.lat != null && initialEvent.lng != null ? {
             lat: initialEvent.lat,
@@ -88,6 +90,7 @@ const CreateEventForm = ({
           end_time: '',
           end_date: '',
           category: '',
+          secondary_category: '',
           address: '',
           location: null,
           // New UX enhancement fields
@@ -413,6 +416,39 @@ const CreateEventForm = ({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-themed-secondary">
+                  Secondary Category 
+                  <span className="text-xs text-themed-muted ml-1">(Optional)</span>
+                </label>
+                <Select 
+                  value={formData.secondary_category} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value }))}
+                >
+                  <SelectTrigger className="input-themed h-9">
+                    <SelectValue placeholder="Choose additional category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">
+                      <span className="text-themed-muted">None</span>
+                    </SelectItem>
+                    {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          {React.createElement(category.icon, {
+                            className: `w-4 h-4 ${category.color}`
+                          })}
+                          <span>{category.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-themed-muted">
+                  Add a second category to better describe your event
+                </p>
               </div>
             </div>
 

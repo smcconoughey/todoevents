@@ -806,6 +806,7 @@ const AdminDashboard = () => {
           "start_time": "15:00",
           "end_time": "20:00",
           "category": "fair-festival",
+          "secondary_category": "food-drink",
           "address": "City Park Pavilion, Boulder, CO, USA",
           "lat": 40.0150,
           "lng": -105.2705,
@@ -851,6 +852,7 @@ const AdminDashboard = () => {
           "start_time": "14:00",
           "end_time": "16:00",
           "category": "health",
+          "secondary_category": "education",
           "address": "Community Wellness Center, Austin, TX, USA",
           "lat": 30.2672,
           "lng": -97.7431,
@@ -1011,6 +1013,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, other</p>
+                  <p><strong>Optional secondary category:</strong> Use the same category IDs as above. Adds more descriptive categorization to events.</p>
                   <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
                   <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
                   <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>

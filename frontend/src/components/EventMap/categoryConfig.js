@@ -26,7 +26,8 @@ import {
   DollarSign,
   Briefcase,
   Cross,
-  Mountain
+  Mountain,
+  Snowflake
 } from 'lucide-react';
 
 // Helper function to create SVG marker with icon path
@@ -104,7 +105,9 @@ const iconPaths = {
   
   Cross: '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
-  Mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  Mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Snowflake: '<path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 7.5L20.07 16.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 16.5L20.07 7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8L16 16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 16L16 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 
 const categories = [
@@ -305,10 +308,10 @@ const categories = [
   {
     id: 'seasonal',
     name: 'Seasonal',
-    icon: CalendarDays,
-    color: 'text-fresh-teal-600',
-    markerColor: '#1BC2A4',
-    markerSVG: createCategoryMarkerSVG('#1BC2A4', iconPaths.CalendarDays)
+    icon: Snowflake,
+    color: 'text-pin-blue-300',
+    markerColor: '#64B5F6',
+    markerSVG: createCategoryMarkerSVG('#64B5F6', iconPaths.Snowflake)
   },
   {
     id: 'other',
