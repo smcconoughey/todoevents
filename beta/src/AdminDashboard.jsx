@@ -492,6 +492,7 @@ const EVENT_CATEGORIES = [
   { id: 'real-estate', name: 'Real Estate', description: 'Open houses, property tours, real estate seminars' },
   { id: 'adventure', name: 'Adventure & Extreme', description: 'Rock climbing, extreme sports, adventure challenges' },
   { id: 'seasonal', name: 'Seasonal', description: 'Holiday events, seasonal celebrations, festive occasions' },
+  { id: 'agriculture', name: 'Agriculture', description: 'Farm events, agricultural fairs, farming workshops, livestock shows' },
   { id: 'other', name: 'Other', description: 'Events that don\'t fit into other categories' }
 ];
 
@@ -600,6 +601,7 @@ const BetaDashboard = () => {
           "start_time": "08:00",
           "end_time": "12:00",
           "category": "community",
+          "secondary_category": "agriculture",
           "address": "Riverside Park, Portland, OR, USA",
           "lat": 45.5152,
           "lng": -122.6784,
@@ -635,11 +637,28 @@ const BetaDashboard = () => {
           "date": "2024-07-30",
           "start_time": "10:00",
           "end_time": "16:00",
-          "category": "other",
+          "category": "community",
+          "secondary_category": "family",
           "address": "Central Mall Parking Lot, Denver, CO, USA",
           "lat": 39.7392,
           "lng": -104.9903,
           "recurring": false
+        },
+        {
+          "title": "Farm-to-Table Workshop",
+          "description": "Learn about sustainable farming practices and enjoy a hands-on cooking class using fresh, locally-grown ingredients. Perfect for food enthusiasts and aspiring farmers.",
+          "date": "2024-08-10",
+          "start_time": "10:00",
+          "end_time": "15:00",
+          "category": "agriculture",
+          "secondary_category": "food-drink",
+          "address": "Sunset Organic Farm, Napa Valley, CA, USA",
+          "lat": 38.2975,
+          "lng": -122.2869,
+          "recurring": false,
+          "fee_required": "$75 per person includes lunch",
+          "event_url": "https://www.sunsetorganicfarm.com/workshops",
+          "host_name": "Sunset Organic Farm"
         }
       ]
     };
@@ -745,8 +764,15 @@ const BetaDashboard = () => {
             
             <div className="mt-3 text-sm text-gray-600">
               <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
-              <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency</p>
-              <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, other</p>
+              <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency, fee_required, event_url, host_name, secondary_category</p>
+              <p><strong>UX Enhancement fields:</strong></p>
+              <ul className="ml-4 list-disc text-xs">
+                <li><strong>fee_required:</strong> Ticket/fee information (e.g., "Free admission", "$10 entry")</li>
+                <li><strong>event_url:</strong> External website URL for registration or details</li>
+                <li><strong>host_name:</strong> Organization or host name</li>
+                <li><strong>secondary_category:</strong> Additional categorization for better organization</li>
+              </ul>
+              <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, agriculture, other</p>
               <p><strong>Optional secondary category:</strong> Use the same category IDs as above. Adds more descriptive categorization to events.</p>
               <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
               <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>

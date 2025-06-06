@@ -582,6 +582,7 @@ const EVENT_CATEGORIES = [
   { id: 'real-estate', name: 'Real Estate', description: 'Open houses, property tours, real estate seminars' },
   { id: 'adventure', name: 'Adventure & Extreme', description: 'Rock climbing, extreme sports, adventure challenges' },
   { id: 'seasonal', name: 'Seasonal', description: 'Holiday events, seasonal celebrations, festive occasions' },
+  { id: 'agriculture', name: 'Agriculture', description: 'Farm events, agricultural fairs, farming workshops, livestock shows' },
   { id: 'other', name: 'Other', description: 'Events that don\'t fit into other categories' }
 ];
 
@@ -655,6 +656,7 @@ const AdminDashboard = () => {
           "start_time": "11:00",
           "end_time": "20:00",
           "category": "food-drink",
+          "secondary_category": "community",
           "address": "Downtown Plaza, Los Angeles, CA, USA",
           "lat": 34.0522,
           "lng": -118.2437,
@@ -701,6 +703,7 @@ const AdminDashboard = () => {
           "start_time": "08:00",
           "end_time": "12:00",
           "category": "community",
+          "secondary_category": "agriculture",
           "address": "Riverside Park, Portland, OR, USA",
           "lat": 45.5152,
           "lng": -122.6784,
@@ -783,6 +786,22 @@ const AdminDashboard = () => {
           "fee_required": "$15 entry, $25 vehicle registration",
           "event_url": "https://www.miamicarshow.org",
           "host_name": "Miami Classic Car Club"
+        },
+        {
+          "title": "County Farm & Agriculture Fair",
+          "description": "Annual agricultural fair featuring livestock shows, farming equipment exhibits, local produce vendors, and traditional farm activities. Family-friendly event with educational demonstrations.",
+          "date": "2024-09-05",
+          "start_time": "09:00",
+          "end_time": "18:00",
+          "category": "agriculture",
+          "secondary_category": "fair-festival",
+          "address": "County Fairgrounds, Iowa City, IA, USA",
+          "lat": 41.6611,
+          "lng": -91.5302,
+          "recurring": false,
+          "fee_required": "$8 adults, $5 children, free parking",
+          "event_url": "https://www.iowacountyfair.org",
+          "host_name": "Iowa County Agricultural Society"
         },
         {
           "title": "Thunderbirds Air Show",
@@ -1012,7 +1031,7 @@ const AdminDashboard = () => {
                   </ul>
                 </div>
                 <div>
-                  <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, other</p>
+                  <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, agriculture, other</p>
                   <p><strong>Optional secondary category:</strong> Use the same category IDs as above. Adds more descriptive categorization to events.</p>
                   <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
                   <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
