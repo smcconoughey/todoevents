@@ -5298,8 +5298,9 @@ async def migrate_events_for_seo(background_tasks: BackgroundTasks):
     
     def run_migration():
         try:
-            from production_seo_migration import migrate_production_seo_fields
-            result = migrate_production_seo_fields()
+            # Note: production_seo_migration.py was removed - using populate_production_seo_fields instead
+            from populate_production_seo_fields import populate_seo_data
+            result = populate_seo_data()
             logger.info(f"Production SEO migration completed: {result}")
         except Exception as e:
             logger.error(f"Production SEO migration failed: {e}")
@@ -5316,8 +5317,9 @@ async def migrate_events_for_seo(background_tasks: BackgroundTasks):
 async def migrate_events_for_seo_sync():
     """Execute production SEO migration synchronously with real-time results"""
     try:
-        from production_seo_migration import migrate_production_seo_fields
-        result = migrate_production_seo_fields()
+        # Note: production_seo_migration.py was removed - using populate_production_seo_fields instead
+        from populate_production_seo_fields import populate_seo_data
+        result = populate_seo_data()
         
         return {
             "success": True,
