@@ -424,14 +424,14 @@ const CreateEventForm = ({
                   <span className="text-xs text-themed-muted ml-1">(Optional)</span>
                 </label>
                 <Select 
-                  value={formData.secondary_category} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value }))}
+                  value={formData.secondary_category || "none"} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value === "none" ? "" : value }))}
                 >
                   <SelectTrigger className="input-themed h-9">
                     <SelectValue placeholder="Choose additional category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
+                    <SelectItem value="none">
                       <span className="text-themed-muted">None</span>
                     </SelectItem>
                     {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
