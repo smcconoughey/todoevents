@@ -1,64 +1,144 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 import allCategories from './categoryConfig';
-import { createIconOnlyMarker, createIconOnlyClusterMarker } from './iconOnlyMarkers';
 
-// *** DYNAMIC MARKER STYLE SYSTEM ***
-// Default to icon-only (clean icon approach)
-let currentMarkerStyle = 'icon-only'; // 'icon-only' or 'diamond-pins'
+// *** USE FULL DETAILED ICONS FROM CATEGORYCONFIG ***
+// Default to using the full detailed category icons that match the sidebar
+let currentMarkerStyle = 'detailed-icons'; // 'detailed-icons' or 'diamond-pins'
 
 // Function to switch marker styles dynamically
 export const setMarkerStyle = (style) => {
-  if (style === 'icon-only' || style === 'diamond-pins') {
+  if (style === 'detailed-icons' || style === 'diamond-pins') {
     currentMarkerStyle = style;
     return true;
   }
   return false;
 };
 
-// Function to get current marker style
 export const getMarkerStyle = () => currentMarkerStyle;
 
-// Function to check if using icon-only markers
-const useIconOnlyMarkers = () => currentMarkerStyle === 'icon-only';
+// Function to check if using detailed category icons
+const useDetailedIcons = () => currentMarkerStyle === 'detailed-icons';
 
-// Get pre-defined icon paths from categoryConfig
-const getIconPathFromCategory = (category) => {
-  // Extract the category name from the icon component name
-  const iconName = category.icon.name || 'MapPin';
+// Create full category marker using the exact same SVG from categoryConfig.js
+const createDetailedCategoryMarker = (category, theme = THEME_DARK) => {
+  if (!category || !category.markerSVG) {
+    console.warn('No marker SVG found for category:', category?.id);
+    // Fallback to first category (All Events)
+    const fallbackCategory = allCategories[0];
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(fallbackCategory.markerSVG),
+      scaledSize: new google.maps.Size(40, 50),
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(20, 50), // Bottom center of the diamond
+      optimized: false
+    };
+  }
+
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(category.markerSVG),
+    scaledSize: new google.maps.Size(40, 50),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(20, 50), // Bottom center of the diamond
+    optimized: false
+  };
+};
+
+// Create cluster marker that shows multiple detailed category icons
+const createDetailedClusterMarker = (count, categoryIds, theme = THEME_DARK) => {
+  if (!categoryIds || categoryIds.length === 0) {
+    // Fallback to default category
+    const fallbackCategory = allCategories[0];
+    return createDetailedCategoryMarker(fallbackCategory, theme);
+  }
   
-  // Get paths from categoryConfig.js iconPaths
-  // This is a workaround since we can't directly extract SVG content from React components
-  const iconPaths = {
-    MapPin: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Utensils: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 2v20" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Music: '<path d="M9 18V5l12-2v13" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="16" r="3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Palette: '<circle cx="13.5" cy="6.5" r=".5" fill="white"/><circle cx="17.5" cy="10.5" r=".5" fill="white"/><circle cx="8.5" cy="7.5" r=".5" fill="white"/><circle cx="6.5" cy="12.5" r=".5" fill="white"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 22h16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Car: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="17" r="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 17h6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="17" r="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Ship: '<path d="M12 10.189V14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2v3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-8.188-3.639a2 2 0 0 0-1.624 0L3 14a11.6 11.6 0 0 0 2.81 7.76" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Church: '<path d="M10 9h4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 22v-4a2 2 0 0 0-4 0v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m18 7 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.618a1 1 0 0 1 .553-.894L6 7" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    BookOpen: '<path d="M12 7v14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    GraduationCap: '<path d="M22 10v6M2 10l10-5 10 5-10 5z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Award: '<circle cx="12" cy="8" r="6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-    
-    Flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  // Get unique categories to understand diversity
+  const uniqueCategoryIds = [...new Set(categoryIds)];
+  const categories = uniqueCategoryIds.map(id => 
+    allCategories.find(cat => cat.id === id) || allCategories[0]
+  ).filter(Boolean).slice(0, 4); // Max 4 categories
+
+  // If only one category type, just use that category's marker but slightly larger
+  if (categories.length === 1) {
+    const category = categories[0];
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(category.markerSVG),
+      scaledSize: new google.maps.Size(50, 62), // Slightly larger for clusters
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(25, 62),
+      optimized: false
+    };
+  }
+
+  // For multiple categories, create a cluster SVG with multiple small diamonds
+  const clusterSVG = createMultiCategoryClusterSVG(categories, count, theme);
+  
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(clusterSVG),
+    scaledSize: new google.maps.Size(60, 60),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(30, 30),
+    optimized: false
+  };
+};
+
+// Create SVG with multiple small category diamonds for clusters
+const createMultiCategoryClusterSVG = (categories, count, theme = THEME_DARK) => {
+  const isDarkMode = theme === THEME_DARK;
+  const strokeColor = isDarkMode ? '#FFFFFF' : '#000000';
+  
+  // Positions for up to 4 small diamonds
+  const positions = [
+    { x: 15, y: 15, size: 20 },
+    { x: 45, y: 15, size: 20 },
+    { x: 15, y: 45, size: 20 },
+    { x: 45, y: 45, size: 20 }
+  ];
+
+  let diamonds = '';
+  
+  categories.slice(0, 4).forEach((category, index) => {
+    const pos = positions[index];
+    // Create small diamond for each category
+    diamonds += `
+      <g>
+        <!-- Small diamond background -->
+        <path 
+          d="M${pos.x} ${pos.y - pos.size/2} L${pos.x + pos.size/2} ${pos.y} L${pos.x} ${pos.y + pos.size/2} L${pos.x - pos.size/2} ${pos.y} Z" 
+          fill="${category.markerColor}" 
+          stroke="${strokeColor}" 
+          stroke-width="1"
+        />
+        <!-- Simplified icon -->
+        <g transform="translate(${pos.x - 6}, ${pos.y - 6}) scale(0.5)">
+          ${getSimplifiedIconPath(category.id)}
+        </g>
+      </g>
+    `;
+  });
+
+  return `
+    <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+      ${diamonds}
+      <!-- Count indicator -->
+      <circle cx="50" cy="10" r="8" fill="${strokeColor}" stroke="${isDarkMode ? '#000000' : '#FFFFFF'}" stroke-width="1"/>
+      <text x="50" y="14" text-anchor="middle" font-size="10" font-weight="bold" fill="${isDarkMode ? '#000000' : '#FFFFFF'}">${count}</text>
+    </svg>
+  `;
+};
+
+// Get simplified icon paths for cluster display
+const getSimplifiedIconPath = (categoryId) => {
+  const simplifiedIcons = {
+    'food-drink': '<path d="M2 1v4c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V1" fill="none" stroke="white" stroke-width="1.5"/><path d="M3 1v12" fill="none" stroke="white" stroke-width="1.5"/><path d="M12 9V1c-1.7 0-3 1.3-3 3v3c0 .6.4 1 1 1h2v1" fill="none" stroke="white" stroke-width="1.5"/>',
+    'music': '<path d="M5 12V3l6-1v8" fill="none" stroke="white" stroke-width="1.5"/><circle cx="3" cy="12" r="2" fill="none" stroke="white" stroke-width="1.5"/><circle cx="11" cy="10" r="2" fill="none" stroke="white" stroke-width="1.5"/>',
+    'arts': '<circle cx="8" cy="8" r="6" fill="none" stroke="white" stroke-width="1.5"/><circle cx="8.5" cy="4.5" r=".3" fill="white"/><circle cx="11.5" cy="6.5" r=".3" fill="white"/>',
+    'sports': '<path d="M4 6H3a1.5 1.5 0 0 1 0-3h1" fill="none" stroke="white" stroke-width="1.5"/><path d="M12 6h1a1.5 1.5 0 0 0 0-3h-1" fill="none" stroke="white" stroke-width="1.5"/><path d="M12 2H4v4a4 4 0 0 0 8 0V2Z" fill="none" stroke="white" stroke-width="1.5"/>',
+    'automotive': '<path d="M12 11h1c.3 0 .6-.2.6-.6v-2c0-.5-.4-1-1-1.2C11.5 7 10 7 10 7s-.8-.8-1.3-1.4c-.3-.2-.7-.4-1.1-.4H3c-.4 0-.7.2-.8.5l-.8 1.7c-.3.5-.3 1 0 1.4V10c0 .3.2.6.6.6h1" fill="none" stroke="white" stroke-width="1.5"/><circle cx="4.5" cy="11" r="1" fill="none" stroke="white" stroke-width="1.5"/><circle cx="10.5" cy="11" r="1" fill="none" stroke="white" stroke-width="1.5"/>',
+    'agriculture': '<path d="M1 11L15 11" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M8 1L8 11" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M5 2L5 9" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M11 2L11 9" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="5" cy="2" r="0.8" fill="white"/><circle cx="8" cy="1" r="0.8" fill="white"/><circle cx="11" cy="2" r="0.8" fill="white"/>',
+    'default': '<circle cx="8" cy="8" r="2" fill="white" stroke="white" stroke-width="1.5"/>'
   };
   
-  return iconPaths[iconName] || iconPaths.MapPin;
+  return simplifiedIcons[categoryId] || simplifiedIcons['default'];
 };
 
 export const createMarkerIcon = (categoryOrId, isDetailed = false, theme = THEME_DARK) => {
@@ -71,9 +151,9 @@ export const createMarkerIcon = (categoryOrId, isDetailed = false, theme = THEME
     category = categoryOrId || allCategories[0];
   }
   
-  // *** NEW FEATURE: Use icon-only markers if flag is enabled ***
-  if (useIconOnlyMarkers()) {
-    return createIconOnlyMarker(category, theme);
+  // *** NEW FEATURE: Use detailed category icons that match the sidebar ***
+  if (useDetailedIcons()) {
+    return createDetailedCategoryMarker(category, theme);
   }
   
   // *** ORIGINAL CODE: Keep existing diamond pin approach ***
@@ -133,10 +213,9 @@ export const createClusterIcon = (count, categoriesOrIds, theme = THEME_DARK) =>
     categories = [];
   }
   
-  // *** NEW FEATURE: Use icon-only cluster markers if flag is enabled ***
-  if (useIconOnlyMarkers()) {
-    // Pass category IDs directly since categoriesOrIds is already an array of IDs when coming from MapContainer
-    return createIconOnlyClusterMarker(count, categoriesOrIds, theme);
+  // *** NEW FEATURE: Use detailed cluster markers that match the sidebar ***
+  if (useDetailedIcons()) {
+    return createDetailedClusterMarker(count, categoriesOrIds, theme);
   }
   
   // *** ORIGINAL CODE: Keep existing cluster approach ***
@@ -170,40 +249,25 @@ export const createClusterIcon = (count, categoriesOrIds, theme = THEME_DARK) =>
       zIndex: 2000
     };
   }
+
+  // Multiple categories - create multi-colored circle
+  const dominantColor = categories[0].markerColor;
   
-  // For multiple categories, create a vibrant cluster with dominant category color
-  try {
-    // Get up to 3 dominant categories
-    const dominantCategories = categories.slice(0, 3);
-    
-    // Use the most common category's color as base, with brand accent
-    const baseColor = dominantCategories[0].markerColor;
-    const pieSize = Math.min(20 + Math.log2(count) * 2.5, 40);
-    
-    // Create gradient-like effect by using the dominant color with brand styling
-    return {
-      path: google.maps.SymbolPath.CIRCLE,
-      fillColor: baseColor,
-      fillOpacity: 0.9,
-      strokeColor: brandColors.stroke,
-      strokeWeight: 3.5,
-      scale: pieSize,
-      // Enhanced visual appeal
-      anchor: new google.maps.Point(0, 0),
-      zIndex: 2000
-    };
-  } catch (error) {
-    console.error('Error creating cluster icon:', error);
-    // Brand-consistent fallback
-    return {
-      path: google.maps.SymbolPath.CIRCLE,
-      fillColor: brandColors.primary,
-      fillOpacity: 0.9,
-      strokeColor: brandColors.stroke,
-      strokeWeight: 3,
-      scale: Math.min(16 + Math.log2(count) * 3, 40),
-      anchor: new google.maps.Point(0, 0),
-      zIndex: 2000
-    };
-  }
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: dominantColor,
+    fillOpacity: 0.9,
+    strokeColor: brandColors.stroke,
+    strokeWeight: 3,
+    scale: Math.min(20 + Math.log2(count) * 4, 50),
+    anchor: new google.maps.Point(0, 0),
+    zIndex: 2000
+  };
+};
+
+export default {
+  createMarkerIcon,
+  createClusterIcon,
+  setMarkerStyle,
+  getMarkerStyle
 };
