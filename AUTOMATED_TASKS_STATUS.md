@@ -31,7 +31,7 @@ The `AutomatedTaskManager` class handles all background automation with the foll
 - **Frequency**: Every 6 hours (offset by 2 hours from sitemap)
 - **Purpose**: Clean and optimize event data for performance
 - **What it does**:
-  - Removes expired events (cleanup with 24-hour archive policy)
+  - Removes expired events (cleanup with 32-day archive policy)
   - Updates search indexes for faster queries
   - Caches popular search queries
   - Optimizes database for AI consumption
@@ -49,13 +49,13 @@ The `AutomatedTaskManager` class handles all background automation with the foll
 
 ### 4. **Event Cleanup**
 - **Frequency**: Every 6 hours (offset by 3 hours from sitemap)
-- **Purpose**: Remove expired events while maintaining 24-hour archive policy
+- **Purpose**: Remove expired events while maintaining 32-day archive policy
 - **What it does**:
   - Identifies events past their end date/time
-  - Archives events for 24 hours before deletion
+  - Archives events for 32 days before deletion
   - Cleans up related data (interests, views)
   - Prevents database bloat
-- **Archive Policy**: Events remain accessible for 24 hours after expiry
+- **Archive Policy**: Events remain accessible for 32 days after expiry
 
 ### 5. **System Health Check**
 - **Frequency**: Every 1 hour

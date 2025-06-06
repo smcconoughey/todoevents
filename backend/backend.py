@@ -1156,7 +1156,7 @@ class AutomatedTaskManager:
                     logger.warning(f"⚠️ Failed to ping search engine: {url} - Error: {str(e)}")
     
     async def cleanup_expired_events(self):
-        """Enhanced cleanup of expired events with 24-hour archive"""
+        """Enhanced cleanup of expired events with 32-day archive policy"""
         try:
             logger.info("🧹 Starting enhanced automated event cleanup...")
             
@@ -1164,12 +1164,16 @@ class AutomatedTaskManager:
                 cursor = conn.cursor()
                 placeholder = get_placeholder()
                 
-                # Get current date and 24-hour archive cutoff
-                current_date = datetime.now().date()
-                archive_cutoff = current_date - timedelta(days=1)  # 24-hour archive
+                # Get current datetime and 32-day archive cutoff with full timestamp precision
+                current_datetime = datetime.now()
+                current_date = current_datetime.date()
+                archive_cutoff_datetime = current_datetime - timedelta(days=32)  # 32-day archive
+                archive_cutoff = archive_cutoff_datetime.date()
                 
+                logger.info(f"Current datetime: {current_datetime.isoformat()}")
                 logger.info(f"Current date: {current_date}")
-                logger.info(f"Archive cutoff: {archive_cutoff} (events before this will be deleted)")
+                logger.info(f"Archive cutoff datetime: {archive_cutoff_datetime.isoformat()}")
+                logger.info(f"Archive cutoff date: {archive_cutoff} (events before this will be deleted)")
                 
                 # First, get expired events for logging
                 if placeholder == "?":
@@ -1190,10 +1194,10 @@ class AutomatedTaskManager:
                 expired_events = cursor.fetchall()
                 
                 if not expired_events:
-                    logger.info("✅ No expired events found beyond 24-hour archive period")
+                    logger.info("✅ No expired events found beyond 32-day archive period")
                     return
                 
-                logger.info(f"📊 Found {len(expired_events)} events beyond 24-hour archive:")
+                logger.info(f"📊 Found {len(expired_events)} events beyond 32-day archive:")
                 for event in expired_events[:5]:  # Log first 5
                     if isinstance(event, dict):
                         event_data = event
@@ -1256,7 +1260,7 @@ class AutomatedTaskManager:
                         """, (str(archive_cutoff), str(current_date)))
                     
                     archived_count = cursor.fetchone()[0]
-                    logger.info(f"📁 {archived_count} events in 24-hour archive (from {archive_cutoff} to {current_date})")
+                    logger.info(f"📁 {archived_count} events in 32-day archive (from {archive_cutoff} to {current_date})")
                     
                 except Exception as cleanup_error:
                     cursor.execute("ROLLBACK")
@@ -1394,7 +1398,7 @@ class AutomatedTaskManager:
                 replace_existing=True
             )
             
-            # Event cleanup with 24-hour archive - every 6 hours (offset by 3 hours)
+            # Event cleanup with 32-day archive - every 6 hours (offset by 3 hours)
             def run_event_cleanup():
                 try:
                     loop = asyncio.new_event_loop()
@@ -1408,7 +1412,7 @@ class AutomatedTaskManager:
                 func=run_event_cleanup,
                 trigger=IntervalTrigger(hours=6, start_date=datetime.utcnow() + timedelta(hours=3)),
                 id='event_cleanup',
-                name='Event Cleanup (24h Archive)',
+                name='Event Cleanup (32-day Archive)',
                 replace_existing=True
             )
             
@@ -1426,7 +1430,7 @@ class AutomatedTaskManager:
             logger.info("📅 Next sitemap generation: 6 hours")
             logger.info("📅 Next event refresh: 8 hours") 
             logger.info("📅 Next AI sync: 10 hours")
-            logger.info("📅 Next event cleanup: 9 hours (24-hour archive policy)")
+            logger.info("📅 Next event cleanup: 9 hours (32-day archive policy)")
             
         except Exception as e:
             logger.error(f"Failed to start scheduler: {str(e)}")
