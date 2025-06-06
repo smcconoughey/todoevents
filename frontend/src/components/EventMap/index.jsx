@@ -850,20 +850,15 @@ const EventMap = ({
     fetchEvents();
   }, []); // Only fetch events once on component mount
 
-  // Handle preset filters from URL routing
+  // Handle preset filters from URL routing  
   useEffect(() => {
-    console.log('🎛️ Preset filters handler running - eventSlug:', eventSlug, 'slug:', slug, 'selectedEvent:', selectedEvent?.title || 'none');
+    console.log('🎛️ Preset filters handler running - eventSlug:', eventSlug, 'slug:', slug);
     
     // Handle individual event slug routes
     if (eventSlug && slug) {
-      // Only handle if we don't already have this event selected (prevent duplicates)
-      if (!selectedEvent || selectedEvent.slug !== slug) {
-        console.log('🎯 Preset handler: Calling handleEventFromSlug for:', slug);
-        // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
-        handleEventFromSlug(slug);
-      } else {
-        console.log('🚫 Preset handler: Event already selected, skipping');
-      }
+      console.log('🎯 Preset handler: Calling handleEventFromSlug for:', slug);
+      // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
+      handleEventFromSlug(slug);
       return;
     }
 
@@ -877,21 +872,33 @@ const EventMap = ({
     if (Object.keys(presetFilters).length > 0) {
       applyPresetFilters(presetFilters);
     }
-  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state, selectedEvent]);
+  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state]); // Removed selectedEvent from dependencies
+
+  // Use a ref to track if we're currently processing a slug to prevent duplicate calls
+  const processingSlugRef = useRef(null);
 
   const handleEventFromSlug = async (eventSlug) => {
     try {
+      // Prevent processing the same slug multiple times simultaneously
+      if (processingSlugRef.current === eventSlug) {
+        console.log('Already processing slug, ignoring duplicate call:', eventSlug);
+        return;
+      }
+
       // Prevent selecting the same event multiple times
       if (selectedEvent && selectedEvent.slug === eventSlug) {
         console.log('Event with slug already selected, ignoring:', eventSlug);
         return;
       }
 
+      processingSlugRef.current = eventSlug;
+
       // Try to find event by slug in current events
       const event = events.find(e => e.slug === eventSlug);
       if (event) {
         console.log('Found event in current events for slug:', eventSlug);
         setSelectedEvent(event);
+        processingSlugRef.current = null;
         return;
       }
 
@@ -905,8 +912,11 @@ const EventMap = ({
           setEvents(prev => [response, ...prev]);
         }
       }
+      
+      processingSlugRef.current = null;
     } catch (error) {
       console.error('Error fetching event by slug:', error);
+      processingSlugRef.current = null;
     }
   };
 
@@ -1059,36 +1069,31 @@ const EventMap = ({
       const eventId = urlParams.get('event');
       const shouldCreate = urlParams.get('create');
       
-      console.log('🔄 URL params handler running - slug:', slug, 'selectedEvent:', selectedEvent?.title || 'none');
+      console.log('🔄 URL params handler running - slug:', slug);
       
       // Handle slug-based URLs (/e/{slug})
       // Check current URL path to ensure we're still on a slug-based URL
       const currentPath = window.location.pathname;
       if (slug && events.length > 0 && currentPath.startsWith('/e/')) {
-        // Only select if we don't already have this event selected
-        if (!selectedEvent || selectedEvent.slug !== slug) {
-          const targetEvent = events.find(event => event.slug === slug);
+        const targetEvent = events.find(event => event.slug === slug);
+        
+        if (targetEvent) {
+          console.log('🎯 URL handler: Found event from slug:', targetEvent.title);
+          setSelectedEvent(targetEvent);
+          setActiveTab('details'); // Start with details tab
           
-          if (targetEvent) {
-            console.log('🎯 URL handler: Found event from slug:', targetEvent.title);
-            setSelectedEvent(targetEvent);
-            setActiveTab('details'); // Start with details tab
-            
-            // If the event has coordinates, center the map on it
-            if (targetEvent.lat && targetEvent.lng) {
-              setSelectedLocation({
-                lat: targetEvent.lat,
-                lng: targetEvent.lng,
-                address: targetEvent.address
-              });
-            }
-          } else {
-            console.warn(`Event with slug "${slug}" not found in current events list`);
-            // Optionally redirect to home page if event not found
-            // navigate('/');
+          // If the event has coordinates, center the map on it
+          if (targetEvent.lat && targetEvent.lng) {
+            setSelectedLocation({
+              lat: targetEvent.lat,
+              lng: targetEvent.lng,
+              address: targetEvent.address
+            });
           }
         } else {
-          console.log('🚫 URL handler: Event already selected, skipping');
+          console.warn(`Event with slug "${slug}" not found in current events list`);
+          // Optionally redirect to home page if event not found
+          // navigate('/');
         }
       }
       // Clear selected event if we're not on an event URL
@@ -1172,7 +1177,7 @@ const EventMap = ({
         }
       }
     }
-  }, [events.length, user, slug, selectedEvent]); // Added selectedEvent to dependencies
+  }, [events.length, user, slug]); // Removed selectedEvent to prevent circular dependencies
 
   const handleAddressSelect = (data) => {
     setSelectedLocation({
