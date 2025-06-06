@@ -1078,17 +1078,22 @@ const EventMap = ({
         const targetEvent = events.find(event => event.slug === slug);
         
         if (targetEvent) {
-          console.log('🎯 URL handler: Found event from slug:', targetEvent.title);
-          setSelectedEvent(targetEvent);
-          setActiveTab('details'); // Start with details tab
-          
-          // If the event has coordinates, center the map on it
-          if (targetEvent.lat && targetEvent.lng) {
-            setSelectedLocation({
-              lat: targetEvent.lat,
-              lng: targetEvent.lng,
-              address: targetEvent.address
-            });
+          // Only select if we don't already have this exact event selected
+          if (!selectedEvent || selectedEvent.slug !== slug) {
+            console.log('🎯 URL handler: Selecting event from slug:', targetEvent.title);
+            setSelectedEvent(targetEvent);
+            setActiveTab('details'); // Start with details tab
+            
+            // If the event has coordinates, center the map on it
+            if (targetEvent.lat && targetEvent.lng) {
+              setSelectedLocation({
+                lat: targetEvent.lat,
+                lng: targetEvent.lng,
+                address: targetEvent.address
+              });
+            }
+          } else {
+            console.log('🔄 URL handler: Event already selected, skipping:', targetEvent.title);
           }
         } else {
           console.warn(`Event with slug "${slug}" not found in current events list`);
@@ -1177,7 +1182,7 @@ const EventMap = ({
         }
       }
     }
-  }, [events.length, user, slug]); // Removed selectedEvent to prevent circular dependencies
+  }, [events.length, user, slug, selectedEvent?.slug]); // Track selectedEvent slug to prevent duplicates
 
   const handleAddressSelect = (data) => {
     setSelectedLocation({
@@ -1259,17 +1264,24 @@ const EventMap = ({
 
   // Helper function to close event details and restore URL
   const handleCloseEventDetails = () => {
+    console.log('Desktop close button clicked');
     console.log('Closing event details, selectedEvent:', selectedEvent?.title);
-    setSelectedEvent(null);
     
     // Only update URL if we're currently on an event URL
     const currentPath = window.location.pathname;
     if (currentPath.startsWith('/e/')) {
-      // Restore URL to home page
+      // Change URL first to prevent re-selection by useEffect
       window.history.replaceState(null, '', '/');
       console.log('URL changed from', currentPath, 'to:', '/');
+      
+      // Small delay to ensure URL change is processed before clearing state
+      setTimeout(() => {
+        setSelectedEvent(null);
+        console.log('Event cleared after URL change');
+      }, 50);
     } else {
       console.log('Not changing URL - not on event page:', currentPath);
+      setSelectedEvent(null);
     }
   };
 
