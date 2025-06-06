@@ -33,33 +33,35 @@ def dedupe_by_title_only(dry_run=True):
 
         # Find duplicate events based ONLY on normalized title
         if 'DATABASE_URL' in os.environ:
-            # PostgreSQL syntax
+            # PostgreSQL syntax - order by created_at to keep oldest
             query = '''
             SELECT 
                 TRIM(LOWER(title)) as norm_title,
                 COUNT(*) as count,
-                STRING_AGG(id::text, ',') as ids,
-                STRING_AGG(title, '|||') as titles,
-                STRING_AGG(date, ',') as dates,
-                STRING_AGG(category, ',') as categories,
-                STRING_AGG(created_at::text, ',') as created_ats
+                STRING_AGG(id::text, ',' ORDER BY created_at) as ids,
+                STRING_AGG(title, '|||' ORDER BY created_at) as titles,
+                STRING_AGG(date, ',' ORDER BY created_at) as dates,
+                STRING_AGG(category, ',' ORDER BY created_at) as categories,
+                STRING_AGG(created_at::text, ',' ORDER BY created_at) as created_ats
             FROM events 
+            WHERE title IS NOT NULL AND TRIM(title) != ''
             GROUP BY TRIM(LOWER(title))
             HAVING COUNT(*) > 1
             ORDER BY count DESC, norm_title
             '''
         else:
-            # SQLite syntax
+            # SQLite syntax - order by created_at to keep oldest
             query = '''
             SELECT 
                 TRIM(LOWER(title)) as norm_title,
                 COUNT(*) as count,
-                GROUP_CONCAT(id) as ids,
-                GROUP_CONCAT(title) as titles,
-                GROUP_CONCAT(date) as dates,
-                GROUP_CONCAT(category) as categories,
-                GROUP_CONCAT(created_at) as created_ats
+                GROUP_CONCAT(id, ',') as ids,
+                GROUP_CONCAT(title, ',') as titles,
+                GROUP_CONCAT(date, ',') as dates,
+                GROUP_CONCAT(category, ',') as categories,
+                GROUP_CONCAT(created_at, ',') as created_ats
             FROM events 
+            WHERE title IS NOT NULL AND TRIM(title) != ''
             GROUP BY norm_title 
             HAVING COUNT(*) > 1
             ORDER BY count DESC, norm_title
@@ -82,31 +84,53 @@ def dedupe_by_title_only(dry_run=True):
         for dup in duplicates:
             norm_title, count, ids_str, titles_str, dates_str, categories_str, created_ats_str = dup
             
-            ids = [int(x) for x in ids_str.split(',')]
-            # Handle different separators for PostgreSQL vs SQLite
-            if 'DATABASE_URL' in os.environ:
-                titles = titles_str.split('|||')
-            else:
-                titles = titles_str.split(',')
-            dates = dates_str.split(',')
-            categories = categories_str.split(',')
-            created_ats = created_ats_str.split(',')
-            
-            print(f"📝 Normalized Title: \"{norm_title}\"")
-            print(f"   Found {count} events with this title:")
-            
-            # Keep the first created event, remove the rest
-            keep_id = ids[0]
-            remove_ids = ids[1:]
-            
-            print(f"   → KEEP: ID {keep_id} - \"{titles[0]}\" ({dates[0]}, {categories[0]}) - created: {created_ats[0]}")
-            
-            for i, remove_id in enumerate(remove_ids, 1):
-                print(f"   → REMOVE: ID {remove_id} - \"{titles[i]}\" ({dates[i]}, {categories[i]}) - created: {created_ats[i]}")
-                removal_plan.append(remove_id)
-            
-            print("-" * 40)
-            total_to_remove += len(remove_ids)
+            try:
+                ids = [int(x.strip()) for x in ids_str.split(',') if x.strip()]
+                # Handle different separators for PostgreSQL vs SQLite
+                if 'DATABASE_URL' in os.environ:
+                    titles = [x.strip() for x in titles_str.split('|||') if x.strip()]
+                else:
+                    titles = [x.strip() for x in titles_str.split(',') if x.strip()]
+                dates = [x.strip() for x in dates_str.split(',') if x.strip()]
+                categories = [x.strip() for x in categories_str.split(',') if x.strip()]
+                created_ats = [x.strip() for x in created_ats_str.split(',') if x.strip()]
+                
+                # Verify all lists have the same length
+                min_length = min(len(ids), len(titles), len(dates), len(categories), len(created_ats))
+                if min_length != len(ids):
+                    print(f"⚠️  Warning: Data length mismatch for title '{norm_title}'. Skipping...")
+                    continue
+                
+                # Truncate all lists to the minimum length to ensure consistency
+                ids = ids[:min_length]
+                titles = titles[:min_length]
+                dates = dates[:min_length]
+                categories = categories[:min_length]
+                created_ats = created_ats[:min_length]
+                
+                print(f"📝 Normalized Title: \"{norm_title}\"")
+                print(f"   Found {len(ids)} events with this title:")
+                
+                # Keep the first created event, remove the rest
+                if len(ids) > 0:
+                    keep_id = ids[0]
+                    remove_ids = ids[1:]
+                    
+                    print(f"   → KEEP: ID {keep_id} - \"{titles[0]}\" ({dates[0]}, {categories[0]}) - created: {created_ats[0]}")
+                    
+                    for i, remove_id in enumerate(remove_ids):
+                        idx = i + 1  # Index in the original arrays
+                        if idx < len(titles):
+                            print(f"   → REMOVE: ID {remove_id} - \"{titles[idx]}\" ({dates[idx]}, {categories[idx]}) - created: {created_ats[idx]}")
+                            removal_plan.append(remove_id)
+                    
+                    print("-" * 40)
+                    total_to_remove += len(remove_ids)
+                    
+            except Exception as e:
+                print(f"⚠️  Error processing duplicate group for title '{norm_title}': {e}")
+                print(f"   Skipping this group...")
+                continue
 
         # Show summary
         cursor.execute('SELECT COUNT(*) FROM events')
