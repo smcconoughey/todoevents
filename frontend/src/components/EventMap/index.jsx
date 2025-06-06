@@ -345,6 +345,10 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
               console.log('Desktop close button clicked');
               onClose();
             }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -1015,7 +1019,9 @@ const EventMap = ({
       const shouldCreate = urlParams.get('create');
       
       // Handle slug-based URLs (/e/{slug})
-      if (slug && events.length > 0 && !selectedEvent) {
+      // Check current URL path to ensure we're still on a slug-based URL
+      const currentPath = window.location.pathname;
+      if (slug && events.length > 0 && !selectedEvent && currentPath.startsWith('/e/')) {
         const targetEvent = events.find(event => event.slug === slug);
         
         if (targetEvent) {
@@ -1086,9 +1092,11 @@ const EventMap = ({
     };
 
     // Run on component mount and when events are loaded
-    if (events.length > 0) {
+    // Only run if we're actually on a URL that should have an event selected
+    const currentPath = window.location.pathname;
+    if (events.length > 0 && (currentPath.startsWith('/e/') || new URLSearchParams(window.location.search).get('event'))) {
       handleUrlParams();
-    } else {
+    } else if (events.length === 0) {
       // Also check for create parameter even when no events loaded
       const urlParams = new URLSearchParams(window.location.search);
       const shouldCreate = urlParams.get('create');
@@ -1193,9 +1201,11 @@ const EventMap = ({
 
   // Helper function to close event details and restore URL
   const handleCloseEventDetails = () => {
+    console.log('Closing event details, selectedEvent:', selectedEvent?.title);
     setSelectedEvent(null);
     // Restore URL to home page
     window.history.replaceState(null, '', '/');
+    console.log('URL changed to:', window.location.pathname);
   };
 
   const handleEventClick = (event, openInNewTab = false) => {
@@ -3350,7 +3360,18 @@ const EventMap = ({
           {/* Backdrop overlay for mobile */}
           <div 
             className="fixed inset-0 bg-black/30 sm:hidden z-40"
-            onClick={handleCloseEventDetails}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Mobile backdrop clicked');
+              handleCloseEventDetails();
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Mobile backdrop touched');
+              handleCloseEventDetails();
+            }}
           />
           
           <div className={`
