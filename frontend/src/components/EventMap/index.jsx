@@ -339,7 +339,12 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
-            onClick={onClose}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Desktop close button clicked');
+              onClose();
+            }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -3360,6 +3365,13 @@ const EventMap = ({
           `}
           onClick={(e) => e.stopPropagation()}
           >
+          {/* Drag handle for mobile */}
+          <div 
+            className="flex justify-center pt-2 pb-1 cursor-pointer"
+            onClick={handleCloseEventDetails}
+          >
+            <div className="w-8 h-1 bg-white/20 rounded-full"></div>
+          </div>
           <div className="p-3 space-y-3 pb-6">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -3380,15 +3392,24 @@ const EventMap = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0 touch-manipulation"
+                className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0 touch-manipulation bg-black/20 backdrop-blur-sm"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  console.log('Mobile close button clicked');
                   handleCloseEventDetails();
                 }}
-                onTouchEnd={(e) => {
+                onTouchStart={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  console.log('Mobile close button touched');
+                  handleCloseEventDetails();
+                }}
+                style={{ 
+                  touchAction: 'manipulation',
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none'
                 }}
               >
                 <X className="h-5 w-5" />

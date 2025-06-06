@@ -1689,6 +1689,45 @@ class EventBase(BaseModel):
             raise ValueError('Host name must be 200 characters or less')
         return v.strip()
 
+    @validator('address')
+    def validate_address(cls, v):
+        import re
+        
+        if not v or not isinstance(v, str):
+            raise ValueError('Address is required')
+        
+        trimmed_address = v.strip()
+        if not trimmed_address:
+            raise ValueError('Address cannot be empty')
+        
+        # Check for street-level detail
+        trimmed_lower = trimmed_address.lower()
+        
+        # Check for common street indicators (numbers followed by street names)
+        street_patterns = [
+            r'^\d+\s+.*(street|st|avenue|ave|boulevard|blvd|road|rd|drive|dr|lane|ln|way|court|ct|circle|cir|place|pl|parkway|pkwy|terrace|ter)',
+            r'^\d+\s+\w+.*\w+',  # At least number + 2 words (like "123 Main Street")
+        ]
+        
+        # Check for any of the street patterns
+        has_street_pattern = any(re.search(pattern, trimmed_lower, re.IGNORECASE) for pattern in street_patterns)
+        
+        # Check that it's not just a city/state (common patterns to avoid)
+        city_only_patterns = [
+            r'^[a-z\s]+,\s*[a-z]{2}$',  # "City, ST" format
+            r'^[a-z\s]+,\s*[a-z\s]+,\s*usa?$',  # "City, State, US" format
+            r'^[a-z\s]+\s+county',  # County names
+            r'^[a-z\s]+,\s*united states$',  # "City, United States"
+        ]
+        
+        is_city_only = any(re.search(pattern, trimmed_lower, re.IGNORECASE) for pattern in city_only_patterns)
+        
+        # Must have street patterns and not be city-only
+        if not has_street_pattern or is_city_only:
+            raise ValueError('Please provide a specific street address (e.g., "123 Main Street, City, State") rather than just a city name. This helps attendees find the exact location.')
+        
+        return trimmed_address
+
 class EventCreate(EventBase):
     pass
 

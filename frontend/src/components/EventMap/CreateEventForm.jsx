@@ -169,6 +169,35 @@ const CreateEventForm = ({
     }
   };
 
+  // Function to validate if address has street-level detail
+  const isStreetLevelAddress = (address) => {
+    if (!address || typeof address !== 'string') return false;
+    
+    const trimmedAddress = address.trim().toLowerCase();
+    
+    // Check for common street indicators (numbers followed by street names)
+    const streetPatterns = [
+      /^\d+\s+.*(street|st|avenue|ave|boulevard|blvd|road|rd|drive|dr|lane|ln|way|court|ct|circle|cir|place|pl|parkway|pkwy|terrace|ter)/i,
+      /^\d+\s+\w+.*\w+/i, // At least number + 2 words (like "123 Main Street")
+    ];
+    
+    // Check for any of the street patterns
+    const hasStreetPattern = streetPatterns.some(pattern => pattern.test(trimmedAddress));
+    
+    // Check that it's not just a city/state (common patterns to avoid)
+    const cityOnlyPatterns = [
+      /^[a-z\s]+,\s*[a-z]{2}$/i, // "City, ST" format
+      /^[a-z\s]+,\s*[a-z\s]+,\s*usa?$/i, // "City, State, US" format
+      /^[a-z\s]+\s+county/i, // County names
+      /^[a-z\s]+,\s*united states$/i, // "City, United States"
+    ];
+    
+    const isCityOnly = cityOnlyPatterns.some(pattern => pattern.test(trimmedAddress));
+    
+    // Must have street patterns and not be city-only
+    return hasStreetPattern && !isCityOnly;
+  };
+
   const validateForm = () => {
     const now = new Date();
     const selectedDate = new Date(formData.date + 'T' + formData.start_time);
@@ -212,6 +241,11 @@ const CreateEventForm = ({
     }
     if (!formData.location) {
       setError('Please select a location for the event');
+      return false;
+    }
+    // Validate address has street-level detail
+    if (!isStreetLevelAddress(formData.address)) {
+      setError('Please provide a specific street address (e.g., "123 Main Street, City, State") rather than just a city name. This helps attendees find the exact location.');
       return false;
     }
     if (formData.end_date && new Date(formData.end_date) <= selectedDate) {
@@ -538,11 +572,31 @@ const CreateEventForm = ({
             </h3>
             
             <div className="space-y-2">
-              <AddressAutocomplete
-                value={formData.address}
-                onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
-                onSelect={handleAddressSelect}
-              />
+              <div className="relative">
+                <AddressAutocomplete
+                  value={formData.address}
+                  onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                  onSelect={handleAddressSelect}
+                />
+                {formData.address && (
+                  <div className="mt-1 flex items-center gap-1">
+                    {isStreetLevelAddress(formData.address) ? (
+                      <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-xs">Street address detected</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                        <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                        <span className="text-xs">Please add street number and name</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-themed-muted">
+                <strong>Required:</strong> Please provide a specific street address (e.g., "123 Main Street") rather than just a city name.
+              </p>
               {formData.location && (
                 <div className="flex items-center gap-2">
                   <div className="flex-1 px-2 py-1 rounded-md bg-themed-surface border border-themed">

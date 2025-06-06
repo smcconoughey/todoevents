@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 
-import sqlite3
+import os
 import sys
 from datetime import datetime
 
 def dedupe_by_title_only(dry_run=True):
     """Remove duplicate events based ONLY on title similarity"""
     try:
-        conn = sqlite3.connect('events.db')
+        # Check if we're in production (PostgreSQL) or local (SQLite)
+        if 'DATABASE_URL' in os.environ:
+            # Production PostgreSQL
+            import psycopg2
+            conn = psycopg2.connect(os.environ['DATABASE_URL'])
+            placeholder = '%s'
+        else:
+            # Local SQLite
+            import sqlite3
+            conn = sqlite3.connect('events.db')
+            placeholder = '?'
+            
         cursor = conn.cursor()
 
         print("=" * 80)
@@ -21,20 +32,38 @@ def dedupe_by_title_only(dry_run=True):
         print()
 
         # Find duplicate events based ONLY on normalized title
-        query = '''
-        SELECT 
-            TRIM(LOWER(title)) as norm_title,
-            COUNT(*) as count,
-            GROUP_CONCAT(id) as ids,
-            GROUP_CONCAT(title) as titles,
-            GROUP_CONCAT(date) as dates,
-            GROUP_CONCAT(category) as categories,
-            GROUP_CONCAT(created_at) as created_ats
-        FROM events 
-        GROUP BY norm_title 
-        HAVING COUNT(*) > 1
-        ORDER BY count DESC, norm_title
-        '''
+        if 'DATABASE_URL' in os.environ:
+            # PostgreSQL syntax
+            query = '''
+            SELECT 
+                TRIM(LOWER(title)) as norm_title,
+                COUNT(*) as count,
+                STRING_AGG(id::text, ',') as ids,
+                STRING_AGG(title, '|||') as titles,
+                STRING_AGG(date, ',') as dates,
+                STRING_AGG(category, ',') as categories,
+                STRING_AGG(created_at::text, ',') as created_ats
+            FROM events 
+            GROUP BY TRIM(LOWER(title))
+            HAVING COUNT(*) > 1
+            ORDER BY count DESC, norm_title
+            '''
+        else:
+            # SQLite syntax
+            query = '''
+            SELECT 
+                TRIM(LOWER(title)) as norm_title,
+                COUNT(*) as count,
+                GROUP_CONCAT(id) as ids,
+                GROUP_CONCAT(title) as titles,
+                GROUP_CONCAT(date) as dates,
+                GROUP_CONCAT(category) as categories,
+                GROUP_CONCAT(created_at) as created_ats
+            FROM events 
+            GROUP BY norm_title 
+            HAVING COUNT(*) > 1
+            ORDER BY count DESC, norm_title
+            '''
 
         cursor.execute(query)
         duplicates = cursor.fetchall()
@@ -54,7 +83,11 @@ def dedupe_by_title_only(dry_run=True):
             norm_title, count, ids_str, titles_str, dates_str, categories_str, created_ats_str = dup
             
             ids = [int(x) for x in ids_str.split(',')]
-            titles = titles_str.split(',')
+            # Handle different separators for PostgreSQL vs SQLite
+            if 'DATABASE_URL' in os.environ:
+                titles = titles_str.split('|||')
+            else:
+                titles = titles_str.split(',')
             dates = dates_str.split(',')
             categories = categories_str.split(',')
             created_ats = created_ats_str.split(',')
@@ -92,23 +125,32 @@ def dedupe_by_title_only(dry_run=True):
             removed_count = 0
             for event_id in removal_plan:
                 try:
-                    # Start transaction
-                    cursor.execute("BEGIN")
+                    # Start transaction (PostgreSQL uses different syntax)
+                    if 'DATABASE_URL' in os.environ:
+                        conn.autocommit = False
+                    else:
+                        cursor.execute("BEGIN")
                     
                     # Remove from related tables first (to avoid foreign key issues)
-                    cursor.execute("DELETE FROM event_interests WHERE event_id = ?", (event_id,))
-                    cursor.execute("DELETE FROM event_views WHERE event_id = ?", (event_id,))
+                    cursor.execute(f"DELETE FROM event_interests WHERE event_id = {placeholder}", (event_id,))
+                    cursor.execute(f"DELETE FROM event_views WHERE event_id = {placeholder}", (event_id,))
                     
                     # Remove the event
-                    cursor.execute("DELETE FROM events WHERE id = ?", (event_id,))
+                    cursor.execute(f"DELETE FROM events WHERE id = {placeholder}", (event_id,))
                     
                     # Commit transaction
-                    cursor.execute("COMMIT")
+                    if 'DATABASE_URL' in os.environ:
+                        conn.commit()
+                    else:
+                        cursor.execute("COMMIT")
                     removed_count += 1
                     print(f"  ✅ Removed event ID {event_id}")
                     
                 except Exception as e:
-                    cursor.execute("ROLLBACK")
+                    if 'DATABASE_URL' in os.environ:
+                        conn.rollback()
+                    else:
+                        cursor.execute("ROLLBACK")
                     print(f"  ❌ Failed to remove event ID {event_id}: {e}")
             
             print(f"\n🎉 Title deduplication complete!")
