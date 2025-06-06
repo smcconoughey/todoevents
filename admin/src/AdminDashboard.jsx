@@ -800,19 +800,64 @@ const AdminDashboard = () => {
           "host_name": "Luke Air Force Base"
         },
         {
-          "title": "Graduation Celebration BBQ",
-          "description": "Community graduation celebration honoring all 2024 graduates with BBQ, music, and awards ceremony.",
+          "title": "Summer Fair & Festival",
+          "description": "Annual community fair featuring carnival rides, local vendors, live entertainment, and family-friendly activities.",
           "date": "2024-06-15",
           "start_time": "15:00",
           "end_time": "20:00",
-          "category": "graduation",
+          "category": "fair-festival",
           "address": "City Park Pavilion, Boulder, CO, USA",
           "lat": 40.0150,
           "lng": -105.2705,
           "recurring": false,
-          "fee_required": "Free event, bring a side dish to share",
-          "event_url": "",
-          "host_name": "Boulder Community Education Foundation"
+          "fee_required": "Free admission, ride tickets $2-5 each",
+          "event_url": "https://www.boulderfair.com",
+          "host_name": "Boulder Community Events"
+        },
+        {
+          "title": "Scuba Diving Course",
+          "description": "Open water scuba diving certification course for beginners. All equipment provided, includes pool and open water training.",
+          "date": "2024-07-10",
+          "start_time": "08:00",
+          "end_time": "17:00",
+          "category": "diving",
+          "address": "Aquatic Center, San Diego, CA, USA",
+          "lat": 32.7157,
+          "lng": -117.1611,
+          "recurring": false,
+          "fee_required": "$450 includes equipment and certification",
+          "event_url": "https://www.sandiegodiving.com",
+          "host_name": "San Diego Dive Center"
+        },
+        {
+          "title": "Holiday Market & Shopping Festival",
+          "description": "Browse unique holiday gifts from local artisans and vendors. Hot cocoa, holiday music, and special promotions all day.",
+          "date": "2024-12-15",
+          "start_time": "10:00",
+          "end_time": "18:00",
+          "category": "shopping",
+          "address": "Downtown Square, Portland, OR, USA",
+          "lat": 45.5152,
+          "lng": -122.6784,
+          "recurring": false,
+          "fee_required": "Free admission",
+          "event_url": "https://www.portlandholidaymarket.com",
+          "host_name": "Portland Downtown Association"
+        },
+        {
+          "title": "Wellness Workshop: Mindfulness & Meditation",
+          "description": "Learn mindfulness techniques and meditation practices to reduce stress and improve mental health. All experience levels welcome.",
+          "date": "2024-08-05",
+          "start_time": "14:00",
+          "end_time": "16:00",
+          "category": "health",
+          "address": "Community Wellness Center, Austin, TX, USA",
+          "lat": 30.2672,
+          "lng": -97.7431,
+          "recurring": false,
+          "fee_required": "$25 per person, mats provided",
+          "event_url": "https://www.austinwellness.org",
+          "host_name": "Austin Wellness Community"
         }
       ]
     };
@@ -965,7 +1010,7 @@ const AdminDashboard = () => {
                   </ul>
                 </div>
                 <div>
-                  <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, graduation, networking</p>
+                  <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, other</p>
                   <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
                   <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
                   <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>

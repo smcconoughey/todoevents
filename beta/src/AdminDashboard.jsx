@@ -561,7 +561,7 @@ const BetaDashboard = () => {
           "date": "2024-07-20",
           "start_time": "11:00",
           "end_time": "20:00",
-          "category": "food",
+          "category": "food-drink",
           "address": "Downtown Plaza, Los Angeles, CA, USA",
           "lat": 34.0522,
           "lng": -118.2437,
@@ -745,7 +745,7 @@ const BetaDashboard = () => {
             <div className="mt-3 text-sm text-gray-600">
               <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
               <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency</p>
-              <p><strong>Valid categories:</strong> music, food, arts, sports, community, networking, education, other</p>
+              <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, other</p>
               <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
               <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
               <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
