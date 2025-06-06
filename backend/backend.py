@@ -2304,7 +2304,8 @@ async def list_events(
     # Try to get from cache first (for mobile performance)
     cached_result = event_cache.get(cache_key)
     if cached_result is not None:
-        logger.info(f"Returning cached events for key: {cache_key}")
+        logger.info(f"Returning cached events for key: {cache_key} - {len(cached_result)} events")
+        logger.info(f"Cache stats: {event_cache.stats()}")
         return cached_result
     
     try:
@@ -2341,6 +2342,14 @@ async def list_events(
             if where_conditions:
                 where_clause = "WHERE " + " AND ".join(where_conditions)
             
+            # Database-specific date comparison logic
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL syntax
+                date_comparison = "date::date >= CURRENT_DATE"
+            else:
+                # SQLite syntax
+                date_comparison = "date >= date('now')"
+            
             # Optimized query with specific columns and LIMIT, including ALL fields
             base_query = f"""
                 SELECT id, title, description, short_description, date, start_time, end_time, end_date, 
@@ -2354,7 +2363,7 @@ async def list_events(
                 {where_clause}
                 ORDER BY 
                     CASE 
-                        WHEN date::date >= CURRENT_DATE THEN 0  -- Future/today events first
+                        WHEN {date_comparison} THEN 0  -- Future/today events first
                         ELSE 1                           -- Past events later  
                     END,
                     date ASC, start_time ASC
@@ -2411,6 +2420,8 @@ async def list_events(
             # Cache the result for mobile performance (shorter TTL for real-time updates)
             event_cache.set(cache_key, result)
             logger.info(f"Cached {len(result)} events for key: {cache_key}")
+            logger.info(f"Database query returned {len(events)} raw events, processed {len(result)} events")
+            logger.info(f"Cache stats: {event_cache.stats()}")
             
             return result
             
@@ -5494,3 +5505,97 @@ async def fix_null_end_times():
     except Exception as e:
         logger.error(f"Error fixing NULL end_time values: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fixing NULL end_time values: {str(e)}")
+
+@app.get("/debug/events-raw")
+async def debug_events_raw():
+    """Debug endpoint to test events query without caching"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Database-specific date comparison logic
+            if IS_PRODUCTION and DB_URL:
+                date_comparison = "date::date >= CURRENT_DATE"
+            else:
+                date_comparison = "date >= date('now')"
+            
+            # Test the exact same query as the events endpoint
+            query = f"""
+                SELECT id, title, description, short_description, date, start_time, end_time, end_date, 
+                       category, address, city, state, country, lat, lng, recurring, frequency, created_by, created_at,
+                       COALESCE(interest_count, 0) as interest_count,
+                       COALESCE(view_count, 0) as view_count,
+                       fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
+                       start_datetime, end_datetime, updated_at
+                FROM events 
+                ORDER BY 
+                    CASE 
+                        WHEN {date_comparison} THEN 0  -- Future/today events first
+                        ELSE 1                           -- Past events later  
+                    END,
+                    date ASC, start_time ASC
+                LIMIT 500
+            """
+            
+            cursor.execute(query)
+            events = cursor.fetchall()
+            
+            # Process results
+            result = []
+            errors = []
+            for i, event in enumerate(events):
+                try:
+                    column_names = [
+                        'id', 'title', 'description', 'short_description', 'date', 'start_time', 'end_time',
+                        'end_date', 'category', 'address', 'city', 'state', 'country', 'lat', 'lng', 'recurring',
+                        'frequency', 'created_by', 'created_at', 'interest_count', 'view_count',
+                        'fee_required', 'price', 'currency', 'event_url', 'host_name', 'organizer_url', 'slug', 'is_published',
+                        'start_datetime', 'end_datetime', 'updated_at'
+                    ]
+                    
+                    event_dict = dict(zip(column_names, event))
+                    event_dict = convert_event_datetime_fields(event_dict)
+                    
+                    # Ensure counters are integers
+                    event_dict['interest_count'] = int(event_dict.get('interest_count', 0) or 0)
+                    event_dict['view_count'] = int(event_dict.get('view_count', 0) or 0)
+                    
+                    result.append(event_dict)
+                    
+                except Exception as event_error:
+                    errors.append(f"Error processing event {i}: {event_error}")
+                    continue
+            
+            return {
+                "query_used": query,
+                "total_events_retrieved": len(events),
+                "processed_events": len(result),
+                "processing_errors": errors,
+                "database_type": "PostgreSQL" if IS_PRODUCTION and DB_URL else "SQLite",
+                "sample_events": result[:3] if result else [],
+                "cache_key_that_would_be_used": f"events:all:all:500:0:None:None:25.0"
+            }
+            
+    except Exception as e:
+        logger.error(f"Debug events query failed: {str(e)}")
+        return {
+            "error": str(e),
+            "database_type": "PostgreSQL" if IS_PRODUCTION and DB_URL else "SQLite"
+        }
+
+@app.post("/debug/clear-cache")
+async def debug_clear_cache():
+    """Debug endpoint to clear the events cache"""
+    try:
+        cache_stats_before = event_cache.stats()
+        event_cache.clear()
+        cache_stats_after = event_cache.stats()
+        
+        return {
+            "message": "Cache cleared successfully",
+            "cache_stats_before": cache_stats_before,
+            "cache_stats_after": cache_stats_after
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear cache: {str(e)}")
+        return {"error": str(e)}
