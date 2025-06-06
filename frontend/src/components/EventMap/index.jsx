@@ -852,13 +852,18 @@ const EventMap = ({
 
   // Handle preset filters from URL routing  
   useEffect(() => {
-    console.log('🎛️ Preset filters handler running - eventSlug:', eventSlug, 'slug:', slug);
+    console.log('🎛️ Preset filters handler running - eventSlug:', eventSlug, 'slug:', slug, 'selectedEvent:', selectedEvent?.slug || 'none');
     
     // Handle individual event slug routes
     if (eventSlug && slug) {
-      console.log('🎯 Preset handler: Calling handleEventFromSlug for:', slug);
-      // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
-      handleEventFromSlug(slug);
+      // Only handle if we don't already have this event selected
+      if (!selectedEvent || selectedEvent.slug !== slug) {
+        console.log('🎯 Preset handler: Calling handleEventFromSlug for:', slug);
+        // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
+        handleEventFromSlug(slug);
+      } else {
+        console.log('🚫 Preset handler: Event already selected, skipping:', slug);
+      }
       return;
     }
 
@@ -872,13 +877,20 @@ const EventMap = ({
     if (Object.keys(presetFilters).length > 0) {
       applyPresetFilters(presetFilters);
     }
-  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state]); // Removed selectedEvent from dependencies
+  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state, selectedEvent?.slug]); // Track selectedEvent slug to prevent duplicates
 
   // Use a ref to track if we're currently processing a slug to prevent duplicate calls
   const processingSlugRef = useRef(null);
 
   const handleEventFromSlug = async (eventSlug) => {
     try {
+      // Check if we're still on a URL that should have this event selected
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes(eventSlug)) {
+        console.log('Current URL no longer contains slug, ignoring:', eventSlug);
+        return;
+      }
+
       // Prevent processing the same slug multiple times simultaneously
       if (processingSlugRef.current === eventSlug) {
         console.log('Already processing slug, ignoring duplicate call:', eventSlug);
