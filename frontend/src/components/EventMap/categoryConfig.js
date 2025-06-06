@@ -28,7 +28,8 @@ import {
   Cross,
   Mountain,
   Snowflake,
-  Tent
+  Tent,
+  Wheat
 } from 'lucide-react';
 
 // Helper function to create SVG marker with icon path
@@ -90,7 +91,7 @@ const iconPaths = {
   
   Heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
-  TreePine: '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h5Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m14 11 3 3.3a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7L10 11h4Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 8 3 3.3a1 1 0 0 1-.7 1.7H8.7a1 1 0 0 1-.7-1.7L11 8h0Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 22V18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  TreePine: '<path d="M12 2 L8 8 h8 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 6 L6 12 h12 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 10 L4 16 h16 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><rect x="11" y="16" width="2" height="6" fill="white" stroke="white" stroke-width="1" stroke-linejoin="round"/>',
   
   Camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
@@ -111,6 +112,9 @@ const iconPaths = {
   Snowflake: '<path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 7.5L20.07 16.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 16.5L20.07 7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8L16 16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 16L16 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
 
   Tent: '<path d="M12 3L2 18h20L12 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 3v15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15h18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  // Wheat icon for agriculture
+  Wheat: '<path d="M2 12h20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17c6 0 10-4 10-9s4-9 10-9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 18c0-8 4-13 8-13s8 5 8 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 20c2-2 4-3 7-3s5 1 7 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 10v3" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M14 7v6" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M18 4v9" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="1" fill="white"/><circle cx="14" cy="7" r="1" fill="white"/><circle cx="18" cy="4" r="1" fill="white"/>',
 
   // Custom Cow icon for livestock
   Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>'
@@ -303,12 +307,12 @@ const categories = [
     markerSVG: createCategoryMarkerSVG('#F57C00', iconPaths.Home)
   },
   {
-    id: 'livestock',
-    name: 'Livestock & Agriculture',
-    icon: () => null, // Custom cow icon will be handled by iconOnlyMarkers
+    id: 'agriculture',
+    name: 'Agriculture',
+    icon: Wheat,
     color: 'text-fresh-teal-900',
     markerColor: '#004D40',
-    markerSVG: createCategoryMarkerSVG('#004D40', iconPaths.Cow)
+    markerSVG: createCategoryMarkerSVG('#004D40', iconPaths.Wheat)
   },
 
   {

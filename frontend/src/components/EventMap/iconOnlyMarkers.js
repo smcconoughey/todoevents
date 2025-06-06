@@ -236,7 +236,10 @@ const iconPaths = {
   
   Snowflake: '<path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 6.5L6.5 17.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 6.5L17.5 17.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6L9 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 3L12 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 18L9 21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 21L12 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
 
-  // Custom Cow icon for livestock
+  // Wheat icon for agriculture
+  Wheat: '<path d="M2 12h20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17c6 0 10-4 10-9s4-9 10-9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 18c0-8 4-13 8-13s8 5 8 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 20c2-2 4-3 7-3s5 1 7 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 10v3" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M14 7v6" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M18 4v9" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="1" fill="white"/><circle cx="14" cy="7" r="1" fill="white"/><circle cx="18" cy="4" r="1" fill="white"/>',
+
+  // Custom Cow icon for livestock (keeping for backward compatibility)
   Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>'
 
 };
@@ -266,7 +269,7 @@ const categoryIconMap = {
   'family': 'Baby',
   'gaming': 'Gamepad2',
   'real-estate': 'Home',
-  'livestock': 'Cow',
+  'agriculture': 'Wheat',
   'adventure': 'Mountain',
   'seasonal': 'Snowflake',
   'other': 'MapPin'
