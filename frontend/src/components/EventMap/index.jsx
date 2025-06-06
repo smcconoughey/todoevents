@@ -852,10 +852,18 @@ const EventMap = ({
 
   // Handle preset filters from URL routing
   useEffect(() => {
+    console.log('🎛️ Preset filters handler running - eventSlug:', eventSlug, 'slug:', slug, 'selectedEvent:', selectedEvent?.title || 'none');
+    
     // Handle individual event slug routes
     if (eventSlug && slug) {
-      // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
-      handleEventFromSlug(slug);
+      // Only handle if we don't already have this event selected (prevent duplicates)
+      if (!selectedEvent || selectedEvent.slug !== slug) {
+        console.log('🎯 Preset handler: Calling handleEventFromSlug for:', slug);
+        // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
+        handleEventFromSlug(slug);
+      } else {
+        console.log('🚫 Preset handler: Event already selected, skipping');
+      }
       return;
     }
 
@@ -869,18 +877,26 @@ const EventMap = ({
     if (Object.keys(presetFilters).length > 0) {
       applyPresetFilters(presetFilters);
     }
-  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state]);
+  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state, selectedEvent]);
 
   const handleEventFromSlug = async (eventSlug) => {
     try {
+      // Prevent selecting the same event multiple times
+      if (selectedEvent && selectedEvent.slug === eventSlug) {
+        console.log('Event with slug already selected, ignoring:', eventSlug);
+        return;
+      }
+
       // Try to find event by slug in current events
       const event = events.find(e => e.slug === eventSlug);
       if (event) {
+        console.log('Found event in current events for slug:', eventSlug);
         setSelectedEvent(event);
         return;
       }
 
       // If not found in current events, try to fetch from API
+      console.log('Fetching event from API for slug:', eventSlug);
       const response = await fetchWithTimeout(`${API_URL}/api/seo/events/by-slug/${eventSlug}`);
       if (response && response.id) {
         setSelectedEvent(response);
@@ -1025,14 +1041,16 @@ const EventMap = ({
   useEffect(() => {
     const handlePopState = () => {
       // If we're back to the home page, clear selected event
-      if (location.pathname === '/') {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/' || !currentPath.startsWith('/e/')) {
+        console.log('Clearing event due to popstate - URL:', currentPath);
         setSelectedEvent(null);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [location.pathname]);
+  }, []);
 
   // Handle URL parameters for event deep linking and create trigger
   useEffect(() => {
@@ -1041,30 +1059,42 @@ const EventMap = ({
       const eventId = urlParams.get('event');
       const shouldCreate = urlParams.get('create');
       
+      console.log('🔄 URL params handler running - slug:', slug, 'selectedEvent:', selectedEvent?.title || 'none');
+      
       // Handle slug-based URLs (/e/{slug})
       // Check current URL path to ensure we're still on a slug-based URL
       const currentPath = window.location.pathname;
-      if (slug && events.length > 0 && !selectedEvent && currentPath.startsWith('/e/')) {
-        const targetEvent = events.find(event => event.slug === slug);
-        
-        if (targetEvent) {
-          console.log('Found event from slug:', targetEvent.title);
-          setSelectedEvent(targetEvent);
-          setActiveTab('details'); // Start with details tab
+      if (slug && events.length > 0 && currentPath.startsWith('/e/')) {
+        // Only select if we don't already have this event selected
+        if (!selectedEvent || selectedEvent.slug !== slug) {
+          const targetEvent = events.find(event => event.slug === slug);
           
-          // If the event has coordinates, center the map on it
-          if (targetEvent.lat && targetEvent.lng) {
-            setSelectedLocation({
-              lat: targetEvent.lat,
-              lng: targetEvent.lng,
-              address: targetEvent.address
-            });
+          if (targetEvent) {
+            console.log('🎯 URL handler: Found event from slug:', targetEvent.title);
+            setSelectedEvent(targetEvent);
+            setActiveTab('details'); // Start with details tab
+            
+            // If the event has coordinates, center the map on it
+            if (targetEvent.lat && targetEvent.lng) {
+              setSelectedLocation({
+                lat: targetEvent.lat,
+                lng: targetEvent.lng,
+                address: targetEvent.address
+              });
+            }
+          } else {
+            console.warn(`Event with slug "${slug}" not found in current events list`);
+            // Optionally redirect to home page if event not found
+            // navigate('/');
           }
         } else {
-          console.warn(`Event with slug "${slug}" not found in current events list`);
-          // Optionally redirect to home page if event not found
-          // navigate('/');
+          console.log('🚫 URL handler: Event already selected, skipping');
         }
+      }
+      // Clear selected event if we're not on an event URL
+      else if (!currentPath.startsWith('/e/') && selectedEvent) {
+        console.log('🧹 URL handler: Clearing selected event - not on event URL');
+        setSelectedEvent(null);
       }
       
       // Handle old-style event ID URLs (?event=123) for backward compatibility
@@ -1142,7 +1172,7 @@ const EventMap = ({
         }
       }
     }
-  }, [events.length, user, slug]); // Depend on events.length, user, and slug
+  }, [events.length, user, slug, selectedEvent]); // Added selectedEvent to dependencies
 
   const handleAddressSelect = (data) => {
     setSelectedLocation({
@@ -1226,9 +1256,16 @@ const EventMap = ({
   const handleCloseEventDetails = () => {
     console.log('Closing event details, selectedEvent:', selectedEvent?.title);
     setSelectedEvent(null);
-    // Restore URL to home page
-    window.history.replaceState(null, '', '/');
-    console.log('URL changed to:', window.location.pathname);
+    
+    // Only update URL if we're currently on an event URL
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/e/')) {
+      // Restore URL to home page
+      window.history.replaceState(null, '', '/');
+      console.log('URL changed from', currentPath, 'to:', '/');
+    } else {
+      console.log('Not changing URL - not on event page:', currentPath);
+    }
   };
 
   const handleEventClick = (event, openInNewTab = false) => {
@@ -1238,6 +1275,13 @@ const EventMap = ({
       return;
     }
 
+    // Prevent clicking the same event multiple times
+    if (selectedEvent && selectedEvent.id === event.id) {
+      console.log('Event already selected, ignoring duplicate click');
+      return;
+    }
+
+    console.log('Selecting event:', event.title);
     setSelectedEvent(event);
     
     // Update the browser URL to reflect the event being viewed
