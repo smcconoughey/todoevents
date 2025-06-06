@@ -2270,7 +2270,7 @@ async def reset_password(request: PasswordReset):
 async def list_events(
     category: Optional[str] = None,
     date: Optional[str] = None,
-    limit: Optional[int] = 100,  # Increased default limit
+    limit: Optional[int] = 500,  # Increased default limit to 500
     offset: Optional[int] = 0,  # Add pagination
     lat: Optional[float] = None,  # Add location filtering
     lng: Optional[float] = None,  # Add location filtering
@@ -2284,7 +2284,7 @@ async def list_events(
     placeholder = get_placeholder()
     
     # Validate and limit pagination parameters  
-    limit = min(max(limit or 100, 1), 200)  # Between 1 and 200
+    limit = min(max(limit or 500, 1), 1000)  # Between 1 and 1000
     offset = max(offset or 0, 0)
     
     # Create cache key for this request
@@ -3418,7 +3418,7 @@ async def admin_reset_user_password(
 @app.get("/admin/activity-logs")
 async def get_activity_logs(
     current_user: dict = Depends(get_current_user),
-    limit: int = 100,
+    limit: int = 500,
     offset: int = 0
 ):
     """
@@ -3561,7 +3561,7 @@ async def get_local_events_for_ai(
     lng: Optional[float] = None,
     radius: Optional[float] = 25.0,  # miles
     category: Optional[str] = None,
-    limit: Optional[int] = 50
+    limit: Optional[int] = 200
 ):
     """
     Public API endpoint for AI search tools to discover local events.
@@ -5159,7 +5159,7 @@ async def get_event_by_slug(slug: str):
 async def get_events_by_location(
     state: str, 
     city: str,
-    limit: int = 20,
+    limit: int = 100,
     offset: int = 0
 ):
     """Get events by state and city for geographic SEO"""
