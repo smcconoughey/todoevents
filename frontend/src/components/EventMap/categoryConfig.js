@@ -13,7 +13,20 @@ import {
   Ship,
   GraduationCap,
   Award,
-  Flame
+  Flame,
+  Waves,
+  CalendarDays,
+  ShoppingBag,
+  Heart,
+  TreePine,
+  Camera,
+  Baby,
+  Gamepad2,
+  Home,
+  DollarSign,
+  Briefcase,
+  Cross,
+  Mountain
 } from 'lucide-react';
 
 // Helper function to create SVG marker with icon path
@@ -65,7 +78,33 @@ const iconPaths = {
   
   Flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
-  Laptop: '<rect width="20" height="14" x="2" y="3" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 21h12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  Laptop: '<rect width="20" height="14" x="2" y="3" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 21h12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Waves: '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  CalendarDays: '<path d="M8 2v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect width="18" height="18" x="3" y="4" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10h18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 18h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 18h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 10a4 4 0 0 1-8 0" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  TreePine: '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h5Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m14 11 3 3.3a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7L10 11h4Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 8 3 3.3a1 1 0 0 1-.7 1.7H8.7a1 1 0 0 1-.7-1.7L11 8h0Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 22V18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Baby: '<path d="M9 12h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 12h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2.69 0 5.12 1.18 6.8 3.3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Gamepad2: '<line x1="6" x2="10" y1="12" y2="12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" x2="8" y1="10" y2="14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="15" x2="15.01" y1="13" y2="13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" x2="18.01" y1="11" y2="11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect width="20" height="12" x="2" y="6" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  DollarSign: '<line x1="12" x2="12" y1="2" y2="22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Briefcase: '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect width="20" height="14" x="2" y="6" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Cross: '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 
 const categories = [
@@ -173,14 +212,7 @@ const categories = [
     markerColor: '#F70049',
     markerSVG: createCategoryMarkerSVG('#F70049', iconPaths.Flame)
   },
-  {
-    id: 'graduation',
-    name: 'Graduation',
-    icon: GraduationCap,
-    color: 'text-spark-yellow-700',
-    markerColor: '#F5D700',
-    markerSVG: createCategoryMarkerSVG('#F5D700', iconPaths.GraduationCap)
-  },
+
   {
     id: 'networking',
     name: 'Networking',
@@ -188,6 +220,103 @@ const categories = [
     color: 'text-pin-blue-700',
     markerColor: '#0052CC',
     markerSVG: createCategoryMarkerSVG('#0052CC', iconPaths.Laptop)
+  },
+  {
+    id: 'fair-festival',
+    name: 'Fair/Festival',
+    icon: CalendarDays,
+    color: 'text-vibrant-magenta-800',
+    markerColor: '#E60026',
+    markerSVG: createCategoryMarkerSVG('#E60026', iconPaths.CalendarDays)
+  },
+  {
+    id: 'diving',
+    name: 'Diving',
+    icon: Waves,
+    color: 'text-pin-blue-500',
+    markerColor: '#4FC3F7',
+    markerSVG: createCategoryMarkerSVG('#4FC3F7', iconPaths.Waves)
+  },
+  {
+    id: 'shopping',
+    name: 'Shopping',
+    icon: ShoppingBag,
+    color: 'text-fresh-teal-500',
+    markerColor: '#26E6A0',
+    markerSVG: createCategoryMarkerSVG('#26E6A0', iconPaths.ShoppingBag)
+  },
+  {
+    id: 'health',
+    name: 'Health & Wellness',
+    icon: Heart,
+    color: 'text-vibrant-magenta-500',
+    markerColor: '#FF4081',
+    markerSVG: createCategoryMarkerSVG('#FF4081', iconPaths.Heart)
+  },
+  {
+    id: 'outdoors',
+    name: 'Outdoors & Nature',
+    icon: TreePine,
+    color: 'text-fresh-teal-800',
+    markerColor: '#00695C',
+    markerSVG: createCategoryMarkerSVG('#00695C', iconPaths.TreePine)
+  },
+  {
+    id: 'photography',
+    name: 'Photography',
+    icon: Camera,
+    color: 'text-spark-yellow-500',
+    markerColor: '#FFD54F',
+    markerSVG: createCategoryMarkerSVG('#FFD54F', iconPaths.Camera)
+  },
+  {
+    id: 'family',
+    name: 'Family & Kids',
+    icon: Baby,
+    color: 'text-pin-blue-400',
+    markerColor: '#81C784',
+    markerSVG: createCategoryMarkerSVG('#81C784', iconPaths.Baby)
+  },
+  {
+    id: 'gaming',
+    name: 'Gaming',
+    icon: Gamepad2,
+    color: 'text-vibrant-magenta-400',
+    markerColor: '#AB47BC',
+    markerSVG: createCategoryMarkerSVG('#AB47BC', iconPaths.Gamepad2)
+  },
+  {
+    id: 'real-estate',
+    name: 'Real Estate',
+    icon: Home,
+    color: 'text-spark-yellow-600',
+    markerColor: '#F57C00',
+    markerSVG: createCategoryMarkerSVG('#F57C00', iconPaths.Home)
+  },
+
+  {
+    id: 'adventure',
+    name: 'Adventure & Extreme',
+    icon: Mountain,
+    color: 'text-spark-yellow-800',
+    markerColor: '#BF360C',
+    markerSVG: createCategoryMarkerSVG('#BF360C', iconPaths.Mountain)
+  },
+  {
+    id: 'seasonal',
+    name: 'Seasonal',
+    icon: CalendarDays,
+    color: 'text-fresh-teal-600',
+    markerColor: '#1BC2A4',
+    markerSVG: createCategoryMarkerSVG('#1BC2A4', iconPaths.CalendarDays)
+  },
+  {
+    id: 'other',
+    name: 'Other',
+    icon: MapPin,
+    color: 'text-gray-500',
+    markerColor: '#9E9E9E',
+    markerSVG: createCategoryMarkerSVG('#9E9E9E', iconPaths.MapPin)
   }
 ];
 

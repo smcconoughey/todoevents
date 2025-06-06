@@ -571,7 +571,18 @@ const EVENT_CATEGORIES = [
   { id: 'networking', name: 'Networking', description: 'Professional networking, business meetups' },
   { id: 'veteran', name: 'Veteran', description: 'Military commemorative events, veteran services' },
   { id: 'cookout', name: 'Cookout', description: 'BBQ events, outdoor cooking, grilling competitions' },
-  { id: 'graduation', name: 'Graduation', description: 'Graduation ceremonies, academic celebrations' }
+  { id: 'fair-festival', name: 'Fair/Festival', description: 'County fairs, cultural festivals, carnival events' },
+  { id: 'diving', name: 'Diving', description: 'Scuba diving, snorkeling, underwater exploration events' },
+  { id: 'shopping', name: 'Shopping', description: 'Market events, shopping festivals, retail gatherings' },
+  { id: 'health', name: 'Health & Wellness', description: 'Fitness events, wellness workshops, health screenings, medical conferences' },
+  { id: 'outdoors', name: 'Outdoors & Nature', description: 'Hiking, camping, nature walks, outdoor activities' },
+  { id: 'photography', name: 'Photography', description: 'Photo walks, exhibitions, workshops for photographers' },
+  { id: 'family', name: 'Family & Kids', description: 'Family-friendly events, children\'s activities, parenting workshops' },
+  { id: 'gaming', name: 'Gaming', description: 'Video game tournaments, board game nights, gaming conventions' },
+  { id: 'real-estate', name: 'Real Estate', description: 'Open houses, property tours, real estate seminars' },
+  { id: 'adventure', name: 'Adventure & Extreme', description: 'Rock climbing, extreme sports, adventure challenges' },
+  { id: 'seasonal', name: 'Seasonal', description: 'Holiday events, seasonal celebrations, festive occasions' },
+  { id: 'other', name: 'Other', description: 'Events that don\'t fit into other categories' }
 ];
 
 // Main Admin Dashboard Component

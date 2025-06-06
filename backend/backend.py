@@ -857,7 +857,12 @@ class AutomatedTaskManager:
   </url>'''
         
         # Add category pages - both query param and SEO-friendly formats
-        categories = ['food-drink', 'music', 'arts', 'sports', 'community', 'networking', 'education', 'family', 'automotive', 'gaming', 'health', 'outdoors', 'shopping', 'technology', 'travel', 'other']
+        categories = [
+    'food-drink', 'music', 'arts', 'sports', 'automotive', 'airshows', 'vehicle-sports', 
+    'community', 'religious', 'education', 'veteran', 'cookout', 'networking',
+    'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
+    'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
+]
         
         sitemap += f'''
 

@@ -31,7 +31,7 @@ const getCurrentDate = () => {
 };
 
 // Categories for event pages
-const CATEGORIES = ['food-drink', 'music', 'arts', 'sports', 'community'];
+const CATEGORIES = ['food-drink', 'music', 'arts', 'sports', 'community', 'fair-festival', 'health', 'outdoors', 'family', 'seasonal'];
 
 // Major cities for location-based SEO
 const MAJOR_CITIES = [
