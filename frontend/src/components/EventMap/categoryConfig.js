@@ -27,7 +27,8 @@ import {
   Briefcase,
   Cross,
   Mountain,
-  Snowflake
+  Snowflake,
+  Tent
 } from 'lucide-react';
 
 // Helper function to create SVG marker with icon path
@@ -107,7 +108,12 @@ const iconPaths = {
   
   Mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
-  Snowflake: '<path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 7.5L20.07 16.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 16.5L20.07 7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8L16 16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 16L16 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  Snowflake: '<path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 7.5L20.07 16.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 16.5L20.07 7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8L16 16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 16L16 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  Tent: '<path d="M12 3L2 18h20L12 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 3v15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15h18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  // Custom Cow icon for livestock
+  Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>'
 };
 
 const categories = [
@@ -227,10 +233,10 @@ const categories = [
   {
     id: 'fair-festival',
     name: 'Fair/Festival',
-    icon: CalendarDays,
+    icon: Tent,
     color: 'text-vibrant-magenta-800',
     markerColor: '#E60026',
-    markerSVG: createCategoryMarkerSVG('#E60026', iconPaths.CalendarDays)
+    markerSVG: createCategoryMarkerSVG('#E60026', iconPaths.Tent)
   },
   {
     id: 'diving',
@@ -295,6 +301,14 @@ const categories = [
     color: 'text-spark-yellow-600',
     markerColor: '#F57C00',
     markerSVG: createCategoryMarkerSVG('#F57C00', iconPaths.Home)
+  },
+  {
+    id: 'livestock',
+    name: 'Livestock & Agriculture',
+    icon: () => null, // Custom cow icon will be handled by iconOnlyMarkers
+    color: 'text-fresh-teal-900',
+    markerColor: '#004D40',
+    markerSVG: createCategoryMarkerSVG('#004D40', iconPaths.Cow)
   },
 
   {

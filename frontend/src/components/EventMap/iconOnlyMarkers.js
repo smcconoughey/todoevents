@@ -212,6 +212,9 @@ const iconPaths = {
 
   // Additional category icons for exact matches with categoryConfig.js
   CalendarDays: '<path d="M8 2v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect width="18" height="18" x="3" y="4" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10h18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 18h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 18h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  // Tent icon for fair/festival
+  Tent: '<path d="M12 3L2 18h20L12 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 3v15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15h18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
   Waves: '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c1.8 0 2.5 2 5 2s3.2-2 5-2c1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2s2.2 2 5 2 3.2-2 5-2c1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2s2.2 2 5 2 3.2-2 5-2c1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
@@ -219,7 +222,7 @@ const iconPaths = {
   
   Heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
-  TreePine: '<path d="M12 2 L8 8 h8 z" fill="white" stroke="white" stroke-width="1.5"/><path d="M10 6 L6 12 h12 z" fill="white" stroke="white" stroke-width="1.5"/><path d="M8 10 L4 16 h16 z" fill="white" stroke="white" stroke-width="1.5"/><rect x="11" y="16" width="2" height="6" fill="white" stroke="white" stroke-width="1"/>',
+  TreePine: '<path d="M12 2 L8 8 h8 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 6 L6 12 h12 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 10 L4 16 h16 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><rect x="11" y="16" width="2" height="6" fill="white" stroke="white" stroke-width="1" stroke-linejoin="round"/>',
   
   Camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
@@ -232,6 +235,9 @@ const iconPaths = {
   Mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
   Snowflake: '<path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 6.5L6.5 17.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 6.5L17.5 17.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6L9 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 3L12 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 18L9 21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 21L12 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  // Custom Cow icon for livestock
+  Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>'
 
 };
 
@@ -251,7 +257,7 @@ const categoryIconMap = {
   'veteran': 'Award',
   'cookout': 'Flame',
   'networking': 'Laptop',
-  'fair-festival': 'CalendarDays',
+  'fair-festival': 'Tent',
   'diving': 'Waves',
   'shopping': 'ShoppingBag',
   'health': 'Heart',
@@ -260,6 +266,7 @@ const categoryIconMap = {
   'family': 'Baby',
   'gaming': 'Gamepad2',
   'real-estate': 'Home',
+  'livestock': 'Cow',
   'adventure': 'Mountain',
   'seasonal': 'Snowflake',
   'other': 'MapPin'
