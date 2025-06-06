@@ -1733,7 +1733,7 @@ class EventBase(BaseModel):
             'food-drink', 'music', 'arts', 'sports', 'automotive', 'airshows', 'vehicle-sports', 
             'community', 'religious', 'education', 'veteran', 'cookout', 'networking',
             'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
-            'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
+            'gaming', 'real-estate', 'adventure', 'seasonal', 'agriculture', 'other'
         ]
         
         if v not in categories:

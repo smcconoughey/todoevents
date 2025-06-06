@@ -687,7 +687,7 @@ const BetaDashboard = () => {
       try {
         const jsonData = JSON.parse(jsonInput);
         
-        const response = await fetchData('/admin/events/bulk', 'POST', jsonData);
+        const response = await fetchData('/admin/events/bulk-simple', 'POST', jsonData);
         
         if (response) {
           setImportResults(response);
