@@ -1,9 +1,12 @@
 import { THEME_DARK, THEME_LIGHT } from '../ThemeContext';
 import { createIconOnlyMarker, createIconOnlyClusterMarker } from './iconOnlyMarkers';
+import categories from './categoryConfig';
 
 // Simply use the existing iconOnlyMarkers system
 export const createMarkerIcon = (categoryId, isDetailed = false, theme = THEME_DARK) => {
-  return createIconOnlyMarker(categoryId, theme);
+  // Find the category object from categoryId
+  const category = categories.find(cat => cat.id === categoryId) || categories[0];
+  return createIconOnlyMarker(category, theme);
 };
 
 export const createClusterIcon = (count, categoryIds, theme = THEME_DARK) => {
