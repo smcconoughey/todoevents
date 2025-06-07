@@ -359,10 +359,10 @@ const CreateEventForm = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="dialog-themed max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="dialog-themed max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] md:w-full"
         aria-describedby="create-event-dialog-description"
       >
-        <DialogHeader className="relative pb-4">
+        <DialogHeader className="relative pb-3">
           <DialogTitle className="text-xl font-display font-bold dialog-title-themed">
             {initialEvent ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
@@ -379,9 +379,9 @@ const CreateEventForm = ({
             </div>
           )}
 
-          {/* Event Info - More Compact */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Left Column */}
+          {/* Event Info - More Compact with responsive grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* First Column - Title & Category */}
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-themed-secondary">Event Title</label>
@@ -417,7 +417,10 @@ const CreateEventForm = ({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            {/* Second Column - Secondary Category */}
+            <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-themed-secondary">
                   Secondary Category 
@@ -452,7 +455,7 @@ const CreateEventForm = ({
               </div>
             </div>
 
-            {/* Right Column */}
+            {/* Third Column - Description */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-themed-secondary">Description</label>
               <textarea
@@ -460,7 +463,7 @@ const CreateEventForm = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Enter event description"
                 className="w-full px-3 py-2 rounded-md input-themed resize-none text-sm"
-                rows="4"
+                rows="6"
               />
             </div>
           </div>
@@ -472,8 +475,8 @@ const CreateEventForm = ({
               Schedule
             </h3>
             
-            {/* First Row: Start Date & Time */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Date & Time Grid - 4 columns on desktop, 2 on mobile */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-themed-secondary">Start Date</label>
                 <Input
@@ -493,24 +496,6 @@ const CreateEventForm = ({
                   className="input-themed h-8 text-sm"
                 />
               </div>
-            </div>
-
-            {/* Same Day Checkbox */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="sameDay"
-                checked={isSameDay}
-                onChange={(e) => handleSameDayChange(e.target.checked)}
-                className="w-3 h-3 rounded border-themed bg-themed-surface text-spark-yellow focus:ring-spark-yellow/50"
-              />
-              <label htmlFor="sameDay" className="text-xs font-medium text-themed-secondary">
-                Single day event
-              </label>
-            </div>
-
-            {/* Second Row: End Date & Time */}
-            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-themed-secondary">
                   End Date {isSameDay && <span className="text-themed-muted">(disabled)</span>}
@@ -537,16 +522,30 @@ const CreateEventForm = ({
                 />
               </div>
             </div>
+
+            {/* Same Day Checkbox */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="sameDay"
+                checked={isSameDay}
+                onChange={(e) => handleSameDayChange(e.target.checked)}
+                className="w-3 h-3 rounded border-themed bg-themed-surface text-spark-yellow focus:ring-spark-yellow/50"
+              />
+              <label htmlFor="sameDay" className="text-xs font-medium text-themed-secondary">
+                Single day event
+              </label>
+            </div>
           </div>
 
-          {/* Additional Event Details - UX Enhancement */}
+          {/* Additional Event Details - UX Enhancement - 3 columns on desktop */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Additional Details <span className="text-xs text-themed-muted">(Optional)</span>
             </h3>
             
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Host Name */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-themed-secondary">
