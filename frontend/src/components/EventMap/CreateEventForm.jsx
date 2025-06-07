@@ -359,48 +359,48 @@ const CreateEventForm = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="dialog-themed max-w-[95vw] max-h-[98vh] overflow-y-auto w-[95vw] h-[98vh]"
+        className="dialog-themed max-w-[90vw] w-fit min-w-[800px] max-h-[95vh] overflow-y-auto"
         aria-describedby="create-event-dialog-description"
       >
-        <DialogHeader className="relative pb-2">
-          <DialogTitle className="text-lg font-display font-bold dialog-title-themed">
+        <DialogHeader className="relative pb-3">
+          <DialogTitle className="text-xl font-display font-bold dialog-title-themed">
             {initialEvent ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
-          <DialogDescription id="create-event-dialog-description" className="dialog-description-themed text-sm">
+          <DialogDescription id="create-event-dialog-description" className="dialog-description-themed">
             {initialEvent ? 'Edit an existing event with details' : 'Create a new event with details'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-2 pb-2">
+        <form onSubmit={handleSubmit} className="space-y-6 px-1">
           {(error || connectionError) && (
-            <div className="p-2 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 text-sm flex items-start gap-2">
+            <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span>{connectionError ? 'Unable to connect to server. Please try again later.' : error}</span>
+              <span className="text-sm">{connectionError ? 'Unable to connect to server. Please try again later.' : error}</span>
             </div>
           )}
 
           {/* Event Info - 3-column grid layout for better space usage */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* First Column - Title */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-sm font-medium text-themed-secondary">Event Title</label>
               <Input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Enter event title"
-                className="input-themed h-8 text-sm"
+                className="input-themed h-10"
               />
             </div>
 
             {/* Second Column - Primary Category */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-sm font-medium text-themed-secondary">Primary Category</label>
               <Select 
                 value={formData.category} 
                 onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
               >
-                <SelectTrigger className="input-themed h-8 text-sm">
+                <SelectTrigger className="input-themed h-10">
                   <SelectValue placeholder="Select..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -408,9 +408,9 @@ const CreateEventForm = ({
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
                         {React.createElement(category.icon, {
-                          className: `w-3 h-3 ${category.color}`
+                          className: `w-4 h-4 ${category.color}`
                         })}
-                        <span className="text-sm">{category.name}</span>
+                        <span>{category.name}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -419,166 +419,188 @@ const CreateEventForm = ({
             </div>
 
             {/* Third Column - Secondary Category */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-themed-secondary">
-                Secondary Category <span className="text-xs text-themed-muted">(Optional)</span>
-              </label>
-              <Select 
-                value={formData.secondary_category || "none"} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value === "none" ? "" : value }))}
-              >
-                <SelectTrigger className="input-themed h-8 text-sm">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    <span className="text-themed-muted text-sm">None</span>
-                  </SelectItem>
-                  {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        {React.createElement(category.icon, {
-                          className: `w-3 h-3 ${category.color}`
-                        })}
-                        <span className="text-sm">{category.name}</span>
-                      </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-themed-secondary">Secondary Category</label>
+              <div className="relative">
+                <Select 
+                  value={formData.secondary_category || "none"} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value === "none" ? "" : value }))}
+                >
+                  <SelectTrigger className="input-themed h-10">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-themed-muted">None</span>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          {React.createElement(category.icon, {
+                            className: `w-4 h-4 ${category.color}`
+                          })}
+                          <span>{category.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="absolute -top-1 right-2 text-xs text-themed-muted bg-themed-surface px-1 rounded">
+                  Optional
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Description - Full width row */}
-          <div className="space-y-1">
+          <div className="space-y-2">
             <label className="text-sm font-medium text-themed-secondary">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Enter event description"
-              className="w-full px-2 py-1 rounded-md input-themed resize-none text-sm"
-              rows="3"
+              className="w-full px-3 py-2 rounded-md input-themed resize-none"
+              rows="4"
             />
           </div>
 
-          {/* Schedule - 6-column compact layout */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
+          {/* Schedule - Compact 4-column layout */}
+          <div className="space-y-3">
+            <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               Schedule
             </h3>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-themed-secondary">Start Date</label>
                 <Input
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   min={new Date().toISOString().split('T')[0]}
-                  className="input-themed h-8 text-sm"
+                  className="input-themed h-10"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-themed-secondary">Start Time</label>
                 <Input
                   type="time"
                   value={formData.start_time}
                   onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-                  className="input-themed h-8 text-sm"
+                  className="input-themed h-10"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-themed-secondary">
-                  End Date {isSameDay && <span className="text-themed-muted">(disabled)</span>}
-                </label>
-                <Input
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                  min={formData.date}
-                  disabled={isSameDay}
-                  className="input-themed h-8 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-themed-secondary">End Date</label>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                    min={formData.date}
+                    disabled={isSameDay}
+                    className="input-themed h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  {isSameDay && (
+                    <span className="absolute -top-1 right-2 text-xs text-themed-muted bg-themed-surface px-1 rounded">
+                      Auto
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-themed-secondary">End Time</label>
                 <Input
                   type="time"
                   value={formData.end_time}
                   onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-                  className="input-themed h-8 text-sm"
+                  className="input-themed h-10"
                   required
                 />
               </div>
-              <div className="flex items-end lg:col-span-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="sameDay"
-                    checked={isSameDay}
-                    onChange={(e) => handleSameDayChange(e.target.checked)}
-                    className="w-3 h-3 rounded border-themed bg-themed-surface text-spark-yellow focus:ring-spark-yellow/50"
+            </div>
+            
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="sameDay"
+                checked={isSameDay}
+                onChange={(e) => handleSameDayChange(e.target.checked)}
+                className="w-4 h-4 rounded border-themed bg-themed-surface text-spark-yellow focus:ring-spark-yellow/50"
+              />
+              <label htmlFor="sameDay" className="text-sm font-medium text-themed-secondary">
+                Single day event (end date same as start date)
+              </label>
+            </div>
+          </div>
+
+          {/* Additional Details - Clean 3-column layout */}
+          <div className="space-y-3">
+            <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Additional Details
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-themed-secondary">Host/Organization</label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={formData.host_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, host_name: e.target.value }))}
+                    placeholder="e.g., Local Restaurant"
+                    className="input-themed h-10"
                   />
-                  <label htmlFor="sameDay" className="text-sm font-medium text-themed-secondary">
-                    Single day
-                  </label>
+                  <span className="absolute -top-1 right-2 text-xs text-themed-muted bg-themed-surface px-1 rounded">
+                    Optional
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-themed-secondary">Tickets/Fees</label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={formData.fee_required}
+                    onChange={(e) => setFormData(prev => ({ ...prev, fee_required: e.target.value }))}
+                    placeholder="e.g., Free, $10 entry"
+                    className="input-themed h-10"
+                  />
+                  <span className="absolute -top-1 right-2 text-xs text-themed-muted bg-themed-surface px-1 rounded">
+                    Optional
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-themed-secondary">Event Website</label>
+                <div className="relative">
+                  <Input
+                    type="url"
+                    value={formData.event_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, event_url: e.target.value }))}
+                    placeholder="https://example.com"
+                    className="input-themed h-10"
+                  />
+                  <span className="absolute -top-1 right-2 text-xs text-themed-muted bg-themed-surface px-1 rounded">
+                    Optional
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Additional Details - Clean 3-column layout */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Additional Details <span className="text-xs text-themed-muted">(Optional)</span>
-            </h3>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-themed-secondary">Host/Organization</label>
-                <Input
-                  type="text"
-                  value={formData.host_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, host_name: e.target.value }))}
-                  placeholder="e.g., Local Restaurant"
-                  className="input-themed h-8 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-themed-secondary">Tickets/Fees</label>
-                <Input
-                  type="text"
-                  value={formData.fee_required}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fee_required: e.target.value }))}
-                  placeholder="e.g., Free, $10 entry"
-                  className="input-themed h-8 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-themed-secondary">Event Website</label>
-                <Input
-                  type="url"
-                  value={formData.event_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, event_url: e.target.value }))}
-                  placeholder="https://example.com"
-                  className="input-themed h-8 text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Location - Compact section */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
+          <div className="space-y-3">
+            <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
               <MapPin className="w-4 h-4" />
               Location
             </h3>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="relative">
                 <AddressAutocomplete
                   value={formData.address}
@@ -586,7 +608,7 @@ const CreateEventForm = ({
                   onSelect={handleAddressSelect}
                 />
                 {formData.address && (
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-2">
                     {isStreetLevelAddress(formData.address) ? (
                       <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -603,8 +625,8 @@ const CreateEventForm = ({
               </div>
               {formData.location && (
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 px-2 py-1 rounded-md bg-themed-surface border border-themed">
-                    <span className="text-xs text-themed-secondary truncate">
+                  <div className="flex-1 px-3 py-2 rounded-md bg-themed-surface border border-themed">
+                    <span className="text-sm text-themed-secondary truncate">
                       {formData.address || `${formData.location.lat.toFixed(6)}, ${formData.location.lng.toFixed(6)}`}
                     </span>
                   </div>
@@ -612,37 +634,39 @@ const CreateEventForm = ({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover"
+                    className="h-10 w-10 text-themed-secondary hover:text-themed-primary hover:bg-themed-surface-hover"
                     onClick={handleClearLocation}
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
               )}
             </div>
           </div>
 
-          <button 
-            type="submit" 
-            className={`w-full px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2
-              ${isSubmitting || !formData.location || connectionError || !user
-                ? 'bg-themed-surface text-themed-muted cursor-not-allowed'
-                : 'btn-yellow-themed hover:scale-[1.02]'
-              }`}
-            disabled={isSubmitting || !formData.location || connectionError || !user}
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"></div>
-                {initialEvent ? 'Updating...' : 'Creating...'}
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                {initialEvent ? 'Update Event' : 'Create Event'}
-              </>
-            )}
-          </button>
+          <div className="pt-4 border-t border-themed">
+            <button 
+              type="submit" 
+              className={`w-full px-6 py-3 rounded-md font-medium transition-all duration-200 flex items-center justify-center gap-2
+                ${isSubmitting || !formData.location || connectionError || !user
+                  ? 'bg-themed-surface text-themed-muted cursor-not-allowed'
+                  : 'btn-yellow-themed hover:scale-[1.02]'
+                }`}
+              disabled={isSubmitting || !formData.location || connectionError || !user}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin"></div>
+                  {initialEvent ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  {initialEvent ? 'Update Event' : 'Create Event'}
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
