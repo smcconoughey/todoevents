@@ -359,19 +359,19 @@ const CreateEventForm = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="dialog-themed max-w-[90vw] w-fit min-w-[800px] max-h-[95vh] overflow-y-auto"
+        className="dialog-themed max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1200px] w-full max-h-[95vh] overflow-y-auto"
         aria-describedby="create-event-dialog-description"
       >
         <DialogHeader className="relative pb-3">
-          <DialogTitle className="text-xl font-display font-bold dialog-title-themed">
+          <DialogTitle className="text-lg sm:text-xl font-display font-bold dialog-title-themed">
             {initialEvent ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
-          <DialogDescription id="create-event-dialog-description" className="dialog-description-themed">
+          <DialogDescription id="create-event-dialog-description" className="dialog-description-themed text-sm">
             {initialEvent ? 'Edit an existing event with details' : 'Create a new event with details'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 px-1">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 px-1">
           {(error || connectionError) && (
             <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -379,10 +379,10 @@ const CreateEventForm = ({
             </div>
           )}
 
-          {/* Event Info - 3-column grid layout for better space usage */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Event Info - Responsive grid: 1 col mobile, 2 col tablet, 3 col desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* First Column - Title */}
-            <div className="space-y-2">
+            <div className="sm:col-span-2 lg:col-span-1 space-y-2">
               <label className="text-sm font-medium text-themed-secondary">Event Title</label>
               <Input
                 type="text"
@@ -460,18 +460,18 @@ const CreateEventForm = ({
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Enter event description"
               className="w-full px-3 py-2 rounded-md input-themed resize-none"
-              rows="4"
+              rows="3"
             />
           </div>
 
-          {/* Schedule - Compact 4-column layout */}
+          {/* Schedule - Responsive grid: 1-2 cols mobile, 4 cols desktop */}
           <div className="space-y-3">
             <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               Schedule
             </h3>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-themed-secondary">Start Date</label>
                 <Input
@@ -535,14 +535,14 @@ const CreateEventForm = ({
             </div>
           </div>
 
-          {/* Additional Details - Clean 3-column layout */}
+          {/* Additional Details - Responsive grid: 1 col mobile, 2 col tablet, 3 col desktop */}
           <div className="space-y-3">
             <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Additional Details
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-themed-secondary">Host/Organization</label>
                 <div className="relative">
@@ -575,7 +575,7 @@ const CreateEventForm = ({
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="sm:col-span-2 lg:col-span-1 space-y-2">
                 <label className="text-sm font-medium text-themed-secondary">Event Website</label>
                 <div className="relative">
                   <Input
@@ -593,7 +593,7 @@ const CreateEventForm = ({
             </div>
           </div>
 
-          {/* Location - Compact section */}
+          {/* Location - Single column section */}
           <div className="space-y-3">
             <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
               <MapPin className="w-4 h-4" />
