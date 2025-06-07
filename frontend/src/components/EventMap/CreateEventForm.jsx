@@ -379,8 +379,8 @@ const CreateEventForm = ({
             </div>
           )}
 
-          {/* Event Info - Compact grid layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* Event Info - 3-column grid layout for better space usage */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* First Column - Title */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-themed-secondary">Event Title</label>
@@ -447,28 +447,28 @@ const CreateEventForm = ({
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Fourth Column - Description */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-themed-secondary">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Enter event description"
-                className="w-full px-2 py-1 rounded-md input-themed resize-none text-sm"
-                rows="3"
-              />
-            </div>
           </div>
 
-          {/* Schedule - Compact row */}
+          {/* Description - Full width row */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-themed-secondary">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Enter event description"
+              className="w-full px-2 py-1 rounded-md input-themed resize-none text-sm"
+              rows="3"
+            />
+          </div>
+
+          {/* Schedule - 6-column compact layout */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               Schedule
             </h3>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-themed-secondary">Start Date</label>
                 <Input
@@ -511,7 +511,7 @@ const CreateEventForm = ({
                   required
                 />
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end lg:col-span-2">
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -528,14 +528,14 @@ const CreateEventForm = ({
             </div>
           </div>
 
-          {/* Additional Details - Compact row */}
+          {/* Additional Details - Clean 3-column layout */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-themed-primary border-b border-themed pb-1 flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Additional Details <span className="text-xs text-themed-muted">(Optional)</span>
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-themed-secondary">Host/Organization</label>
                 <Input
