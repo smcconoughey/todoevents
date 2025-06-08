@@ -5994,15 +5994,25 @@ async def get_time_series_data(
             # Handle both SQLite tuple results and PostgreSQL dict-like results
             formatted_data = []
             for row in data:
-                if isinstance(row, dict):
+                if isinstance(row, dict) or hasattr(row, 'get'):
                     # PostgreSQL RealDictCursor returns dict-like objects
-                    period_val = row.get('period', row.get(list(row.keys())[0]))
-                    count_val = row.get('count', row.get(list(row.keys())[1]))
+                    period_val = row.get('period') 
+                    count_val = row.get('count')
+                    
+                    # Fallback: if standard keys don't exist, use first two values
+                    if period_val is None or count_val is None:
+                        keys = list(row.keys()) if hasattr(row, 'keys') else []
+                        if len(keys) >= 2:
+                            period_val = row.get(keys[0]) if period_val is None else period_val
+                            count_val = row.get(keys[1]) if count_val is None else count_val
                 else:
                     # SQLite returns tuples
-                    period_val = row[0]
-                    count_val = row[1]
-                formatted_data.append({"period": period_val, "count": count_val})
+                    period_val = row[0] if len(row) > 0 else None
+                    count_val = row[1] if len(row) > 1 else None
+                
+                # Only add valid data
+                if period_val is not None and count_val is not None:
+                    formatted_data.append({"period": period_val, "count": count_val})
             
             return {
                 "metric": metric,
@@ -6187,7 +6197,22 @@ async def get_geographic_analytics(
                 GROUP BY state
                 ORDER BY count DESC
             """, state_params)
-            by_state = dict(cursor.fetchall())
+            state_results = cursor.fetchall()
+            
+            # Handle both SQLite tuple results and PostgreSQL dict-like results
+            by_state = {}
+            for row in state_results:
+                if isinstance(row, dict) or hasattr(row, 'get'):
+                    # PostgreSQL RealDictCursor returns dict-like objects
+                    state_name = row.get('state')
+                    count_val = row.get('count')
+                else:
+                    # SQLite returns tuples
+                    state_name = row[0] if len(row) > 0 else None
+                    count_val = row[1] if len(row) > 1 else None
+                
+                if state_name is not None and count_val is not None:
+                    by_state[state_name] = count_val
             
             # Events by city
             cursor.execute(f"""
