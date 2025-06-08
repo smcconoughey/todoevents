@@ -5778,34 +5778,31 @@ async def get_analytics_metrics(
                 except ValueError:
                     excluded_user_ids = []
             
-            # Build date filter
-            date_filter = ""
-            date_params = []
-            if start_date:
-                date_filter += " AND date >= ?"
-                date_params.append(start_date)
-            if end_date:
-                date_filter += " AND date <= ?"
-                date_params.append(end_date)
+            # Build WHERE conditions
+            conditions = ["1=1"]
+            params = []
             
-            # Build user exclusion filter
-            user_filter = ""
+            if start_date:
+                conditions.append("date >= ?")
+                params.append(start_date)
+            if end_date:
+                conditions.append("date <= ?")
+                params.append(end_date)
             if excluded_user_ids:
                 placeholders = ','.join(['?' for _ in excluded_user_ids])
-                user_filter = f" AND created_by NOT IN ({placeholders})"
-            
-            # Build category filter
-            category_filter = ""
-            category_params = []
+                conditions.append(f"created_by NOT IN ({placeholders})")
+                params.extend(excluded_user_ids)
             if category:
-                category_filter = " AND category = ?"
-                category_params.append(category)
+                conditions.append("category = ?")
+                params.append(category)
+            
+            where_clause = " AND ".join(conditions)
             
             # Total events
             cursor.execute(f"""
                 SELECT COUNT(*) FROM events 
-                WHERE 1=1 {date_filter} {user_filter} {category_filter}
-            """, date_params + excluded_user_ids + category_params)
+                WHERE {where_clause}
+            """, params)
             total_events = cursor.fetchone()[0]
             
             # Total users
@@ -5814,20 +5811,31 @@ async def get_analytics_metrics(
             
             # Active hosts (users with at least one event in the last month)
             one_month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            host_conditions = ["date >= ?"]
+            host_params = [one_month_ago]
+            if excluded_user_ids:
+                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                host_conditions.append(f"created_by NOT IN ({placeholders})")
+                host_params.extend(excluded_user_ids)
+            if category:
+                host_conditions.append("category = ?")
+                host_params.append(category)
+            host_where = " AND ".join(host_conditions)
+            
             cursor.execute(f"""
                 SELECT COUNT(DISTINCT created_by) FROM events 
-                WHERE date >= ? {user_filter} {category_filter}
-            """, [one_month_ago] + excluded_user_ids + category_params)
+                WHERE {host_where}
+            """, host_params)
             active_hosts = cursor.fetchone()[0]
             
             # Events by category
             cursor.execute(f"""
                 SELECT category, COUNT(*) 
                 FROM events 
-                WHERE 1=1 {date_filter} {user_filter} {category_filter}
+                WHERE {where_clause}
                 GROUP BY category
                 ORDER BY COUNT(*) DESC
-            """, date_params + excluded_user_ids + category_params)
+            """, params)
             events_by_category = dict(cursor.fetchall())
             
             # User role distribution
@@ -5838,10 +5846,10 @@ async def get_analytics_metrics(
             cursor.execute(f"""
                 SELECT date, COUNT(*) 
                 FROM events 
-                WHERE date >= ? {user_filter} {category_filter}
+                WHERE {host_where}
                 GROUP BY date
                 ORDER BY date
-            """, [one_month_ago] + excluded_user_ids + category_params)
+            """, host_params)
             events_trend = dict(cursor.fetchall())
             
             return {
@@ -5895,17 +5903,20 @@ async def get_time_series_data(
             if not end_date:
                 end_date = datetime.now().strftime('%Y-%m-%d')
             
-            # Build filters
-            user_filter = ""
+            # Build WHERE conditions for events queries
+            conditions = ["date >= ?", "date <= ?"]
+            params = [start_date, end_date]
+            
             if excluded_user_ids:
                 placeholders = ','.join(['?' for _ in excluded_user_ids])
-                user_filter = f" AND created_by NOT IN ({placeholders})"
+                conditions.append(f"created_by NOT IN ({placeholders})")
+                params.extend(excluded_user_ids)
             
-            category_filter = ""
-            category_params = []
             if category:
-                category_filter = " AND category = ?"
-                category_params.append(category)
+                conditions.append("category = ?")
+                params.append(category)
+            
+            where_clause = " AND ".join(conditions)
             
             # Date grouping based on period
             if period == "weekly":
@@ -5922,10 +5933,10 @@ async def get_time_series_data(
                 cursor.execute(f"""
                     SELECT {date_group} as period, COUNT(*) as count
                     FROM events 
-                    WHERE date >= ? AND date <= ? {user_filter} {category_filter}
+                    WHERE {where_clause}
                     GROUP BY {date_group}
                     ORDER BY period
-                """, [start_date, end_date] + excluded_user_ids + category_params)
+                """, params)
                 
             elif metric == "users":
                 # User registrations by period
@@ -5942,10 +5953,10 @@ async def get_time_series_data(
                 cursor.execute(f"""
                     SELECT {date_group} as period, COUNT(DISTINCT created_by) as count
                     FROM events 
-                    WHERE date >= ? AND date <= ? {user_filter} {category_filter}
+                    WHERE {where_clause}
                     GROUP BY {date_group}
                     ORDER BY period
-                """, [start_date, end_date] + excluded_user_ids + category_params)
+                """, params)
             
             data = cursor.fetchall()
             
@@ -5990,21 +6001,23 @@ async def get_top_hosts(
                 except ValueError:
                     excluded_user_ids = []
             
-            # Build date filter
-            date_filter = ""
-            date_params = []
-            if start_date:
-                date_filter += " AND e.date >= ?"
-                date_params.append(start_date)
-            if end_date:
-                date_filter += " AND e.date <= ?"
-                date_params.append(end_date)
+            # Build WHERE conditions
+            conditions = ["1=1"]
+            params = []
             
-            # Build user exclusion filter
-            user_filter = ""
+            if start_date:
+                conditions.append("e.date >= ?")
+                params.append(start_date)
+            if end_date:
+                conditions.append("e.date <= ?")
+                params.append(end_date)
             if excluded_user_ids:
                 placeholders = ','.join(['?' for _ in excluded_user_ids])
-                user_filter = f" AND e.created_by NOT IN ({placeholders})"
+                conditions.append(f"e.created_by NOT IN ({placeholders})")
+                params.extend(excluded_user_ids)
+            
+            where_clause = " AND ".join(conditions)
+            params.append(limit)
             
             cursor.execute(f"""
                 SELECT 
@@ -6015,11 +6028,11 @@ async def get_top_hosts(
                     MAX(e.date) as last_event_date
                 FROM events e
                 JOIN users u ON e.created_by = u.id
-                WHERE 1=1 {date_filter} {user_filter}
+                WHERE {where_clause}
                 GROUP BY u.id, u.email
                 ORDER BY event_count DESC
                 LIMIT ?
-            """, date_params + excluded_user_ids + [limit])
+            """, params)
             
             hosts = cursor.fetchall()
             
@@ -6066,40 +6079,59 @@ async def get_geographic_analytics(
                 except ValueError:
                     excluded_user_ids = []
             
-            # Build filters
-            date_filter = ""
-            date_params = []
-            if start_date:
-                date_filter += " AND date >= ?"
-                date_params.append(start_date)
-            if end_date:
-                date_filter += " AND date <= ?"
-                date_params.append(end_date)
+            # Build WHERE conditions for state query
+            state_conditions = ["state IS NOT NULL"]
+            state_params = []
             
-            user_filter = ""
+            if start_date:
+                state_conditions.append("date >= ?")
+                state_params.append(start_date)
+            if end_date:
+                state_conditions.append("date <= ?")
+                state_params.append(end_date)
             if excluded_user_ids:
                 placeholders = ','.join(['?' for _ in excluded_user_ids])
-                user_filter = f" AND created_by NOT IN ({placeholders})"
+                state_conditions.append(f"created_by NOT IN ({placeholders})")
+                state_params.extend(excluded_user_ids)
+            
+            state_where = " AND ".join(state_conditions)
+            
+            # Build WHERE conditions for city query
+            city_conditions = ["city IS NOT NULL"]
+            city_params = []
+            
+            if start_date:
+                city_conditions.append("date >= ?")
+                city_params.append(start_date)
+            if end_date:
+                city_conditions.append("date <= ?")
+                city_params.append(end_date)
+            if excluded_user_ids:
+                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                city_conditions.append(f"created_by NOT IN ({placeholders})")
+                city_params.extend(excluded_user_ids)
+            
+            city_where = " AND ".join(city_conditions)
             
             # Events by state
             cursor.execute(f"""
                 SELECT state, COUNT(*) as count
                 FROM events 
-                WHERE state IS NOT NULL {date_filter} {user_filter}
+                WHERE {state_where}
                 GROUP BY state
                 ORDER BY count DESC
-            """, date_params + excluded_user_ids)
+            """, state_params)
             by_state = dict(cursor.fetchall())
             
             # Events by city
             cursor.execute(f"""
                 SELECT city, state, COUNT(*) as count
                 FROM events 
-                WHERE city IS NOT NULL {date_filter} {user_filter}
+                WHERE {city_where}
                 GROUP BY city, state
                 ORDER BY count DESC
                 LIMIT 20
-            """, date_params + excluded_user_ids)
+            """, city_params)
             by_city = [{"city": row[0], "state": row[1], "count": row[2]} for row in cursor.fetchall()]
             
             return {
