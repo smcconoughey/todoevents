@@ -6359,3 +6359,243 @@ async def debug_analytics_sql():
             "placeholder_used": get_placeholder()
         }
 
+@app.get("/admin/analytics/category-cloud")
+async def get_category_cloud_data(
+    current_user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exclude_users: Optional[str] = None
+):
+    """Get category data for word cloud/bubble visualization"""
+    # Check admin permission
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Build WHERE conditions
+            conditions = ["1=1"]
+            params = []
+            
+            if start_date:
+                conditions.append(f"date >= {placeholder}")
+                params.append(start_date)
+            if end_date:
+                conditions.append(f"date <= {placeholder}")
+                params.append(end_date)
+            if excluded_user_ids:
+                placeholders = ','.join([placeholder for _ in excluded_user_ids])
+                conditions.append(f"created_by NOT IN ({placeholders})")
+                params.extend(excluded_user_ids)
+            
+            where_clause = " AND ".join(conditions)
+            
+            # Get primary categories with counts and additional metrics
+            cursor.execute(f"""
+                SELECT 
+                    category,
+                    COUNT(*) as count,
+                    COUNT(DISTINCT created_by) as unique_hosts,
+                    AVG(COALESCE(interest_count, 0)) as avg_interest,
+                    AVG(COALESCE(view_count, 0)) as avg_views
+                FROM events 
+                WHERE {where_clause}
+                GROUP BY category
+                ORDER BY count DESC
+            """, params)
+            
+            primary_results = cursor.fetchall()
+            
+            # Get secondary categories (if they exist)
+            cursor.execute(f"""
+                SELECT 
+                    secondary_category,
+                    COUNT(*) as count
+                FROM events 
+                WHERE {where_clause} AND secondary_category IS NOT NULL AND secondary_category != ''
+                GROUP BY secondary_category
+                ORDER BY count DESC
+            """, params)
+            
+            secondary_results = cursor.fetchall()
+            
+            # Process primary categories
+            categories = []
+            for row in primary_results:
+                if isinstance(row, dict) or hasattr(row, 'get'):
+                    category_data = {
+                        "name": row.get('category', 'Unknown'),
+                        "count": row.get('count', 0),
+                        "unique_hosts": row.get('unique_hosts', 0),
+                        "avg_interest": float(row.get('avg_interest', 0) or 0),
+                        "avg_views": float(row.get('avg_views', 0) or 0),
+                        "type": "primary"
+                    }
+                else:
+                    category_data = {
+                        "name": row[0] if row[0] else 'Unknown',
+                        "count": row[1],
+                        "unique_hosts": row[2],
+                        "avg_interest": float(row[3] or 0),
+                        "avg_views": float(row[4] or 0),
+                        "type": "primary"
+                    }
+                categories.append(category_data)
+            
+            # Process secondary categories
+            for row in secondary_results:
+                if isinstance(row, dict) or hasattr(row, 'get'):
+                    category_data = {
+                        "name": row.get('secondary_category', 'Unknown'),
+                        "count": row.get('count', 0),
+                        "unique_hosts": 0,  # Not calculated for secondary
+                        "avg_interest": 0,   # Not calculated for secondary
+                        "avg_views": 0,      # Not calculated for secondary
+                        "type": "secondary"
+                    }
+                else:
+                    category_data = {
+                        "name": row[0] if row[0] else 'Unknown',
+                        "count": row[1],
+                        "unique_hosts": 0,
+                        "avg_interest": 0,
+                        "avg_views": 0,
+                        "type": "secondary"
+                    }
+                categories.append(category_data)
+            
+            return {
+                "categories": categories,
+                "total_categories": len(categories),
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "excluded_users": excluded_user_ids
+                }
+            }
+    except Exception as e:
+        print(f"Category cloud error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch category cloud data: {str(e)}")
+
+@app.get("/admin/analytics/event-locations")
+async def get_event_locations(
+    current_user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exclude_users: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: Optional[int] = 1000
+):
+    """Get event locations with coordinates for density mapping"""
+    # Check admin permission
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Build WHERE conditions
+            conditions = ["lat IS NOT NULL", "lng IS NOT NULL"]
+            params = []
+            
+            if start_date:
+                conditions.append(f"date >= {placeholder}")
+                params.append(start_date)
+            if end_date:
+                conditions.append(f"date <= {placeholder}")
+                params.append(end_date)
+            if category:
+                conditions.append(f"category = {placeholder}")
+                params.append(category)
+            if excluded_user_ids:
+                placeholders = ','.join([placeholder for _ in excluded_user_ids])
+                conditions.append(f"created_by NOT IN ({placeholders})")
+                params.extend(excluded_user_ids)
+            
+            where_clause = " AND ".join(conditions)
+            
+            # Get event locations with metadata
+            cursor.execute(f"""
+                SELECT 
+                    lat, lng, category, city, state,
+                    COALESCE(interest_count, 0) as interest_count,
+                    COALESCE(view_count, 0) as view_count,
+                    title
+                FROM events 
+                WHERE {where_clause}
+                ORDER BY COALESCE(interest_count, 0) + COALESCE(view_count, 0) DESC
+                LIMIT {placeholder}
+            """, params + [limit])
+            
+            location_results = cursor.fetchall()
+            
+            # Process locations
+            locations = []
+            for row in location_results:
+                if isinstance(row, dict) or hasattr(row, 'get'):
+                    location_data = {
+                        "lat": float(row.get('lat', 0)),
+                        "lng": float(row.get('lng', 0)),
+                        "category": row.get('category', 'Unknown'),
+                        "city": row.get('city', ''),
+                        "state": row.get('state', ''),
+                        "interest_count": row.get('interest_count', 0),
+                        "view_count": row.get('view_count', 0),
+                        "title": row.get('title', '')[:50] + ("..." if len(row.get('title', '')) > 50 else "")
+                    }
+                else:
+                    location_data = {
+                        "lat": float(row[0] or 0),
+                        "lng": float(row[1] or 0),
+                        "category": row[2] or 'Unknown',
+                        "city": row[3] or '',
+                        "state": row[4] or '',
+                        "interest_count": row[5] or 0,
+                        "view_count": row[6] or 0,
+                        "title": (row[7] or '')[:50] + ("..." if len(row[7] or '') > 50 else "")
+                    }
+                locations.append(location_data)
+            
+            # Calculate some summary stats
+            total_locations = len(locations)
+            avg_lat = sum(loc['lat'] for loc in locations) / total_locations if total_locations > 0 else 0
+            avg_lng = sum(loc['lng'] for loc in locations) / total_locations if total_locations > 0 else 0
+            
+            return {
+                "locations": locations,
+                "total_locations": total_locations,
+                "center": {"lat": avg_lat, "lng": avg_lng},
+                "categories": list(set(loc['category'] for loc in locations)),
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "category": category,
+                    "excluded_users": excluded_user_ids,
+                    "limit": limit
+                }
+            }
+    except Exception as e:
+        print(f"Event locations error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch event locations: {str(e)}")
+

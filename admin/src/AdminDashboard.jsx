@@ -1840,9 +1840,10 @@ const AdminDashboard = () => {
     const [chartPeriod, setChartPeriod] = useState('daily');
     const [cumulativeMode, setCumulativeMode] = useState({
       events: true,      // Default to cumulative for events 
-      users: true,       // Default to cumulative for users
       active_hosts: false // Default to period-based for active hosts
     });
+    const [categoryCloudData, setCategoryCloudData] = useState(null);
+    const [eventLocations, setEventLocations] = useState(null);
     const [refreshInterval, setRefreshInterval] = useState(null);
 
     // Chart theme
@@ -1899,6 +1900,14 @@ const AdminDashboard = () => {
         // Fetch geographic data
         const geoData = await fetchData(`/admin/analytics/geographic?${params}`);
         setGeographicData(geoData);
+
+        // Fetch category cloud data
+        const categoryData = await fetchData(`/admin/analytics/category-cloud?${params}`);
+        setCategoryCloudData(categoryData);
+
+        // Fetch event locations for density map
+        const locationsData = await fetchData(`/admin/analytics/event-locations?${params}`);
+        setEventLocations(locationsData);
 
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
@@ -2037,6 +2046,74 @@ const AdminDashboard = () => {
         }
       }
     });
+
+    // Create bubble chart config for categories
+    const createBubbleChartConfig = (categories) => {
+      const maxCount = Math.max(...categories.map(c => c.count));
+      const bubbleData = categories.map((cat, index) => ({
+        x: index + 1,
+        y: cat.avg_interest + cat.avg_views, // Combined engagement score
+        r: Math.max(5, (cat.count / maxCount) * 50), // Bubble size based on event count
+        label: cat.name,
+        count: cat.count,
+        hosts: cat.unique_hosts,
+        engagement: (cat.avg_interest + cat.avg_views).toFixed(1)
+      }));
+
+      return {
+        data: {
+          datasets: [{
+            label: 'Categories',
+            data: bubbleData,
+            backgroundColor: categories.map((_, i) => 
+              Object.values(chartTheme.colors)[i % Object.values(chartTheme.colors).length] + '60'
+            ),
+            borderColor: categories.map((_, i) => 
+              Object.values(chartTheme.colors)[i % Object.values(chartTheme.colors).length]
+            ),
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            title: { 
+              display: true, 
+              text: 'Category Popularity (Size = Event Count, Y = Engagement)',
+              font: { size: 14 }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const point = context.raw;
+                  return [
+                    `Category: ${point.label}`,
+                    `Events: ${point.count}`,
+                    `Hosts: ${point.hosts}`,
+                    `Avg Engagement: ${point.engagement}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: { 
+              display: false,
+              grid: { display: false }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Engagement Score (Interest + Views)'
+              },
+              beginAtZero: true
+            }
+          }
+        }
+      };
+    };
 
     if (loading) {
       return (
@@ -2236,10 +2313,10 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {analyticsData?.user_roles && (
+          {categoryCloudData?.categories && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="h-80">
-                <Doughnut {...createPieChartConfig(analyticsData.user_roles, 'User Roles')} />
+                <Bubble {...createBubbleChartConfig(categoryCloudData.categories)} />
               </div>
             </div>
           )}
@@ -2255,18 +2332,37 @@ const AdminDashboard = () => {
             </div>
 
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold mb-4">Top Cities</h3>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {geographicData.by_city?.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex items-center">
-                      <MapPin className="w-4 h-4 text-gray-500 mr-2" />
-                      <span>{item.city}, {item.state}</span>
+              <h3 className="text-xl font-semibold mb-4">Event Location Density</h3>
+              {eventLocations?.locations && (
+                <div className="h-72 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <h4 className="text-lg font-medium text-gray-700">Event Distribution</h4>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {eventLocations.total_locations} events across {eventLocations.categories?.length || 0} categories
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 max-w-md">
+                      {eventLocations.categories?.slice(0, 6).map((category, index) => {
+                        const categoryCount = eventLocations.locations.filter(loc => loc.category === category).length;
+                        const color = Object.values(chartTheme.colors)[index % Object.values(chartTheme.colors).length];
+                        return (
+                          <div key={category} className="text-center">
+                            <div 
+                              className="w-8 h-8 rounded-full mx-auto mb-1"
+                              style={{ backgroundColor: color + '40', border: `2px solid ${color}` }}
+                            ></div>
+                            <div className="text-xs font-medium capitalize">{category}</div>
+                            <div className="text-xs text-gray-500">{categoryCount}</div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <span className="font-semibold text-blue-600">{item.count}</span>
+                    <div className="mt-4 text-xs text-gray-400">
+                      Center: {eventLocations.center?.lat?.toFixed(2)}, {eventLocations.center?.lng?.toFixed(2)}
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2313,7 +2409,7 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-semibold mb-4">Chart Metrics</h3>
             <div className="space-y-2">
-              {['events', 'users', 'active_hosts'].map(metric => (
+              {['events', 'active_hosts'].map(metric => (
                 <label key={metric} className="flex items-center">
                   <input
                     type="checkbox"
@@ -2355,7 +2451,7 @@ const AdminDashboard = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Cumulative Mode</label>
               <div className="space-y-2">
-                {['events', 'users', 'active_hosts'].map(metric => (
+                {['events', 'active_hosts'].map(metric => (
                   <label key={metric} className="flex items-center justify-between">
                     <span className="capitalize text-sm">{metric.replace('_', ' ')}</span>
                     <div className="flex items-center">
