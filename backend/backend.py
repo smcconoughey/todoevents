@@ -5769,6 +5769,7 @@ async def get_analytics_metrics(
     try:
         with get_db() as conn:
             cursor = conn.cursor()
+            placeholder = get_placeholder()
             
             # Parse filters
             excluded_user_ids = []
@@ -5783,17 +5784,17 @@ async def get_analytics_metrics(
             params = []
             
             if start_date:
-                conditions.append("date >= ?")
+                conditions.append(f"date >= {placeholder}")
                 params.append(start_date)
             if end_date:
-                conditions.append("date <= ?")
+                conditions.append(f"date <= {placeholder}")
                 params.append(end_date)
             if excluded_user_ids:
-                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                placeholders = ','.join([placeholder for _ in excluded_user_ids])
                 conditions.append(f"created_by NOT IN ({placeholders})")
                 params.extend(excluded_user_ids)
             if category:
-                conditions.append("category = ?")
+                conditions.append(f"category = {placeholder}")
                 params.append(category)
             
             where_clause = " AND ".join(conditions)
@@ -5811,14 +5812,14 @@ async def get_analytics_metrics(
             
             # Active hosts (users with at least one event in the last month)
             one_month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-            host_conditions = ["date >= ?"]
+            host_conditions = [f"date >= {placeholder}"]
             host_params = [one_month_ago]
             if excluded_user_ids:
-                placeholders = ','.join(['?' for _ in excluded_user_ids])
-                host_conditions.append(f"created_by NOT IN ({placeholders})")
+                host_placeholders = ','.join([placeholder for _ in excluded_user_ids])
+                host_conditions.append(f"created_by NOT IN ({host_placeholders})")
                 host_params.extend(excluded_user_ids)
             if category:
-                host_conditions.append("category = ?")
+                host_conditions.append(f"category = {placeholder}")
                 host_params.append(category)
             host_where = " AND ".join(host_conditions)
             
@@ -5904,16 +5905,17 @@ async def get_time_series_data(
                 end_date = datetime.now().strftime('%Y-%m-%d')
             
             # Build WHERE conditions for events queries
-            conditions = ["date >= ?", "date <= ?"]
+            placeholder = get_placeholder()
+            conditions = [f"date >= {placeholder}", f"date <= {placeholder}"]
             params = [start_date, end_date]
             
             if excluded_user_ids:
-                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                placeholders = ','.join([placeholder for _ in excluded_user_ids])
                 conditions.append(f"created_by NOT IN ({placeholders})")
                 params.extend(excluded_user_ids)
             
             if category:
-                conditions.append("category = ?")
+                conditions.append(f"category = {placeholder}")
                 params.append(category)
             
             where_clause = " AND ".join(conditions)
@@ -5943,7 +5945,7 @@ async def get_time_series_data(
                 cursor.execute(f"""
                     SELECT {date_group.replace('date', 'DATE(created_at)')} as period, COUNT(*) as count
                     FROM users 
-                    WHERE DATE(created_at) >= ? AND DATE(created_at) <= ?
+                    WHERE DATE(created_at) >= {placeholder} AND DATE(created_at) <= {placeholder}
                     GROUP BY {date_group.replace('date', 'DATE(created_at)')}
                     ORDER BY period
                 """, [start_date, end_date])
@@ -5992,6 +5994,7 @@ async def get_top_hosts(
     try:
         with get_db() as conn:
             cursor = conn.cursor()
+            placeholder = get_placeholder()
             
             # Parse filters
             excluded_user_ids = []
@@ -6006,13 +6009,13 @@ async def get_top_hosts(
             params = []
             
             if start_date:
-                conditions.append("e.date >= ?")
+                conditions.append(f"e.date >= {placeholder}")
                 params.append(start_date)
             if end_date:
-                conditions.append("e.date <= ?")
+                conditions.append(f"e.date <= {placeholder}")
                 params.append(end_date)
             if excluded_user_ids:
-                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                placeholders = ','.join([placeholder for _ in excluded_user_ids])
                 conditions.append(f"e.created_by NOT IN ({placeholders})")
                 params.extend(excluded_user_ids)
             
@@ -6031,7 +6034,7 @@ async def get_top_hosts(
                 WHERE {where_clause}
                 GROUP BY u.id, u.email
                 ORDER BY event_count DESC
-                LIMIT ?
+                LIMIT {placeholder}
             """, params)
             
             hosts = cursor.fetchall()
@@ -6070,6 +6073,7 @@ async def get_geographic_analytics(
     try:
         with get_db() as conn:
             cursor = conn.cursor()
+            placeholder = get_placeholder()
             
             # Parse filters
             excluded_user_ids = []
@@ -6084,14 +6088,14 @@ async def get_geographic_analytics(
             state_params = []
             
             if start_date:
-                state_conditions.append("date >= ?")
+                state_conditions.append(f"date >= {placeholder}")
                 state_params.append(start_date)
             if end_date:
-                state_conditions.append("date <= ?")
+                state_conditions.append(f"date <= {placeholder}")
                 state_params.append(end_date)
             if excluded_user_ids:
-                placeholders = ','.join(['?' for _ in excluded_user_ids])
-                state_conditions.append(f"created_by NOT IN ({placeholders})")
+                state_placeholders = ','.join([placeholder for _ in excluded_user_ids])
+                state_conditions.append(f"created_by NOT IN ({state_placeholders})")
                 state_params.extend(excluded_user_ids)
             
             state_where = " AND ".join(state_conditions)
@@ -6101,14 +6105,14 @@ async def get_geographic_analytics(
             city_params = []
             
             if start_date:
-                city_conditions.append("date >= ?")
+                city_conditions.append(f"date >= {placeholder}")
                 city_params.append(start_date)
             if end_date:
-                city_conditions.append("date <= ?")
+                city_conditions.append(f"date <= {placeholder}")
                 city_params.append(end_date)
             if excluded_user_ids:
-                placeholders = ','.join(['?' for _ in excluded_user_ids])
-                city_conditions.append(f"created_by NOT IN ({placeholders})")
+                city_placeholders = ','.join([placeholder for _ in excluded_user_ids])
+                city_conditions.append(f"created_by NOT IN ({city_placeholders})")
                 city_params.extend(excluded_user_ids)
             
             city_where = " AND ".join(city_conditions)
@@ -6169,21 +6173,22 @@ async def debug_analytics_sql():
                     excluded_user_ids = []
             
             # Build WHERE conditions
+            placeholder = get_placeholder()
             conditions = ["1=1"]
             params = []
             
             if start_date:
-                conditions.append("date >= ?")
+                conditions.append(f"date >= {placeholder}")
                 params.append(start_date)
             if end_date:
-                conditions.append("date <= ?")
+                conditions.append(f"date <= {placeholder}")
                 params.append(end_date)
             if excluded_user_ids:
-                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                placeholders = ','.join([placeholder for _ in excluded_user_ids])
                 conditions.append(f"created_by NOT IN ({placeholders})")
                 params.extend(excluded_user_ids)
             if category:
-                conditions.append("category = ?")
+                conditions.append(f"category = {placeholder}")
                 params.append(category)
             
             where_clause = " AND ".join(conditions)
