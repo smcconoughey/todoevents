@@ -331,16 +331,34 @@ def get_count_from_result(cursor_result):
     if cursor_result is None:
         return 0
     
-    if IS_PRODUCTION and DB_URL:
-        # PostgreSQL with RealDictCursor returns dict-like objects
-        if hasattr(cursor_result, 'get'):
-            return cursor_result.get('count', 0) or cursor_result.get('count(*)', 0) or 0
-        else:
-            # Fallback for other cursor types
-            return cursor_result[0] if cursor_result else 0
+    # Check if this is a dict-like object (PostgreSQL RealDictRow)
+    if isinstance(cursor_result, dict) or hasattr(cursor_result, 'get'):
+        # PostgreSQL RealDictCursor returns dict-like objects
+        # Try various count column names
+        for key in ['count', 'COUNT(*)', 'count(*)', 'cnt']:
+            if hasattr(cursor_result, 'get'):
+                value = cursor_result.get(key)
+            else:
+                value = cursor_result.get(key, None)
+            if value is not None:
+                return value
+        # If no count key found, return the first value
+        if hasattr(cursor_result, 'values'):
+            values = list(cursor_result.values())
+            return values[0] if values else 0
+        return 0
     else:
         # SQLite returns tuples
-        return cursor_result[0] if cursor_result else 0
+        return cursor_result[0] if cursor_result and len(cursor_result) > 0 else 0
+
+def format_cursor_row(row, column_names):
+    """Format a single cursor row for both SQLite and PostgreSQL compatibility"""
+    if isinstance(row, dict) or hasattr(row, 'get'):
+        # PostgreSQL RealDictCursor returns dict-like objects
+        return {col: row.get(col) for col in column_names}
+    else:
+        # SQLite returns tuples
+        return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
 
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
@@ -5973,11 +5991,24 @@ async def get_time_series_data(
             
             data = cursor.fetchall()
             
+            # Handle both SQLite tuple results and PostgreSQL dict-like results
+            formatted_data = []
+            for row in data:
+                if isinstance(row, dict):
+                    # PostgreSQL RealDictCursor returns dict-like objects
+                    period_val = row.get('period', row.get(list(row.keys())[0]))
+                    count_val = row.get('count', row.get(list(row.keys())[1]))
+                else:
+                    # SQLite returns tuples
+                    period_val = row[0]
+                    count_val = row[1]
+                formatted_data.append({"period": period_val, "count": count_val})
+            
             return {
                 "metric": metric,
                 "period": period,
                 "date_label": date_label,
-                "data": [{"period": row[0], "count": row[1]} for row in data],
+                "data": formatted_data,
                 "filters_applied": {
                     "start_date": start_date,
                     "end_date": end_date,
@@ -5986,7 +6017,10 @@ async def get_time_series_data(
                 }
             }
     except Exception as e:
-        print(f"Time series data error: {str(e)}")
+        import traceback
+        error_details = f"Time series data error: {str(e)}"
+        print(error_details)
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch time series data: {str(e)}")
 
 @app.get("/admin/analytics/top-hosts")
@@ -6050,14 +6084,31 @@ async def get_top_hosts(
             
             hosts = cursor.fetchall()
             
+            # Handle both SQLite tuple results and PostgreSQL dict-like results
+            formatted_hosts = []
+            for host in hosts:
+                if isinstance(host, dict):
+                    # PostgreSQL RealDictCursor returns dict-like objects
+                    host_data = {
+                        "email": host.get('email'),
+                        "user_id": host.get('id'),
+                        "event_count": host.get('event_count'),
+                        "first_event_date": host.get('first_event_date'),
+                        "last_event_date": host.get('last_event_date')
+                    }
+                else:
+                    # SQLite returns tuples
+                    host_data = {
+                        "email": host[0],
+                        "user_id": host[1],
+                        "event_count": host[2],
+                        "first_event_date": host[3],
+                        "last_event_date": host[4]
+                    }
+                formatted_hosts.append(host_data)
+            
             return {
-                "hosts": [{
-                    "email": host[0],
-                    "user_id": host[1],
-                    "event_count": host[2],
-                    "first_event_date": host[3],
-                    "last_event_date": host[4]
-                } for host in hosts],
+                "hosts": formatted_hosts,
                 "filters_applied": {
                     "start_date": start_date,
                     "end_date": end_date,
@@ -6147,7 +6198,26 @@ async def get_geographic_analytics(
                 ORDER BY count DESC
                 LIMIT 20
             """, city_params)
-            by_city = [{"city": row[0], "state": row[1], "count": row[2]} for row in cursor.fetchall()]
+            city_results = cursor.fetchall()
+            
+            # Handle both SQLite tuple results and PostgreSQL dict-like results
+            by_city = []
+            for row in city_results:
+                if isinstance(row, dict):
+                    # PostgreSQL RealDictCursor returns dict-like objects
+                    city_data = {
+                        "city": row.get('city'),
+                        "state": row.get('state'),
+                        "count": row.get('count')
+                    }
+                else:
+                    # SQLite returns tuples
+                    city_data = {
+                        "city": row[0],
+                        "state": row[1],
+                        "count": row[2]
+                    }
+                by_city.append(city_data)
             
             return {
                 "by_state": by_state,
