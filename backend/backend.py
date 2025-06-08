@@ -6147,3 +6147,69 @@ async def get_geographic_analytics(
         print(f"Geographic analytics error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch geographic analytics: {str(e)}")
 
+@app.get("/debug/analytics-sql")
+async def debug_analytics_sql():
+    """Debug the analytics SQL query construction"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Replicate the same logic from analytics
+            start_date = "2025-05-09"
+            end_date = "2025-06-08"
+            exclude_users = None
+            category = None
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Build WHERE conditions
+            conditions = ["1=1"]
+            params = []
+            
+            if start_date:
+                conditions.append("date >= ?")
+                params.append(start_date)
+            if end_date:
+                conditions.append("date <= ?")
+                params.append(end_date)
+            if excluded_user_ids:
+                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                conditions.append(f"created_by NOT IN ({placeholders})")
+                params.extend(excluded_user_ids)
+            if category:
+                conditions.append("category = ?")
+                params.append(category)
+            
+            where_clause = " AND ".join(conditions)
+            
+            # Build the final query
+            query = f"""
+                SELECT COUNT(*) FROM events 
+                WHERE {where_clause}
+            """
+            
+            # Test the query
+            cursor.execute(query, params)
+            result = cursor.fetchone()[0]
+            
+            return {
+                "status": "success",
+                "conditions": conditions,
+                "where_clause": where_clause,
+                "params": params,
+                "final_query": query,
+                "result": result
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
