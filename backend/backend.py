@@ -680,7 +680,7 @@ def create_default_admin_user(conn):
         
         # Check if any admin users exist
         cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
-        admin_count = cursor.fetchone()[0]
+        admin_count = get_count_from_result(cursor.fetchone())
         
         if admin_count == 0:
             logger.info("No admin users found. Creating default admin user...")
@@ -1300,7 +1300,7 @@ class AutomatedTaskManager:
                         WHERE date >= {placeholder} AND date < {placeholder}
                     """, (str(archive_cutoff), str(current_date)))
                     
-                    archived_count = cursor.fetchone()[0]
+                    archived_count = get_count_from_result(cursor.fetchone())
                     logger.info(f"📁 {archived_count} events in 32-day archive (from {archive_cutoff} to {current_date})")
                     
                 except Exception as cleanup_error:
@@ -4393,10 +4393,10 @@ async def debug_test_tracking(event_id: int):
             
             # Test 2: Check tracking tables
             cursor.execute("SELECT COUNT(*) FROM event_interests")
-            interest_count = cursor.fetchone()[0]
+            interest_count = get_count_from_result(cursor.fetchone())
             
             cursor.execute("SELECT COUNT(*) FROM event_views")
-            view_count = cursor.fetchone()[0]
+            view_count = get_count_from_result(cursor.fetchone())
             
             # Test 3: Try simple insert (without constraints)
             test_fingerprint = f"debug-test-{event_id}"
@@ -4843,7 +4843,7 @@ async def debug_database_info():
                 
                 # Count events
                 cursor.execute("SELECT COUNT(*) FROM events")
-                event_count = cursor.fetchone()[0]
+                event_count = get_count_from_result(cursor.fetchone())
                 
                 db_info.update({
                     "tables": tables,
@@ -4865,7 +4865,7 @@ async def debug_database_info():
                 event_columns = [{"name": row[1], "type": row[2]} for row in cursor.fetchall()]
                 
                 cursor.execute("SELECT COUNT(*) FROM events")
-                event_count = cursor.fetchone()[0]
+                event_count = get_count_from_result(cursor.fetchone())
                 
                 db_info.update({
                     "tables": tables,
@@ -5311,7 +5311,7 @@ async def get_events_by_location(
                 AND date::date >= CURRENT_DATE
             ''', (state.lower(), city.lower()))
         
-        total = cursor.fetchone()[0]
+        total = get_count_from_result(cursor.fetchone())
         
         return {
             "events": events,
