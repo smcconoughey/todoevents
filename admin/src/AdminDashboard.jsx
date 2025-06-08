@@ -1836,11 +1836,12 @@ const AdminDashboard = () => {
       timeFrame: '30d'
     });
     
-    const [selectedMetrics, setSelectedMetrics] = useState(['events', 'active_hosts']);
+    const [selectedMetrics, setSelectedMetrics] = useState(['events', 'active_hosts', 'page_visits']);
     const [chartPeriod, setChartPeriod] = useState('daily');
     const [cumulativeMode, setCumulativeMode] = useState({
       events: true,      // Default to cumulative for events 
-      active_hosts: false // Default to period-based for active hosts
+      active_hosts: false, // Default to period-based for active hosts
+      page_visits: true   // Default to cumulative for page visits
     });
     const [categoryCloudData, setCategoryCloudData] = useState(null);
     const [refreshInterval, setRefreshInterval] = useState(null);
@@ -1884,7 +1885,12 @@ const AdminDashboard = () => {
             tsParams.append('cumulative', cumulativeMode[metric]);
           }
           
-          const data = await fetchData(`/admin/analytics/time-series?${tsParams}`);
+          // Use different endpoint for page visits
+          const endpoint = metric === 'page_visits' 
+            ? `/admin/analytics/page-visits?${tsParams}`
+            : `/admin/analytics/time-series?${tsParams}`;
+          
+          const data = await fetchData(endpoint);
           return [metric, data];
         });
 
@@ -2358,7 +2364,7 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-semibold mb-4">Chart Metrics</h3>
             <div className="space-y-2">
-              {['events', 'active_hosts'].map(metric => (
+              {['events', 'active_hosts', 'page_visits'].map(metric => (
                 <label key={metric} className="flex items-center">
                   <input
                     type="checkbox"
@@ -2400,7 +2406,7 @@ const AdminDashboard = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Cumulative Mode</label>
               <div className="space-y-2">
-                {['events', 'active_hosts'].map(metric => (
+                {['events', 'active_hosts', 'page_visits'].map(metric => (
                   <label key={metric} className="flex items-center justify-between">
                     <span className="capitalize text-sm">{metric.replace('_', ' ')}</span>
                     <div className="flex items-center">
