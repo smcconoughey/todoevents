@@ -325,6 +325,23 @@ def get_placeholder():
     else:
         return "?"   # SQLite uses ?
 
+# Helper function to get count from cursor result (handles both SQLite and PostgreSQL)
+def get_count_from_result(cursor_result):
+    """Extract count value from cursor result, handling both SQLite tuples and PostgreSQL RealDictRow"""
+    if cursor_result is None:
+        return 0
+    
+    if IS_PRODUCTION and DB_URL:
+        # PostgreSQL with RealDictCursor returns dict-like objects
+        if hasattr(cursor_result, 'get'):
+            return cursor_result.get('count', 0) or cursor_result.get('count(*)', 0) or 0
+        else:
+            # Fallback for other cursor types
+            return cursor_result[0] if cursor_result else 0
+    else:
+        # SQLite returns tuples
+        return cursor_result[0] if cursor_result else 0
+
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -5798,11 +5815,11 @@ async def get_analytics_metrics(
                 SELECT COUNT(*) FROM events 
                 WHERE {where_clause}
             """, params)
-            total_events = cursor.fetchone()[0]
+            total_events = get_count_from_result(cursor.fetchone())
             
             # Total users
             cursor.execute("SELECT COUNT(*) FROM users")
-            total_users = cursor.fetchone()[0]
+            total_users = get_count_from_result(cursor.fetchone())
             
             # Active hosts (users with at least one event in the last month)
             one_month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
@@ -5821,7 +5838,7 @@ async def get_analytics_metrics(
                 SELECT COUNT(DISTINCT created_by) FROM events 
                 WHERE {host_where}
             """, host_params)
-            active_hosts = cursor.fetchone()[0]
+            active_hosts = get_count_from_result(cursor.fetchone())
             
             # Events by category
             cursor.execute(f"""
@@ -6145,77 +6162,23 @@ async def get_geographic_analytics(
         print(f"Geographic analytics error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch geographic analytics: {str(e)}")
 
-@app.get("/debug/test-analytics-simple")
-async def test_analytics_simple():
-    """Simple analytics test without authentication"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            placeholder = get_placeholder()
-            
-            # Simple test query
-            cursor.execute(f"SELECT COUNT(*) FROM events WHERE date >= {placeholder}", ["2025-01-01"])
-            result = cursor.fetchone()[0]
-            
-            return {
-                "status": "success",
-                "placeholder_used": placeholder,
-                "total_events_since_jan": result,
-                "database_type": "PostgreSQL" if placeholder == "%s" else "SQLite"
-            }
-    except Exception as e:
-        return {
-            "status": "error", 
-            "error": str(e),
-            "placeholder_used": get_placeholder(),
-            "database_type": "PostgreSQL" if get_placeholder() == "%s" else "SQLite"
-        }
-
-@app.get("/debug/test-admin-auth")
-async def test_admin_auth():
-    """Test admin authentication"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # Check admin users
-            cursor.execute("SELECT email, role FROM users WHERE role = 'admin'")
-            admin_users = cursor.fetchall()
-            
-            return {
-                "status": "success",
-                "admin_users": admin_users,
-                "total_admin_count": len(admin_users)
-            }
-    except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
-
 @app.get("/debug/analytics-sql")
 async def debug_analytics_sql():
     """Debug the analytics SQL query construction"""
     try:
         with get_db() as conn:
             cursor = conn.cursor()
+            placeholder = get_placeholder()
             
-            # Replicate the same logic from analytics
+            # Test basic count first
+            cursor.execute("SELECT COUNT(*) FROM events")
+            total_events = cursor.fetchone()[0]
+            
+            # Test with date filter
             start_date = "2025-05-09"
             end_date = "2025-06-08"
-            exclude_users = None
-            category = None
             
-            # Parse filters
-            excluded_user_ids = []
-            if exclude_users:
-                try:
-                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
-                except ValueError:
-                    excluded_user_ids = []
-            
-            # Build WHERE conditions
-            placeholder = get_placeholder()
+            # Build WHERE conditions exactly like the main analytics function
             conditions = ["1=1"]
             params = []
             
@@ -6225,86 +6188,34 @@ async def debug_analytics_sql():
             if end_date:
                 conditions.append(f"date <= {placeholder}")
                 params.append(end_date)
-            if excluded_user_ids:
-                placeholders = ','.join([placeholder for _ in excluded_user_ids])
-                conditions.append(f"created_by NOT IN ({placeholders})")
-                params.extend(excluded_user_ids)
-            if category:
-                conditions.append(f"category = {placeholder}")
-                params.append(category)
             
             where_clause = " AND ".join(conditions)
             
             # Build the final query
-            query = f"""
-                SELECT COUNT(*) FROM events 
-                WHERE {where_clause}
-            """
+            query = f"SELECT COUNT(*) FROM events WHERE {where_clause}"
             
             # Test the query
             cursor.execute(query, params)
-            result = cursor.fetchone()[0]
-            
-            return {
-                "status": "success",
-                "conditions": conditions,
-                "where_clause": where_clause,
-                "params": params,
-                "final_query": query,
-                "result": result
-            }
-    except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }
-
-@app.get("/debug/test-analytics-simple")
-async def test_analytics_simple():
-    """Simple analytics test without authentication"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            placeholder = get_placeholder()
-            
-            # Simple test query
-            cursor.execute(f"SELECT COUNT(*) FROM events WHERE date >= {placeholder}", ["2025-01-01"])
-            result = cursor.fetchone()[0]
+            result = cursor.fetchone()
+            filtered_count = result[0] if result else 0
             
             return {
                 "status": "success",
                 "placeholder_used": placeholder,
-                "total_events_since_jan": result,
-                "database_type": "PostgreSQL" if placeholder == "%s" else "SQLite"
+                "database_type": "PostgreSQL" if placeholder == "%s" else "SQLite",
+                "total_events": total_events,
+                "conditions": conditions,
+                "where_clause": where_clause,
+                "params": params,
+                "final_query": query,
+                "filtered_count": filtered_count
             }
     except Exception as e:
-        return {
-            "status": "error", 
-            "error": str(e),
-            "placeholder_used": get_placeholder(),
-            "database_type": "PostgreSQL" if get_placeholder() == "%s" else "SQLite"
-        }
-
-@app.get("/debug/test-admin-auth")
-async def test_admin_auth():
-    """Test admin authentication"""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # Check admin users
-            cursor.execute("SELECT email, role FROM users WHERE role = 'admin'")
-            admin_users = cursor.fetchall()
-            
-            return {
-                "status": "success",
-                "admin_users": admin_users,
-                "total_admin_count": len(admin_users)
-            }
-    except Exception as e:
+        import traceback
         return {
             "status": "error",
-            "error": str(e)
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "placeholder_used": get_placeholder()
         }
 
