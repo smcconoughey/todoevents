@@ -534,6 +534,17 @@ def init_db():
                             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
                         )''')
                 
+                # Create page visits tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
+                            id SERIAL PRIMARY KEY,
+                            page_type TEXT NOT NULL,
+                            page_path TEXT NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'anonymous',
+                            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
                 # Ensure tables are committed
                 conn.commit()
                 logger.info("✅ Interest and view tracking tables created/verified")
@@ -655,6 +666,17 @@ def init_db():
                             viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             UNIQUE(event_id, user_id, browser_fingerprint),
                             FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
+                # Create page visits tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            page_type TEXT NOT NULL,
+                            page_path TEXT NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'anonymous',
+                            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
                         )''')
                 
@@ -4375,6 +4397,18 @@ async def create_tracking_tables():
                 )
             """)
             
+            # Create page_visits table for general page visit tracking
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS page_visits (
+                    id SERIAL PRIMARY KEY,
+                    page_type TEXT NOT NULL,
+                    page_path TEXT NOT NULL,
+                    user_id INTEGER,
+                    browser_fingerprint TEXT NOT NULL DEFAULT 'anonymous',
+                    visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
             # Fix NULL counter values in existing events
             cursor.execute("UPDATE events SET interest_count = 0 WHERE interest_count IS NULL")
             cursor.execute("UPDATE events SET view_count = 0 WHERE view_count IS NULL")
@@ -6598,4 +6632,219 @@ async def get_event_locations(
     except Exception as e:
         print(f"Event locations error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch event locations: {str(e)}")
+
+# Page Visit Tracking - Privacy-friendly without personal data storage
+async def track_page_visit(page_type: str, page_path: str, user_id: int = None, browser_fingerprint: str = None):
+    """
+    Track page visits in a privacy-friendly way
+    Only stores aggregated data and basic page info
+    """
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Check if this exact visit already exists recently (1 hour window)
+            # This prevents double-counting from page refreshes
+            cursor.execute(f"""
+                SELECT COUNT(*) FROM page_visits 
+                WHERE page_type = {placeholder} 
+                AND page_path = {placeholder}
+                AND browser_fingerprint = {placeholder}
+                AND visited_at > (CURRENT_TIMESTAMP - INTERVAL '1 hour')
+            """)
+            
+            recent_visit_count = get_count_from_result(cursor.fetchone())
+            
+            if recent_visit_count > 0:
+                return False  # Don't track duplicate visits within 1 hour
+            
+            # Insert new page visit
+            cursor.execute(f"""
+                INSERT INTO page_visits (page_type, page_path, user_id, browser_fingerprint, visited_at)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
+            """, (page_type, page_path, user_id, browser_fingerprint or 'anonymous'))
+            
+            conn.commit()
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error tracking page visit: {e}")
+        return False
+
+@app.post("/api/track-visit")
+async def track_page_visit_endpoint(
+    request: Request,
+    page_type: str,  # 'homepage', 'events_list', 'event_detail', 'admin', etc.
+    page_path: str = "/",
+    current_user: dict = Depends(get_current_user_optional_no_exception)
+):
+    """
+    Privacy-friendly page visit tracking endpoint
+    Only tracks basic page types and paths, no personal data
+    """
+    try:
+        # Get user ID if authenticated (for better analytics, but not required)
+        user_id = current_user.get('id') if current_user else None
+        
+        # Generate browser fingerprint for deduplication only
+        browser_fingerprint = generate_browser_fingerprint(request)
+        
+        # Track the page visit
+        visit_tracked = await track_page_visit(page_type, page_path, user_id, browser_fingerprint)
+        
+        return {
+            "success": True,
+            "visit_tracked": visit_tracked,
+            "page_type": page_type
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in page visit tracking endpoint: {e}")
+        return {"success": False, "error": "Failed to track visit"}
+
+@app.get("/admin/analytics/page-visits")
+async def get_page_visits_analytics(
+    current_user: dict = Depends(get_current_user),
+    metric: str = "page_visits",  # page_visits
+    period: str = "daily",   # daily, weekly, monthly
+    cumulative: Optional[bool] = None,  # Auto-default to True for page visits
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exclude_users: Optional[str] = None,
+    page_type: Optional[str] = None  # Filter by page type
+):
+    """Get page visit analytics with time series data"""
+    # Check admin permission
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Set cumulative default for page visits (usually we want to see growth)
+            if cumulative is None:
+                cumulative = True
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Default date range (last 90 days)
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            
+            # Build WHERE clause
+            where_conditions = [f"DATE(visited_at) >= {placeholder}", f"DATE(visited_at) <= {placeholder}"]
+            params = [start_date, end_date]
+            
+            if excluded_user_ids:
+                user_placeholders = ','.join([placeholder] * len(excluded_user_ids))
+                where_conditions.append(f"(user_id IS NULL OR user_id NOT IN ({user_placeholders}))")
+                params.extend(excluded_user_ids)
+            
+            if page_type:
+                where_conditions.append(f"page_type = {placeholder}")
+                params.append(page_type)
+            
+            where_clause = " AND ".join(where_conditions)
+            
+            # Generate period-specific date grouping
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL
+                if period == "daily":
+                    date_group = "TO_CHAR(visited_at, 'YYYY-MM-DD')"
+                    date_label = "Daily"
+                elif period == "weekly":
+                    date_group = "TO_CHAR(DATE_TRUNC('week', visited_at), 'YYYY-\"W\"WW')"
+                    date_label = "Weekly"
+                elif period == "monthly":
+                    date_group = "TO_CHAR(DATE_TRUNC('month', visited_at), 'YYYY-MM')"
+                    date_label = "Monthly"
+                else:
+                    date_group = "TO_CHAR(visited_at, 'YYYY-MM-DD')"
+                    date_label = "Daily"
+            else:
+                # SQLite
+                if period == "daily":
+                    date_group = "strftime('%Y-%m-%d', visited_at)"
+                    date_label = "Daily"
+                elif period == "weekly":
+                    date_group = "strftime('%Y-W%W', visited_at)"
+                    date_label = "Weekly"
+                elif period == "monthly":
+                    date_group = "strftime('%Y-%m', visited_at)"
+                    date_label = "Monthly"
+                else:
+                    date_group = "strftime('%Y-%m-%d', visited_at)"
+                    date_label = "Daily"
+            
+            # Query for time series data
+            query = f"""
+                SELECT {date_group} as period, COUNT(*) as count
+                FROM page_visits
+                WHERE {where_clause}
+                GROUP BY {date_group}
+                ORDER BY period
+            """
+            
+            cursor.execute(query, params)
+            data = cursor.fetchall()
+            
+            # Handle both SQLite tuple results and PostgreSQL dict-like results
+            formatted_data = []
+            for row in data:
+                if isinstance(row, dict) or hasattr(row, 'get'):
+                    # PostgreSQL RealDictCursor returns dict-like objects
+                    period_val = row.get('period') 
+                    count_val = row.get('count')
+                    
+                    # Fallback: if standard keys don't exist, use first two values
+                    if period_val is None or count_val is None:
+                        keys = list(row.keys()) if hasattr(row, 'keys') else []
+                        if len(keys) >= 2:
+                            period_val = row.get(keys[0]) if period_val is None else period_val
+                            count_val = row.get(keys[1]) if count_val is None else count_val
+                else:
+                    # SQLite returns tuples
+                    period_val = row[0]
+                    count_val = row[1]
+                
+                formatted_data.append({
+                    "period": period_val,
+                    "count": int(count_val) if count_val is not None else 0
+                })
+            
+            # Apply cumulative calculation if requested
+            if cumulative and formatted_data:
+                running_total = 0
+                for item in formatted_data:
+                    running_total += item["count"]
+                    item["count"] = running_total
+            
+            return {
+                "metric": metric,
+                "period": period,
+                "cumulative": cumulative,
+                "date_label": date_label,
+                "data": formatted_data,
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "excluded_users": excluded_user_ids,
+                    "page_type": page_type
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching page visits analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch page visits analytics: {str(e)}")
 
