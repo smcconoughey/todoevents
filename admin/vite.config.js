@@ -18,6 +18,6 @@ export default defineConfig({
     outDir: 'dist'
   },
   define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://todoevents.onrender.com')
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://todoevents-backend.onrender.com')
   }
 })
