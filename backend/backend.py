@@ -6172,7 +6172,7 @@ async def debug_analytics_sql():
             
             # Test basic count first
             cursor.execute("SELECT COUNT(*) FROM events")
-            total_events = cursor.fetchone()[0]
+            total_events = get_count_from_result(cursor.fetchone())
             
             # Test with date filter
             start_date = "2025-05-09"
@@ -6197,7 +6197,7 @@ async def debug_analytics_sql():
             # Test the query
             cursor.execute(query, params)
             result = cursor.fetchone()
-            filtered_count = result[0] if result else 0
+            filtered_count = get_count_from_result(result)
             
             return {
                 "status": "success",
