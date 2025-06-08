@@ -5905,6 +5905,7 @@ async def get_time_series_data(
     current_user: dict = Depends(get_current_user),
     metric: str = "events",  # events, users, active_hosts
     period: str = "daily",   # daily, weekly, monthly
+    cumulative: Optional[bool] = None,  # Auto-default based on metric if None
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     exclude_users: Optional[str] = None,
@@ -5918,6 +5919,17 @@ async def get_time_series_data(
     try:
         with get_db() as conn:
             cursor = conn.cursor()
+            
+            # Set cumulative defaults based on metric if not specified
+            if cumulative is None:
+                if metric == "events":
+                    cumulative = True  # Events should show cumulative growth by default
+                elif metric == "users":
+                    cumulative = True  # Users should show cumulative growth by default
+                elif metric == "active_hosts":
+                    cumulative = False  # Active hosts is more meaningful as period-based by default
+                else:
+                    cumulative = False
             
             # Parse filters
             excluded_user_ids = []
@@ -6039,9 +6051,17 @@ async def get_time_series_data(
                 if period_val is not None and count_val is not None:
                     formatted_data.append({"period": period_val, "count": count_val})
             
+            # Convert to cumulative if requested
+            if cumulative:
+                cumulative_count = 0
+                for item in formatted_data:
+                    cumulative_count += item["count"]
+                    item["count"] = cumulative_count
+            
             return {
                 "metric": metric,
                 "period": period,
+                "cumulative": cumulative,
                 "date_label": date_label,
                 "data": formatted_data,
                 "filters_applied": {
