@@ -5949,16 +5949,29 @@ async def get_time_series_data(
             
             where_clause = " AND ".join(conditions)
             
-            # Date grouping based on period
-            if period == "weekly":
-                date_group = "strftime('%Y-W%W', date)"
-                date_label = "Week"
-            elif period == "monthly":
-                date_group = "strftime('%Y-%m', date)"
-                date_label = "Month"
-            else:  # daily
-                date_group = "date"
-                date_label = "Date"
+            # Date grouping based on period and database type
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL date functions
+                if period == "weekly":
+                    date_group = "TO_CHAR(DATE_TRUNC('week', date::date), 'YYYY-\"W\"WW')"
+                    date_label = "Week"
+                elif period == "monthly":
+                    date_group = "TO_CHAR(date::date, 'YYYY-MM')"
+                    date_label = "Month"
+                else:  # daily
+                    date_group = "date"
+                    date_label = "Date"
+            else:
+                # SQLite date functions
+                if period == "weekly":
+                    date_group = "strftime('%Y-W%W', date)"
+                    date_label = "Week"
+                elif period == "monthly":
+                    date_group = "strftime('%Y-%m', date)"
+                    date_label = "Month"
+                else:  # daily
+                    date_group = "date"
+                    date_label = "Date"
             
             if metric == "events":
                 cursor.execute(f"""
@@ -5971,13 +5984,25 @@ async def get_time_series_data(
                 
             elif metric == "users":
                 # User registrations by period
-                cursor.execute(f"""
-                    SELECT {date_group.replace('date', 'DATE(created_at)')} as period, COUNT(*) as count
-                    FROM users 
-                    WHERE DATE(created_at) >= {placeholder} AND DATE(created_at) <= {placeholder}
-                    GROUP BY {date_group.replace('date', 'DATE(created_at)')}
-                    ORDER BY period
-                """, [start_date, end_date])
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL - replace date references with created_at::date
+                    user_date_group = date_group.replace('date', 'created_at::date')
+                    cursor.execute(f"""
+                        SELECT {user_date_group} as period, COUNT(*) as count
+                        FROM users 
+                        WHERE created_at::date >= {placeholder}::date AND created_at::date <= {placeholder}::date
+                        GROUP BY {user_date_group}
+                        ORDER BY period
+                    """, [start_date, end_date])
+                else:
+                    # SQLite
+                    cursor.execute(f"""
+                        SELECT {date_group.replace('date', 'DATE(created_at)')} as period, COUNT(*) as count
+                        FROM users 
+                        WHERE DATE(created_at) >= {placeholder} AND DATE(created_at) <= {placeholder}
+                        GROUP BY {date_group.replace('date', 'DATE(created_at)')}
+                        ORDER BY period
+                    """, [start_date, end_date])
                 
             elif metric == "active_hosts":
                 # Active hosts by period (users who created events in that period)
