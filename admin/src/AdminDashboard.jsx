@@ -20,7 +20,7 @@ import {
   TimeScale,
   Filler,
 } from 'chart.js';
-import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+import { Line, Bar, Pie, Doughnut, Bubble } from 'react-chartjs-2';
 import { format, subDays, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 
 // Register Chart.js components including Filler for area charts
