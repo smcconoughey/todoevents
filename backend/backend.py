@@ -5753,3 +5753,365 @@ async def debug_test_event_urls():
             "traceback": traceback.format_exc()
         }
 
+@app.get("/admin/analytics/metrics")
+async def get_analytics_metrics(
+    current_user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exclude_users: Optional[str] = None,  # Comma-separated user IDs
+    category: Optional[str] = None
+):
+    """Get comprehensive analytics metrics with filtering"""
+    # Check admin permission
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Build date filter
+            date_filter = ""
+            date_params = []
+            if start_date:
+                date_filter += " AND date >= ?"
+                date_params.append(start_date)
+            if end_date:
+                date_filter += " AND date <= ?"
+                date_params.append(end_date)
+            
+            # Build user exclusion filter
+            user_filter = ""
+            if excluded_user_ids:
+                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                user_filter = f" AND created_by NOT IN ({placeholders})"
+            
+            # Build category filter
+            category_filter = ""
+            category_params = []
+            if category:
+                category_filter = " AND category = ?"
+                category_params.append(category)
+            
+            # Total events
+            cursor.execute(f"""
+                SELECT COUNT(*) FROM events 
+                WHERE 1=1 {date_filter} {user_filter} {category_filter}
+            """, date_params + excluded_user_ids + category_params)
+            total_events = cursor.fetchone()[0]
+            
+            # Total users
+            cursor.execute("SELECT COUNT(*) FROM users")
+            total_users = cursor.fetchone()[0]
+            
+            # Active hosts (users with at least one event in the last month)
+            one_month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            cursor.execute(f"""
+                SELECT COUNT(DISTINCT created_by) FROM events 
+                WHERE date >= ? {user_filter} {category_filter}
+            """, [one_month_ago] + excluded_user_ids + category_params)
+            active_hosts = cursor.fetchone()[0]
+            
+            # Events by category
+            cursor.execute(f"""
+                SELECT category, COUNT(*) 
+                FROM events 
+                WHERE 1=1 {date_filter} {user_filter} {category_filter}
+                GROUP BY category
+                ORDER BY COUNT(*) DESC
+            """, date_params + excluded_user_ids + category_params)
+            events_by_category = dict(cursor.fetchall())
+            
+            # User role distribution
+            cursor.execute("SELECT role, COUNT(*) FROM users GROUP BY role")
+            user_roles = dict(cursor.fetchall())
+            
+            # Recent events trend (last 30 days)
+            cursor.execute(f"""
+                SELECT date, COUNT(*) 
+                FROM events 
+                WHERE date >= ? {user_filter} {category_filter}
+                GROUP BY date
+                ORDER BY date
+            """, [one_month_ago] + excluded_user_ids + category_params)
+            events_trend = dict(cursor.fetchall())
+            
+            return {
+                "total_events": total_events,
+                "total_users": total_users,
+                "active_hosts": active_hosts,
+                "events_by_category": events_by_category,
+                "user_roles": user_roles,
+                "events_trend": events_trend,
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "excluded_users": excluded_user_ids,
+                    "category": category
+                }
+            }
+    except Exception as e:
+        print(f"Analytics metrics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch analytics: {str(e)}")
+
+@app.get("/admin/analytics/time-series")
+async def get_time_series_data(
+    current_user: dict = Depends(get_current_user),
+    metric: str = "events",  # events, users, active_hosts
+    period: str = "daily",   # daily, weekly, monthly
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exclude_users: Optional[str] = None,
+    category: Optional[str] = None
+):
+    """Get time-series data for various metrics"""
+    # Check admin permission
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Default date range (last 90 days)
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            
+            # Build filters
+            user_filter = ""
+            if excluded_user_ids:
+                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                user_filter = f" AND created_by NOT IN ({placeholders})"
+            
+            category_filter = ""
+            category_params = []
+            if category:
+                category_filter = " AND category = ?"
+                category_params.append(category)
+            
+            # Date grouping based on period
+            if period == "weekly":
+                date_group = "strftime('%Y-W%W', date)"
+                date_label = "Week"
+            elif period == "monthly":
+                date_group = "strftime('%Y-%m', date)"
+                date_label = "Month"
+            else:  # daily
+                date_group = "date"
+                date_label = "Date"
+            
+            if metric == "events":
+                cursor.execute(f"""
+                    SELECT {date_group} as period, COUNT(*) as count
+                    FROM events 
+                    WHERE date >= ? AND date <= ? {user_filter} {category_filter}
+                    GROUP BY {date_group}
+                    ORDER BY period
+                """, [start_date, end_date] + excluded_user_ids + category_params)
+                
+            elif metric == "users":
+                # User registrations by period
+                cursor.execute(f"""
+                    SELECT {date_group.replace('date', 'DATE(created_at)')} as period, COUNT(*) as count
+                    FROM users 
+                    WHERE DATE(created_at) >= ? AND DATE(created_at) <= ?
+                    GROUP BY {date_group.replace('date', 'DATE(created_at)')}
+                    ORDER BY period
+                """, [start_date, end_date])
+                
+            elif metric == "active_hosts":
+                # Active hosts by period (users who created events in that period)
+                cursor.execute(f"""
+                    SELECT {date_group} as period, COUNT(DISTINCT created_by) as count
+                    FROM events 
+                    WHERE date >= ? AND date <= ? {user_filter} {category_filter}
+                    GROUP BY {date_group}
+                    ORDER BY period
+                """, [start_date, end_date] + excluded_user_ids + category_params)
+            
+            data = cursor.fetchall()
+            
+            return {
+                "metric": metric,
+                "period": period,
+                "date_label": date_label,
+                "data": [{"period": row[0], "count": row[1]} for row in data],
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "excluded_users": excluded_user_ids,
+                    "category": category
+                }
+            }
+    except Exception as e:
+        print(f"Time series data error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch time series data: {str(e)}")
+
+@app.get("/admin/analytics/top-hosts")
+async def get_top_hosts(
+    current_user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = 10,
+    exclude_users: Optional[str] = None
+):
+    """Get top event hosts/creators by event count"""
+    # Check admin permission
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Build date filter
+            date_filter = ""
+            date_params = []
+            if start_date:
+                date_filter += " AND e.date >= ?"
+                date_params.append(start_date)
+            if end_date:
+                date_filter += " AND e.date <= ?"
+                date_params.append(end_date)
+            
+            # Build user exclusion filter
+            user_filter = ""
+            if excluded_user_ids:
+                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                user_filter = f" AND e.created_by NOT IN ({placeholders})"
+            
+            cursor.execute(f"""
+                SELECT 
+                    u.email,
+                    u.id,
+                    COUNT(e.id) as event_count,
+                    MIN(e.date) as first_event_date,
+                    MAX(e.date) as last_event_date
+                FROM events e
+                JOIN users u ON e.created_by = u.id
+                WHERE 1=1 {date_filter} {user_filter}
+                GROUP BY u.id, u.email
+                ORDER BY event_count DESC
+                LIMIT ?
+            """, date_params + excluded_user_ids + [limit])
+            
+            hosts = cursor.fetchall()
+            
+            return {
+                "hosts": [{
+                    "email": host[0],
+                    "user_id": host[1],
+                    "event_count": host[2],
+                    "first_event_date": host[3],
+                    "last_event_date": host[4]
+                } for host in hosts],
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "excluded_users": excluded_user_ids,
+                    "limit": limit
+                }
+            }
+    except Exception as e:
+        print(f"Top hosts error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch top hosts: {str(e)}")
+
+@app.get("/admin/analytics/geographic")
+async def get_geographic_analytics(
+    current_user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exclude_users: Optional[str] = None
+):
+    """Get geographic distribution of events"""
+    # Check admin permission
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Parse filters
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [int(uid.strip()) for uid in exclude_users.split(',') if uid.strip()]
+                except ValueError:
+                    excluded_user_ids = []
+            
+            # Build filters
+            date_filter = ""
+            date_params = []
+            if start_date:
+                date_filter += " AND date >= ?"
+                date_params.append(start_date)
+            if end_date:
+                date_filter += " AND date <= ?"
+                date_params.append(end_date)
+            
+            user_filter = ""
+            if excluded_user_ids:
+                placeholders = ','.join(['?' for _ in excluded_user_ids])
+                user_filter = f" AND created_by NOT IN ({placeholders})"
+            
+            # Events by state
+            cursor.execute(f"""
+                SELECT state, COUNT(*) as count
+                FROM events 
+                WHERE state IS NOT NULL {date_filter} {user_filter}
+                GROUP BY state
+                ORDER BY count DESC
+            """, date_params + excluded_user_ids)
+            by_state = dict(cursor.fetchall())
+            
+            # Events by city
+            cursor.execute(f"""
+                SELECT city, state, COUNT(*) as count
+                FROM events 
+                WHERE city IS NOT NULL {date_filter} {user_filter}
+                GROUP BY city, state
+                ORDER BY count DESC
+                LIMIT 20
+            """, date_params + excluded_user_ids)
+            by_city = [{"city": row[0], "state": row[1], "count": row[2]} for row in cursor.fetchall()]
+            
+            return {
+                "by_state": by_state,
+                "by_city": by_city,
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "excluded_users": excluded_user_ids
+                }
+            }
+    except Exception as e:
+        print(f"Geographic analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch geographic analytics: {str(e)}")
+

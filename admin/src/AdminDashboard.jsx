@@ -1,38 +1,42 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Users,
-  Calendar,
-  Server,
-  Trash2,
-  Lock,
-  Unlock,
-  AlertTriangle,
-  LogOut,
-  X,
-  Filter,
-  Search,
-  BarChart2,
-  PieChart,
-  Database,
-  MessageSquare,
-  Shield,
-  Download,
-  ChevronDown,
-  Edit,
-  Key,
-  Save,
-  Plus,
-  Eye,
-  RefreshCw,
-  Upload,
-  UserCheck,
-  Settings,
-  Copy,
-  CheckCircle,
-  XCircle,
-  List,
-  Grid
+  Users, Calendar, Server, Shield, LogOut, Plus, BarChart2, Database,
+  Trash2, Upload, Download, RefreshCw, Search, Filter, Eye, Heart,
+  Edit, X, AlertTriangle, CheckCircle, UserPlus, Lock, MessageSquare,
+  TrendingUp, TrendingDown, Activity, Globe, MapPin, Clock
 } from 'lucide-react';
+
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  TimeScale,
+} from 'chart.js';
+import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+import { format, subDays, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  TimeScale
+);
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://todoevents.onrender.com';
 
 // Get API URL from environment variable or fallback to production backend
 const API_URL = import.meta.env.VITE_API_URL || 'https://todoevents-backend.onrender.com';
@@ -1810,68 +1814,512 @@ const AdminDashboard = () => {
     );
   };
 
-  // Analytics Component
+  // Enhanced AnalyticsDashboard Component with Grafana-style functionality
   const AnalyticsDashboard = () => {
-    const renderPieChart = (data, title) => {
-      const total = Object.values(data).reduce((a, b) => a + b, 0);
+    const [analyticsData, setAnalyticsData] = useState(null);
+    const [timeSeriesData, setTimeSeriesData] = useState({});
+    const [topHosts, setTopHosts] = useState([]);
+    const [geographicData, setGeographicData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    
+    // Filter states
+    const [filters, setFilters] = useState({
+      startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+      endDate: format(new Date(), 'yyyy-MM-dd'),
+      excludeUsers: '',
+      category: '',
+      timeFrame: '30d'
+    });
+    
+    const [selectedMetrics, setSelectedMetrics] = useState(['events', 'active_hosts']);
+    const [chartPeriod, setChartPeriod] = useState('daily');
+    const [refreshInterval, setRefreshInterval] = useState(null);
+
+    // Chart theme
+    const chartTheme = {
+      colors: {
+        primary: '#3B82F6',
+        secondary: '#10B981',
+        accent: '#F59E0B',
+        danger: '#EF4444',
+        purple: '#8B5CF6',
+        pink: '#EC4899',
+        teal: '#14B8A6',
+        orange: '#F97316'
+      }
+    };
+
+    // Fetch analytics data
+    const fetchAnalyticsData = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('adminToken');
+        const headers = { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        // Build query parameters
+        const params = new URLSearchParams();
+        if (filters.startDate) params.append('start_date', filters.startDate);
+        if (filters.endDate) params.append('end_date', filters.endDate);
+        if (filters.excludeUsers) params.append('exclude_users', filters.excludeUsers);
+        if (filters.category) params.append('category', filters.category);
+
+        // Fetch main metrics
+        const metricsResponse = await fetch(`${API_BASE_URL}/admin/analytics/metrics?${params}`, { headers });
+        const metrics = await metricsResponse.json();
+        setAnalyticsData(metrics);
+
+        // Fetch time series data for selected metrics
+        const timeSeriesPromises = selectedMetrics.map(async (metric) => {
+          const tsParams = new URLSearchParams(params);
+          tsParams.append('metric', metric);
+          tsParams.append('period', chartPeriod);
+          
+          const response = await fetch(`${API_BASE_URL}/admin/analytics/time-series?${tsParams}`, { headers });
+          const data = await response.json();
+          return [metric, data];
+        });
+
+        const timeSeriesResults = await Promise.all(timeSeriesPromises);
+        const timeSeriesObj = Object.fromEntries(timeSeriesResults);
+        setTimeSeriesData(timeSeriesObj);
+
+        // Fetch top hosts
+        const hostsResponse = await fetch(`${API_BASE_URL}/admin/analytics/top-hosts?${params}`, { headers });
+        const hostsData = await hostsResponse.json();
+        setTopHosts(hostsData.hosts || []);
+
+        // Fetch geographic data
+        const geoResponse = await fetch(`${API_BASE_URL}/admin/analytics/geographic?${params}`, { headers });
+        const geoData = await geoResponse.json();
+        setGeographicData(geoData);
+
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+        setError('Failed to fetch analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Handle time frame presets
+    const handleTimeFrameChange = (timeFrame) => {
+      const now = new Date();
+      let startDate, endDate = format(now, 'yyyy-MM-dd');
+
+      switch (timeFrame) {
+        case '7d':
+          startDate = format(subDays(now, 7), 'yyyy-MM-dd');
+          break;
+        case '30d':
+          startDate = format(subDays(now, 30), 'yyyy-MM-dd');
+          break;
+        case '90d':
+          startDate = format(subDays(now, 90), 'yyyy-MM-dd');
+          break;
+        case 'thisWeek':
+          startDate = format(startOfWeek(now), 'yyyy-MM-dd');
+          endDate = format(endOfWeek(now), 'yyyy-MM-dd');
+          break;
+        case 'thisMonth':
+          startDate = format(startOfMonth(now), 'yyyy-MM-dd');
+          endDate = format(endOfMonth(now), 'yyyy-MM-dd');
+          break;
+        default:
+          return;
+      }
+
+      setFilters(prev => ({ ...prev, startDate, endDate, timeFrame }));
+    };
+
+    // Auto-refresh functionality
+    const toggleAutoRefresh = (enabled) => {
+      if (enabled) {
+        const interval = setInterval(fetchAnalyticsData, 60000); // Refresh every minute
+        setRefreshInterval(interval);
+      } else {
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+          setRefreshInterval(null);
+        }
+      }
+    };
+
+    useEffect(() => {
+      fetchAnalyticsData();
+      return () => {
+        if (refreshInterval) clearInterval(refreshInterval);
+      };
+    }, [filters, selectedMetrics, chartPeriod]);
+
+    // Chart configurations
+    const createLineChartConfig = (data, label, color) => ({
+      data: {
+        labels: data.data?.map(d => d.period) || [],
+        datasets: [{
+          label: label,
+          data: data.data?.map(d => d.count) || [],
+          borderColor: color,
+          backgroundColor: color + '20',
+          fill: true,
+          tension: 0.4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' },
+          title: { display: true, text: `${label} Over Time` }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    const createBarChartConfig = (data, title, color) => ({
+      data: {
+        labels: Object.keys(data || {}),
+        datasets: [{
+          label: title,
+          data: Object.values(data || {}),
+          backgroundColor: color,
+          borderColor: color.replace('20', ''),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: title }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    const createPieChartConfig = (data, title) => ({
+      data: {
+        labels: Object.keys(data || {}),
+        datasets: [{
+          data: Object.values(data || {}),
+          backgroundColor: [
+            chartTheme.colors.primary,
+            chartTheme.colors.secondary,
+            chartTheme.colors.accent,
+            chartTheme.colors.purple,
+            chartTheme.colors.pink,
+            chartTheme.colors.teal,
+            chartTheme.colors.orange
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right' },
+          title: { display: true, text: title }
+        }
+      }
+    });
+
+    if (loading) {
       return (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-semibold text-blue-600 mb-4">{title}</h3>
-          <div className="flex flex-wrap items-center justify-center">
-            {Object.entries(data).map(([key, value]) => (
-              <div key={key} className="flex items-center m-2">
-                <div
-                  className="w-4 h-4 mr-2 rounded-full"
-                  style={{
-                    backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`
-                  }}
-                />
-                <span>{key}: {value} ({((value / total) * 100).toFixed(1)}%)</span>
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="ml-2 text-lg">Loading analytics...</span>
         </div>
       );
-    };
+    }
 
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Overall Statistics */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-blue-600 mb-4">System Overview</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="text-sm text-blue-600">Total Users</h4>
-                <p className="text-2xl font-bold text-blue-800">{analytics.totalUsers}</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="text-sm text-green-600">Total Events</h4>
-                <p className="text-2xl font-bold text-green-800">{analytics.totalEvents}</p>
-              </div>
+        {/* Filters and Controls */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <h2 className="text-2xl font-bold text-gray-800">Analytics Dashboard</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchAnalyticsData}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </button>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  onChange={(e) => toggleAutoRefresh(e.target.checked)}
+                  className="mr-2"
+                />
+                Auto-refresh
+              </label>
             </div>
           </div>
 
-          {/* User Role Distribution */}
-          {renderPieChart(
-            analytics.userRoleDistribution,
-            'User Role Distribution'
+          {/* Filter Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {/* Time Frame Presets */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Time Frame</label>
+              <select
+                value={filters.timeFrame}
+                onChange={(e) => handleTimeFrameChange(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="thisWeek">This week</option>
+                <option value="thisMonth">This month</option>
+              </select>
+            </div>
+
+            {/* Category Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select
+                value={filters.category}
+                onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              >
+                <option value="">All Categories</option>
+                <option value="community">Community</option>
+                <option value="food">Food & Drink</option>
+                <option value="music">Music</option>
+                <option value="arts">Arts & Culture</option>
+                <option value="sports">Sports & Fitness</option>
+              </select>
+            </div>
+
+            {/* Exclude Users */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Exclude Users (IDs)</label>
+              <input
+                type="text"
+                value={filters.excludeUsers}
+                onChange={(e) => setFilters(prev => ({ ...prev, excludeUsers: e.target.value }))}
+                placeholder="1,2,3"
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              />
+            </div>
+
+            {/* Chart Period */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Chart Period</label>
+              <select
+                value={chartPeriod}
+                onChange={(e) => setChartPeriod(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Custom Date Range */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Key Metrics Cards */}
+        {analyticsData && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold opacity-90">Total Events</h3>
+                  <p className="text-3xl font-bold">{analyticsData.total_events}</p>
+                </div>
+                <Calendar className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold opacity-90">Total Users</h3>
+                  <p className="text-3xl font-bold">{analyticsData.total_users}</p>
+                </div>
+                <Users className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold opacity-90">Active Hosts</h3>
+                  <p className="text-3xl font-bold">{analyticsData.active_hosts}</p>
+                  <p className="text-sm opacity-75">Last 30 days</p>
+                </div>
+                <Activity className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold opacity-90">Host Rate</h3>
+                  <p className="text-3xl font-bold">
+                    {analyticsData.total_users > 0 
+                      ? Math.round((analyticsData.active_hosts / analyticsData.total_users) * 100)
+                      : 0}%
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 opacity-80" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Time Series Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {selectedMetrics.map(metric => (
+            timeSeriesData[metric] && (
+              <div key={metric} className="bg-white rounded-lg shadow-md p-6">
+                <div className="h-80">
+                  <Line 
+                    {...createLineChartConfig(
+                      timeSeriesData[metric], 
+                      metric.charAt(0).toUpperCase() + metric.slice(1).replace('_', ' '),
+                      chartTheme.colors[metric === 'events' ? 'primary' : metric === 'active_hosts' ? 'secondary' : 'accent']
+                    )}
+                  />
+                </div>
+              </div>
+            )
+          ))}
+        </div>
+
+        {/* Distribution Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {analyticsData?.events_by_category && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="h-80">
+                <Pie {...createPieChartConfig(analyticsData.events_by_category, 'Events by Category')} />
+              </div>
+            </div>
+          )}
+
+          {analyticsData?.user_roles && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="h-80">
+                <Doughnut {...createPieChartConfig(analyticsData.user_roles, 'User Roles')} />
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Event Category Distribution */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {renderPieChart(
-            analytics.eventCategoryDistribution,
-            'Event Category Distribution'
-          )}
+        {/* Geographic Distribution */}
+        {geographicData && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="h-80">
+                <Bar {...createBarChartConfig(geographicData.by_state, 'Events by State', chartTheme.colors.teal + '80')} />
+              </div>
+            </div>
 
-          {/* Recent Activity Placeholder */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-semibold mb-4">Top Cities</h3>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {geographicData.by_city?.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex items-center">
+                      <MapPin className="w-4 h-4 text-gray-500 mr-2" />
+                      <span>{item.city}, {item.state}</span>
+                    </div>
+                    <span className="font-semibold text-blue-600">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Hosts Table */}
+        {topHosts.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-blue-600 mb-4">Recent Activity</h3>
-            <p className="text-gray-500 text-center">
-              No recent activity logs available
-            </p>
+            <h3 className="text-xl font-semibold mb-4">Top Event Hosts</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2">Host</th>
+                    <th className="text-left py-2">Events Created</th>
+                    <th className="text-left py-2">First Event</th>
+                    <th className="text-left py-2">Latest Event</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topHosts.map((host, index) => (
+                    <tr key={host.user_id} className="border-b hover:bg-gray-50">
+                      <td className="py-2">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-sm font-semibold text-blue-600">#{index + 1}</span>
+                          </div>
+                          {host.email}
+                        </div>
+                      </td>
+                      <td className="py-2 font-semibold">{host.event_count}</td>
+                      <td className="py-2">{format(new Date(host.first_event_date), 'MMM dd, yyyy')}</td>
+                      <td className="py-2">{format(new Date(host.last_event_date), 'MMM dd, yyyy')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Metric Selection */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-xl font-semibold mb-4">Chart Metrics</h3>
+          <div className="space-y-2">
+            {['events', 'users', 'active_hosts'].map(metric => (
+              <label key={metric} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={selectedMetrics.includes(metric)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedMetrics(prev => [...prev, metric]);
+                    } else {
+                      setSelectedMetrics(prev => prev.filter(m => m !== metric));
+                    }
+                  }}
+                  className="mr-2"
+                />
+                <span className="capitalize">{metric.replace('_', ' ')}</span>
+              </label>
+            ))}
           </div>
         </div>
       </div>
