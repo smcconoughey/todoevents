@@ -143,6 +143,10 @@ function App() {
             {/* Date-indexed event URLs: /events/2025/06/06/slug-id */}
             <Route path="/events/:year/:month/:day/:slug" element={<EventMap mapsLoaded={mapsLoaded} eventSlug={true} />} />
             
+            {/* Location-based event URLs: /us/state/city/events/slug */}
+            <Route path="/us/:state/:city/events/:slug" element={<EventMap mapsLoaded={mapsLoaded} eventSlug={true} />} />
+            <Route path="/events/:slug" element={<EventMap mapsLoaded={mapsLoaded} eventSlug={true} />} />
+            
             {/* Category-based SEO routes */}
             <Route path="/events/:category" element={<EventMap mapsLoaded={mapsLoaded} presetCategory={true} />} />
             

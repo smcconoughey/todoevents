@@ -915,22 +915,34 @@ class AutomatedTaskManager:
             if event.get('slug'):
                 event_slug = event['slug']
                 
-                # Add main event URL (new format)
+                # Generate canonical URL based on location data
+                if event.get('city') and event.get('state'):
+                    # Location-based URL: /us/state/city/events/slug
+                    state_lower = event.get('state', '').lower()
+
+                    city_slug = slugify(event.get('city', ''))
+                    canonical_url = f"{domain}/us/{state_lower}/{city_slug}/events/{event_slug}"
+                    priority = "0.9"  # Higher priority for geo-specific URLs
+                else:
+                    # Fallback URL: /events/slug
+                    canonical_url = f"{domain}/events/{event_slug}"
+                    priority = "0.85"
+                
                 sitemap += f'''
   <url>
-    <loc>{domain}/event/{event_slug}</loc>
+    <loc>{canonical_url}</loc>
     <lastmod>{event_lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <priority>{priority}</priority>
   </url>'''
                 
-                # Add legacy URL format for compatibility
+                # Add short URL for compatibility
                 sitemap += f'''
   <url>
     <loc>{domain}/e/{event_slug}</loc>
     <lastmod>{event_lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>'''
                 
                 # Add date-indexed URL if we have event date
@@ -5640,4 +5652,104 @@ async def debug_clear_cache():
     except Exception as e:
         logger.error(f"Failed to clear cache: {str(e)}")
         return {"error": str(e)}
+
+@app.get("/debug/test-event-urls")
+async def debug_test_event_urls():
+    """Test URL generation for specific events to ensure Google indexing format"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get the specific events mentioned by the user
+            cursor.execute('''
+                SELECT id, title, slug, city, state, date, created_at, updated_at
+                FROM events 
+                WHERE slug IN ('wolly-worm-festival-camargo', 'camargo-woolly-worm-festival-camargo')
+                OR title LIKE '%Wolly Worm%' OR title LIKE '%Woolly Worm%'
+                ORDER BY id
+            ''')
+            
+            events = cursor.fetchall()
+            
+            if not events:
+                return {
+                    "message": "No matching events found",
+                    "searched_slugs": ['wolly-worm-festival-camargo', 'camargo-woolly-worm-festival-camargo']
+                }
+            
+            results = []
+            base_domain = "https://todo-events.com"
+            
+            for event in events:
+                event_id, title, slug, city, state, date, created_at, updated_at = event
+                
+                # Generate all URL formats for this event
+                urls = {}
+                
+                # 1. Canonical URL (location-based if city/state available)
+                if city and state:
+                    city_slug = slugify(city)
+                    state_lower = state.lower()
+                    urls['canonical'] = f"{base_domain}/us/{state_lower}/{city_slug}/events/{slug}"
+                    urls['canonical_priority'] = "0.9"
+                else:
+                    urls['canonical'] = f"{base_domain}/events/{slug}"
+                    urls['canonical_priority'] = "0.85"
+                
+                # 2. Short URL (compatibility)
+                urls['short'] = f"{base_domain}/e/{slug}"
+                urls['short_priority'] = "0.7"
+                
+                # 3. Date-indexed URL
+                try:
+                    if date:
+                        date_obj = datetime.fromisoformat(str(date))
+                        year = date_obj.strftime('%Y')
+                        month = date_obj.strftime('%m')
+                        day = date_obj.strftime('%d')
+                        urls['date_indexed'] = f"{base_domain}/events/{year}/{month}/{day}/{slug}"
+                        urls['date_indexed_priority'] = "0.75"
+                except:
+                    urls['date_indexed'] = "Error parsing date"
+                
+                # 4. SEO metadata
+                seo_data = {
+                    "title": title,
+                    "slug": slug,
+                    "city": city,
+                    "state": state,
+                    "date": date,
+                    "google_indexable": bool(slug and title),
+                    "location_specific": bool(city and state)
+                }
+                
+                results.append({
+                    "event_id": event_id,
+                    "title": title,
+                    "slug": slug,
+                    "urls": urls,
+                    "seo_data": seo_data,
+                    "created_at": created_at,
+                    "updated_at": updated_at
+                })
+            
+            return {
+                "status": "success",
+                "events_found": len(results),
+                "events": results,
+                "url_format_explanation": {
+                    "canonical": "Primary URL for Google indexing - location-based if city/state available",
+                    "short": "Compatibility URL for sharing and redirects",
+                    "date_indexed": "Time-based URL for event discovery",
+                    "priority_explanation": "Higher priority = more important for search engines"
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error testing event URLs: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
 

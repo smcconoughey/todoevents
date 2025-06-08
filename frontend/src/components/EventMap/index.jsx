@@ -1292,9 +1292,23 @@ const EventMap = ({
   };
 
   const handleEventClick = (event, openInNewTab = false) => {
+    // Generate canonical URL (location-based if available)
+    let eventUrl;
+    if (event.slug) {
+      if (event.city && event.state) {
+        const citySlug = event.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const stateSlug = event.state.toLowerCase();
+        eventUrl = `/us/${stateSlug}/${citySlug}/events/${event.slug}`;
+      } else {
+        eventUrl = `/events/${event.slug}`;
+      }
+    } else {
+      eventUrl = `/?event=${event.id}`;
+    }
+
     // If opening in new tab or user specifically wants the detail page
     if (openInNewTab) {
-      window.open(`/e/${event.slug}`, '_blank');
+      window.open(eventUrl, '_blank');
       return;
     }
 
@@ -1308,13 +1322,7 @@ const EventMap = ({
     setSelectedEvent(event);
     
     // Update the browser URL to reflect the event being viewed
-    if (event.slug) {
-      // Use replaceState to update URL without adding to history
-      window.history.replaceState(null, '', `/e/${event.slug}`);
-    } else {
-      // Fallback to old format for events without slugs
-      window.history.replaceState(null, '', `/?event=${event.id}`);
-    }
+    window.history.replaceState(null, '', eventUrl);
     
     if (activeView === 'list') {
       setActiveView('map');
@@ -1696,10 +1704,17 @@ const EventMap = ({
 
   // Copy event link
   const handleCopyLink = () => {
-    // Generate URL using the new slug format, with fallback to old format if no slug
+    // Generate canonical URL (location-based if available, Google-friendly format)
     let url;
     if (selectedEvent.slug) {
-      url = `${window.location.origin}/e/${selectedEvent.slug}`;
+      // Use location-based URL if city and state are available
+      if (selectedEvent.city && selectedEvent.state) {
+        const citySlug = selectedEvent.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const stateSlug = selectedEvent.state.toLowerCase();
+        url = `${window.location.origin}/us/${stateSlug}/${citySlug}/events/${selectedEvent.slug}`;
+      } else {
+        url = `${window.location.origin}/events/${selectedEvent.slug}`;
+      }
     } else {
       // Fallback to old format for events without slugs
       url = `${window.location.origin}/?event=${selectedEvent.id}`;
@@ -1908,10 +1923,17 @@ const EventMap = ({
         }
 
         // Open Facebook with event URL and helpful text
-        // Generate URL using the new slug format, with fallback to old format
+        // Generate URL using canonical format (location-based if available)
         let eventUrl;
         if (selectedEvent.slug) {
-          eventUrl = `${window.location.origin}/e/${selectedEvent.slug}`;
+          // Use location-based URL if city and state are available (Google-friendly format)
+          if (selectedEvent.city && selectedEvent.state) {
+            const citySlug = selectedEvent.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            const stateSlug = selectedEvent.state.toLowerCase();
+            eventUrl = `${window.location.origin}/us/${stateSlug}/${citySlug}/events/${selectedEvent.slug}`;
+          } else {
+            eventUrl = `${window.location.origin}/events/${selectedEvent.slug}`;
+          }
         } else {
           eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
         }
@@ -1936,10 +1958,17 @@ const EventMap = ({
 
     } catch (error) {
       console.error('Facebook share error:', error);
-      // Fallback to simple URL sharing
+      // Fallback to simple URL sharing using canonical format
       let fallbackUrl;
       if (selectedEvent.slug) {
-        fallbackUrl = `${window.location.origin}/e/${selectedEvent.slug}`;
+        // Use location-based URL if city and state are available (Google-friendly format)
+        if (selectedEvent.city && selectedEvent.state) {
+          const citySlug = selectedEvent.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+          const stateSlug = selectedEvent.state.toLowerCase();
+          fallbackUrl = `${window.location.origin}/us/${stateSlug}/${citySlug}/events/${selectedEvent.slug}`;
+        } else {
+          fallbackUrl = `${window.location.origin}/events/${selectedEvent.slug}`;
+        }
       } else {
         fallbackUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
       }
