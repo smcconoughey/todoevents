@@ -1275,19 +1275,13 @@ class AutomatedTaskManager:
                     logger.info(f"✅ Successfully cleaned up {len(expired_events)} expired events")
                     logger.info(f"🧹 Cleared event cache after cleanup")
                     
-                    # Log archive policy
-                    if placeholder == "?":
-                        cursor.execute("""
-                            SELECT COUNT(*) 
-                            FROM events 
-                            WHERE date >= ? AND date < ?
-                        """, (str(archive_cutoff), str(current_date)))
-                    else:
-                        cursor.execute("""
-                            SELECT COUNT(*) 
-                            FROM events 
-                            WHERE date >= %s AND date < %s
-                        """, (str(archive_cutoff), str(current_date)))
+                    # Log archive policy  
+                    placeholder = get_placeholder()
+                    cursor.execute(f"""
+                        SELECT COUNT(*) 
+                        FROM events 
+                        WHERE date >= {placeholder} AND date < {placeholder}
+                    """, (str(archive_cutoff), str(current_date)))
                     
                     archived_count = cursor.fetchone()[0]
                     logger.info(f"📁 {archived_count} events in 32-day archive (from {archive_cutoff} to {current_date})")
@@ -6151,6 +6145,54 @@ async def get_geographic_analytics(
         print(f"Geographic analytics error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch geographic analytics: {str(e)}")
 
+@app.get("/debug/test-analytics-simple")
+async def test_analytics_simple():
+    """Simple analytics test without authentication"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Simple test query
+            cursor.execute(f"SELECT COUNT(*) FROM events WHERE date >= {placeholder}", ["2025-01-01"])
+            result = cursor.fetchone()[0]
+            
+            return {
+                "status": "success",
+                "placeholder_used": placeholder,
+                "total_events_since_jan": result,
+                "database_type": "PostgreSQL" if placeholder == "%s" else "SQLite"
+            }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "error": str(e),
+            "placeholder_used": get_placeholder(),
+            "database_type": "PostgreSQL" if get_placeholder() == "%s" else "SQLite"
+        }
+
+@app.get("/debug/test-admin-auth")
+async def test_admin_auth():
+    """Test admin authentication"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check admin users
+            cursor.execute("SELECT email, role FROM users WHERE role = 'admin'")
+            admin_users = cursor.fetchall()
+            
+            return {
+                "status": "success",
+                "admin_users": admin_users,
+                "total_admin_count": len(admin_users)
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
 @app.get("/debug/analytics-sql")
 async def debug_analytics_sql():
     """Debug the analytics SQL query construction"""
@@ -6216,5 +6258,53 @@ async def debug_analytics_sql():
             "status": "error",
             "error": str(e),
             "traceback": traceback.format_exc()
+        }
+
+@app.get("/debug/test-analytics-simple")
+async def test_analytics_simple():
+    """Simple analytics test without authentication"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Simple test query
+            cursor.execute(f"SELECT COUNT(*) FROM events WHERE date >= {placeholder}", ["2025-01-01"])
+            result = cursor.fetchone()[0]
+            
+            return {
+                "status": "success",
+                "placeholder_used": placeholder,
+                "total_events_since_jan": result,
+                "database_type": "PostgreSQL" if placeholder == "%s" else "SQLite"
+            }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "error": str(e),
+            "placeholder_used": get_placeholder(),
+            "database_type": "PostgreSQL" if get_placeholder() == "%s" else "SQLite"
+        }
+
+@app.get("/debug/test-admin-auth")
+async def test_admin_auth():
+    """Test admin authentication"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check admin users
+            cursor.execute("SELECT email, role FROM users WHERE role = 'admin'")
+            admin_users = cursor.fetchall()
+            
+            return {
+                "status": "success",
+                "admin_users": admin_users,
+                "total_admin_count": len(admin_users)
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
         }
 
