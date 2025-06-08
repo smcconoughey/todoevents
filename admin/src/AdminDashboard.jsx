@@ -1838,6 +1838,11 @@ const AdminDashboard = () => {
     
     const [selectedMetrics, setSelectedMetrics] = useState(['events', 'active_hosts']);
     const [chartPeriod, setChartPeriod] = useState('daily');
+    const [cumulativeMode, setCumulativeMode] = useState({
+      events: true,      // Default to cumulative for events 
+      users: true,       // Default to cumulative for users
+      active_hosts: false // Default to period-based for active hosts
+    });
     const [refreshInterval, setRefreshInterval] = useState(null);
 
     // Chart theme
@@ -1874,6 +1879,10 @@ const AdminDashboard = () => {
           const tsParams = new URLSearchParams(params);
           tsParams.append('metric', metric);
           tsParams.append('period', chartPeriod);
+          // Add cumulative parameter based on the mode for this metric
+          if (cumulativeMode[metric] !== undefined) {
+            tsParams.append('cumulative', cumulativeMode[metric]);
+          }
           
           const data = await fetchData(`/admin/analytics/time-series?${tsParams}`);
           return [metric, data];
@@ -1951,7 +1960,7 @@ const AdminDashboard = () => {
       return () => {
         if (refreshInterval) clearInterval(refreshInterval);
       };
-    }, [filters, selectedMetrics, chartPeriod]);
+    }, [filters, selectedMetrics, chartPeriod, cumulativeMode]);
 
     // Chart configurations
     const createLineChartConfig = (data, label, color) => ({
@@ -2298,27 +2307,82 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Metric Selection */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-semibold mb-4">Chart Metrics</h3>
-          <div className="space-y-2">
-            {['events', 'users', 'active_hosts'].map(metric => (
-              <label key={metric} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedMetrics.includes(metric)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedMetrics(prev => [...prev, metric]);
-                    } else {
-                      setSelectedMetrics(prev => prev.filter(m => m !== metric));
-                    }
-                  }}
-                  className="mr-2"
-                />
-                <span className="capitalize">{metric.replace('_', ' ')}</span>
-              </label>
-            ))}
+        {/* Chart Settings */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Metric Selection */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold mb-4">Chart Metrics</h3>
+            <div className="space-y-2">
+              {['events', 'users', 'active_hosts'].map(metric => (
+                <label key={metric} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedMetrics.includes(metric)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedMetrics(prev => [...prev, metric]);
+                      } else {
+                        setSelectedMetrics(prev => prev.filter(m => m !== metric));
+                      }
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="capitalize">{metric.replace('_', ' ')}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart Display Options */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold mb-4">Display Options</h3>
+            
+            {/* Period Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Chart Period</label>
+              <select
+                value={chartPeriod}
+                onChange={(e) => setChartPeriod(e.target.value)}
+                className="w-full p-2 border rounded"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+
+            {/* Cumulative Mode Toggles */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Cumulative Mode</label>
+              <div className="space-y-2">
+                {['events', 'users', 'active_hosts'].map(metric => (
+                  <label key={metric} className="flex items-center justify-between">
+                    <span className="capitalize text-sm">{metric.replace('_', ' ')}</span>
+                    <div className="flex items-center">
+                      <span className="text-xs mr-2 text-gray-500">
+                        {cumulativeMode[metric] ? 'Cumulative' : 'Period-based'}
+                      </span>
+                      <button
+                        onClick={() => setCumulativeMode(prev => ({ 
+                          ...prev, 
+                          [metric]: !prev[metric] 
+                        }))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          cumulativeMode[metric] ? 'bg-blue-600' : 'bg-gray-200'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          cumulativeMode[metric] ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Cumulative shows running totals, period-based shows activity per time period.
+              </p>
+            </div>
           </div>
         </div>
       </div>
