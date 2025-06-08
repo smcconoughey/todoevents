@@ -18,11 +18,12 @@ import {
   Legend,
   ArcElement,
   TimeScale,
+  Filler,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import { format, subDays, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 
-// Register Chart.js components
+// Register Chart.js components including Filler for area charts
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -33,7 +34,8 @@ ChartJS.register(
   Tooltip,
   Legend,
   ArcElement,
-  TimeScale
+  TimeScale,
+  Filler
 );
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://todoevents.onrender.com';
@@ -48,8 +50,11 @@ const fetchData = async (endpoint, method = 'GET', body = null) => {
     const token = localStorage.getItem('token');
 
     if (!token) {
+      console.error('No authentication token found in localStorage');
       throw new Error('No authentication token found');
     }
+
+    console.log('Using token:', token.substring(0, 20) + '...'); // Log partial token for debugging
 
     const headers = {
       'Content-Type': 'application/json',
@@ -69,10 +74,10 @@ const fetchData = async (endpoint, method = 'GET', body = null) => {
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.error('Authentication failed, removing token');
+        console.error('Authentication failed, removing token and reloading');
         localStorage.removeItem('token');
-        window.location.reload();
-        throw new Error('Unauthorized');
+        // Instead of reloading immediately, let the component handle this
+        throw new Error('Authentication failed - please log in again');
       }
 
       let errorData;
@@ -1853,12 +1858,6 @@ const AdminDashboard = () => {
     const fetchAnalyticsData = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('adminToken');
-        const headers = { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        };
-
         // Build query parameters
         const params = new URLSearchParams();
         if (filters.startDate) params.append('start_date', filters.startDate);
@@ -1866,9 +1865,8 @@ const AdminDashboard = () => {
         if (filters.excludeUsers) params.append('exclude_users', filters.excludeUsers);
         if (filters.category) params.append('category', filters.category);
 
-        // Fetch main metrics
-        const metricsResponse = await fetch(`${API_BASE_URL}/admin/analytics/metrics?${params}`, { headers });
-        const metrics = await metricsResponse.json();
+        // Fetch main metrics using the shared fetchData function
+        const metrics = await fetchData(`/admin/analytics/metrics?${params}`);
         setAnalyticsData(metrics);
 
         // Fetch time series data for selected metrics
@@ -1877,8 +1875,7 @@ const AdminDashboard = () => {
           tsParams.append('metric', metric);
           tsParams.append('period', chartPeriod);
           
-          const response = await fetch(`${API_BASE_URL}/admin/analytics/time-series?${tsParams}`, { headers });
-          const data = await response.json();
+          const data = await fetchData(`/admin/analytics/time-series?${tsParams}`);
           return [metric, data];
         });
 
@@ -1887,18 +1884,20 @@ const AdminDashboard = () => {
         setTimeSeriesData(timeSeriesObj);
 
         // Fetch top hosts
-        const hostsResponse = await fetch(`${API_BASE_URL}/admin/analytics/top-hosts?${params}`, { headers });
-        const hostsData = await hostsResponse.json();
+        const hostsData = await fetchData(`/admin/analytics/top-hosts?${params}`);
         setTopHosts(hostsData.hosts || []);
 
         // Fetch geographic data
-        const geoResponse = await fetch(`${API_BASE_URL}/admin/analytics/geographic?${params}`, { headers });
-        const geoData = await geoResponse.json();
+        const geoData = await fetchData(`/admin/analytics/geographic?${params}`);
         setGeographicData(geoData);
 
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
-        setError('Failed to fetch analytics data');
+        if (error.message.includes('Authentication failed')) {
+          // Redirect back to login
+          window.location.reload();
+        }
+        setError('Failed to fetch analytics data: ' + error.message);
       } finally {
         setLoading(false);
       }
