@@ -1843,7 +1843,6 @@ const AdminDashboard = () => {
       active_hosts: false // Default to period-based for active hosts
     });
     const [categoryCloudData, setCategoryCloudData] = useState(null);
-    const [eventLocations, setEventLocations] = useState(null);
     const [refreshInterval, setRefreshInterval] = useState(null);
 
     // Chart theme
@@ -1904,10 +1903,6 @@ const AdminDashboard = () => {
         // Fetch category cloud data
         const categoryData = await fetchData(`/admin/analytics/category-cloud?${params}`);
         setCategoryCloudData(categoryData);
-
-        // Fetch event locations for density map
-        const locationsData = await fetchData(`/admin/analytics/event-locations?${params}`);
-        setEventLocations(locationsData);
 
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
@@ -2303,66 +2298,20 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Distribution Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {analyticsData?.events_by_category && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="h-80">
-                <Pie {...createPieChartConfig(analyticsData.events_by_category, 'Events by Category')} />
-              </div>
+        {/* Category Bubble Chart */}
+        {categoryCloudData?.categories && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="h-80">
+              <Bubble {...createBubbleChartConfig(categoryCloudData.categories)} />
             </div>
-          )}
-
-          {categoryCloudData?.categories && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="h-80">
-                <Bubble {...createBubbleChartConfig(categoryCloudData.categories)} />
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Geographic Distribution */}
         {geographicData && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="h-80">
-                <Bar {...createBarChartConfig(geographicData.by_state, 'Events by State', chartTheme.colors.teal + '80')} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold mb-4">Event Location Density</h3>
-              {eventLocations?.locations && (
-                <div className="h-72 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <h4 className="text-lg font-medium text-gray-700">Event Distribution</h4>
-                    <p className="text-sm text-gray-500 mb-4">
-                      {eventLocations.total_locations} events across {eventLocations.categories?.length || 0} categories
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 max-w-md">
-                      {eventLocations.categories?.slice(0, 6).map((category, index) => {
-                        const categoryCount = eventLocations.locations.filter(loc => loc.category === category).length;
-                        const color = Object.values(chartTheme.colors)[index % Object.values(chartTheme.colors).length];
-                        return (
-                          <div key={category} className="text-center">
-                            <div 
-                              className="w-8 h-8 rounded-full mx-auto mb-1"
-                              style={{ backgroundColor: color + '40', border: `2px solid ${color}` }}
-                            ></div>
-                            <div className="text-xs font-medium capitalize">{category}</div>
-                            <div className="text-xs text-gray-500">{categoryCount}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-4 text-xs text-gray-400">
-                      Center: {eventLocations.center?.lat?.toFixed(2)}, {eventLocations.center?.lng?.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              )}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="h-80">
+              <Bar {...createBarChartConfig(geographicData.by_state, 'Events by State', chartTheme.colors.teal + '80')} />
             </div>
           </div>
         )}
