@@ -69,6 +69,27 @@ import ExternalLinkWarning from './ExternalLinkWarning';
 import EmailContactPopup from './EmailContactPopup';
 import { batchedSync } from '@/utils/batchedSync';
 
+// Simple page visit tracking (privacy-friendly)
+const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
+  try {
+    await fetchWithTimeout(`${API_URL}/api/track-visit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...(localStorage.getItem('token') && {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        })
+      },
+      body: new URLSearchParams({
+        page_type: pageType,
+        page_path: pagePath
+      }).toString()
+    }, 3000);
+  } catch (error) {
+    // Silently fail - don't disrupt user experience
+    console.debug('Page tracking failed:', error);
+  }
+};
 
 const normalizeDate = (date) => {
   if (!date) return null;
@@ -1051,6 +1072,11 @@ const EventMap = ({
     }
   };
 
+  // Track page visit for analytics (privacy-friendly)
+  useEffect(() => {
+    trackPageVisit('homepage', '/');
+  }, []);
+
   // Track first-time sign-in to show welcome popup
   useEffect(() => {
     if (user && !localStorage.getItem('hasSeenFirstTimeSignIn')) {
@@ -1320,6 +1346,9 @@ const EventMap = ({
 
     console.log('Selecting event:', event.title);
     setSelectedEvent(event);
+    
+    // Track event detail view
+    trackPageVisit('event_detail', eventUrl);
     
     // Update the browser URL to reflect the event being viewed
     window.history.replaceState(null, '', eventUrl);
