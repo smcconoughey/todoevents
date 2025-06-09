@@ -6644,22 +6644,33 @@ async def track_page_visit(page_type: str, page_path: str, user_id: int = None, 
             cursor = conn.cursor()
             placeholder = get_placeholder()
             
-            # Check if this exact visit already exists recently (1 hour window)
-            # This prevents double-counting from page refreshes
-            cursor.execute(f"""
-                SELECT COUNT(*) FROM page_visits 
-                WHERE page_type = {placeholder} 
-                AND page_path = {placeholder}
-                AND browser_fingerprint = {placeholder}
-                AND visited_at > (CURRENT_TIMESTAMP - INTERVAL '1 hour')
-            """)
+            # Temporarily disable deduplication to test tracking
+            # TODO: Re-enable this later
+            # if IS_PRODUCTION and DB_URL:
+            #     # PostgreSQL syntax
+            #     cursor.execute(f"""
+            #         SELECT COUNT(*) FROM page_visits 
+            #         WHERE page_type = {placeholder} 
+            #         AND page_path = {placeholder}
+            #         AND browser_fingerprint = {placeholder}
+            #         AND visited_at > (CURRENT_TIMESTAMP - INTERVAL '1 hour')
+            #     """, (page_type, page_path, browser_fingerprint or 'anonymous'))
+            # else:
+            #     # SQLite syntax  
+            #     cursor.execute(f"""
+            #         SELECT COUNT(*) FROM page_visits 
+            #         WHERE page_type = {placeholder} 
+            #         AND page_path = {placeholder}
+            #         AND browser_fingerprint = {placeholder}
+            #         AND visited_at > datetime('now', '-1 hour')
+            #     """, (page_type, page_path, browser_fingerprint or 'anonymous'))
             
-            recent_visit_count = get_count_from_result(cursor.fetchone())
+            # recent_visit_count = get_count_from_result(cursor.fetchone())
             
-            if recent_visit_count > 0:
-                return False  # Don't track duplicate visits within 1 hour
+            # if recent_visit_count > 0:
+            #     return False  # Don't track duplicate visits within 1 hour
             
-            # Insert new page visit
+            # Insert new page visit (always for testing)
             cursor.execute(f"""
                 INSERT INTO page_visits (page_type, page_path, user_id, browser_fingerprint, visited_at)
                 VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
