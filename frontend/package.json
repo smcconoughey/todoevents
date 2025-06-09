@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run sync-sitemap && npm install tailwindcss-animate && vite build",
+    "build": "npm run sync-sitemap && npm install tailwindcss-animate && vite build && npm run build:beta",
+    "build:beta": "cd ../beta && npm ci && npm run build && mkdir -p ../frontend/dist/beta && cp -r dist/* ../frontend/dist/beta/",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "sync-sitemap": "node sync-sitemap.cjs",
     "verify-sitemap": "node verify-sitemap-sync.cjs",
-    "build:render": "npm install tailwindcss-animate && vite build --mode production",
+    "build:render": "npm install tailwindcss-animate && vite build --mode production && npm run build:beta",
     "start": "npx serve -s dist",
     "generate-sitemap": "node generate-sitemap.js",
     "validate-sitemap": "node validate-sitemap.js"
