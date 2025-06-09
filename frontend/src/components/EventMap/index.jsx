@@ -72,18 +72,19 @@ import { batchedSync } from '@/utils/batchedSync';
 // Simple page visit tracking (privacy-friendly)
 const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
   try {
-    await fetchWithTimeout(`${API_URL}/api/track-visit`, {
+    const params = new URLSearchParams({
+      page_type: pageType,
+      page_path: pagePath
+    });
+    
+    await fetchWithTimeout(`${API_URL}/api/track-visit?${params}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
         ...(localStorage.getItem('token') && {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         })
-      },
-      body: new URLSearchParams({
-        page_type: pageType,
-        page_path: pagePath
-      }).toString()
+      }
     }, 3000);
   } catch (error) {
     // Silently fail - don't disrupt user experience
