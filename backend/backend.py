@@ -6850,3 +6850,58 @@ async def get_page_visits_analytics(
         logger.error(f"Error fetching page visits analytics: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch page visits analytics: {str(e)}")
 
+@app.get("/debug/page-visits")
+async def debug_page_visits():
+    """Debug endpoint to check page visits table"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if table exists and get structure
+            if IS_PRODUCTION and DB_URL:
+                cursor.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'page_visits' ORDER BY ordinal_position")
+                columns = cursor.fetchall()
+                
+                cursor.execute("SELECT COUNT(*) FROM page_visits")
+                count = get_count_from_result(cursor.fetchone())
+                
+                cursor.execute("SELECT * FROM page_visits ORDER BY visited_at DESC LIMIT 5")
+                recent_visits = cursor.fetchall()
+            else:
+                cursor.execute("PRAGMA table_info(page_visits)")
+                columns = cursor.fetchall()
+                
+                cursor.execute("SELECT COUNT(*) FROM page_visits")
+                count = get_count_from_result(cursor.fetchone())
+                
+                cursor.execute("SELECT * FROM page_visits ORDER BY visited_at DESC LIMIT 5")
+                recent_visits = cursor.fetchall()
+            
+            # Test direct insert
+            try:
+                placeholder = get_placeholder()
+                cursor.execute(f"""
+                    INSERT INTO page_visits (page_type, page_path, user_id, browser_fingerprint, visited_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
+                """, ('debug_direct', '/debug-direct', None, 'debug-fingerprint'))
+                conn.commit()
+                direct_insert_success = True
+                direct_insert_error = None
+            except Exception as e:
+                direct_insert_success = False
+                direct_insert_error = str(e)
+                
+            return {
+                "table_exists": len(columns) > 0,
+                "columns": columns,
+                "visit_count": count,
+                "recent_visits": recent_visits,
+                "direct_insert_success": direct_insert_success,
+                "direct_insert_error": direct_insert_error,
+                "is_production": IS_PRODUCTION,
+                "db_url": DB_URL is not None
+            }
+            
+    except Exception as e:
+        return {"error": str(e), "traceback": str(e.__traceback__)}
+
