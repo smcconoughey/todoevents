@@ -1,18 +1,25 @@
 services:
   - type: web
-    name: todoevents-beta
+    name: todoevents-beta-glass
     env: node
-    rootDir: .
-    buildCommand: npm ci && npm run build
-    staticPublishPath: ./dist
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: https://todoevents-backend.onrender.com
+      - key: VITE_GOOGLE_MAPS_API_KEY
+        fromSecret: GOOGLE_MAPS_API_KEY
+    buildFilter:
+      paths:
+        - beta/**
+    rootDir: beta
+    plan: free
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
       - key: NODE_VERSION
-        value: 18.x
-      - key: VITE_API_URL
-        value: https://todoevents-backend.onrender.com
-      - key: NODE_ENV
-        value: production 
+        value: 18.x 

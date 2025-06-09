@@ -1,20 +1,33 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  base: '/',
+  plugins: [
+    react(),
+    {
+      name: 'html-transform',
+      transformIndexHtml(html) {
+        // Replace the Google Maps API key placeholder
+        return html.replace(
+          /%VITE_GOOGLE_MAPS_API_KEY%/g, 
+          process.env.VITE_GOOGLE_MAPS_API_KEY || ''
+        );
+      }
+    }
+  ],
   resolve: {
     alias: {
-      '@': '/src',
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   server: {
-    port: 5175,  // Different port for beta (5174 is admin, 5173 is frontend)
-    host: true   // Allow external connections
-  },
-  build: {
-    outDir: 'dist'
+    proxy: {
+      '/admin': {
+        target: 'http://localhost:5174',
+        changeOrigin: true
+      }
+    }
   }
 })
