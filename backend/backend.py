@@ -6640,47 +6640,38 @@ async def track_page_visit(page_type: str, page_path: str, user_id: int = None, 
     Only stores aggregated data and basic page info
     """
     try:
+        print(f"DEBUG: Tracking page visit - type: {page_type}, path: {page_path}, user: {user_id}, fingerprint: {browser_fingerprint}")
+        
         with get_db() as conn:
             cursor = conn.cursor()
             placeholder = get_placeholder()
             
             # Temporarily disable deduplication to test tracking
             # TODO: Re-enable this later
-            # if IS_PRODUCTION and DB_URL:
-            #     # PostgreSQL syntax
-            #     cursor.execute(f"""
-            #         SELECT COUNT(*) FROM page_visits 
-            #         WHERE page_type = {placeholder} 
-            #         AND page_path = {placeholder}
-            #         AND browser_fingerprint = {placeholder}
-            #         AND visited_at > (CURRENT_TIMESTAMP - INTERVAL '1 hour')
-            #     """, (page_type, page_path, browser_fingerprint or 'anonymous'))
-            # else:
-            #     # SQLite syntax  
-            #     cursor.execute(f"""
-            #         SELECT COUNT(*) FROM page_visits 
-            #         WHERE page_type = {placeholder} 
-            #         AND page_path = {placeholder}
-            #         AND browser_fingerprint = {placeholder}
-            #         AND visited_at > datetime('now', '-1 hour')
-            #     """, (page_type, page_path, browser_fingerprint or 'anonymous'))
-            
-            # recent_visit_count = get_count_from_result(cursor.fetchone())
-            
-            # if recent_visit_count > 0:
-            #     return False  # Don't track duplicate visits within 1 hour
             
             # Insert new page visit (always for testing)
-            cursor.execute(f"""
+            insert_query = f"""
                 INSERT INTO page_visits (page_type, page_path, user_id, browser_fingerprint, visited_at)
                 VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
-            """, (page_type, page_path, user_id, browser_fingerprint or 'anonymous'))
+            """
+            params = (page_type, page_path, user_id, browser_fingerprint or 'anonymous')
             
+            print(f"DEBUG: Executing insert query: {insert_query}")
+            print(f"DEBUG: With params: {params}")
+            
+            cursor.execute(insert_query, params)
+            
+            print(f"DEBUG: Insert successful, committing...")
             conn.commit()
+            print(f"DEBUG: Commit successful")
+            
             return True
             
     except Exception as e:
-        logger.error(f"Error tracking page visit: {e}")
+        print(f"ERROR: Error tracking page visit: {e}")
+        print(f"ERROR: Exception type: {type(e)}")
+        import traceback
+        print(f"ERROR: Traceback: {traceback.format_exc()}")
         return False
 
 @app.post("/api/track-visit")
