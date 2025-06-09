@@ -4418,7 +4418,7 @@ async def create_tracking_tables():
             return {
                 "success": True,
                 "message": "Tracking tables created successfully",
-                "tables_created": ["event_interests", "event_views"],
+                "tables_created": ["event_interests", "event_views", "page_visits"],
                 "events_updated": True
             }
             
