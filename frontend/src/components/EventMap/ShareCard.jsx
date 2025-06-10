@@ -217,9 +217,8 @@ const ShareCard = ({ event }) => {
     color: textColor,
     border: `1px solid ${borderColor}`,
     fontFamily: 'Arial, sans-serif', // Use more basic font
-    width: '100%',
-    maxWidth: '380px',
-    minWidth: '280px',
+    width: '320px',  // Fixed width for 2:3 ratio
+    height: '480px', // Fixed height for 2:3 ratio
     borderRadius: '16px',
     overflow: 'hidden',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
@@ -233,11 +232,12 @@ const ShareCard = ({ event }) => {
     padding: '12px 16px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    flexShrink: 0
   };
 
   const titleStyle = {
-    fontSize: '18px',
+    fontSize: '16px',  // Slightly smaller for better fit
     fontWeight: 'bold',
     lineHeight: '1.2',
     color: textColor,
@@ -248,19 +248,20 @@ const ShareCard = ({ event }) => {
   const categoryStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
     marginTop: '4px'
   };
 
   const categoryTextStyle = {
-    fontSize: '12px',
+    fontSize: '11px',  // Smaller category text
     fontWeight: '500',
     color: category.color || "#F5C842"
   };
 
   const mapContainerStyle = {
     position: 'relative',
-    height: '180px'
+    height: '120px',  // Reduced map height
+    flexShrink: 0
   };
 
   const mapImageStyle = {
@@ -270,65 +271,80 @@ const ShareCard = ({ event }) => {
     backgroundColor: theme === "dark" ? "#262626" : "#f5f5f5"
   };
 
-  const detailsStyle = {
+  const mainContentStyle = {
     backgroundColor: cardBg,
     padding: '12px 16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px'
+    gap: '8px',
+    flex: 1,
+    minHeight: 0  // Allow content to shrink
+  };
+
+  const descriptionStyle = {
+    fontSize: '13px',  // Larger description
+    lineHeight: '1.4',
+    color: textColor,
+    margin: '0 0 12px 0',
+    fontWeight: '400'
+  };
+
+  const detailsContainerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',  // Smaller gap between details
+    marginTop: 'auto'  // Push to bottom
   };
 
   const detailRowStyle = {
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',  // Changed from flex-start to center for better alignment
     gap: '8px'
   };
 
   const iconContainerStyle = {
-    padding: '8px',
+    width: '20px',  // Fixed width for consistent alignment
+    height: '20px', // Fixed height
     borderRadius: '50%',
-    marginTop: '2px'
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0  // Prevent shrinking
   };
 
   const detailTextStyle = {
-    fontSize: '14px',
-    lineHeight: '1.4',
-    color: textColor,
-    margin: '0'
-  };
-
-  const descriptionStyle = {
-    fontSize: '12px',
-    lineHeight: '1.4',
-    color: secondaryTextColor,
+    fontSize: '11px',  // Smaller details text
+    lineHeight: '1.3',
+    color: secondaryTextColor,  // Use secondary color for less emphasis
     margin: '0',
-    paddingTop: '4px'
+    flex: 1
   };
 
   const footerStyle = {
-    padding: '12px 16px',
+    padding: '8px 16px',  // Reduced padding
     textAlign: 'center',
     borderTop: `1px solid ${borderColor}`,
-    backgroundColor: bgColor
+    backgroundColor: bgColor,
+    flexShrink: 0
   };
 
   const footerTextStyle = {
-    fontSize: '10px',
+    fontSize: '8px',  // Smaller footer text
     color: secondaryTextColor,
-    margin: '0 0 4px 0'
+    margin: '0 0 2px 0'
   };
 
   const brandingStyle = {
-    fontSize: '16px',
+    fontSize: '12px',  // Smaller branding
     fontWeight: 'bold',
     color: "#F5C842",
     margin: '0'
   };
 
   const eventIdStyle = {
-    fontSize: '10px',
+    fontSize: '8px',  // Smaller event ID
     color: secondaryTextColor,
-    margin: '8px 0 0 0'
+    margin: '4px 0 0 0'
   };
 
   // Helper function to determine if event is paid
@@ -355,14 +371,14 @@ const ShareCard = ({ event }) => {
           <div style={categoryStyle}>
             <CategoryIcon 
               category={event.category} 
-              style={{ width: '16px', height: '16px', color: category.color || "#F5C842" }}
+              style={{ width: '14px', height: '14px', color: category.color || "#F5C842" }}
             />
             <span style={categoryTextStyle}>
               {category.label || event.category}
             </span>
           </div>
         </div>
-        <TodoEventsLogo theme={theme} />
+        <TodoEventsLogo theme={theme} className="w-10 h-10" />
       </div>
       
       {/* Map section */}
@@ -381,118 +397,111 @@ const ShareCard = ({ event }) => {
         )}
       </div>
       
-      {/* Event details */}
-      <div style={detailsStyle}>
-        {/* Date and time */}
-        <div style={detailRowStyle}>
-          <div style={{
-            ...iconContainerStyle,
-            backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
-                stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+      {/* Main content with description first */}
+      <div style={mainContentStyle}>
+        {/* Description - Prioritized */}
+        {event.description && (
           <div>
+            <p style={descriptionStyle}>
+              {event.description.length > 120 ? event.description.substring(0, 120) + "..." : event.description}
+            </p>
+          </div>
+        )}
+        
+        {/* Event details - smaller at bottom */}
+        <div style={detailsContainerStyle}>
+          {/* Date and time */}
+          <div style={detailRowStyle}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
+                  stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
             <p style={detailTextStyle}>
               {formatDate(event)}
             </p>
           </div>
-        </div>
-        
-        {/* Location */}
-        <div style={detailRowStyle}>
-          <div style={{
-            ...iconContainerStyle,
-            backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
-                stroke="#dc2626" strokeWidth="2"/>
-              <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
-                stroke="#dc2626" strokeWidth="2"/>
-            </svg>
-          </div>
-          <div style={{ flex: 1 }}>
+          
+          {/* Location */}
+          <div style={detailRowStyle}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
+                  stroke="#dc2626" strokeWidth="2"/>
+                <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
+                  stroke="#dc2626" strokeWidth="2"/>
+              </svg>
+            </div>
             <p style={detailTextStyle}>
               {event.address}
             </p>
           </div>
-        </div>
-        
-        {/* Host Name */}
-        {event.host_name && (
-          <div style={detailRowStyle}>
-            <div style={{
-              ...iconContainerStyle,
-              backgroundColor: theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7"
-            }}>
-              <HostIcon 
-                style={{ width: '16px', height: '16px', color: '#16a34a' }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
+          
+          {/* Host Name */}
+          {event.host_name && (
+            <div style={detailRowStyle}>
+              <div style={{
+                ...iconContainerStyle,
+                backgroundColor: theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7"
+              }}>
+                <HostIcon 
+                  style={{ width: '12px', height: '12px', color: '#16a34a' }}
+                />
+              </div>
               <p style={detailTextStyle}>
                 Hosted by {event.host_name}
               </p>
             </div>
-          </div>
-        )}
-        
-        {/* Payment Status */}
-        <div style={detailRowStyle}>
-          <div style={{
-            ...iconContainerStyle,
-            backgroundColor: isPaidEvent(event) 
-              ? (theme === "dark" ? "rgba(234, 179, 8, 0.2)" : "#fef3c7")
-              : (theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7")
-          }}>
-            {isPaidEvent(event) ? (
-              <PaidIcon 
-                style={{ width: '16px', height: '16px', color: '#eab308' }}
-              />
-            ) : (
-              <FreeIcon 
-                style={{ width: '16px', height: '16px', color: '#16a34a' }}
-              />
-            )}
-          </div>
-          <div style={{ flex: 1 }}>
+          )}
+          
+          {/* Payment Status */}
+          <div style={detailRowStyle}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: isPaidEvent(event) 
+                ? (theme === "dark" ? "rgba(234, 179, 8, 0.2)" : "#fef3c7")
+                : (theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7")
+            }}>
+              {isPaidEvent(event) ? (
+                <PaidIcon 
+                  style={{ width: '12px', height: '12px', color: '#eab308' }}
+                />
+              ) : (
+                <FreeIcon 
+                  style={{ width: '12px', height: '12px', color: '#16a34a' }}
+                />
+              )}
+            </div>
             <p style={detailTextStyle}>
               {isPaidEvent(event) ? 'Paid Event' : 'Free Event'}
             </p>
           </div>
-        </div>
-        
-        {/* Secondary Category */}
-        {event.secondary_category && (
-          <div style={detailRowStyle}>
-            <div style={{
-              ...iconContainerStyle,
-              backgroundColor: theme === "dark" ? "rgba(139, 92, 246, 0.2)" : "#ede9fe"
-            }}>
-              <CategoryIcon 
-                category={event.secondary_category} 
-                style={{ width: '16px', height: '16px', color: '#8b5cf6' }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
+          
+          {/* Secondary Category */}
+          {event.secondary_category && (
+            <div style={detailRowStyle}>
+              <div style={{
+                ...iconContainerStyle,
+                backgroundColor: theme === "dark" ? "rgba(139, 92, 246, 0.2)" : "#ede9fe"
+              }}>
+                <CategoryIcon 
+                  category={event.secondary_category} 
+                  style={{ width: '12px', height: '12px', color: '#8b5cf6' }}
+                />
+              </div>
               <p style={detailTextStyle}>
                 Also: {getCategory(event.secondary_category)?.label || event.secondary_category}
               </p>
             </div>
-          </div>
-        )}
-        
-        {/* Description */}
-        {event.description && (
-          <div>
-            <p style={descriptionStyle}>
-              {event.description.length > 150 ? event.description.substring(0, 150) + "..." : event.description}
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       
       {/* Footer with branding */}
