@@ -1,13 +1,13 @@
 // src/components/EventMap/CalendarFilter.jsx
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { Button } from '../ui/button';
+import { Calendar } from '../ui/calendar';
 import { X, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from '../ui/popover';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 
