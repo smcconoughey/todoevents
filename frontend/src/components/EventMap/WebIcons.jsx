@@ -3,29 +3,33 @@ import {
   MapPin, 
   Calendar, 
   Clock, 
-  Link as LinkIcon, 
+  Search, 
   Target, 
   Lightbulb, 
   BarChart3, 
   Rocket, 
   Sparkles, 
   Star, 
-  Flame, 
-  PinIcon, 
   PartyPopper, 
-  Trophy, 
-  Balloon,
-  Sun,
-  Moon,
-  Filter
+  Sun, 
+  Moon, 
+  Sunset,
+  Settings,
+  Tag,
+  Link,
+  Mail,
+  MessageSquare,
+  Map,
+  AlertTriangle
 } from 'lucide-react';
 
 // Icon mapping for common emojis
-export const iconMap = {
+const iconMapping = {
   '📍': MapPin,
   '📅': Calendar,
   '⏰': Clock,
-  '🔗': LinkIcon,
+  '🕐': Clock,
+  '🔍': Search,
   '🎯': Target,
   '💡': Lightbulb,
   '📊': BarChart3,
@@ -33,31 +37,31 @@ export const iconMap = {
   '✨': Sparkles,
   '🌟': Star,
   '⭐': Star,
-  '🔥': Flame,
-  '📌': PinIcon,
+  '🎉': PartyPopper,
   '🎪': PartyPopper,
-  '🏆': Trophy,
-  '🎈': Balloon,
+  '🎨': PartyPopper,
   '☀️': Sun,
   '🌙': Moon,
-  'filter': Filter
+  '🌆': Sunset,
+  '⚙️': Settings,
+  '🏷️': Tag,
+  '🔗': Link,
+  '📧': Mail,
+  '🗣️': MessageSquare,
+  '🗺️': Map,
+  '⚠️': AlertTriangle
 };
 
 // Helper component to render icons
-export const WebIcon = ({ emoji, className = "w-4 h-4", color, ...props }) => {
-  const IconComponent = iconMap[emoji];
+export const WebIcon = ({ emoji, size = 16, className = "", ...props }) => {
+  const IconComponent = iconMapping[emoji];
   
   if (!IconComponent) {
+    // Fallback to emoji if no icon mapping exists
     return <span className={className} {...props}>{emoji}</span>;
   }
   
-  return (
-    <IconComponent 
-      className={className} 
-      style={{ color }} 
-      {...props} 
-    />
-  );
+  return <IconComponent size={size} className={className} {...props} />;
 };
 
 // Specific icon components for common use cases

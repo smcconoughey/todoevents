@@ -53,7 +53,7 @@ const EventInteractionComponents = ({ eventId }) => {
       <div className="text-xs text-themed-muted font-medium">
         Engagement
         {hasError && (
-          <span className="ml-2 text-yellow-400 text-xs">⚠️ Offline</span>
+          <span className="ml-2 text-yellow-400 text-xs">Offline</span>
         )}
       </div>
       <div className="flex items-center gap-4 mt-2">

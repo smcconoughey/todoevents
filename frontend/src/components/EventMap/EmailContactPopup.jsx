@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { Mail, Copy, Check, X } from 'lucide-react';
+import { Mail, Copy, Check, X, Send, ExternalLink } from 'lucide-react';
+import { WebIcon } from './WebIcons';
 
 const EmailContactPopup = ({ isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
@@ -110,9 +111,11 @@ const EmailContactPopup = ({ isOpen, onClose }) => {
           
           {/* Footer note */}
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 text-xs text-themed-tertiary bg-themed-surface px-3 py-2 rounded-lg">
-              <span>💡</span>
-              <span>We typically respond within 24 hours</span>
+            <div className="bg-blue-50 dark:bg-blue-900/20 frost:bg-blue-50/70 p-3 rounded-lg border border-blue-200 dark:border-blue-700 frost:border-blue-200/50 mb-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200 frost:text-blue-800 flex items-center">
+                <WebIcon emoji="💡" size={16} className="mr-2" />
+                This form sends your message directly to the event organizer. Your email is not stored on our servers.
+              </p>
             </div>
           </div>
         </div>

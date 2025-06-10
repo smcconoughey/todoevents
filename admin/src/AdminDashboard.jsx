@@ -3,7 +3,8 @@ import {
   Users, Calendar, Server, Shield, LogOut, Plus, BarChart2, Database,
   Trash2, Upload, Download, RefreshCw, Search, Filter, Eye, Heart,
   Edit, X, AlertTriangle, CheckCircle, UserPlus, Lock, MessageSquare,
-  TrendingUp, TrendingDown, Activity, Globe, MapPin, Clock, List
+  TrendingUp, TrendingDown, Activity, Globe, MapPin, Clock, List,
+  ChevronDown, ChevronUp, Lightbulb
 } from 'lucide-react';
 
 import {
@@ -1069,8 +1070,9 @@ const AdminDashboard = () => {
                 placeholder="Paste your JSON data here or use the template above..."
                 spellCheck="false"
               />
-              <div className="mt-1 text-xs text-gray-500">
-                💡 Tip: Use the "Copy Template" button above to get started with proper formatting
+              <div className="mt-1 text-xs text-gray-500 flex items-center">
+                <Lightbulb className="w-4 h-4 mr-1" />
+                Tip: Use the "Copy Template" button above to get started with proper formatting
               </div>
             </div>
 

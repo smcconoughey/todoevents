@@ -73,6 +73,7 @@ import EventInteractionComponents from './EventInteractionComponents';
 import ExternalLinkWarning from './ExternalLinkWarning';
 import EmailContactPopup from './EmailContactPopup';
 import { batchedSync } from '@/utils/batchedSync';
+import { WebIcon } from './WebIcons';
 
 // Simple page visit tracking (privacy-friendly)
 const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
@@ -441,7 +442,8 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
               )}
               {event.distance !== undefined && (
                 <div className="text-sm text-white/70 font-data">
-                  📍 {event.distance.toFixed(1)} miles away
+                  <WebIcon emoji="📍" size={14} className="mr-1" />
+                  {event.distance.toFixed(1)} miles away
                 </div>
               )}
               
@@ -839,7 +841,7 @@ const EventMap = ({
       console.log(`Fetched ${response.length} events, ${validEvents.length} valid events`);
       
       // Debug: Log first few events to see their data
-      console.log('📊 Sample events data:', validEvents.slice(0, 2).map(e => ({
+                      console.log('Sample events data:', validEvents.slice(0, 2).map(e => ({
         id: e.id,
         title: e.title,
         view_count: e.view_count,
@@ -885,7 +887,7 @@ const EventMap = ({
     if (eventSlug && slug) {
       // Only handle if we don't already have this event selected
       if (!selectedEvent || selectedEvent.slug !== slug) {
-        console.log('🎯 Preset handler: Calling handleEventFromSlug for:', slug);
+        console.log('Preset handler: Calling handleEventFromSlug for:', slug);
         // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
         handleEventFromSlug(slug);
       } else {
@@ -1124,7 +1126,7 @@ const EventMap = ({
         if (targetEvent) {
           // Always select the event from the URL, regardless of current selection
           // This ensures proper event switching when URLs change
-          console.log('🎯 URL handler: Selecting event from slug:', targetEvent.title);
+          console.log('URL handler: Selecting event from slug:', targetEvent.title);
           setSelectedEvent(targetEvent);
           setActiveTab('details'); // Start with details tab
           
@@ -1892,8 +1894,8 @@ const EventMap = ({
             currentY = wrapText(selectedEvent.title, canvas.width/2, currentY, 1000, 60) + 40;
             
             ctx.font = '32px Arial, sans-serif';
-            currentY = wrapText(`📅 ${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, currentY, 1000, 40) + 20;
-            currentY = wrapText(`📍 ${selectedEvent.address}`, canvas.width/2, currentY, 1000, 40) + 40;
+            currentY = wrapText(`${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, currentY, 1000, 40) + 20;
+            currentY = wrapText(`${selectedEvent.address}`, canvas.width/2, currentY, 1000, 40) + 40;
             
             ctx.font = '24px Arial, sans-serif';
             currentY = wrapText(selectedEvent.description || '', canvas.width/2, currentY, 1000, 35) + 60;
@@ -1973,7 +1975,7 @@ const EventMap = ({
           eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
         }
         const encodedUrl = encodeURIComponent(eventUrl);
-        const shareText = encodeURIComponent(`Check out this amazing event: ${selectedEvent.title}!\n\n📅 ${selectedEvent.date} at ${selectedEvent.time}\n📍 ${selectedEvent.address}\n\n${selectedEvent.description}\n\nFind more local events at todo-events.com`);
+        const shareText = encodeURIComponent(`Check out this amazing event: ${selectedEvent.title}!\n\n${selectedEvent.date} at ${selectedEvent.time}\n${selectedEvent.address}\n\n${selectedEvent.description}\n\nFind more local events at todo-events.com`);
         
         // Small delay to let download start
         setTimeout(() => {
@@ -2150,7 +2152,7 @@ const EventMap = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
-                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
+                      <label className="text-sm font-medium text-white dark:text-white light:text-black">Location</label>
                     </div>
                     <Button
                       variant="ghost"
@@ -2229,9 +2231,9 @@ const EventMap = ({
                 <div className="space-y-3 p-3 bg-themed-surface rounded-lg border border-themed">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
-                    <span className="text-sm font-medium text-themed-primary">🎯 Search Filters</span>
+                    <span className="text-sm font-medium text-themed-primary">Search Filters</span>
                     <div className="text-xs text-themed-tertiary bg-themed-surface-hover px-2 py-0.5 rounded-full ml-auto">
-                      💡 Combine for better results
+                      Combine for better results
                     </div>
                   </div>
                   
@@ -2244,7 +2246,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
-                      📅 Date
+                      Date
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
@@ -2264,7 +2266,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
-                      🏷️ Type
+                      Type
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
@@ -2274,7 +2276,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('misc')}
                     >
-                      ⚙️ Misc
+                      Misc
                     </button>
                   </div>
 
@@ -2333,9 +2335,9 @@ const EventMap = ({
                         {[
                           { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
                           { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
-                          { value: 'afternoon', label: 'Afternoon', icon: '☀️', description: '12 PM - 5 PM' },
-                          { value: 'evening', label: 'Evening', icon: '🌆', description: '5 PM - 9 PM' },
-                          { value: 'night', label: 'Night', icon: '🌙', description: '9 PM - 5 AM' }
+                          { value: 'afternoon', label: 'Afternoon', icon: 'sun', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: 'sunset', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: 'moon', description: '9 PM - 5 AM' }
                         ].map(timeOption => {
                           // Calculate event count for this time period
                           const eventCount = events.filter(event => {
@@ -2403,7 +2405,7 @@ const EventMap = ({
                   {activeFilterTab === 'category' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
-                        💡 Tap categories to toggle them on/off. You can select multiple!
+                        Tap categories to toggle them on/off. You can select multiple!
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
                         {categories.map(category => {
@@ -2506,7 +2508,7 @@ const EventMap = ({
                   {activeFilterTab === 'misc' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
-                        ⚙️ Additional filters for event attributes
+                        Additional filters for event attributes
                       </div>
                       
                       {/* Fee Filter */}
@@ -2636,7 +2638,7 @@ const EventMap = ({
                       )}
                       {selectedLocation && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
-                          📍 Location set
+                          Location set
                         </span>
                       )}
                     </div>
@@ -2826,7 +2828,7 @@ const EventMap = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
-                      <label className="text-sm font-medium text-white dark:text-white light:text-black">📍 Location</label>
+                      <label className="text-sm font-medium text-white dark:text-white light:text-black">Location</label>
                     </div>
                     <Button
                       variant="ghost"
@@ -2905,9 +2907,9 @@ const EventMap = ({
                 <div className="space-y-3 p-3 bg-themed-surface rounded-lg border border-themed">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-1 h-4 bg-spark-yellow rounded-full"></span>
-                    <span className="text-sm font-medium text-themed-primary">🎯 Search Filters</span>
+                    <span className="text-sm font-medium text-themed-primary">Search Filters</span>
                     <div className="text-xs text-themed-tertiary bg-themed-surface-hover px-2 py-0.5 rounded-full ml-auto">
-                      💡 Combine for better results
+                      Combine for better results
                     </div>
                   </div>
                   
@@ -2920,7 +2922,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('date')}
                     >
-                      📅 Date
+                      Date
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
@@ -2940,7 +2942,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('category')}
                     >
-                      🏷️ Type
+                      Type
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
@@ -2950,7 +2952,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('misc')}
                     >
-                      ⚙️ Misc
+                      Misc
                     </button>
                   </div>
 
@@ -3009,9 +3011,9 @@ const EventMap = ({
                         {[
                           { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
                           { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
-                          { value: 'afternoon', label: 'Afternoon', icon: '☀️', description: '12 PM - 5 PM' },
-                          { value: 'evening', label: 'Evening', icon: '🌆', description: '5 PM - 9 PM' },
-                          { value: 'night', label: 'Night', icon: '🌙', description: '9 PM - 5 AM' }
+                          { value: 'afternoon', label: 'Afternoon', icon: 'sun', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: 'sunset', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: 'moon', description: '9 PM - 5 AM' }
                         ].map(timeOption => {
                           // Calculate event count for this time period
                           const eventCount = events.filter(event => {
@@ -3079,7 +3081,7 @@ const EventMap = ({
                   {activeFilterTab === 'category' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
-                        💡 Tap categories to toggle them on/off. You can select multiple!
+                        Tap categories to toggle them on/off. You can select multiple!
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
                         {categories.map(category => {
@@ -3182,7 +3184,7 @@ const EventMap = ({
                   {activeFilterTab === 'misc' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
-                        ⚙️ Additional filters for event attributes
+                        Additional filters for event attributes
                       </div>
                       
                       {/* Fee Filter */}
@@ -3312,7 +3314,7 @@ const EventMap = ({
                       )}
                       {selectedLocation && (
                         <span className="px-2 py-0.5 text-xs bg-white/10 dark:bg-white/10 light:bg-black/10 text-white/80 dark:text-white/80 light:text-black/80 rounded-full">
-                          📍 Location set
+                          Location set
                         </span>
                       )}
                     </div>
@@ -3643,7 +3645,7 @@ const EventMap = ({
                   </div>
                   {selectedEvent.distance !== undefined && (
                     <div className="text-sm text-white/70 font-data ml-8">
-                      📍 {selectedEvent.distance.toFixed(1)} miles away
+                      \{selectedEvent.distance.toFixed(1)} miles away
                     </div>
                   )}
                   

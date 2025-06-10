@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ArrowRight, ArrowLeft, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { WebIcon } from './EventMap/WebIcons';
 
 const WelcomePopup = ({ onClose, forceShow = false }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -31,36 +32,32 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
 
   const steps = [
     {
-      title: "Welcome to todo-events! 🎉",
+      title: "Welcome to todo-events!",
       content: "Your Ultimate Local Event Discovery Platform",
       description: "Discover amazing local events in your community! From food festivals and concerts to art shows and sports events - find what's happening around you.",
       features: [
-        "📍 Find events by location and category",
-        "🔍 Discover hidden gems in your neighborhood", 
-        "🤝 Connect with your local community",
-        "📅 Share and create your own events"
+        <><WebIcon emoji="📍" size={16} className="mr-2 inline" />Find events by location and category</>,
+        <><WebIcon emoji="🔍" size={16} className="mr-2 inline" />Discover hidden gems in your neighborhood</>,
+        <><WebIcon emoji="🗣️" size={16} className="mr-2 inline" />Share your favorite events with friends</>,
+        <><WebIcon emoji="📅" size={16} className="mr-2 inline" />Share and create your own events</>
       ]
     },
     {
-      title: "Create & Share Events",
-      content: "Make your events visible to everyone!",
-      description: "Create beautiful event listings and share them instantly. Generate stunning shareable images for social media with just one click.",
+      title: "Smart Features",
+      description: "Intelligent event discovery and sharing",
       features: [
-        "🎨 Auto-generated share cards with event details",
-        "📱 Download images for Instagram & Facebook",
-        "📋 Copy direct links to share anywhere",
-        "🗺️ Interactive map with your exact location"
+        <><WebIcon emoji="🎨" size={16} className="mr-2 inline" />Auto-generated share cards with event details</>,
+        <><WebIcon emoji="🔗" size={16} className="mr-2 inline" />Smart event links with rich previews</>,
+        <><WebIcon emoji="📧" size={16} className="mr-2 inline" />Email contact forms for event organizers</>,
+        <><WebIcon emoji="🗺️" size={16} className="mr-2 inline" />Interactive map with your exact location</>
       ]
     },
     {
-      title: "Ready to explore?",
-      content: "Start discovering local events today!",
-      description: "Join thousands of people who use todo-events to stay connected with their community and never miss out on amazing local experiences.",
+      title: "Privacy First",
+      description: "Your data stays secure and private",
       features: [
-        "🆓 Free for attendees",
-        "📱 Works on all devices",
-        "🌟 No spam or unwanted notifications",
-        "🚀 New events added daily"
+        <><WebIcon emoji="🌟" size={16} className="mr-2 inline" />No spam or unwanted notifications</>,
+        <><WebIcon emoji="🚀" size={16} className="mr-2 inline" />New events added daily</>
       ]
     }
   ];
@@ -162,9 +159,10 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
                 <p className="text-center text-xs sm:text-sm text-themed-tertiary">
                   What type of events are you interested in?
                 </p>
-                <div className="bg-pin-blue/10 border border-pin-blue/20 rounded-lg p-3 mb-3">
-                  <p className="text-xs sm:text-sm text-themed-secondary text-center">
-                    💡 <strong>Tip:</strong> You can access this guide anytime by clicking the <strong>?</strong> button in the top left corner of the main page.
+                <div className="bg-blue-50 dark:bg-blue-900/30 frost:bg-blue-50/70 p-4 rounded-lg border border-blue-200 dark:border-blue-700 frost:border-blue-200/50">
+                  <p className="text-sm text-blue-800 dark:text-blue-200 frost:text-blue-800">
+                    <WebIcon emoji="💡" size={16} className="mr-2 inline" />
+                    <strong>Tip:</strong> You can access this guide anytime by clicking the <strong>?</strong> button in the top left corner of the main page.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

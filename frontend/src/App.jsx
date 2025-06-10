@@ -47,7 +47,7 @@ function App() {
             console.error('❌ Google Maps initialization failed:', error);
           }
         } else {
-          console.warn('⚠️ Google Maps API key not configured');
+          console.warn('Google Maps API key not configured');
         }
         
         // Small delay for better UX
