@@ -1245,7 +1245,7 @@ const EventMap = ({
   const filteredEvents = events.filter(event => {
     if (!event || !event.id || event.lat == null || event.lng == null) return false;
     
-    // Filter out past events  
+    // Filter out past events
     if (isEventPast(event)) return false;
     
     // Category filter
@@ -2086,15 +2086,15 @@ const EventMap = ({
                 >
                   <Mail className="w-4 h-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                   onClick={() => user ? window.open('/hosts', '_blank') : setShowWelcomePopup(true)}
                   title={user ? "Hosting Guide" : "Help & Tutorial"}
-                >
+                      >
                   <HelpCircle className="w-4 h-4" />
-                </Button>
+                      </Button>
                 <ThemeToggle />
                 {user ? (
                   <div className="flex items-center gap-2">
@@ -2465,7 +2465,7 @@ const EventMap = ({
                             };
                             return colorMap[categoryId] || 'border-gray-400';
                           };
-
+                          
                           return (
                             <button
                               key={category.id}
@@ -2648,7 +2648,7 @@ const EventMap = ({
                 {/* Event Count & Quick Actions */}
                 <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
                     {selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null && (
                       <span className="text-xs text-pin-blue bg-pin-blue/10 px-2 py-1 rounded-full flex items-center gap-1">
                         <Navigation className="w-3 h-3" />
@@ -2770,15 +2770,15 @@ const EventMap = ({
                   >
                     <Mail className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
                     onClick={() => user ? window.open('/hosts', '_blank') : setShowWelcomePopup(true)}
                     title={user ? "Hosting Guide" : "Help & Tutorial"}
-                  >
+                        >
                     <HelpCircle className="w-4 h-4" />
-                  </Button>
+                        </Button>
                   <ThemeToggle />
                   {user ? (
                     <div className="flex items-center gap-2">
@@ -3141,7 +3141,7 @@ const EventMap = ({
                             };
                             return colorMap[categoryId] || 'border-gray-400';
                           };
-
+                          
                           return (
                             <button
                               key={category.id}
@@ -3324,7 +3324,7 @@ const EventMap = ({
                 {/* Event Count & Quick Actions */}
                 <div className="flex items-center justify-between text-xs text-white/50 dark:text-white/50 light:text-black/50 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
+                  <span>{filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found</span>
                     {selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null && (
                       <span className="text-xs text-pin-blue bg-pin-blue/10 px-2 py-1 rounded-full flex items-center gap-1">
                         <Navigation className="w-3 h-3" />
@@ -3462,31 +3462,31 @@ const EventMap = ({
 
               {/* Desktop Event Details Panel */}
               {selectedEvent && (
-                <div className="hidden sm:block">
-                  <EventDetailsPanel
-                    event={selectedEvent}
-                    user={user}
+              <div className="hidden sm:block">
+                <EventDetailsPanel
+                  event={selectedEvent}
+                  user={user}
                     onClose={handleCloseEventDetails}
-                    onEdit={() => {
-                      setEditingEvent(selectedEvent);
-                      setIsCreateFormOpen(true);
-                      setSelectedLocation({
-                        lat: selectedEvent.lat,
-                        lng: selectedEvent.lng,
-                        address: selectedEvent.address
-                      });
-                    }}
-                    onDelete={handleEventDelete}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    shareCardRef={shareCardRef}
-                    downloadStatus={downloadStatus}
-                    handleDownload={handleDownload}
-                    handleCopyLink={handleCopyLink}
-                    handleFacebookShare={handleFacebookShare}
+                  onEdit={() => {
+                    setEditingEvent(selectedEvent);
+                    setIsCreateFormOpen(true);
+                    setSelectedLocation({
+                      lat: selectedEvent.lat,
+                      lng: selectedEvent.lng,
+                      address: selectedEvent.address
+                    });
+                  }}
+                  onDelete={handleEventDelete}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  shareCardRef={shareCardRef}
+                  downloadStatus={downloadStatus}
+                  handleDownload={handleDownload}
+                  handleCopyLink={handleCopyLink}
+                  handleFacebookShare={handleFacebookShare}
                     setExternalLinkDialog={setExternalLinkDialog}
-                  />
-                </div>
+                />
+              </div>
               )}
             </div>
           </div>
@@ -3530,15 +3530,15 @@ const EventMap = ({
             }}
           />
           
-          <div className={`
-            fixed bottom-0 left-0 right-0 
-            dialog-themed backdrop-blur-sm
-            border-t border-themed
+        <div className={`
+          fixed bottom-0 left-0 right-0 
+          dialog-themed backdrop-blur-sm
+          border-t border-themed
             rounded-t-lg z-50
-            sm:hidden
-            transform transition-transform duration-300
-            max-h-[80vh] overflow-y-auto shadow-2xl
-            ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
+          sm:hidden
+          transform transition-transform duration-300
+          max-h-[80vh] overflow-y-auto shadow-2xl
+          ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
           `}
           onClick={(e) => e.stopPropagation()}
           >

@@ -260,8 +260,10 @@ const ShareCard = ({ event }) => {
 
   const mapContainerStyle = {
     position: 'relative',
-    height: '120px',  // Reduced map height
-    flexShrink: 0
+    minHeight: '80px',   // Minimum height to ensure map is visible
+    maxHeight: '180px',  // Maximum height to prevent it from being too large
+    flex: '1 1 auto',    // Allow it to grow and shrink based on available space
+    flexShrink: 1        // Allow shrinking when content needs space
   };
 
   const mapImageStyle = {
@@ -277,23 +279,28 @@ const ShareCard = ({ event }) => {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
-    flex: 1,
-    minHeight: 0  // Allow content to shrink
+    flex: '1 1 auto',    // Allow this section to grow/shrink
+    minHeight: '120px',  // Minimum height to ensure content fits
+    overflow: 'hidden'   // Prevent content overflow
   };
 
   const descriptionStyle = {
-    fontSize: '13px',  // Larger description
+    fontSize: '13px',
     lineHeight: '1.4',
     color: textColor,
     margin: '0 0 12px 0',
-    fontWeight: '400'
+    fontWeight: '400',
+    flex: '0 0 auto',    // Don't shrink description
+    maxHeight: '80px',   // Limit description height
+    overflow: 'hidden'   // Hide overflow text
   };
 
   const detailsContainerStyle = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',  // Smaller gap between details
-    marginTop: 'auto'  // Push to bottom
+    gap: '6px',
+    flex: '1 1 auto',    // Allow details to use remaining space
+    minHeight: '0'       // Allow shrinking
   };
 
   const detailRowStyle = {
@@ -349,14 +356,49 @@ const ShareCard = ({ event }) => {
 
   // Helper function to determine if event is paid
   const isPaidEvent = (event) => {
-    if (event.price && event.price > 0) return true;
-    if (event.fee_required && 
-        event.fee_required.toLowerCase() !== 'free' && 
-        event.fee_required.toLowerCase() !== 'no' &&
-        event.fee_required.toLowerCase() !== 'none' &&
-        !event.fee_required.toLowerCase().includes('free')) {
+    // Check explicit price field
+    if (event.price && parseFloat(event.price) > 0) return true;
+    
+    // Check fee_required field with more comprehensive logic
+    if (event.fee_required) {
+      const feeText = event.fee_required.toLowerCase().trim();
+      
+      // Explicitly free indicators
+      if (feeText === 'free' || 
+          feeText === 'no' || 
+          feeText === 'none' || 
+          feeText === '$0' ||
+          feeText === '0' ||
+          feeText.includes('free admission') ||
+          feeText.includes('no cost') ||
+          feeText.includes('no charge')) {
+        return false;
+      }
+      
+      // If it contains dollar signs, price numbers, or payment terms, it's likely paid
+      if (feeText.includes('$') && !feeText.includes('$0') ||
+          /\$[1-9]/.test(feeText) ||
+          feeText.includes('fee') ||
+          feeText.includes('cost') ||
+          feeText.includes('charge') ||
+          feeText.includes('ticket') ||
+          feeText.includes('admission') ||
+          feeText.includes('entry') ||
+          /\d+/.test(feeText)) {
+        return true;
+      }
+    }
+    
+    // Check if title or description mentions payment
+    const titleText = (event.title || '').toLowerCase();
+    const descText = (event.description || '').toLowerCase();
+    
+    if (titleText.includes('$') || descText.includes('admission fee') || 
+        descText.includes('entry fee') || descText.includes('ticket required')) {
       return true;
     }
+    
+    // Default to free if no clear payment indicators
     return false;
   };
 

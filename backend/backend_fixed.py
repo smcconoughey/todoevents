@@ -42,12 +42,18 @@ import httpx
 load_dotenv()
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key-for-development-only")
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+     "fallback-secret-key-for-development-only")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
-# Environment configuration 
-IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
+# Environment configuration
+IS_PRODUCTION = os.getenv(
+    "RENDER",
+    False) or os.getenv(
+        "RAILWAY_ENVIRONMENT",
+         False)
 DB_URL = os.getenv("DATABASE_URL", None)
 
 # Password hashing setup
@@ -62,6 +68,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="EventFinder API")
 
 # Dynamic CORS origins based on environment
+
+
 def get_cors_origins():
     base_origins = [
         "http://localhost:5173",  # Local Vite dev server
@@ -69,16 +77,17 @@ def get_cors_origins():
         "http://localhost:5174",  # Admin dashboard local
         "http://127.0.0.1:5174",
     ]
-    
+
     if IS_PRODUCTION:
-        # In production, add common Render.com patterns including the actual deployed URL
+        # In production, add common Render.com patterns including the actual
+        # deployed URL
         production_origins = [
             "https://todoevents.onrender.com",  # Actual frontend URL
             "https://eventfinder-api.onrender.com",
-            "https://eventfinder-web.onrender.com", 
+            "https://eventfinder-web.onrender.com",
             "https://eventfinder-admin.onrender.com",
             "https://todoevents-1.onrender.com",
-            "https://todoevents-1-frontend.onrender.com", 
+            "https://todoevents-1-frontend.onrender.com",
             "https://todoevents-1-web.onrender.com",
             "https://todoevents-api.onrender.com",
             "https://todoevents-frontend.onrender.com",
@@ -89,16 +98,18 @@ def get_cors_origins():
         return base_origins
 
 # Custom CORS middleware for flexible Render.com handling
+
+
 @app.middleware("http")
 async def cors_handler(request, call_next):
     # Log the request for debugging (reduced logging for performance)
     origin = request.headers.get("origin")
-    
+
     # Handle preflight requests
     if request.method == "OPTIONS":
         # Determine allowed origin
         allowed_origin = "*"  # Default fallback
-        
+
         if origin:
             # Allow localhost and 127.0.0.1 for development
             if ("localhost" in origin or "127.0.0.1" in origin):
@@ -111,7 +122,7 @@ async def cors_handler(request, call_next):
                 allowed_origin = origin
             else:
                 allowed_origin = origin
-        
+
         # Return proper preflight response
         return Response(
             status_code=200,
@@ -123,50 +134,51 @@ async def cors_handler(request, call_next):
                 "Access-Control-Max-Age": "86400",
             }
         )
-    
+
     try:
         # Call the next middleware or endpoint handler
         response = await call_next(request)
-        
+
         # Add CORS headers to successful responses
         if origin:
             # Determine allowed origin for response
             allowed_origin = "*"
-            if ("localhost" in origin or "127.0.0.1" in origin or 
+            if ("localhost" in origin or "127.0.0.1" in origin or
                 ".onrender.com" in origin or "todo-events.com" in origin):
                 allowed_origin = origin
-            
+
             response.headers["Access-Control-Allow-Origin"] = allowed_origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma"
-        
+
         return response
-        
+
     except Exception as e:
-        # Handle exceptions and ensure CORS headers are added to error responses
+        # Handle exceptions and ensure CORS headers are added to error
+        # responses
         logger.error(f"Error during request processing: {str(e)}")
-        
+
         # Create response with error details
         status_code = 500
         if isinstance(e, HTTPException):
             status_code = e.status_code
-            
+
         error_response = JSONResponse(
             status_code=status_code,
             content={"detail": str(e)},
         )
-        
+
         # Add CORS headers to error response
         if origin:
             allowed_origin = "*"
-            if ("localhost" in origin or "127.0.0.1" in origin or 
+            if ("localhost" in origin or "127.0.0.1" in origin or
                 ".onrender.com" in origin or "todo-events.com" in origin):
                 allowed_origin = origin
-                
+
             error_response.headers["Access-Control-Allow-Origin"] = allowed_origin
             error_response.headers["Access-Control-Allow-Credentials"] = "true"
-            
+
         return error_response
 
 # CORS middleware with dynamic origins (as fallback)
@@ -184,30 +196,34 @@ async def cors_handler(request, call_next):
 DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
 
 # Enums
+
+
 class UserRole(str, Enum):
     ADMIN = "admin"
     USER = "user"
 
 # Database context manager with retry logic
+
+
 @contextmanager
 def get_db_transaction():
     """
     Get database connection with transaction control - properly handles autocommit for PostgreSQL
-    
-    CRITICAL FIX: PostgreSQL connections default to autocommit=True which prevents manual 
+
+    CRITICAL FIX: PostgreSQL connections default to autocommit=True which prevents manual
     transaction control (BEGIN/COMMIT/ROLLBACK). This function temporarily disables autocommit
     to allow explicit transaction management, then restores the original setting.
-    
+
     This fixes the "set_session cannot be used inside a transaction" error.
     """
     if IS_PRODUCTION and DB_URL:
         # In production with PostgreSQL
         import psycopg2
         from psycopg2.extras import RealDictCursor
-        
+
         conn = None
         original_autocommit = None
-        
+
         try:
             conn = psycopg2.connect(
                 DB_URL,
@@ -219,13 +235,14 @@ def get_db_transaction():
                 keepalives_count=3,
                 application_name='todoevents'
             )
-            
-            # Store original autocommit setting and disable it for transaction control
+
+            # Store original autocommit setting and disable it for transaction
+            # control
             original_autocommit = conn.autocommit
             conn.autocommit = False  # CRITICAL: Disable autocommit for manual transactions
-            
+
             yield conn
-            
+
         finally:
             if conn:
                 # Restore original autocommit setting
@@ -247,17 +264,18 @@ def get_db_transaction():
         finally:
             conn.close()
 
+
 @contextmanager
 def get_db():
     if IS_PRODUCTION and DB_URL:
         # In production with PostgreSQL
         import psycopg2
         from psycopg2.extras import RealDictCursor
-        
+
         # Reduced retry count for faster failover
         retry_count = 2  # Reduced from 3
         conn = None
-        
+
         for attempt in range(retry_count):
             try:
                 # Optimized connection parameters for faster connections
@@ -272,11 +290,11 @@ def get_db():
                     # Add connection pooling parameters
                     application_name='todoevents'
                 )
-                
+
                 # Set autocommit for read operations to reduce lock time
                 conn.autocommit = True
                 break  # Connection successful, exit retry loop
-                
+
             except Exception as e:
                 if conn:
                     try:
@@ -284,21 +302,23 @@ def get_db():
                         conn = None
                     except:
                         pass
-                
+
                 error_msg = str(e)
-                
+
                 if attempt < retry_count - 1:
                     # Faster backoff for production
                     wait_time = 1  # Reduced wait time
                     time.sleep(wait_time)
                 else:
-                    logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
-                    # Instead of falling back to SQLite, raise a proper HTTP exception
+                    logger.critical(
+    f"Failed to connect to database after {retry_count} attempts: {error_msg}")
+                    # Instead of falling back to SQLite, raise a proper HTTP
+                    # exception
                     raise HTTPException(
                         status_code=503,
                         detail="Database connection failed. Please try again later."
                     )
-        
+
         # If we made it here, conn should be valid
         try:
             yield conn
@@ -319,18 +339,23 @@ def get_db():
             conn.close()
 
 # Helper function to get placeholder style based on environment
+
+
 def get_placeholder():
     if IS_PRODUCTION and DB_URL:
         return "%s"  # PostgreSQL uses %s
     else:
         return "?"   # SQLite uses ?
 
-# Helper function to get count from cursor result (handles both SQLite and PostgreSQL)
+# Helper function to get count from cursor result (handles both SQLite and
+# PostgreSQL)
+
+
 def get_count_from_result(cursor_result):
     """Extract count value from cursor result, handling both SQLite tuples and PostgreSQL RealDictRow"""
     if cursor_result is None:
         return 0
-    
+
     # Check if this is a dict-like object (PostgreSQL RealDictRow)
     if isinstance(cursor_result, dict) or hasattr(cursor_result, 'get'):
         # PostgreSQL RealDictCursor returns dict-like objects
@@ -349,7 +374,9 @@ def get_count_from_result(cursor_result):
         return 0
     else:
         # SQLite returns tuples
-        return cursor_result[0] if cursor_result and len(cursor_result) > 0 else 0
+        return cursor_result[0] if cursor_result and len(
+            cursor_result) > 0 else 0
+
 
 def format_cursor_row(row, column_names):
     """Format a single cursor row for both SQLite and PostgreSQL compatibility"""
@@ -358,18 +385,22 @@ def format_cursor_row(row, column_names):
         return {col: row.get(col) for col in column_names}
     else:
         # SQLite returns tuples
-        return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
+        return {
+    col: row[i] if i < len(row) else None for i,
+     col in enumerate(column_names)}
 
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
+
+
 def init_db():
     try:
         with get_db() as conn:
             c = conn.cursor()
-            
+
             if IS_PRODUCTION and DB_URL:
                 # PostgreSQL table creation
-                
+
                 # Create users table
                     c.execute('''
                     CREATE TABLE IF NOT EXISTS users (
@@ -380,7 +411,7 @@ def init_db():
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
-                
+
                 # Create events table with user relationship
                     c.execute('''
                     CREATE TABLE IF NOT EXISTS events (
@@ -408,8 +439,9 @@ def init_db():
                         FOREIGN KEY(created_by) REFERENCES users(id)
                     )
                 ''')
-                
-                # Add migration for existing events to have start_time and end_time
+
+                # Add migration for existing events to have start_time and
+                # end_time
                 try:
                     # Use PostgreSQL-compatible column checking method with fallback
                     def column_exists(table_name, column_name):
