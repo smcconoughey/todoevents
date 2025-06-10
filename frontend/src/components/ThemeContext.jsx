@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 // Theme options
 export const THEME_DARK = 'dark';
 export const THEME_LIGHT = 'light';
+export const THEME_GLASS = 'glass';
 
 // Create the Theme Context
 export const ThemeContext = createContext({
@@ -26,7 +27,7 @@ export const ThemeProvider = ({ children }) => {
     const savedTheme = localStorage.getItem('theme');
     console.log('Initial theme from localStorage:', savedTheme);
     
-    if (savedTheme) {
+    if (savedTheme && [THEME_DARK, THEME_LIGHT, THEME_GLASS].includes(savedTheme)) {
       return savedTheme;
     }
     
@@ -44,23 +45,31 @@ export const ThemeProvider = ({ children }) => {
     document.documentElement.setAttribute('data-theme', theme);
     
     // Apply additional classes to body for more styling options
-    if (theme === THEME_DARK) {
-      document.body.classList.add('dark-mode');
-      document.body.classList.remove('light-mode');
-    } else {
-      document.body.classList.add('light-mode');
-      document.body.classList.remove('dark-mode');
-    }
+    document.body.classList.remove('dark-mode', 'light-mode', 'glass-mode');
+    document.body.classList.add(`${theme}-mode`);
     
     // Store in localStorage for persistence
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Toggle between light and dark themes
+  // Cycle through light, dark, and glass themes
   const toggleTheme = () => {
     console.log('Toggle theme called, current theme:', theme);
     setTheme(prevTheme => {
-      const newTheme = prevTheme === THEME_DARK ? THEME_LIGHT : THEME_DARK;
+      let newTheme;
+      switch (prevTheme) {
+        case THEME_LIGHT:
+          newTheme = THEME_DARK;
+          break;
+        case THEME_DARK:
+          newTheme = THEME_GLASS;
+          break;
+        case THEME_GLASS:
+          newTheme = THEME_LIGHT;
+          break;
+        default:
+          newTheme = THEME_LIGHT;
+      }
       console.log('Setting new theme to:', newTheme);
       return newTheme;
     });

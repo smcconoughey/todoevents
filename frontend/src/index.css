@@ -89,6 +89,113 @@
   --warning-color: #D97706;     /* Darker warning for light mode */
 }
 
+/* Glass theme variables - Apple-inspired translucent design */
+[data-theme='glass'],
+.glass-mode {
+  /* Brand Colors - Glass Mode */
+  --spark-yellow: #FFD700;      /* Bright gold for glass effect */
+  --spark-yellow-muted: #FFC107; 
+  --spark-yellow-text: #FFD700;  
+  --pin-blue: #007AFF;          /* Apple system blue */
+  --pin-blue-muted: #0056CC;    
+  --vibrant-magenta: #FF2D92;   /* Apple system pink */
+  --fresh-teal: #30D158;        /* Apple system mint */
+  
+  /* Glass-specific colors */
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-hover: rgba(255, 255, 255, 0.15);
+  --glass-active: rgba(255, 255, 255, 0.25);
+  
+  /* Neutrals - Glass Mode with translucency */
+  --bg-main: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bg-card: rgba(255, 255, 255, 0.1);
+  --bg-card-hover: rgba(255, 255, 255, 0.15);
+  --bg-card-active: rgba(255, 255, 255, 0.2);
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.8);
+  --text-tertiary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --border-color: rgba(255, 255, 255, 0.2);
+  --border-color-hover: rgba(255, 255, 255, 0.3);
+  
+  /* Button Text Colors - Glass Mode */
+  --btn-yellow-text: #1A1A1A;   
+  --btn-blue-text: #FFFFFF;     
+  
+  /* Semantic Colors - Glass Mode */
+  --accent-color: var(--spark-yellow);
+  --secondary-color: var(--pin-blue);
+  --error-color: var(--vibrant-magenta);
+  --success-color: var(--fresh-teal);
+  --warning-color: #FF9500;     /* Apple system orange */
+}
+
+/* Glass theme specific styling */
+.glass-mode {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-attachment: fixed;
+}
+
+.glass-mode .bg-themed-surface {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.glass-mode .bg-themed-surface-hover:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.glass-mode .bg-themed-surface-active {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Glass cards and dialogs */
+.glass-mode .dialog-themed,
+.glass-mode [data-radix-dialog-content] {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Glass input fields */
+.glass-mode .input-themed {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.glass-mode .input-themed:focus {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: var(--pin-blue) !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+}
+
+/* Glass buttons */
+.glass-mode .btn-primary {
+  background: rgba(255, 215, 0, 0.9) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-mode .btn-secondary {
+  background: rgba(0, 122, 255, 0.9) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Glass calendar */
+.glass-mode .calendar-themed {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
 /* Apply theme variables to Tailwind elements */
 @layer base {
   /* Global font enforcement - ensure Inter loads everywhere */

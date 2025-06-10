@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
-import { ThemeContext, THEME_LIGHT, THEME_DARK } from '../../components/ThemeContext';
+import { Sun, Moon, Snowflake } from 'lucide-react';
+import { ThemeContext, THEME_LIGHT, THEME_DARK, THEME_GLASS } from '../../components/ThemeContext';
 import { Button } from './button';
 
 const ThemeToggle = () => {
@@ -21,24 +21,31 @@ const ThemeToggle = () => {
     setIsToggling(true);
     
     // Determine the new theme
-    const newTheme = theme === THEME_DARK ? THEME_LIGHT : THEME_DARK;
+    let newTheme;
+    switch (theme) {
+      case THEME_LIGHT:
+        newTheme = THEME_DARK;
+        break;
+      case THEME_DARK:
+        newTheme = THEME_GLASS;
+        break;
+      case THEME_GLASS:
+        newTheme = THEME_LIGHT;
+        break;
+      default:
+        newTheme = THEME_LIGHT;
+    }
+    
     console.log('ThemeToggle: switching to new theme:', newTheme);
     
     // Directly manipulate DOM in addition to context update for immediate visual feedback
     document.documentElement.setAttribute('data-theme', newTheme);
     
     // Add/remove the theme classes
-    if (newTheme === THEME_LIGHT) {
-      document.documentElement.classList.add('light-mode');
-      document.documentElement.classList.remove('dark-mode');
-      document.body.classList.add('light-mode');
-      document.body.classList.remove('dark-mode');
-    } else {
-      document.documentElement.classList.add('dark-mode');
-      document.documentElement.classList.remove('light-mode');
-      document.body.classList.add('dark-mode');
-      document.body.classList.remove('light-mode');
-    }
+    document.documentElement.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+    document.documentElement.classList.add(`${newTheme}-mode`);
+    document.body.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+    document.body.classList.add(`${newTheme}-mode`);
     
     // Persist the setting in localStorage for a more consistent experience
     localStorage.setItem('theme', newTheme);
@@ -52,30 +59,59 @@ const ThemeToggle = () => {
     }, 600);
   };
 
-  const isDark = localTheme === THEME_DARK;
+  // Get theme-specific styling and labels
+  const getThemeInfo = () => {
+    switch (localTheme) {
+      case THEME_LIGHT:
+        return {
+          icon: Sun,
+          label: 'Switch to dark mode',
+          iconClass: 'text-amber-500',
+          bgClass: 'hover:bg-amber-50 dark:hover:bg-amber-950'
+        };
+      case THEME_DARK:
+        return {
+          icon: Moon,
+          label: 'Switch to glass mode',
+          iconClass: 'text-indigo-400',
+          bgClass: 'hover:bg-indigo-50 dark:hover:bg-indigo-950'
+        };
+      case THEME_GLASS:
+        return {
+          icon: Snowflake,
+          label: 'Switch to light mode',
+          iconClass: 'text-cyan-400',
+          bgClass: 'hover:bg-cyan-50 dark:hover:bg-cyan-950'
+        };
+      default:
+        return {
+          icon: Sun,
+          label: 'Switch theme',
+          iconClass: 'text-amber-500',
+          bgClass: 'hover:bg-amber-50'
+        };
+    }
+  };
+
+  const themeInfo = getThemeInfo();
+  const IconComponent = themeInfo.icon;
   
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={handleToggle}
-      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-      className={`relative overflow-hidden w-10 h-10 rounded-full bg-opacity-20 transition-colors ${
-        isToggling ? 'animate-pulse' : ''
-      }`}
+      aria-label={themeInfo.label}
+      className={`relative overflow-hidden w-10 h-10 rounded-full bg-opacity-20 transition-all duration-300 ${
+        themeInfo.bgClass
+      } ${isToggling ? 'animate-pulse scale-105' : 'scale-100'}`}
     >
-      <span 
-        className="absolute inset-0 flex items-center justify-center transition-opacity duration-300" 
-        style={{ opacity: isDark ? 1 : 0 }}
-      >
-        <Sun size={18} className={`yellow-text-themed ${isDark && isToggling ? 'animate-spin' : ''}`} />
-      </span>
-      <span 
-        className="absolute inset-0 flex items-center justify-center transition-opacity duration-300" 
-        style={{ opacity: isDark ? 0 : 1 }}
-      >
-        <Moon size={18} className={`text-indigo-400 ${!isDark && isToggling ? 'animate-spin' : ''}`} />
-      </span>
+      <IconComponent 
+        size={18} 
+        className={`${themeInfo.iconClass} transition-all duration-300 ${
+          isToggling ? 'animate-spin' : ''
+        }`} 
+      />
     </Button>
   );
 };
