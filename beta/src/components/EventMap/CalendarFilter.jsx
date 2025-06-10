@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { cn } from '../../lib/utils.js';
+import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 
 const CalendarFilter = ({ selectedDate, onDateSelect, onClear }) => {

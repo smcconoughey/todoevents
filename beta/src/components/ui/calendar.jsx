@@ -1,7 +1,7 @@
 // src/components/ui/calendar.jsx
 import React from "react";
 import { DayPicker } from "react-day-picker";
-import { cn } from "../../lib/utils.js";
+import { cn } from "../../lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
