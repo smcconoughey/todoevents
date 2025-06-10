@@ -2333,11 +2333,11 @@ const EventMap = ({
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
-                          { value: 'all', label: 'All Times', icon: 'clock', description: 'Any time' },
-                          { value: 'morning', label: 'Morning', icon: 'sunrise', description: '5 AM - 12 PM' },
-                          { value: 'afternoon', label: 'Afternoon', icon: 'sun', description: '12 PM - 5 PM' },
-                          { value: 'evening', label: 'Evening', icon: 'sunset', description: '5 PM - 9 PM' },
-                          { value: 'night', label: 'Night', icon: 'moon', description: '9 PM - 5 AM' }
+                          { value: 'all', label: 'All Times', icon: '', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: '', description: '5 AM - 12 PM' },
+                          { value: 'afternoon', label: 'Afternoon', icon: '', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: '', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: '', description: '9 PM - 5 AM' }
                         ].map(timeOption => {
                           // Calculate event count for this time period
                           const eventCount = events.filter(event => {
@@ -2381,7 +2381,7 @@ const EventMap = ({
                               onClick={() => setSelectedTime(timeOption.value)}
                             >
                               <div className="flex items-center gap-1.5 mb-1">
-                                <span className="text-sm">{timeOption.icon}</span>
+                                
                                 <span className="text-xs font-medium">{timeOption.label}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${
@@ -3009,11 +3009,11 @@ const EventMap = ({
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
-                          { value: 'all', label: 'All Times', icon: 'clock', description: 'Any time' },
-                          { value: 'morning', label: 'Morning', icon: 'sunrise', description: '5 AM - 12 PM' },
-                          { value: 'afternoon', label: 'Afternoon', icon: 'sun', description: '12 PM - 5 PM' },
-                          { value: 'evening', label: 'Evening', icon: 'sunset', description: '5 PM - 9 PM' },
-                          { value: 'night', label: 'Night', icon: 'moon', description: '9 PM - 5 AM' }
+                          { value: 'all', label: 'All Times', icon: '', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: '', description: '5 AM - 12 PM' },
+                          { value: 'afternoon', label: 'Afternoon', icon: '', description: '12 PM - 5 PM' },
+                          { value: 'evening', label: 'Evening', icon: '', description: '5 PM - 9 PM' },
+                          { value: 'night', label: 'Night', icon: '', description: '9 PM - 5 AM' }
                         ].map(timeOption => {
                           // Calculate event count for this time period
                           const eventCount = events.filter(event => {
@@ -3057,7 +3057,7 @@ const EventMap = ({
                               onClick={() => setSelectedTime(timeOption.value)}
                             >
                               <div className="flex items-center gap-1.5 mb-1">
-                                <span className="text-sm">{timeOption.icon}</span>
+                                
                                 <span className="text-xs font-medium">{timeOption.label}</span>
                               </div>
                               <div className={`text-xs transition-colors duration-200 ${

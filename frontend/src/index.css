@@ -30,7 +30,7 @@
   --bg-card: #1a1a1a;
   --bg-card-hover: rgba(45, 45, 45, 0.95);
   --bg-card-active: rgba(60, 60, 60, 0.95);
-  --text-primary: #FFFFFF;      /* Pure white for maximum contrast */
+  --text-primary: #FAFBFC;      /* Pure white for maximum contrast */
   --text-secondary: rgba(255, 255, 255, 0.85); /* Slightly muted white */
   --text-tertiary: rgba(255, 255, 255, 0.6);   /* More muted white */
   --text-muted: rgba(255, 255, 255, 0.4);      /* Very muted white */
@@ -39,7 +39,7 @@
   
   /* Button Text Colors - Dark Mode */
   --btn-yellow-text: #1A1A1A;   /* Dark text on yellow background */
-  --btn-blue-text: #FFFFFF;     /* White text on blue background */
+  --btn-blue-text: #FAFBFC;     /* White text on blue background */
   
   /* Semantic Colors - Dark Mode */
   --accent-color: var(--spark-yellow);
@@ -66,10 +66,10 @@
   --fresh-teal: #20A39E;        /* Darker teal for better contrast */
   
   /* Neutrals - Light Mode */
-  --bg-main: #FFFFFF;           /* White background */
-  --bg-card: rgba(248, 249, 250, 0.9);
-  --bg-card-hover: rgba(233, 236, 239, 0.9);
-  --bg-card-active: rgba(222, 226, 230, 0.9);
+  --bg-main: #FAFBFC;           /* White background */
+  --bg-card: rgba(251, 252, 253, 0.95);
+  --bg-card-hover: rgba(245, 247, 250, 0.95);
+  --bg-card-active: rgba(240, 243, 247, 0.95);
   --text-primary: #1A1A1A;      /* Dark text */
   --text-secondary: rgba(26, 26, 26, 0.85); /* Slightly muted dark */
   --text-tertiary: rgba(26, 26, 26, 0.6);   /* More muted dark */
@@ -79,7 +79,7 @@
   
   /* Button Text Colors - Light Mode */
   --btn-yellow-text: #1A1A1A;   /* Dark text on yellow background */
-  --btn-blue-text: #FFFFFF;     /* White text on blue background */
+  --btn-blue-text: #FAFBFC;     /* White text on blue background */
   
   /* Semantic Colors - Light Mode */
   --accent-color: var(--spark-yellow);
@@ -115,20 +115,20 @@
   --glass-text-shadow-light: 0 0.5px 1px rgba(0, 0, 0, 0.2); /* Light text shadow */
   
   /* Frost Neutrals - Light and clean */
-  --bg-main: #E1F5FE;           /* Light blue background instead of gradient */
+  --bg-main: #D6F3FF;           /* Light blue background instead of gradient */
   --bg-card: var(--glass-bg);
   --bg-card-hover: var(--glass-hover);
   --bg-card-active: var(--glass-active);
-  --text-primary: rgba(30, 64, 100, 0.95);         /* Dark blue text for contrast */
-  --text-secondary: rgba(30, 64, 100, 0.8);        /* Secondary dark blue */
-  --text-tertiary: rgba(30, 64, 100, 0.65);        /* Tertiary dark blue */
-  --text-muted: rgba(30, 64, 100, 0.5);            /* Muted dark blue */
+  --text-primary: #000000;         /* Dark blue text for contrast */
+  --text-secondary: rgba(0, 0, 0, 0.85);        /* Secondary dark blue */
+  --text-tertiary: rgba(0, 0, 0, 0.65);        /* Tertiary dark blue */
+  --text-muted: rgba(0, 0, 0, 0.5);            /* Muted dark blue */
   --border-color: rgba(255, 255, 255, 0.35);
   --border-color-hover: rgba(255, 255, 255, 0.5);
   
   /* Button Text Colors - Frost Mode */
   --btn-yellow-text: #1A1A1A;   
-  --btn-blue-text: #FFFFFF;     
+  --btn-blue-text: #FAFBFC;     
   
   /* Semantic Colors - Frost Mode */
   --accent-color: var(--spark-yellow);
@@ -147,9 +147,9 @@
   --radius-pill: 50px;          /* Pill-shaped elements */
 }
 
-/* Glass theme specific styling */
+/* Frost theme specific styling */
 .glass-mode {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #E1F5FE;
   background-attachment: fixed;
 }
 
@@ -1084,3 +1084,44 @@ body {
 [data-theme='light'] .hover\:text-white\/70:hover {
   color: var(--text-secondary) !important;
 }
+/* Glass/Frost mode specific text overrides - Force all text to be black */
+[data-theme='glass'] .text-white,
+[data-theme='glass'] .text-white\/90,
+[data-theme='glass'] .text-white\/80,
+[data-theme='glass'] .text-white\/70,
+[data-theme='glass'] .text-white\/60,
+[data-theme='glass'] .text-white\/50,
+[data-theme='glass'] .text-white\/40,
+[data-theme='glass'] .text-white\/30,
+[data-theme='glass'] .text-white\/20 {
+  color: #000000 !important;
+}
+
+[data-theme='glass'] .text-white\/70 {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+[data-theme='glass'] .text-white\/60 {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+[data-theme='glass'] .text-white\/50 {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+[data-theme='glass'] .text-white\/40,
+[data-theme='glass'] .text-white\/30,
+[data-theme='glass'] .text-white\/20 {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme='glass'] button.text-white,
+[data-theme='glass'] .text-white.hover\:text-white:hover,
+[data-theme='glass'] .hover\:text-white:hover {
+  color: #000000 !important;
+}
+
+[data-theme='glass'] .text-white\/70.hover\:text-white:hover,
+[data-theme='glass'] .hover\:text-white\/70:hover {
+  color: rgba(0, 0, 0, 0.85) !important;
+} 

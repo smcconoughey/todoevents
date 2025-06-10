@@ -957,7 +957,7 @@ const AdminDashboard = () => {
             setSuccess(`Successfully imported ${response.success_count} events!${response.error_count > 0 ? ` ${response.error_count} events had errors.` : ''}`);
             if (response.error_count === 0) {
               setJsonInput(''); // Clear input only on complete success
-            }
+          }
           }
           if (response.error_count > 0 && response.success_count === 0) {
             setBulkError(`All ${response.error_count} events failed to import. Check errors below.`);
@@ -1031,7 +1031,7 @@ const AdminDashboard = () => {
             <div className="mt-3 text-sm text-gray-600">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
+              <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
                   <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency, fee_required, event_url, host_name</p>
                   <p><strong>UX Enhancement fields:</strong></p>
                   <ul className="ml-4 list-disc text-xs">
@@ -1043,9 +1043,9 @@ const AdminDashboard = () => {
                 <div>
                   <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, agriculture, other</p>
                   <p><strong>Optional secondary category:</strong> Use the same category IDs as above. Adds more descriptive categorization to events.</p>
-                  <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
-                  <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
-                  <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
+              <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
+              <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
+              <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
                   <p><strong>Batch size:</strong> Maximum 100 events per import for optimal performance</p>
                 </div>
               </div>
@@ -1053,12 +1053,12 @@ const AdminDashboard = () => {
           </div>
 
           {/* JSON Input */}
-                      <div className="space-y-4">
+          <div className="space-y-4">
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  JSON Data (Paste your event data here)
-                </label>
+                JSON Data (Paste your event data here)
+              </label>
                 <div className="text-xs text-gray-500">
                   {jsonInput.length > 0 && `${jsonInput.length} characters`}
                 </div>
@@ -2130,7 +2130,7 @@ const AdminDashboard = () => {
     return (
       <div className="space-y-6">
         {/* Filters and Controls */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Analytics Dashboard</h2>
             <div className="flex items-center gap-2">
@@ -2149,8 +2149,8 @@ const AdminDashboard = () => {
                 />
                 Auto-refresh
               </label>
-            </div>
-          </div>
+              </div>
+              </div>
 
           {/* Filter Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -2185,7 +2185,7 @@ const AdminDashboard = () => {
                 <option value="arts">Arts & Culture</option>
                 <option value="sports">Sports & Fitness</option>
               </select>
-            </div>
+          </div>
 
             {/* Exclude Users */}
             <div>
