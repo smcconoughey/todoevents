@@ -371,7 +371,7 @@ def init_db():
                 # PostgreSQL table creation
                 
                 # Create users table
-                    c.execute('''
+                c.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         id SERIAL PRIMARY KEY,
                         email TEXT UNIQUE NOT NULL,
@@ -382,7 +382,7 @@ def init_db():
                 ''')
                 
                 # Create events table with user relationship
-                    c.execute('''
+                c.execute('''
                     CREATE TABLE IF NOT EXISTS events (
                         id SERIAL PRIMARY KEY,
                         title TEXT NOT NULL,
@@ -499,7 +499,7 @@ def init_db():
                         pass
                 
                 # Create activity_logs table
-                    c.execute('''
+                c.execute('''
                     CREATE TABLE IF NOT EXISTS activity_logs (
                         id SERIAL PRIMARY KEY,
                         user_id INTEGER,
@@ -511,7 +511,7 @@ def init_db():
                 ''')
                 
                 # Create interest tracking table
-                    c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
+                c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
                             id SERIAL PRIMARY KEY,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
@@ -523,7 +523,7 @@ def init_db():
                         )''')
                 
                 # Create view tracking table
-                    c.execute('''CREATE TABLE IF NOT EXISTS event_views (
+                c.execute('''CREATE TABLE IF NOT EXISTS event_views (
                             id SERIAL PRIMARY KEY,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
@@ -535,7 +535,7 @@ def init_db():
                         )''')
                 
                 # Create page visits tracking table
-                    c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
+                c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
                             id SERIAL PRIMARY KEY,
                             page_type TEXT NOT NULL,
                             page_path TEXT NOT NULL,
@@ -550,7 +550,7 @@ def init_db():
                 logger.info("✅ Interest and view tracking tables created/verified")
             else:
                 # SQLite table creation (existing code)
-                    c.execute('''CREATE TABLE IF NOT EXISTS users (
+                c.execute('''CREATE TABLE IF NOT EXISTS users (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             email TEXT UNIQUE NOT NULL,
                             hashed_password TEXT NOT NULL,
@@ -558,8 +558,8 @@ def init_db():
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )''')
                 
-                    # Check if events table exists and needs migration
-                    c.execute('''PRAGMA table_info(events)''')
+                # Check if events table exists and needs migration
+                c.execute('''PRAGMA table_info(events)''')
                 columns = [column[1] for column in c.fetchall()]
                 
                 if 'events' not in [table[0] for table in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]:
@@ -636,7 +636,7 @@ def init_db():
                         c.execute('''ALTER TABLE events ADD COLUMN secondary_category TEXT''')
                         logger.info("Added secondary_category column")
                 
-                    c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             user_id INTEGER,
                             action TEXT NOT NULL,
@@ -646,7 +646,7 @@ def init_db():
                         )''')
                 
                 # Create interest tracking table
-                    c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
+                c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
@@ -658,7 +658,7 @@ def init_db():
                         )''')
                 
                 # Create view tracking table
-                    c.execute('''CREATE TABLE IF NOT EXISTS event_views (
+                c.execute('''CREATE TABLE IF NOT EXISTS event_views (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             event_id INTEGER NOT NULL,
                             user_id INTEGER,
@@ -670,22 +670,22 @@ def init_db():
                         )''')
                 
                 # Create page visits tracking table
-                    c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
+                c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             page_type TEXT NOT NULL,
                             page_path TEXT NOT NULL,
-                                    user_id INTEGER,
+                            user_id INTEGER,
                             browser_fingerprint TEXT NOT NULL DEFAULT 'anonymous',
                             visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
-                                )''')
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
                 
                 # SQLite does not have information_schema, so we skip the schema fixes
                 # The tracking tables are created correctly above for SQLite
             
             # Ensure password_resets table exists
             if IS_PRODUCTION and DB_URL:
-                    c.execute('''
+                c.execute('''
                     CREATE TABLE IF NOT EXISTS password_resets (
                         id SERIAL PRIMARY KEY,
                         email TEXT NOT NULL,
@@ -695,7 +695,7 @@ def init_db():
                     )
                 ''')
             else:
-                    c.execute('''
+                c.execute('''
                     CREATE TABLE IF NOT EXISTS password_resets (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         email TEXT NOT NULL,
@@ -721,7 +721,7 @@ def create_default_admin_user(conn):
         # Check if any admin users exist
         cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
         admin_count = get_count_from_result(cursor.fetchone())
-            
+        
         if admin_count == 0:
             logger.info("No admin users found. Creating default admin user...")
             
@@ -1053,7 +1053,7 @@ class AutomatedTaskManager:
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>'''
-        
+
         # Add location-based discovery pages for major cities
         major_cities = [
             'new-york', 'los-angeles', 'chicago', 'houston', 'phoenix', 'philadelphia',
@@ -1075,7 +1075,7 @@ class AutomatedTaskManager:
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>'''
-        
+
         sitemap += f'''
 
   <!-- "Free Events in [City]" Pages -->'''
@@ -1347,10 +1347,10 @@ class AutomatedTaskManager:
                     cursor.execute("ROLLBACK")
                     logger.error(f"❌ Event cleanup failed, transaction rolled back: {cleanup_error}")
                     raise
-                    
+                
         except Exception as e:
             logger.error(f"❌ Event cleanup automation error: {e}")
-    
+
     async def update_search_index(self):
         """Update search index after cleanup"""
         try:
@@ -1965,7 +1965,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             
             # First check connection health with a simple query
             try:
-                    c.execute("SELECT 1")
+                c.execute("SELECT 1")
             except Exception as e:
                 logger.error(f"Database health check failed during login: {str(e)}")
                 raise HTTPException(
@@ -1976,7 +1976,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             # Find user by email - with timeout handling
             user = None
             try:
-                    c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (form_data.username,))
+                c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (form_data.username,))
                 user = c.fetchone()
                 
                 if not user:
@@ -2079,7 +2079,7 @@ async def create_user(user: UserCreate):
             
             # First check connection health with a simple query
             try:
-                    c.execute("SELECT 1")
+                c.execute("SELECT 1")
             except Exception as e:
                 logger.error(f"Database health check failed during registration: {str(e)}")
                 raise HTTPException(
@@ -2089,7 +2089,7 @@ async def create_user(user: UserCreate):
             
             # Check if email exists - with timeout handling
             try:
-                    c.execute(f"SELECT id FROM users WHERE email = {placeholder}", (user.email,))
+                c.execute(f"SELECT id FROM users WHERE email = {placeholder}", (user.email,))
                 existing_user = c.fetchone()
                 if existing_user:
                     logger.info(f"Registration failed: Email already exists - {user.email}")
@@ -2148,7 +2148,7 @@ async def create_user(user: UserCreate):
             try:
                     
                 logger.info(f"Fetching created user with ID {last_id}")
-                    c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (last_id,))
+                c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (last_id,))
                 user_data = dict(c.fetchone())
                 
                 # Return user data along with password strength
@@ -2252,7 +2252,7 @@ async def request_password_reset(request: PasswordResetRequest):
             # Store the reset code in the database
             # First, create a password_resets table if it doesn't exist
             if IS_PRODUCTION and DB_URL:
-                    c.execute('''
+                c.execute('''
                     CREATE TABLE IF NOT EXISTS password_resets (
                         id SERIAL PRIMARY KEY,
                         email TEXT NOT NULL,
@@ -2262,7 +2262,7 @@ async def request_password_reset(request: PasswordResetRequest):
                     )
                 ''')
             else:
-                    c.execute('''
+                c.execute('''
                     CREATE TABLE IF NOT EXISTS password_resets (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         email TEXT NOT NULL,
@@ -2398,7 +2398,7 @@ async def list_events(
     """
     placeholder = get_placeholder()
     
-    # Validate and limit pagination parameters
+    # Validate and limit pagination parameters  
     limit = min(max(limit or 500, 1), 1000)  # Between 1 and 1000
     offset = max(offset or 0, 0)
     
@@ -3155,7 +3155,7 @@ async def update_event(
                     cursor.execute("ROLLBACK")
                     raise HTTPException(status_code=404, detail="Event not found")
                 
-                    # Check if current user is the creator or an admin
+                # Check if current user is the creator or an admin
                 if (current_user['id'] != existing_event['created_by'] and 
                     current_user['role'] != UserRole.ADMIN):
                     cursor.execute("ROLLBACK")
@@ -3278,7 +3278,7 @@ async def delete_event(
                     cursor.execute("ROLLBACK")
                     raise HTTPException(status_code=404, detail="Event not found")
                 
-                    # Check if current user is the creator or an admin
+                # Check if current user is the creator or an admin
                 if (current_user['id'] != existing_event['created_by'] and 
                     current_user['role'] != UserRole.ADMIN):
                     cursor.execute("ROLLBACK")
@@ -3469,7 +3469,7 @@ async def update_user_role(
             
             # Prevent removing last admin
             if user['role'] == UserRole.ADMIN:
-                    c.execute(f"SELECT COUNT(*) as admin_count FROM users WHERE role = {placeholder}", (UserRole.ADMIN,))
+                c.execute(f"SELECT COUNT(*) as admin_count FROM users WHERE role = {placeholder}", (UserRole.ADMIN,))
                 admin_count = c.fetchone()['admin_count']
                 
                 if admin_count <= 1:
@@ -3560,7 +3560,7 @@ async def get_activity_logs(
             
             # Create an activity logs table if it doesn't exist
             if IS_PRODUCTION and DB_URL:
-                    c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER,
                     action TEXT NOT NULL,
@@ -3569,7 +3569,7 @@ async def get_activity_logs(
                     FOREIGN KEY(user_id) REFERENCES users(id)
                 )''')
             else:
-                    c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER,
                     action TEXT NOT NULL,
@@ -3606,7 +3606,7 @@ def log_activity(user_id: int, action: str, details: str = None):
             
             # Ensure activity_logs table exists
             if IS_PRODUCTION and DB_URL:
-                    c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER,
                     action TEXT NOT NULL,
@@ -3615,7 +3615,7 @@ def log_activity(user_id: int, action: str, details: str = None):
                     FOREIGN KEY(user_id) REFERENCES users(id)
                 )''')
             else:
-                    c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER,
                     action TEXT NOT NULL,
@@ -4270,50 +4270,50 @@ async def debug_schema():
             if IS_PRODUCTION and DB_URL:
                 try:
                     c.execute("""
-                    SELECT column_name, data_type, is_nullable, column_default 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'events' 
-                    ORDER BY ordinal_position
-                """)
+                        SELECT column_name, data_type, is_nullable, column_default 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'events' 
+                        ORDER BY ordinal_position
+                    """)
                     events_columns = c.fetchall()
-                
+                    
                     # Check if event_interests table exists
                     c.execute("""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_name = 'event_interests'
-                """)
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name = 'event_interests'
+                    """)
                     interests_table = c.fetchone()
-                
+                    
                     # Check if event_views table exists
                     c.execute("""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_name = 'event_views'
-                """)
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name = 'event_views'
+                    """)
                     views_table = c.fetchone()
-                
-                # Get event_interests columns if table exists
+                    
+                    # Get event_interests columns if table exists
                     interests_columns = []
-                if interests_table:
-                    c.execute("""
-                        SELECT column_name, data_type, is_nullable 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'event_interests' 
-                        ORDER BY ordinal_position
-                    """)
-                    interests_columns = c.fetchall()
-                
-                # Get event_views columns if table exists
+                    if interests_table:
+                        c.execute("""
+                            SELECT column_name, data_type, is_nullable 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'event_interests' 
+                            ORDER BY ordinal_position
+                        """)
+                        interests_columns = c.fetchall()
+                    
+                    # Get event_views columns if table exists
                     views_columns = []
-                if views_table:
-                    c.execute("""
-                        SELECT column_name, data_type, is_nullable 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'event_views' 
-                        ORDER BY ordinal_position
-                    """)
-                    views_columns = c.fetchall()
+                    if views_table:
+                        c.execute("""
+                            SELECT column_name, data_type, is_nullable 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'event_views' 
+                            ORDER BY ordinal_position
+                        """)
+                        views_columns = c.fetchall()
                 except Exception as e:
                     # Fallback for information_schema issues
                     logger.warning(f"information_schema query failed, using fallback: {e}")
@@ -4324,17 +4324,17 @@ async def debug_schema():
                     views_columns = []
             else:
                 # SQLite
-                    c.execute('PRAGMA table_info(events)')
-                    events_columns = c.fetchall()
+                c.execute('PRAGMA table_info(events)')
+                events_columns = c.fetchall()
                 
-                    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='event_interests'")
-                    interests_table = c.fetchone()
+                c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='event_interests'")
+                interests_table = c.fetchone()
                 
-                    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='event_views'")
-                    views_table = c.fetchone()
+                c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='event_views'")
+                views_table = c.fetchone()
                 
-                    interests_columns = []
-                    views_columns = []
+                interests_columns = []
+                views_columns = []
                 
                 if interests_table:
                     c.execute('PRAGMA table_info(event_interests)')
@@ -4773,16 +4773,16 @@ async def bulk_create_events(
             logger.info(f"✅ Successfully created event {i+1}: '{event_data.title}' (ID: {response_event.id})")
             
         except Exception as e:
-                        error_count += 1
+            error_count += 1
             error_msg = str(e)
             logger.error(f"❌ Error creating event {i+1} ({event_data.title}): {error_msg}")
-                        errors.append({
+            errors.append({
                 "event_index": i + 1,
                 "event_title": event_data.title,
                 "error": error_msg
-                        })
-                        continue
-                    
+            })
+            continue
+    
     logger.info(f"✅ Robust bulk event creation completed. Success: {success_count}, Errors: {error_count}")
     
     # Clear event cache after bulk import
@@ -4814,7 +4814,7 @@ def ensure_unique_slug_failsafe(cursor, base_slug: str, placeholder: str) -> str
         else:
             cursor.execute("SELECT COUNT(*) FROM events WHERE slug = %s", (base_slug,))
         
-                        result = cursor.fetchone()
+        result = cursor.fetchone()
         logger.debug(f"🔍 Slug query result: {result} (type: {type(result)})")
         
         # Enhanced result handling with better validation
@@ -4834,7 +4834,7 @@ def ensure_unique_slug_failsafe(cursor, base_slug: str, placeholder: str) -> str
             except (IndexError, KeyError, TypeError):
                 logger.warning(f"⚠️ Could not extract count from indexable result: {result}")
                 count = 0
-                    else:
+        else:
             try:
                 count = int(result) if result is not None else 0
                 logger.debug(f"🔍 Used result directly as count: {count}")
@@ -5200,11 +5200,11 @@ def convert_event_datetime_fields(event_dict):
             else:
                 # For optional fields, keep as None
                 event_dict[field] = None
-                    
-                    # Ensure counters are integers
-                    event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
-                    event_dict['view_count'] = event_dict.get('view_count', 0) or 0
-                    
+    
+    # Ensure counters are integers
+    event_dict['interest_count'] = event_dict.get('interest_count', 0) or 0
+    event_dict['view_count'] = event_dict.get('view_count', 0) or 0
+    
     return event_dict
 
 # ===== SEO ENDPOINTS =====
@@ -5617,8 +5617,8 @@ async def fix_null_end_times():
                 "updated_count": updated_count,
                 "remaining_nulls": remaining_nulls
             }
-                    
-                except Exception as e:
+            
+    except Exception as e:
         logger.error(f"Error fixing NULL end_time values: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fixing NULL end_time values: {str(e)}")
 
@@ -5772,7 +5772,7 @@ async def debug_test_event_urls():
                         day = date_obj.strftime('%d')
                         urls['date_indexed'] = f"{base_domain}/events/{year}/{month}/{day}/{slug}"
                         urls['date_indexed_priority'] = "0.75"
-                    except:
+                except:
                     urls['date_indexed'] = "Error parsing date"
                 
                 # 4. SEO metadata
