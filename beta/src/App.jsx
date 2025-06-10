@@ -81,7 +81,7 @@ function App() {
           <div className="glass-panel p-8 rounded-2xl">
             <div className="relative mb-6">
               <div className="w-20 h-20 rounded-full border-4 border-blue-400/20 border-t-blue-400 animate-spin mx-auto"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
               </div>
             </div>
@@ -102,11 +102,11 @@ function App() {
           <div className="mb-6">
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-red-400 text-2xl">⚠️</span>
-            </div>
+          </div>
             <h2 className="text-xl font-bold glass-text-primary mb-2">Connection Error</h2>
             <p className="glass-text-secondary">
-              Cannot connect to the API server. Please check your connection or try again later.
-            </p>
+            Cannot connect to the API server. Please check your connection or try again later.
+          </p>
           </div>
           <button 
             onClick={() => window.location.reload()}
@@ -127,7 +127,7 @@ function App() {
             <div className="w-16 h-16 rounded-full border-4 border-blue-400/20 border-t-blue-400 animate-spin mx-auto mb-6"></div>
             <h2 className="text-2xl font-bold glass-text-primary mb-2">TodoEvents Glass</h2>
             <p className="text-lg glass-text-secondary mb-4">Initializing premium experience</p>
-            <div className="space-y-2">
+          <div className="space-y-2">
               <div className="w-48 mx-auto glass-panel-tertiary rounded-full h-2">
                 <div className="bg-blue-400 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
               </div>
@@ -145,7 +145,7 @@ function App() {
         <AuthProvider>
           <Router>
             <div className="App">
-              <Routes>
+          <Routes>
                 <Route 
                   path="/" 
                   element={<EventMapGlass mapsLoaded={mapsLoaded} />} 
@@ -170,7 +170,7 @@ function App() {
                   path="/flyer" 
                   element={<FlyerPage />} 
                 />
-              </Routes>
+          </Routes>
             </div>
           </Router>
           <WelcomePopup />

@@ -452,35 +452,35 @@ const ShareCard = ({ event }) => {
         
         {/* Event details - smaller at bottom */}
         <div style={detailsContainerStyle}>
-          {/* Date and time */}
-          <div style={detailRowStyle}>
-            <div style={{
-              ...iconContainerStyle,
-              backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
-            }}>
+        {/* Date and time */}
+        <div style={detailRowStyle}>
+          <div style={{
+            ...iconContainerStyle,
+            backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
+          }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
-                  stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+              <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
+                stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
             <p style={detailTextStyle}>
               {formatDate(event)}
             </p>
-          </div>
-          
-          {/* Location */}
-          <div style={detailRowStyle}>
-            <div style={{
-              ...iconContainerStyle,
-              backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
-            }}>
+        </div>
+        
+        {/* Location */}
+        <div style={detailRowStyle}>
+          <div style={{
+            ...iconContainerStyle,
+            backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
+          }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
-                  stroke="#dc2626" strokeWidth="2"/>
-                <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
-                  stroke="#dc2626" strokeWidth="2"/>
-              </svg>
-            </div>
+              <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
+                stroke="#dc2626" strokeWidth="2"/>
+              <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
+                stroke="#dc2626" strokeWidth="2"/>
+            </svg>
+          </div>
             <p style={detailTextStyle}>
               {event.address}
             </p>
@@ -500,7 +500,7 @@ const ShareCard = ({ event }) => {
               <p style={detailTextStyle}>
                 Hosted by {event.host_name}
               </p>
-            </div>
+        </div>
           )}
           
           {/* Payment Status */}
@@ -540,9 +540,9 @@ const ShareCard = ({ event }) => {
               </div>
               <p style={detailTextStyle}>
                 Also: {getCategory(event.secondary_category)?.label || event.secondary_category}
-              </p>
-            </div>
-          )}
+            </p>
+          </div>
+        )}
         </div>
       </div>
       

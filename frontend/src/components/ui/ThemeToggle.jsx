@@ -105,7 +105,7 @@ const ThemeToggle = () => {
       className={`relative overflow-hidden w-10 h-10 rounded-full bg-opacity-20 transition-all duration-300 ${
         themeInfo.bgClass
       } ${isToggling ? 'animate-pulse scale-105' : 'scale-100'}`}
-    >
+      >
       <IconComponent 
         size={18} 
         className={`${themeInfo.iconClass} transition-all duration-300 ${
