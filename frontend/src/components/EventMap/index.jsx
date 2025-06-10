@@ -881,7 +881,7 @@ const EventMap = ({
 
   // Handle preset filters from URL routing  
   useEffect(() => {
-    console.log('🎛️ Preset filters handler running - eventSlug:', eventSlug, 'slug:', slug, 'selectedEvent:', selectedEvent?.slug || 'none');
+    console.log('Preset filters handler running - eventSlug:', eventSlug, 'slug:', slug, 'selectedEvent:', selectedEvent?.slug || 'none');
     
     // Handle individual event slug routes
     if (eventSlug && slug) {
@@ -2256,7 +2256,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('time')}
                     >
-                      🕐 Time
+                      Time
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
@@ -2329,12 +2329,12 @@ const EventMap = ({
                   {activeFilterTab === 'time' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
-                        🕐 Filter events by time of day
+                        Filter events by time of day
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
-                          { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
-                          { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
+                          { value: 'all', label: 'All Times', icon: 'clock', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: 'sunrise', description: '5 AM - 12 PM' },
                           { value: 'afternoon', label: 'Afternoon', icon: 'sun', description: '12 PM - 5 PM' },
                           { value: 'evening', label: 'Evening', icon: 'sunset', description: '5 PM - 9 PM' },
                           { value: 'night', label: 'Night', icon: 'moon', description: '9 PM - 5 AM' }
@@ -2932,7 +2932,7 @@ const EventMap = ({
                       }`}
                       onClick={() => setActiveFilterTab('time')}
                     >
-                      🕐 Time
+                      Time
                     </button>
                     <button
                       className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
@@ -3005,12 +3005,12 @@ const EventMap = ({
                   {activeFilterTab === 'time' && (
                     <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
                       <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
-                        🕐 Filter events by time of day
+                        Filter events by time of day
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
-                          { value: 'all', label: 'All Times', icon: '🕐', description: 'Any time' },
-                          { value: 'morning', label: 'Morning', icon: '🌅', description: '5 AM - 12 PM' },
+                          { value: 'all', label: 'All Times', icon: 'clock', description: 'Any time' },
+                          { value: 'morning', label: 'Morning', icon: 'sunrise', description: '5 AM - 12 PM' },
                           { value: 'afternoon', label: 'Afternoon', icon: 'sun', description: '12 PM - 5 PM' },
                           { value: 'evening', label: 'Evening', icon: 'sunset', description: '5 PM - 9 PM' },
                           { value: 'night', label: 'Night', icon: 'moon', description: '9 PM - 5 AM' }

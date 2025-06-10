@@ -20,7 +20,9 @@ import {
   Mail,
   MessageSquare,
   Map,
-  AlertTriangle
+  AlertTriangle,
+  Sunrise,
+  Filter
 } from 'lucide-react';
 
 // Icon mapping for common emojis
@@ -29,6 +31,7 @@ const iconMapping = {
   '📅': Calendar,
   '⏰': Clock,
   '🕐': Clock,
+  'clock': Clock,
   '🔍': Search,
   '🎯': Target,
   '💡': Lightbulb,
@@ -41,8 +44,13 @@ const iconMapping = {
   '🎪': PartyPopper,
   '🎨': PartyPopper,
   '☀️': Sun,
+  'sun': Sun,
   '🌙': Moon,
+  'moon': Moon,
   '🌆': Sunset,
+  'sunset': Sunset,
+  '🌅': Sunrise,
+  'sunrise': Sunrise,
   '⚙️': Settings,
   '🏷️': Tag,
   '🔗': Link,
