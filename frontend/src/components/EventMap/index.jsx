@@ -49,7 +49,12 @@ import {
   DollarSign,
   ExternalLink,
   Mail,
-  Tag
+  Tag,
+  Target,
+  Lightbulb,
+  Sun,
+  Moon,
+  Cog
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

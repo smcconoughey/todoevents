@@ -72,7 +72,7 @@ const ThemeToggle = () => {
       case THEME_DARK:
         return {
           icon: Moon,
-          label: 'Switch to glass mode',
+          label: 'Switch to frost mode',
           iconClass: 'text-indigo-400',
           bgClass: 'hover:bg-indigo-50 dark:hover:bg-indigo-950'
         };

@@ -92,50 +92,59 @@
 /* Glass theme variables - Apple-inspired translucent design */
 [data-theme='glass'],
 .glass-mode {
-  /* Brand Colors - Glass Mode */
-  --spark-yellow: #FFD700;      /* Bright gold for glass effect */
-  --spark-yellow-muted: #FFC107; 
-  --spark-yellow-text: #FFD700;  
-  --pin-blue: #007AFF;          /* Apple system blue */
-  --pin-blue-muted: #0056CC;    
-  --vibrant-magenta: #FF2D92;   /* Apple system pink */
-  --fresh-teal: #30D158;        /* Apple system mint */
+  /* Brand Colors - Frost Mode - Light and airy */
+  --spark-yellow: #FFC947;      /* Warm golden yellow for frost */
+  --spark-yellow-muted: #E6B800; 
+  --spark-yellow-text: #FFC947;  
+  --pin-blue: #60A5FA;          /* Softer blue for frost theme */
+  --pin-blue-muted: #3B82F6;    
+  --vibrant-magenta: #F472B6;   /* Softer pink for frost */
+  --fresh-teal: #34D399;        /* Softer mint for frost */
   
-  /* Enhanced Glass-specific colors with better contrast */
-  --glass-bg: rgba(10, 20, 40, 0.25);           /* Stronger dark blue tinted glass */
-  --glass-bg-light: rgba(255, 255, 255, 0.08);  /* Light glass for layering */
-  --glass-border: rgba(255, 255, 255, 0.3);     /* More visible borders */
-  --glass-border-strong: rgba(255, 255, 255, 0.4); /* Strong borders for emphasis */
-  --glass-hover: rgba(10, 20, 40, 0.35);        /* Darker on hover */
-  --glass-active: rgba(10, 20, 40, 0.45);       /* Even darker when active */
-  --glass-button: rgba(10, 20, 40, 0.3);        /* Button glass tint */
-  --glass-surface: rgba(15, 25, 50, 0.2);       /* General surface glass */
-  --glass-elevated: rgba(5, 15, 35, 0.4);       /* Elevated elements like modals */
-  --glass-text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); /* Stronger text shadow */
-  --glass-text-shadow-light: 0 1px 2px rgba(0, 0, 0, 0.4); /* Light text shadow */
+  /* Frost-specific colors - Light and translucent */
+  --glass-bg: rgba(255, 255, 255, 0.15);           /* Light translucent white */
+  --glass-bg-light: rgba(255, 255, 255, 0.25);     /* Lighter for layering */
+  --glass-border: rgba(255, 255, 255, 0.4);        /* Visible light borders */
+  --glass-border-strong: rgba(255, 255, 255, 0.6); /* Strong borders for emphasis */
+  --glass-hover: rgba(255, 255, 255, 0.25);        /* Light hover effect */
+  --glass-active: rgba(255, 255, 255, 0.35);       /* Light active state */
+  --glass-button: rgba(255, 255, 255, 0.2);        /* Button glass tint */
+  --glass-surface: rgba(255, 255, 255, 0.18);      /* General surface glass */
+  --glass-elevated: rgba(255, 255, 255, 0.3);      /* Elevated elements like modals */
+  --glass-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); /* Subtle text shadow */
+  --glass-text-shadow-light: 0 0.5px 1px rgba(0, 0, 0, 0.2); /* Light text shadow */
   
-  /* Enhanced Neutrals - Glass Mode with better hierarchy */
-  --bg-main: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* Frost Neutrals - Light and clean */
+  --bg-main: #E1F5FE;           /* Light blue background instead of gradient */
   --bg-card: var(--glass-bg);
   --bg-card-hover: var(--glass-hover);
   --bg-card-active: var(--glass-active);
-  --text-primary: rgba(255, 255, 255, 0.98);    /* Higher contrast for primary text */
-  --text-secondary: rgba(255, 255, 255, 0.85);  /* Better secondary text */
-  --text-tertiary: rgba(255, 255, 255, 0.7);    /* Clear tertiary text */
-  --text-muted: rgba(255, 255, 255, 0.55);      /* Readable muted text */
-  --border-color: rgba(255, 255, 255, 0.25);
-  --border-color-hover: rgba(255, 255, 255, 0.4);
+  --text-primary: rgba(30, 64, 100, 0.95);         /* Dark blue text for contrast */
+  --text-secondary: rgba(30, 64, 100, 0.8);        /* Secondary dark blue */
+  --text-tertiary: rgba(30, 64, 100, 0.65);        /* Tertiary dark blue */
+  --text-muted: rgba(30, 64, 100, 0.5);            /* Muted dark blue */
+  --border-color: rgba(255, 255, 255, 0.35);
+  --border-color-hover: rgba(255, 255, 255, 0.5);
   
-  /* Enhanced Button Text Colors - Glass Mode */
+  /* Button Text Colors - Frost Mode */
   --btn-yellow-text: #1A1A1A;   
   --btn-blue-text: #FFFFFF;     
   
-  /* Semantic Colors - Glass Mode */
+  /* Semantic Colors - Frost Mode */
   --accent-color: var(--spark-yellow);
   --secondary-color: var(--pin-blue);
   --error-color: var(--vibrant-magenta);
   --success-color: var(--fresh-teal);
-  --warning-color: #FF9500;     /* Apple system orange */
+  --warning-color: #FB923C;     /* Softer orange for frost */
+  
+  /* Unified Border Radius System */
+  --radius-outer: 16px;         /* Base outer radius */
+  --radius-inner: 12px;         /* Inner radius = outer - 4px padding */
+  --radius-button: 12px;        /* Button radius */
+  --radius-input: 10px;         /* Input radius */
+  --radius-card: 20px;          /* Card radius */
+  --radius-dialog: 24px;        /* Dialog radius */
+  --radius-pill: 50px;          /* Pill-shaped elements */
 }
 
 /* Glass theme specific styling */

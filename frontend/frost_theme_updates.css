@@ -1,0 +1,121 @@
+/* Frost theme variables - Light and airy translucent design */
+[data-theme='glass'],
+.glass-mode {
+  /* Brand Colors - Frost Mode - Light and airy */
+  --spark-yellow: #FFC947;      /* Warm golden yellow for frost */
+  --spark-yellow-muted: #E6B800; 
+  --spark-yellow-text: #FFC947;  
+  --pin-blue: #60A5FA;          /* Softer blue for frost theme */
+  --pin-blue-muted: #3B82F6;    
+  --vibrant-magenta: #F472B6;   /* Softer pink for frost */
+  --fresh-teal: #34D399;        /* Softer mint for frost */
+  
+  /* Frost-specific colors - Light and translucent */
+  --glass-bg: rgba(255, 255, 255, 0.15);           /* Light translucent white */
+  --glass-bg-light: rgba(255, 255, 255, 0.25);     /* Lighter for layering */
+  --glass-border: rgba(255, 255, 255, 0.4);        /* Visible light borders */
+  --glass-border-strong: rgba(255, 255, 255, 0.6); /* Strong borders for emphasis */
+  --glass-hover: rgba(255, 255, 255, 0.25);        /* Light hover effect */
+  --glass-active: rgba(255, 255, 255, 0.35);       /* Light active state */
+  --glass-button: rgba(255, 255, 255, 0.2);        /* Button glass tint */
+  --glass-surface: rgba(255, 255, 255, 0.18);      /* General surface glass */
+  --glass-elevated: rgba(255, 255, 255, 0.3);      /* Elevated elements like modals */
+  --glass-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); /* Subtle text shadow */
+  --glass-text-shadow-light: 0 0.5px 1px rgba(0, 0, 0, 0.2); /* Light text shadow */
+  
+  /* Frost Neutrals - Light and clean */
+  --bg-main: #E1F5FE;           /* Light blue background instead of gradient */
+  --bg-card: var(--glass-bg);
+  --bg-card-hover: var(--glass-hover);
+  --bg-card-active: var(--glass-active);
+  --text-primary: rgba(30, 64, 100, 0.95);         /* Dark blue text for contrast */
+  --text-secondary: rgba(30, 64, 100, 0.8);        /* Secondary dark blue */
+  --text-tertiary: rgba(30, 64, 100, 0.65);        /* Tertiary dark blue */
+  --text-muted: rgba(30, 64, 100, 0.5);            /* Muted dark blue */
+  --border-color: rgba(255, 255, 255, 0.35);
+  --border-color-hover: rgba(255, 255, 255, 0.5);
+  
+  /* Button Text Colors - Frost Mode */
+  --btn-yellow-text: #1A1A1A;   
+  --btn-blue-text: #FFFFFF;     
+  
+  /* Semantic Colors - Frost Mode */
+  --accent-color: var(--spark-yellow);
+  --secondary-color: var(--pin-blue);
+  --error-color: var(--vibrant-magenta);
+  --success-color: var(--fresh-teal);
+  --warning-color: #FB923C;     /* Softer orange for frost */
+  
+  /* Unified Border Radius System */
+  --radius-outer: 16px;         /* Base outer radius */
+  --radius-inner: 12px;         /* Inner radius = outer - 4px padding */
+  --radius-button: 12px;        /* Button radius */
+  --radius-input: 10px;         /* Input radius */
+  --radius-card: 20px;          /* Card radius */
+  --radius-dialog: 24px;        /* Dialog radius */
+  --radius-pill: 50px;          /* Pill-shaped elements */
+}
+
+/* Frost theme specific styling */
+.glass-mode {
+  background: #E1F5FE;
+  background-attachment: fixed;
+}
+
+/* Enhanced text readability with subtle shadows */
+.glass-mode,
+.glass-mode * {
+  text-shadow: var(--glass-text-shadow-light);
+}
+
+/* Remove text shadow from icons and buttons where it might look odd */
+.glass-mode svg,
+.glass-mode .btn-primary,
+.glass-mode .btn-secondary,
+.glass-mode button svg {
+  text-shadow: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+/* Unified border radius for cards and surfaces */
+.glass-mode .bg-themed-surface {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-card) !important;
+}
+
+/* Unified border radius for dialogs */
+.glass-mode .dialog-themed,
+.glass-mode [data-radix-dialog-content] {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-dialog) !important;
+}
+
+/* Unified border radius for input fields */
+.glass-mode .input-themed {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-input) !important;
+}
+
+/* Unified border radius for buttons */
+.glass-mode .btn-primary,
+.glass-mode .btn-secondary {
+  border-radius: var(--radius-button) !important;
+}
+
+/* Unified border radius for calendar */
+.glass-mode .calendar-themed {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-card) !important;
+} 

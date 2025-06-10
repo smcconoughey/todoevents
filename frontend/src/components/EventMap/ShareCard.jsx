@@ -138,11 +138,11 @@ const ShareCard = ({ event }) => {
   const category = getCategory(event.category);
   const [mapUrl, setMapUrl] = useState("");
   
-  const bgColor = theme === "dark" ? "#0f0f0f" : "#ffffff";
-  const textColor = theme === "dark" ? "#ffffff" : "#0f0f0f";
-  const secondaryTextColor = theme === "dark" ? "#a3a3a3" : "#525252";
-  const borderColor = theme === "dark" ? "#262626" : "#e5e5e5";
-  const cardBg = theme === "dark" ? "#171717" : "#fafafa";
+  const bgColor = theme === "glass" ? "#E1F5FE" : (theme === "dark" ? "#0f0f0f" : "#ffffff");
+  const textColor = theme === "glass" ? "#1e4064" : (theme === "dark" ? "#ffffff" : "#0f0f0f");
+  const secondaryTextColor = theme === "glass" ? "#1e4064CC" : (theme === "dark" ? "#a3a3a3" : "#525252");
+  const borderColor = theme === "glass" ? "#FFFFFF66" : (theme === "dark" ? "#262626" : "#e5e5e5");
+  const cardBg = theme === "glass" ? "rgba(255, 255, 255, 0.2)" : (theme === "dark" ? "#171717" : "#fafafa");
 
   // Generate simplified Google Maps Static API URL
   useEffect(() => {
