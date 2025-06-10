@@ -1,117 +1,102 @@
-# Deployment Guide for Render.com
+# TodoEvents Deployment Guide
 
 ## Overview
-This project consists of two separate services that need to be deployed independently:
-1. Backend API (FastAPI/Python)
-2. Frontend Web App (Vite/React)
+TodoEvents consists of three main components:
+- **Backend API** - FastAPI application serving the REST API
+- **Frontend** - React/Vite application for the main user interface  
+- **Beta Glass UI** - React/Vite application with Apple's Glass UI design (served at `/beta`)
 
-## Prerequisites
-- GitHub repository with your code
-- Render.com account
-- PostgreSQL database (already created: `eventfinder-db`)
+## Deployment Configuration
 
-## Step 1: Deploy Backend API
+### Main Application
+The main application is deployed on Render with the following services:
 
-1. **Create a new Web Service on Render:**
-   - Go to Render Dashboard → New → Web Service
-   - Connect your GitHub repository
-   - **Important:** Set the root directory to `backend`
+1. **Backend API** (`todoevents-backend`)
+   - Python/FastAPI service
+   - Connects to PostgreSQL database
+   - Deployed at: `https://todoevents-backend.onrender.com`
 
-2. **Configure the Backend Service:**
-   - **Name:** `todoevents-backend`
-   - **Environment:** Python 3
-   - **Region:** Oregon (US West) - Same as your database
-   - **Branch:** main (or your default branch)
-   - **Root Directory:** `backend`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn backend:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120`
+2. **Frontend** (`todoevents`)
+   - Node.js/React static site
+   - Includes both main app and beta version
+   - Main app deployed at: `https://todo-events.com`
+   - Beta Glass UI accessible at: `https://todo-events.com/beta`
 
-3. **Environment Variables for Backend:**
-   ```
-   RENDER=true
-   SECRET_KEY=3a4f89cc0b7db4bf2a97e6fe9f9a8e29fcb43d8f5d67c8a3
-   DATABASE_URL=postgresql://eventfinder_user:J6euBSG7jS6U0aPZxMjy5CfuUnOAhjj8@dpg-d0bs2huuk2gs7383mnu0-a.oregon-postgres.render.com/eventfinder
-   ```
+### Beta Glass UI Integration
 
-## Step 2: Deploy Frontend
+The Beta Glass UI is automatically built and included as part of the main frontend deployment:
 
-1. **Create another Web Service on Render:**
-   - Go to Render Dashboard → New → Static Site
-   - Connect the same GitHub repository
-   - **Important:** Set the root directory to `frontend`
+- **Build Process**: The frontend build script automatically builds the beta version and places it in `dist/beta/`
+- **Base Path**: Beta is configured with `/beta/` as the base path via Vite configuration
+- **Static Serving**: Render automatically serves the beta files at the `/beta` path
 
-2. **Configure the Frontend Service:**
-   - **Name:** `todoevents-frontend`
-   - **Environment:** Static Site
-   - **Root Directory:** `frontend`
-   - **Build Command:** `npm ci && npm run build`
-   - **Publish Directory:** `dist`
-
-3. **Environment Variables for Frontend:**
-   ```
-   VITE_API_URL=https://todoevents-backend.onrender.com
-   NODE_ENV=production
-   VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-   ```
-
-## Step 3: Verify Deployment
-
-1. **Check Backend:**
-   - Visit: `https://todoevents-backend.onrender.com/health`
-   - Should return JSON with health status
-
-2. **Check Frontend:**
-   - Visit: `https://todoevents-frontend.onrender.com`
-   - Should load your React app
-
-3. **Test API Communication:**
-   - On frontend, try creating an account or viewing events
-   - Check browser Network tab for API calls
-
-## Step 4: Update CORS (if needed)
-
-If you get CORS errors, the backend automatically allows any `*.onrender.com` subdomain, but you may need to add your specific URLs to the CORS configuration in `backend/backend.py`.
-
-## Troubleshooting
-
-### Backend Issues:
-- **500 errors:** Check database connection
-- **Timeout on startup:** Database connection might be slow
-- **Module not found:** Check requirements.txt and build logs
-
-### Frontend Issues:
-- **API calls failing:** Verify VITE_API_URL environment variable
-- **Build fails:** Check package.json and Node.js version
-- **Routes not working:** Ensure rewrite rules are set up
-
-### Database Issues:
-- **Connection timeout:** Database might be sleeping (free tier)
-- **Permission denied:** Check database credentials and IP allowlist
-
-## Manual Testing Commands
-
-You can test the backend locally:
-```bash
-cd backend
-python test_api.py https://todoevents-backend.onrender.com
+#### Build Scripts
+```json
+{
+  "build": "npm run sync-sitemap && npm install tailwindcss-animate && vite build && npm run build:beta",
+  "build:beta": "cd ../beta && npm ci && npm run build && mkdir -p ../frontend/dist/beta && cp -r dist/* ../frontend/dist/beta/"
+}
 ```
 
-## Important Notes
+### Environment Variables
+Required environment variables for deployment:
+- `VITE_API_URL`: Backend API URL
+- `VITE_GOOGLE_MAPS_API_KEY`: Google Maps API key
+- `DATABASE_URL`: PostgreSQL connection string
+- `SECRET_KEY`: Application secret key
 
-1. **Free Tier Limitations:**
-   - Services sleep after 15 minutes of inactivity
-   - First request after sleep may be slow (30+ seconds)
-   - Database connections are limited
+### Database
+- **Provider**: Render PostgreSQL
+- **Plan**: Free tier
+- **Connection**: Via `DATABASE_URL` environment variable
 
-2. **Service Names:**
-   - Backend: `todoevents-backend`
-   - Frontend: `todoevents-frontend` 
-   - Database: `eventfinder-db`
+## Beta Glass UI Features
 
-3. **URLs:**
-   - Backend API: `https://todoevents-backend.onrender.com`
-   - Frontend: `https://todoevents-frontend.onrender.com`
+The beta version at `/beta` showcases:
+- Apple's Glass UI design system
+- Frosted glass panels with backdrop blur
+- Apple-style animations and micro-interactions
+- SF Pro Display typography
+- Hardware-accelerated performance
+- Mobile-optimized touch interactions
 
-## Alternative: Deploy from Root Directory
+## Access URLs
 
-If you prefer to deploy both services from the root directory, you can use the main `render.yaml` file, but you'll need to adjust the build commands to include the directory navigation. 
+- **Main App**: https://todo-events.com
+- **Beta Glass UI**: https://todo-events.com/beta  
+- **API**: https://todoevents-backend.onrender.com
+- **Admin Dashboard**: https://todo-events.com/admin
+
+## Local Development
+
+### Main Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Beta Glass UI
+```bash
+cd beta  
+npm install
+npm run dev
+```
+
+### Backend
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn backend:app --reload
+```
+
+## Deployment Process
+
+1. **Automatic Deployment**: Push to main branch triggers automatic deployment
+2. **Build Process**: 
+   - Frontend builds main app
+   - Automatically builds and integrates beta version
+   - Static files served by Render's CDN
+3. **Zero Downtime**: Beta updates don't affect main application
+
+The beta Glass UI provides a preview of the future design direction while maintaining the stability of the main production application. 
