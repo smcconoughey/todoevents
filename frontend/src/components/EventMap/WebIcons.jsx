@@ -22,7 +22,10 @@ import {
   Map,
   AlertTriangle,
   Sunrise,
-  Filter
+  Filter,
+  DollarSign,
+  Check,
+  User
 } from 'lucide-react';
 
 // Icon mapping for common emojis
@@ -57,7 +60,10 @@ const iconMapping = {
   '📧': Mail,
   '🗣️': MessageSquare,
   '🗺️': Map,
-  '⚠️': AlertTriangle
+  '⚠️': AlertTriangle,
+  '💰': DollarSign,
+  '✅': Check,
+  '👤': User
 };
 
 // Helper component to render icons
@@ -95,6 +101,18 @@ export const TipIcon = ({ className = "w-4 h-4", ...props }) => (
 
 export const TargetIcon = ({ className = "w-4 h-4", ...props }) => (
   <Target className={className} {...props} />
+);
+
+export const PaidIcon = ({ className = "w-4 h-4", ...props }) => (
+  <DollarSign className={className} {...props} />
+);
+
+export const FreeIcon = ({ className = "w-4 h-4", ...props }) => (
+  <Check className={className} {...props} />
+);
+
+export const HostIcon = ({ className = "w-4 h-4", ...props }) => (
+  <User className={className} {...props} />
 );
 
 export default WebIcon; 

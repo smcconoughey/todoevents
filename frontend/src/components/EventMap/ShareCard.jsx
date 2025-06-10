@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { ThemeContext } from "../ThemeContext";
 import { getCategory } from "./categoryConfig";
 import { CategoryIcon } from "./CategoryIcons";
+import { PaidIcon, FreeIcon, HostIcon } from "./WebIcons";
 
 // Custom logo component - Replace with your actual logo
 const TodoEventsLogo = ({ theme, className = "" }) => {
@@ -330,6 +331,19 @@ const ShareCard = ({ event }) => {
     margin: '8px 0 0 0'
   };
 
+  // Helper function to determine if event is paid
+  const isPaidEvent = (event) => {
+    if (event.price && event.price > 0) return true;
+    if (event.fee_required && 
+        event.fee_required.toLowerCase() !== 'free' && 
+        event.fee_required.toLowerCase() !== 'no' &&
+        event.fee_required.toLowerCase() !== 'none' &&
+        !event.fee_required.toLowerCase().includes('free')) {
+      return true;
+    }
+    return false;
+  };
+
   return (
     <div style={containerStyle} id="share-card-root">
       {/* Header with title and logo */}
@@ -406,6 +420,70 @@ const ShareCard = ({ event }) => {
             </p>
           </div>
         </div>
+        
+        {/* Host Name */}
+        {event.host_name && (
+          <div style={detailRowStyle}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7"
+            }}>
+              <HostIcon 
+                style={{ width: '16px', height: '16px', color: '#16a34a' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={detailTextStyle}>
+                Hosted by {event.host_name}
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {/* Payment Status */}
+        <div style={detailRowStyle}>
+          <div style={{
+            ...iconContainerStyle,
+            backgroundColor: isPaidEvent(event) 
+              ? (theme === "dark" ? "rgba(234, 179, 8, 0.2)" : "#fef3c7")
+              : (theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7")
+          }}>
+            {isPaidEvent(event) ? (
+              <PaidIcon 
+                style={{ width: '16px', height: '16px', color: '#eab308' }}
+              />
+            ) : (
+              <FreeIcon 
+                style={{ width: '16px', height: '16px', color: '#16a34a' }}
+              />
+            )}
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={detailTextStyle}>
+              {isPaidEvent(event) ? 'Paid Event' : 'Free Event'}
+            </p>
+          </div>
+        </div>
+        
+        {/* Secondary Category */}
+        {event.secondary_category && (
+          <div style={detailRowStyle}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: theme === "dark" ? "rgba(139, 92, 246, 0.2)" : "#ede9fe"
+            }}>
+              <CategoryIcon 
+                category={event.secondary_category} 
+                style={{ width: '16px', height: '16px', color: '#8b5cf6' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={detailTextStyle}>
+                Also: {getCategory(event.secondary_category)?.label || event.secondary_category}
+              </p>
+            </div>
+          </div>
+        )}
         
         {/* Description */}
         {event.description && (
