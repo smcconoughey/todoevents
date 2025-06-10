@@ -101,27 +101,32 @@
   --vibrant-magenta: #FF2D92;   /* Apple system pink */
   --fresh-teal: #30D158;        /* Apple system mint */
   
-  /* Glass-specific colors with dark blue tinge */
-  --glass-bg: rgba(15, 25, 50, 0.15);           /* Dark blue tinted glass */
-  --glass-border: rgba(255, 255, 255, 0.25);    /* Slightly more visible borders */
-  --glass-hover: rgba(15, 25, 50, 0.25);        /* Darker on hover */
-  --glass-active: rgba(15, 25, 50, 0.35);       /* Even darker when active */
-  --glass-button: rgba(15, 25, 50, 0.2);        /* Button glass tint */
-  --glass-text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); /* Soft text shadow */
+  /* Enhanced Glass-specific colors with better contrast */
+  --glass-bg: rgba(10, 20, 40, 0.25);           /* Stronger dark blue tinted glass */
+  --glass-bg-light: rgba(255, 255, 255, 0.08);  /* Light glass for layering */
+  --glass-border: rgba(255, 255, 255, 0.3);     /* More visible borders */
+  --glass-border-strong: rgba(255, 255, 255, 0.4); /* Strong borders for emphasis */
+  --glass-hover: rgba(10, 20, 40, 0.35);        /* Darker on hover */
+  --glass-active: rgba(10, 20, 40, 0.45);       /* Even darker when active */
+  --glass-button: rgba(10, 20, 40, 0.3);        /* Button glass tint */
+  --glass-surface: rgba(15, 25, 50, 0.2);       /* General surface glass */
+  --glass-elevated: rgba(5, 15, 35, 0.4);       /* Elevated elements like modals */
+  --glass-text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); /* Stronger text shadow */
+  --glass-text-shadow-light: 0 1px 2px rgba(0, 0, 0, 0.4); /* Light text shadow */
   
-  /* Neutrals - Glass Mode with translucency */
+  /* Enhanced Neutrals - Glass Mode with better hierarchy */
   --bg-main: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --bg-card: var(--glass-bg);
   --bg-card-hover: var(--glass-hover);
   --bg-card-active: var(--glass-active);
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(255, 255, 255, 0.8);
-  --text-tertiary: rgba(255, 255, 255, 0.65);
-  --text-muted: rgba(255, 255, 255, 0.5);
-  --border-color: rgba(255, 255, 255, 0.2);
-  --border-color-hover: rgba(255, 255, 255, 0.3);
+  --text-primary: rgba(255, 255, 255, 0.98);    /* Higher contrast for primary text */
+  --text-secondary: rgba(255, 255, 255, 0.85);  /* Better secondary text */
+  --text-tertiary: rgba(255, 255, 255, 0.7);    /* Clear tertiary text */
+  --text-muted: rgba(255, 255, 255, 0.55);      /* Readable muted text */
+  --border-color: rgba(255, 255, 255, 0.25);
+  --border-color-hover: rgba(255, 255, 255, 0.4);
   
-  /* Button Text Colors - Glass Mode */
+  /* Enhanced Button Text Colors - Glass Mode */
   --btn-yellow-text: #1A1A1A;   
   --btn-blue-text: #FFFFFF;     
   
@@ -137,6 +142,21 @@
 .glass-mode {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   background-attachment: fixed;
+}
+
+/* Enhanced text readability with shadows */
+.glass-mode,
+.glass-mode * {
+  text-shadow: var(--glass-text-shadow);
+}
+
+/* Remove text shadow from icons and buttons where it might look odd */
+.glass-mode svg,
+.glass-mode .btn-primary,
+.glass-mode .btn-secondary,
+.glass-mode button svg {
+  text-shadow: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .glass-mode .bg-themed-surface {
@@ -1055,9 +1075,3 @@ body {
 [data-theme='light'] .hover\:text-white\/70:hover {
   color: var(--text-secondary) !important;
 }
-
- 
-/* Enhanced Glass Theme Styling */
-.glass-mode, .glass-mode * { text-shadow: var(--glass-text-shadow); }
-.glass-mode svg, .glass-mode .btn-primary, .glass-mode .btn-secondary, .glass-mode button svg { text-shadow: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)); }
-.glass-mode .lucide, .glass-mode svg { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)); }
