@@ -1,7 +1,7 @@
 // src/components/ui/popover.jsx
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
-import { cn } from "../../lib/utils.js";
+import { clsx } from "clsx"; import { twMerge } from "tailwind-merge"; function cn(...inputs) { return twMerge(clsx(inputs)); }
 
 const Popover = PopoverPrimitive.Root;
 const PopoverTrigger = PopoverPrimitive.Trigger;
