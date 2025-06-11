@@ -4,7 +4,8 @@ import {
   Trash2, Upload, Download, RefreshCw, Search, Filter, Eye, Heart,
   Edit, X, AlertTriangle, CheckCircle, UserPlus, Lock, MessageSquare,
   TrendingUp, TrendingDown, Activity, Globe, MapPin, Clock, List,
-  ChevronDown, ChevronUp, Lightbulb
+  ChevronDown, ChevronUp, Lightbulb, FileText, UserCheck, FileX,
+  Clock3, CheckCircle2, XCircle, AlertOctagon, ExternalLink
 } from 'lucide-react';
 
 import {
@@ -330,6 +331,245 @@ const UserEditModal = ({ user, isOpen, onClose, onSave }) => {
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Save Changes
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// Privacy Request View Modal
+const PrivacyRequestModal = ({ request, isOpen, onClose, onUpdate }) => {
+  const [status, setStatus] = useState(request?.status || 'pending');
+  const [notes, setNotes] = useState(request?.admin_notes || '');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    if (request) {
+      setStatus(request.status);
+      setNotes(request.admin_notes || '');
+    }
+  }, [request]);
+
+  const handleStatusUpdate = async () => {
+    if (!request) return;
+    
+    try {
+      setIsProcessing(true);
+      await fetchData(`/admin/privacy-requests/${request.id}/status`, 'PUT', {
+        status,
+        admin_notes: notes
+      });
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Error updating privacy request:', error);
+      alert('Error updating request: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleProcessRequest = async (action) => {
+    if (!request) return;
+    
+    if (!confirm(`Are you sure you want to ${action} this privacy request? This action may be irreversible.`)) {
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const endpoint = action === 'export' 
+        ? `/admin/privacy-requests/${request.id}/export`
+        : `/admin/privacy-requests/${request.id}/delete-data`;
+      
+      const response = await fetchData(endpoint, 'POST');
+      
+      if (action === 'export' && response.export_url) {
+        // Open export in new tab
+        window.open(response.export_url, '_blank');
+      }
+      
+      // Update status to completed
+      await fetchData(`/admin/privacy-requests/${request.id}/status`, 'PUT', {
+        status: 'completed',
+        admin_notes: notes + `\n${action} completed on ${new Date().toISOString()}`
+      });
+      
+      onUpdate();
+      alert(`Privacy request ${action} completed successfully.`);
+    } catch (error) {
+      console.error(`Error processing ${action}:`, error);
+      alert(`Error processing ${action}: ` + error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'access': return <Eye className="w-4 h-4" />;
+      case 'deletion': return <Trash2 className="w-4 h-4" />;
+      case 'portability': return <Download className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  if (!request) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Privacy Request #${request.id}`} size="xl">
+      <div className="space-y-6">
+        {/* Request Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Request Type</label>
+            <div className="flex items-center space-x-2">
+              {getTypeIcon(request.request_type)}
+              <span className="capitalize font-medium">{request.request_type}</span>
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Current Status</label>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(request.status)}`}>
+              {request.status.replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">User Email</label>
+            <p className="text-gray-900">{request.user_email}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+            <p className="text-gray-900">{request.full_name}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Submitted</label>
+            <p className="text-gray-900">{new Date(request.created_at).toLocaleString()}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Request ID</label>
+            <p className="text-gray-900 font-mono">#{request.id}</p>
+          </div>
+        </div>
+
+        {/* User Details */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Additional Details</label>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+              {request.additional_details || 'No additional details provided.'}
+            </pre>
+          </div>
+        </div>
+
+        {/* Verification Info */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Verification Information</label>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+              {request.verification_info || 'No verification information provided.'}
+            </pre>
+          </div>
+        </div>
+
+        {/* Status Update Section */}
+        <div className="border-t pt-6">
+          <h3 className="text-lg font-medium text-gray-800 mb-4">Update Request Status</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Admin Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Add internal notes about this request..."
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleStatusUpdate}
+              disabled={isProcessing}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+            >
+              {isProcessing ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+              Update Status
+            </button>
+
+            {request.request_type === 'access' && (
+              <button
+                onClick={() => handleProcessRequest('export')}
+                disabled={isProcessing}
+                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export User Data
+              </button>
+            )}
+
+            {request.request_type === 'deletion' && (
+              <button
+                onClick={() => handleProcessRequest('delete')}
+                disabled={isProcessing}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete User Data
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Timeline/History */}
+        {request.admin_notes && (
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-medium text-gray-800 mb-4">Request History</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap">{request.admin_notes}</pre>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Close
           </button>
         </div>
       </div>
@@ -1156,6 +1396,17 @@ const AdminDashboard = () => {
     );
   };
 
+  // Fetch privacy requests
+  const fetchPrivacyRequests = async () => {
+    try {
+      const requests = await fetchData('/admin/privacy-requests');
+      setPrivacyRequests(requests);
+    } catch (error) {
+      console.error('Error fetching privacy requests:', error);
+      setError('Failed to fetch privacy requests: ' + error.message);
+    }
+  };
+
   // Fetch user details and initial data
   useEffect(() => {
     const fetchUserAndData = async () => {
@@ -1180,6 +1431,9 @@ const AdminDashboard = () => {
 
         setUsers(usersData);
         setEvents(eventsData);
+
+        // Fetch privacy requests
+        await fetchPrivacyRequests();
 
         // Compute Analytics
         const userRoleDistribution = usersData.reduce((acc, user) => {
@@ -1234,6 +1488,9 @@ const AdminDashboard = () => {
 
       setUsers(usersData);
       setEvents(eventsData);
+
+      // Refresh privacy requests
+      await fetchPrivacyRequests();
 
       // Recompute analytics
       const userRoleDistribution = usersData.reduce((acc, user) => {
@@ -1302,6 +1559,14 @@ const AdminDashboard = () => {
     }
   };
 
+  // Privacy Management States
+  const [privacyRequests, setPrivacyRequests] = useState([]);
+  const [privacySearch, setPrivacySearch] = useState('');
+  const [privacyFilterStatus, setPrivacyFilterStatus] = useState('all');
+  const [privacyFilterType, setPrivacyFilterType] = useState('all');
+  const [selectedRequests, setSelectedRequests] = useState([]);
+  const [viewingRequest, setViewingRequest] = useState(null);
+
   // Bulk User Actions
   const handleBulkUserAction = async (action) => {
     try {
@@ -1363,12 +1628,25 @@ const AdminDashboard = () => {
         headers = ['ID', 'Title', 'Date', 'Category'];
         filename = 'events_export.csv';
         break;
+      case 'privacy':
+        data = privacyRequests.map(({ id, request_type, user_email, full_name, status, created_at }) => ({
+          id,
+          request_type,
+          user_email,
+          full_name,
+          status,
+          created_at: new Date(created_at).toLocaleDateString(),
+          days_since: Math.floor((new Date() - new Date(created_at)) / (1000 * 60 * 60 * 24))
+        }));
+        headers = ['ID', 'Request_Type', 'User_Email', 'Full_Name', 'Status', 'Created_At', 'Days_Since'];
+        filename = 'privacy_requests_export.csv';
+        break;
     }
 
     const csvContent = [
       headers.join(','),
       ...data.map(row => headers.map(header =>
-        row[header.toLowerCase()]
+        JSON.stringify(row[header.toLowerCase()] || '')
       ).join(','))
     ].join('\n');
 
@@ -2442,6 +2720,350 @@ const AdminDashboard = () => {
     );
   };
 
+  // Privacy Management Component
+  const PrivacyManagement = () => {
+    // Filtered privacy requests
+    const filteredRequests = useMemo(() => {
+      return privacyRequests.filter(request => {
+        const matchesSearch = 
+          request.user_email.toLowerCase().includes(privacySearch.toLowerCase()) ||
+          request.full_name.toLowerCase().includes(privacySearch.toLowerCase()) ||
+          request.id.toString().includes(privacySearch);
+        
+        const matchesStatus = privacyFilterStatus === 'all' || request.status === privacyFilterStatus;
+        const matchesType = privacyFilterType === 'all' || request.request_type === privacyFilterType;
+        
+        return matchesSearch && matchesStatus && matchesType;
+      });
+    }, [privacyRequests, privacySearch, privacyFilterStatus, privacyFilterType]);
+
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'pending': return 'bg-yellow-100 text-yellow-800';
+        case 'in_progress': return 'bg-blue-100 text-blue-800';
+        case 'completed': return 'bg-green-100 text-green-800';
+        case 'rejected': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const getTypeIcon = (type) => {
+      switch (type) {
+        case 'access': return <Eye className="w-4 h-4" />;
+        case 'deletion': return <Trash2 className="w-4 h-4" />;
+        case 'portability': return <Download className="w-4 h-4" />;
+        default: return <FileText className="w-4 h-4" />;
+      }
+    };
+
+    const handleBulkStatusUpdate = async (newStatus) => {
+      if (selectedRequests.length === 0) {
+        alert('Please select requests to update.');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to update ${selectedRequests.length} requests to ${newStatus}?`)) {
+        return;
+      }
+
+      try {
+        await Promise.all(
+          selectedRequests.map(requestId =>
+            fetchData(`/admin/privacy-requests/${requestId}/status`, 'PUT', {
+              status: newStatus,
+              admin_notes: `Bulk status update to ${newStatus} on ${new Date().toISOString()}`
+            })
+          )
+        );
+        setSelectedRequests([]);
+        await fetchPrivacyRequests();
+      } catch (error) {
+        setError('Error updating requests: ' + error.message);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Privacy Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold opacity-90">Total Requests</h3>
+                <p className="text-3xl font-bold">{privacyRequests.length}</p>
+              </div>
+              <FileText className="w-8 h-8 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg shadow-md p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold opacity-90">Pending</h3>
+                <p className="text-3xl font-bold">
+                  {privacyRequests.filter(r => r.status === 'pending').length}
+                </p>
+              </div>
+              <Clock3 className="w-8 h-8 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-md p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold opacity-90">Completed</h3>
+                <p className="text-3xl font-bold">
+                  {privacyRequests.filter(r => r.status === 'completed').length}
+                </p>
+              </div>
+              <CheckCircle2 className="w-8 h-8 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg shadow-md p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold opacity-90">Overdue</h3>
+                <p className="text-3xl font-bold">
+                  {privacyRequests.filter(r => {
+                    const daysSince = (new Date() - new Date(r.created_at)) / (1000 * 60 * 60 * 24);
+                    return r.status === 'pending' && daysSince > 30; // 30 day SLA
+                  }).length}
+                </p>
+                <p className="text-sm opacity-75">30+ days</p>
+              </div>
+              <AlertOctagon className="w-8 h-8 opacity-80" />
+            </div>
+          </div>
+        </div>
+
+        {/* Privacy Request Management */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-blue-600">Privacy Request Management</h2>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={fetchPrivacyRequests}
+                className="flex items-center text-blue-600 hover:text-blue-800"
+                title="Refresh Requests"
+              >
+                <RefreshCw className="w-5 h-5 mr-2" /> Refresh
+              </button>
+              {selectedRequests.length > 0 && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleBulkStatusUpdate('in_progress')}
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  >
+                    Mark In Progress
+                  </button>
+                  <button
+                    onClick={() => handleBulkStatusUpdate('completed')}
+                    className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                  >
+                    Mark Completed
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search requests..."
+                value={privacySearch}
+                onChange={(e) => setPrivacySearch(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md pl-10"
+              />
+              <Search className="absolute left-3 top-3 text-gray-400" />
+            </div>
+            
+            <select
+              value={privacyFilterStatus}
+              onChange={(e) => setPrivacyFilterStatus(e.target.value)}
+              className="px-3 py-2 border rounded-md"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="rejected">Rejected</option>
+            </select>
+
+            <select
+              value={privacyFilterType}
+              onChange={(e) => setPrivacyFilterType(e.target.value)}
+              className="px-3 py-2 border rounded-md"
+            >
+              <option value="all">All Types</option>
+              <option value="access">Data Access</option>
+              <option value="deletion">Data Deletion</option>
+              <option value="portability">Data Portability</option>
+            </select>
+
+            <button
+              onClick={() => {
+                setPrivacySearch('');
+                setPrivacyFilterStatus('all');
+                setPrivacyFilterType('all');
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              Clear Filters
+            </button>
+          </div>
+
+          {/* Privacy Requests Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedRequests.length === filteredRequests.length && filteredRequests.length > 0}
+                      onChange={(e) =>
+                        setSelectedRequests(
+                          e.target.checked
+                            ? filteredRequests.map(r => r.id)
+                            : []
+                        )
+                      }
+                    />
+                  </th>
+                  <th className="p-3 text-left">ID</th>
+                  <th className="p-3 text-left">Type</th>
+                  <th className="p-3 text-left">User</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-left">Submitted</th>
+                  <th className="p-3 text-left">SLA Status</th>
+                  <th className="p-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRequests.map(request => {
+                  const daysSince = (new Date() - new Date(request.created_at)) / (1000 * 60 * 60 * 24);
+                  const isOverdue = request.status === 'pending' && daysSince > 30;
+                  const isWarning = request.status === 'pending' && daysSince > 20;
+                  
+                  return (
+                    <tr key={request.id} className={`border-b hover:bg-gray-50 ${isOverdue ? 'bg-red-50' : isWarning ? 'bg-yellow-50' : ''}`}>
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedRequests.includes(request.id)}
+                          onChange={(e) =>
+                            setSelectedRequests(prev =>
+                              e.target.checked
+                                ? [...prev, request.id]
+                                : prev.filter(id => id !== request.id)
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="p-3">
+                        <span className="text-xs text-gray-500 font-mono">#{request.id}</span>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center space-x-2">
+                          {getTypeIcon(request.request_type)}
+                          <span className="capitalize">{request.request_type}</span>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div>
+                          <div className="font-medium">{request.full_name}</div>
+                          <div className="text-sm text-gray-500">{request.user_email}</div>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status)}`}>
+                          {request.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="text-sm">
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {Math.floor(daysSince)} days ago
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        {isOverdue ? (
+                          <span className="text-red-600 font-medium text-sm">Overdue</span>
+                        ) : isWarning ? (
+                          <span className="text-yellow-600 font-medium text-sm">Due Soon</span>
+                        ) : (
+                          <span className="text-green-600 font-medium text-sm">On Time</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => setViewingRequest(request)}
+                          className="text-blue-500 hover:text-blue-700 mr-2"
+                          title="View Request"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredRequests.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No privacy requests found matching your criteria.</p>
+            </div>
+          )}
+        </div>
+
+        {/* CCPA Compliance Information */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-xl font-semibold text-blue-600 mb-4">CCPA Compliance Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-semibold text-gray-800 mb-2">Response Time Requirements</h4>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Data Access Requests: 45 days maximum</li>
+                <li>• Data Deletion Requests: 30 days maximum</li>
+                <li>• Data Portability: 45 days maximum</li>
+                <li>• Acknowledgment: Within 10 days</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold text-gray-800 mb-2">Quick Actions</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => window.open('mailto:support@todo-events.com', '_blank')}
+                  className="w-full bg-blue-100 text-blue-700 py-2 px-4 rounded hover:bg-blue-200 flex items-center justify-center"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Contact Support Team
+                </button>
+                <button
+                  onClick={() => exportData('privacy')}
+                  className="w-full bg-green-100 text-green-700 py-2 px-4 rounded hover:bg-green-200 flex items-center justify-center"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Privacy Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Moderation Tools Component
   const ModerationTools = () => {
     return (
@@ -2520,6 +3142,7 @@ const AdminDashboard = () => {
               { name: 'Dashboard', icon: <Server className="mr-2" />, tab: 'dashboard' },
               { name: 'Users', icon: <Users className="mr-2" />, tab: 'users' },
               { name: 'Events', icon: <Calendar className="mr-2" />, tab: 'events' },
+              { name: 'Privacy', icon: <FileText className="mr-2" />, tab: 'privacy' },
               { name: 'Bulk Import', icon: <Plus className="mr-2" />, tab: 'bulk' },
               { name: 'Analytics', icon: <BarChart2 className="mr-2" />, tab: 'analytics' },
               { name: 'Moderation', icon: <Shield className="mr-2" />, tab: 'moderation' }
@@ -2580,6 +3203,7 @@ const AdminDashboard = () => {
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'users' && <UserManagement />}
           {activeTab === 'events' && <EventManagement />}
+          {activeTab === 'privacy' && <PrivacyManagement />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'moderation' && <ModerationTools />}
           {activeTab === 'bulk' && <BulkOperations />}
@@ -2606,6 +3230,18 @@ const AdminDashboard = () => {
           onClose={() => setEditingEvent(null)}
           onSave={() => {
             refreshData();
+          }}
+        />
+      )}
+
+      {/* Privacy Request Modal */}
+      {viewingRequest && (
+        <PrivacyRequestModal
+          request={viewingRequest}
+          isOpen={!!viewingRequest}
+          onClose={() => setViewingRequest(null)}
+          onUpdate={() => {
+            fetchPrivacyRequests();
           }}
         />
       )}
