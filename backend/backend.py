@@ -4007,6 +4007,7 @@ async def toggle_event_interest(
     try:
         # Get user ID if authenticated
         user_id = current_user.get('id') if current_user else None
+        logger.info(f"🎯 Interest toggle - Event: {event_id}, User ID: {user_id}, Has Auth: {current_user is not None}")
         
         # Generate browser fingerprint
         browser_fingerprint = generate_browser_fingerprint(request)
@@ -4090,6 +4091,8 @@ async def toggle_event_interest(
                 interest_count = 0
             
             conn.commit()
+            
+            logger.info(f"✅ Interest {action} - Event: {event_id}, Count: {interest_count}, User: {user_id}, Fingerprint: {browser_fingerprint}")
             
             return {
                 "success": True,

@@ -283,11 +283,6 @@ class BatchedSyncService {
     const API_URL = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
     
-    if (!token) {
-      console.log('No auth token, skipping interest sync');
-      return;
-    }
-    
     const interestsToSync = Array.from(this.interestQueue.entries());
     
     for (const [eventId, change] of interestsToSync) {
@@ -303,17 +298,24 @@ class BatchedSyncService {
           continue; // Skip this event, it was cleaned up by validateEventExists
         }
 
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add authorization header only if token exists
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const response = await fetchWithTimeout(`${API_URL}/events/${eventId}/interest`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+          headers
         }, 10000); // 10 second timeout for batch operations
 
         // Remove from queue on success
         this.interestQueue.delete(eventId);
-        console.log(`✅ Interest synced for event ${eventId}:`, response);
+        const userType = token ? 'authenticated' : 'anonymous';
+        console.log(`✅ Interest synced for event ${eventId} (${userType}):`, response);
         
       } catch (error) {
         // Handle 404 errors (event doesn't exist anymore)
@@ -489,6 +491,43 @@ class BatchedSyncService {
   }
 
   /**
+   * Debug method to test anonymous interest functionality
+   */
+     debugAnonymousInterest() {
+     const testEventId = '456'; // Chicago Air and Water Show from your example
+     const token = localStorage.getItem('token');
+     
+     console.log('🧪 Testing anonymous interest functionality...');
+     console.log('Token present:', !!token);
+     console.log('User type:', token ? 'authenticated' : 'anonymous');
+     
+     // Test toggle interest
+     const initialState = this.getCachedEventData(testEventId);
+     console.log('Initial state:', initialState);
+     
+     const result1 = this.toggleInterest(testEventId, false);
+     console.log('After toggle ON:', result1);
+     
+     const result2 = this.toggleInterest(testEventId, true);
+     console.log('After toggle OFF:', result2);
+     
+     // Test sync behavior
+     console.log('Queue size before sync:', this.interestQueue.size);
+     this.syncInterestChanges().then(() => {
+       console.log('Queue size after sync:', this.interestQueue.size);
+       console.log('✅ Anonymous interest test completed');
+     });
+     
+     return {
+       tokenPresent: !!token,
+       userType: token ? 'authenticated' : 'anonymous',
+       initialState,
+       toggleResults: [result1, result2],
+       queueSize: this.interestQueue.size
+     };
+   }
+
+  /**
    * Check user's interest status for a specific event (lazy loading)
    */
   async checkUserInterestStatus(eventId) {
@@ -504,7 +543,7 @@ class BatchedSyncService {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        // User not logged in, can't be interested
+        // User not logged in, default to not interested (but can still interact)
         cached.interested = false;
         cached.interestStatusChecked = true;
         return false;
