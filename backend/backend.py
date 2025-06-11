@@ -8471,21 +8471,21 @@ async def create_tracking_tables():
                 )
             """)
             
-            # Create privacy_requests table for CCPA compliance
+            # Create privacy_requests table for CCPA compliance with simpler constraints for compatibility
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS privacy_requests (
-                    id SERIAL PRIMARY KEY,
-                    request_type TEXT NOT NULL CHECK (request_type IN ('access', 'delete', 'opt_out')),
-                    email TEXT NOT NULL,
-                    full_name TEXT,
-                    verification_info TEXT,
-                    details TEXT,
-                    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'denied')),
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    completed_at TIMESTAMP,
-                    admin_notes TEXT
-                )
-            """)
+                    CREATE TABLE IF NOT EXISTS privacy_requests (
+                        id SERIAL PRIMARY KEY,
+                        request_type VARCHAR(50) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
+                        full_name VARCHAR(255),
+                        verification_info TEXT,
+                        details TEXT,
+                        status VARCHAR(50) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP,
+                        admin_notes TEXT
+                    )
+                """)
             
             # Fix NULL counter values in existing events
             cursor.execute("UPDATE events SET interest_count = 0 WHERE interest_count IS NULL")
@@ -8493,11 +8493,35 @@ async def create_tracking_tables():
             
             conn.commit()
             
+            # Test privacy request insertion
+            try:
+                created_at = datetime.now().isoformat()
+                cursor.execute(f"""
+                    INSERT INTO privacy_requests 
+                    (request_type, email, full_name, verification_info, details, status, created_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                """, (
+                    'access',
+                    'test@example.com',
+                    'Test User',
+                    'Test verification',
+                    'Test details',
+                    'pending',
+                    created_at
+                ))
+                test_result = cursor.fetchone()
+                test_request_id = test_result[0] if test_result else None
+                conn.commit()
+            except Exception as test_error:
+                test_request_id = f"Error: {test_error}"
+            
             return {
                 "success": True,
                 "message": "All tables created successfully",
                 "tables_created": ["event_interests", "event_views", "page_visits", "privacy_requests"],
-                "events_updated": True
+                "events_updated": True,
+                "privacy_test_insert": test_request_id
             }
             
     except Exception as e:
@@ -11138,7 +11162,9 @@ async def submit_privacy_request(request: PrivacyRequest):
         logger.error(f"Error details: {str(e)}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Failed to submit privacy request")
+        # Return more detailed error for debugging
+        error_detail = f"Failed to submit privacy request: {type(e).__name__}: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_detail)
 
 @app.get("/api/privacy/data/{email}")
 async def get_user_data_export(email: str, verification_code: str = None):
@@ -11622,6 +11648,110 @@ async def create_privacy_table():
             "success": False,
             "error": str(e),
             "database_type": "PostgreSQL" if (IS_PRODUCTION and DB_URL) else "SQLite"
+        }
+
+@app.post("/debug/test-privacy-insert")
+async def debug_test_privacy_insert():
+    """Debug endpoint to test privacy request insertion with detailed error info"""
+    try:
+        debug_info = {
+            "IS_PRODUCTION": IS_PRODUCTION,
+            "DB_URL_exists": bool(DB_URL),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        test_data = {
+            "request_type": "access",
+            "email": "debug-test@example.com",
+            "full_name": "Debug Test User",
+            "verification_info": "Debug verification",
+            "details": "Debug test request"
+        }
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Test 1: Basic table check
+            try:
+                cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_name = 'privacy_requests'")
+                table_check = cursor.fetchone()
+                debug_info["table_exists_direct"] = table_check is not None
+                debug_info["table_check_result"] = table_check
+            except Exception as e:
+                debug_info["table_check_error"] = str(e)
+            
+            # Test 2: Try to count records
+            try:
+                cursor.execute("SELECT COUNT(*) FROM privacy_requests")
+                count_result = cursor.fetchone()
+                debug_info["current_record_count"] = count_result[0] if count_result else "No result"
+            except Exception as e:
+                debug_info["count_error"] = str(e)
+                debug_info["count_error_type"] = type(e).__name__
+            
+            # Test 3: Try the actual insert from the main endpoint
+            try:
+                created_at = datetime.now().isoformat()
+                
+                insert_sql = f"""
+                    INSERT INTO privacy_requests 
+                    (request_type, email, full_name, verification_info, details, status, created_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                """
+                insert_values = (
+                    test_data["request_type"],
+                    test_data["email"],
+                    test_data["full_name"],
+                    test_data["verification_info"],
+                    test_data["details"],
+                    'pending',
+                    created_at
+                )
+                
+                debug_info["insert_sql"] = insert_sql
+                debug_info["insert_values"] = insert_values
+                
+                cursor.execute(insert_sql, insert_values)
+                result = cursor.fetchone()
+                
+                if result and len(result) > 0:
+                    request_id = result[0]
+                    debug_info["insert_success"] = True
+                    debug_info["request_id"] = request_id
+                    
+                    conn.commit()
+                    
+                    # Test retrieval
+                    cursor.execute(f"SELECT * FROM privacy_requests WHERE id = {placeholder}", (request_id,))
+                    retrieved = cursor.fetchone()
+                    debug_info["retrieval_test"] = dict(retrieved) if hasattr(retrieved, 'keys') else list(retrieved)
+                    
+                else:
+                    debug_info["insert_success"] = False
+                    debug_info["insert_result"] = result
+                    
+            except Exception as e:
+                debug_info["insert_error"] = str(e)
+                debug_info["insert_error_type"] = type(e).__name__
+                import traceback
+                debug_info["insert_traceback"] = traceback.format_exc()
+            
+            return {
+                "success": True,
+                "message": "Privacy request debug test completed",
+                "debug_info": debug_info
+            }
+            
+    except Exception as e:
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc(),
+            "debug_info": debug_info if 'debug_info' in locals() else {}
         }
 
 # =============================================================================
