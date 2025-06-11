@@ -11022,6 +11022,10 @@ async def submit_privacy_request(request: PrivacyRequest):
     Handle CCPA privacy requests (access, deletion, opt-out)
     """
     try:
+        logger.debug(f"=== PRIVACY REQUEST SUBMISSION DEBUG ===")
+        logger.debug(f"Request data: request_type={request.request_type}, email={request.email}")
+        logger.debug(f"IS_PRODUCTION: {IS_PRODUCTION}, DB_URL exists: {bool(DB_URL)}")
+        
         with get_db() as conn:
             cursor = conn.cursor()
             
@@ -11029,15 +11033,27 @@ async def submit_privacy_request(request: PrivacyRequest):
             placeholder = get_placeholder()
             created_at = datetime.now().isoformat()
             
+            logger.debug(f"Using placeholder: {placeholder}, created_at: {created_at}")
+            
             # Use different approach for PostgreSQL vs SQLite
             if IS_PRODUCTION and DB_URL:  # PostgreSQL
                 logger.debug(f"Using PostgreSQL, inserting privacy request for {request.email}")
-                cursor.execute(f"""
+                
+                # Test if table exists first
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM privacy_requests LIMIT 1")
+                    logger.debug("privacy_requests table exists and is accessible")
+                except Exception as table_error:
+                    logger.error(f"privacy_requests table issue: {table_error}")
+                    raise HTTPException(status_code=500, detail=f"Database table error: {table_error}")
+                
+                insert_sql = f"""
                     INSERT INTO privacy_requests 
                     (request_type, email, full_name, verification_info, details, status, created_at)
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                     RETURNING id
-                """, (
+                """
+                insert_values = (
                     request.request_type,
                     request.email,
                     request.full_name,
@@ -11045,7 +11061,12 @@ async def submit_privacy_request(request: PrivacyRequest):
                     request.details,
                     'pending',
                     created_at
-                ))
+                )
+                
+                logger.debug(f"PostgreSQL insert SQL: {insert_sql}")
+                logger.debug(f"PostgreSQL insert values: {insert_values}")
+                
+                cursor.execute(insert_sql, insert_values)
                 result = cursor.fetchone()
                 logger.debug(f"PostgreSQL insert result: {result}")
                 if result and len(result) > 0:
@@ -11113,6 +11134,10 @@ async def submit_privacy_request(request: PrivacyRequest):
             
     except Exception as e:
         logger.error(f"Privacy request submission error: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to submit privacy request")
 
 @app.get("/api/privacy/data/{email}")
