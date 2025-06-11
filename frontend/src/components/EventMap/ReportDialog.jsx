@@ -81,9 +81,11 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
       };
 
       console.log('📝 Report data:', reportData);
-      console.log('🌐 Sending to:', window.location.origin + '/api/report-event');
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://todoevents-backend.onrender.com';
+      const reportUrl = `${apiUrl}/api/report-event`;
+      console.log('🌐 Sending to:', reportUrl);
 
-      const response = await fetch('/api/report-event', {
+      const response = await fetch(reportUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
