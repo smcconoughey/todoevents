@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useEventInteraction } from '../../hooks/useEventInteraction';
 import { InterestButton } from './InterestButton';
 import { ViewCounter } from './ViewCounter';
+import { Button } from '../ui/button';
+import { AlertTriangle } from 'lucide-react';
 
-const EventInteractionComponents = ({ eventId }) => {
+const EventInteractionComponents = ({ eventId, onReport }) => {
   const {
     interested,
     interestCount,
@@ -71,6 +73,17 @@ const EventInteractionComponents = ({ eventId }) => {
           alwaysShow={true}
           className="text-themed-secondary"
         />
+        {onReport && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white/50 hover:text-white/80 hover:bg-white/5 transition-all duration-200 text-xs px-2 py-1 h-auto"
+            onClick={onReport}
+          >
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            Report
+          </Button>
+        )}
       </div>
     </div>
   );

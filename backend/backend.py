@@ -6855,6 +6855,7 @@ async def get_page_visits_analytics(
 async def report_event(report_data: dict):
     """Report an event for inappropriate content, incorrect information, etc."""
     try:
+        logger.info(f"🚨 Report event endpoint called with data: {report_data}")
         # Validate required fields
         required_fields = ['eventId', 'eventTitle', 'category', 'description', 'reporterEmail']
         for field in required_fields:
@@ -6873,6 +6874,7 @@ async def report_event(report_data: dict):
         
         # Send email notification
         try:
+            logger.info("📧 Attempting to send report email...")
             from email_config import EmailService
             email_service = EmailService()
             
@@ -6895,11 +6897,15 @@ async def report_event(report_data: dict):
                 html_content=html_content
             )
             
+            logger.info(f"📧 Email send result: {email_sent}")
+            
         except Exception as e:
             logger.error(f"Error sending report email: {e}")
         
         # Log the report
         logger.info(f"Event report received - Event ID: {report_data['eventId']}, Type: {report_reason}, Reporter: {email}")
+        
+        logger.info("✅ Report processing completed successfully")
         
         return {
             "success": True,
@@ -6911,6 +6917,33 @@ async def report_event(report_data: dict):
     except Exception as e:
         logger.error(f"Error processing event report: {e}")
         raise HTTPException(status_code=500, detail="Failed to submit report. Please contact support@todo-events.com directly.")
+
+@app.get("/debug/test-email")
+async def debug_test_email():
+    """Test email configuration"""
+    try:
+        from email_config import EmailService
+        email_service = EmailService()
+        
+        # Test email send
+        result = email_service.send_email(
+            to_email="support@todo-events.com",
+            subject="Test Email from Render - Report System",
+            html_content="<h2>Test Email</h2><p>This is a test email to verify the report system email configuration is working.</p>"
+        )
+        
+        return {
+            "email_test_result": result,
+            "config": {
+                "smtp_server": email_service.config['smtp_server'],
+                "smtp_port": email_service.config['smtp_port'],
+                "smtp_username": email_service.config['smtp_username'],
+                "from_email": email_service.config['from_email'],
+                "password_configured": bool(email_service.config['smtp_password'])
+            }
+        }
+    except Exception as e:
+        return {"error": str(e), "traceback": str(e.__traceback__)}
 
 @app.get("/debug/page-visits")
 async def debug_page_visits():

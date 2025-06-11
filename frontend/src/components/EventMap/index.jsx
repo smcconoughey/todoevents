@@ -493,20 +493,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
             </div>
             
             {/* Add event interaction components to the details panel */}
-            <EventInteractionComponents eventId={String(event.id)} />
-            
-            {/* Report Button - available to all users */}
-            <div className="pt-3 border-t border-white/10">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white/50 hover:text-white/80 hover:bg-white/5 transition-all duration-200 text-xs px-2 py-1"
-                onClick={onReport}
-              >
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                Report
-              </Button>
-            </div>
+            <EventInteractionComponents eventId={String(event.id)} onReport={onReport} />
             
             {user && (user.id === event.created_by || user.role === 'admin') && (
               <div className="pt-4 space-y-3 border-t border-white/10">
@@ -3710,20 +3697,7 @@ const EventMap = ({
                 </div>
                 
                 {/* Event Interaction Components */}
-                <EventInteractionComponents eventId={String(selectedEvent.id)} />
-                
-                {/* Report Button - available to all users on mobile */}
-                <div className="pt-3 border-t border-white/10">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/50 hover:text-white/80 hover:bg-white/5 transition-all duration-200 text-xs px-2 py-1"
-                    onClick={() => setShowReportDialog(true)}
-                  >
-                    <AlertTriangle className="w-3 h-3 mr-1" />
-                    Report
-                  </Button>
-                </div>
+                <EventInteractionComponents eventId={String(selectedEvent.id)} onReport={() => setShowReportDialog(true)} />
                 
                 {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
                   <div className="pt-3 space-y-2 border-t border-white/10">

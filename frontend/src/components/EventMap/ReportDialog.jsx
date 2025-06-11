@@ -64,6 +64,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
     setError(null);
 
     try {
+      console.log('🚨 Starting report submission...');
       const reportData = {
         eventId: event.id,
         eventTitle: event.title,
@@ -79,6 +80,9 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
         currentUrl: window.location.href
       };
 
+      console.log('📝 Report data:', reportData);
+      console.log('🌐 Sending to:', window.location.origin + '/api/report-event');
+
       const response = await fetch('/api/report-event', {
         method: 'POST',
         headers: {
@@ -87,8 +91,12 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
         body: JSON.stringify(reportData)
       });
 
+      console.log('📡 Response received:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       // Check if response has content before parsing JSON
@@ -97,6 +105,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
       
       if (contentType && contentType.includes('application/json')) {
         const text = await response.text();
+        console.log('📄 Response text:', text);
         if (text.trim()) {
           result = JSON.parse(text);
         } else {
@@ -107,6 +116,8 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
         // Non-JSON response, assume success if status is ok
         result = { success: true };
       }
+      
+      console.log('✅ Parsed result:', result);
       
       if (result.success) {
         setIsSubmitted(true);
@@ -119,6 +130,9 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
       }
     } catch (error) {
       console.error('Error submitting report:', error);
+      console.log('Report data sent:', reportData);
+      console.log('Response status:', response?.status);
+      console.log('Response headers:', response?.headers);
       setError('Failed to submit report. Please try again or contact support directly at support@todo-events.com');
     } finally {
       setIsSubmitting(false);
@@ -172,23 +186,23 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="dialog-themed max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="pb-4">
           <DialogTitle className="flex items-center gap-2 text-white text-lg">
             <AlertTriangle className="w-5 h-5 text-yellow-400" />
             Report "{event.title}"
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6 py-2">
+        <form onSubmit={handleSubmit} className="space-y-6 pb-2">
 
           {/* Report Category */}
           <div className="space-y-3">
             <label className="text-sm font-medium text-white">
               What's the issue? <span className="text-red-400">*</span>
             </label>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {reportCategories.map((category) => (
-                <label key={category.value} className="flex items-center gap-3 p-2 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-colors">
+                <label key={category.value} className="flex items-center gap-3 p-3 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-colors">
                   <input
                     type="radio"
                     name="category"
@@ -214,8 +228,8 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
               value={formData.description}
               onChange={handleInputChange}
               placeholder="Please provide details about the issue..."
-              className="input-themed min-h-[80px] resize-y"
-              rows={3}
+              className="input-themed min-h-[100px] resize-y"
+              rows={4}
             />
             <div className="text-xs text-white/50">
               {formData.description.length}/500 characters
@@ -267,7 +281,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           )}
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4">
             <Button
               type="button"
               variant="ghost"
@@ -297,7 +311,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           </div>
 
           {/* Privacy Notice */}
-          <div className="text-xs text-white/40 pt-1 text-center">
+          <div className="text-xs text-white/40 pt-3 text-center">
             Report will be sent to our moderation team for review.
           </div>
         </form>
