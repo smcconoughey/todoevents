@@ -7032,7 +7032,7 @@ async def submit_privacy_request(request: PrivacyRequest):
             request_id = cursor.lastrowid
             conn.commit()
             
-                                     # Send confirmation email
+            # Send confirmation email
             try:
                 from email_config import EmailService
                 email_service = EmailService()
