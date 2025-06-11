@@ -11375,3 +11375,322 @@ async def debug_page_visits():
     except Exception as e:
         return {"error": str(e), "traceback": str(e.__traceback__)}
 
+# =============================================================================
+# ADMIN PRIVACY MANAGEMENT ENDPOINTS
+# =============================================================================
+
+@app.get("/admin/privacy-requests")
+async def list_admin_privacy_requests(current_user: dict = Depends(get_current_user)):
+    """
+    List all privacy requests for admin dashboard (with hyphen path)
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute(f"""
+                SELECT id, request_type, user_email, full_name, 
+                       additional_details, verification_info, status, 
+                       created_at, completed_at, admin_notes
+                FROM privacy_requests 
+                ORDER BY created_at DESC
+            """)
+            
+            requests = cursor.fetchall()
+            
+            return [
+                {
+                    "id": row[0],
+                    "request_type": row[1],
+                    "user_email": row[2],
+                    "full_name": row[3],
+                    "additional_details": row[4],
+                    "verification_info": row[5],
+                    "status": row[6] or "pending",
+                    "created_at": row[7],
+                    "completed_at": row[8],
+                    "admin_notes": row[9]
+                } for row in requests
+            ]
+            
+    except Exception as e:
+        logger.error(f"Error listing admin privacy requests: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list privacy requests")
+
+@app.put("/admin/privacy-requests/{request_id}/status")
+async def update_admin_privacy_request_status(
+    request_id: int, 
+    update_data: dict,  # Expecting {"status": "...", "admin_notes": "..."}
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Update privacy request status (with hyphen path for admin dashboard)
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    status = update_data.get("status")
+    admin_notes = update_data.get("admin_notes", "")
+    
+    if not status:
+        raise HTTPException(status_code=400, detail="Status is required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            completed_at = datetime.now().isoformat() if status == "completed" else None
+            
+            cursor.execute(f"""
+                UPDATE privacy_requests 
+                SET status = {placeholder}, completed_at = {placeholder}, admin_notes = {placeholder}
+                WHERE id = {placeholder}
+            """, (status, completed_at, admin_notes, request_id))
+            
+            conn.commit()
+            
+            return {"success": True, "message": "Privacy request status updated"}
+            
+    except Exception as e:
+        logger.error(f"Error updating admin privacy request status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update privacy request status")
+
+@app.post("/admin/privacy-requests/{request_id}/export")
+async def export_user_data_for_request(
+    request_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Export user data for a specific privacy request
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get the privacy request
+            cursor.execute(f"""
+                SELECT user_email, request_type FROM privacy_requests 
+                WHERE id = {placeholder}
+            """, (request_id,))
+            
+            request_row = cursor.fetchone()
+            if not request_row:
+                raise HTTPException(status_code=404, detail="Privacy request not found")
+            
+            email = request_row[0]
+            request_type = request_row[1]
+            
+            if request_type != "access":
+                raise HTTPException(status_code=400, detail="Export only available for access requests")
+            
+            # Get user data (reuse existing logic)
+            user_data = {}
+            
+            # Get user account
+            cursor.execute(f"SELECT id, email, role FROM users WHERE email = {placeholder}", (email,))
+            user_row = cursor.fetchone()
+            
+            if user_row:
+                user_data["user_account"] = {
+                    "id": user_row[0],
+                    "email": user_row[1],
+                    "role": user_row[2]
+                }
+                
+                user_id = user_row[0]
+                
+                # Get user's events
+                cursor.execute(f"""
+                    SELECT id, title, description, date, start_time, end_time, category, address, lat, lng
+                    FROM events WHERE created_by = {placeholder}
+                """, (user_id,))
+                events = cursor.fetchall()
+                
+                user_data["events"] = [
+                    {
+                        "id": event[0],
+                        "title": event[1],
+                        "description": event[2],
+                        "date": event[3],
+                        "start_time": event[4],
+                        "end_time": event[5],
+                        "category": event[6],
+                        "address": event[7],
+                        "lat": event[8],
+                        "lng": event[9]
+                    } for event in events
+                ]
+                
+                # Get user's interests
+                cursor.execute(f"""
+                    SELECT e.id, e.title, ei.interested_at
+                    FROM event_interests ei
+                    JOIN events e ON ei.event_id = e.id
+                    WHERE ei.user_id = {placeholder}
+                """, (user_id,))
+                interests = cursor.fetchall()
+                
+                user_data["interests"] = [
+                    {
+                        "event_id": interest[0],
+                        "event_title": interest[1],
+                        "interested_at": interest[2]
+                    } for interest in interests
+                ]
+                
+                # Get page visits
+                cursor.execute(f"""
+                    SELECT page_type, page_path, visited_at
+                    FROM page_visits WHERE user_id = {placeholder}
+                    ORDER BY visited_at DESC
+                """, (user_id,))
+                visits = cursor.fetchall()
+                
+                user_data["page_visits"] = [
+                    {
+                        "page_type": visit[0],
+                        "page_path": visit[1],
+                        "visited_at": visit[2]
+                    } for visit in visits
+                ]
+                
+            else:
+                user_data["user_account"] = None
+                user_data["events"] = []
+                user_data["interests"] = []
+                user_data["page_visits"] = []
+            
+            # Get any reports by this email
+            cursor.execute(f"""
+                SELECT event_id, report_type, details, reported_at
+                FROM event_reports WHERE reporter_email = {placeholder}
+            """, (email,))
+            reports = cursor.fetchall()
+            
+            user_data["reports"] = [
+                {
+                    "event_id": report[0],
+                    "report_type": report[1],
+                    "details": report[2],
+                    "reported_at": report[3]
+                } for report in reports
+            ]
+            
+            # Generate export file (simplified - in production you might want to create actual files)
+            export_data = {
+                "export_date": datetime.now().isoformat(),
+                "request_id": request_id,
+                "user_email": email,
+                "data": user_data
+            }
+            
+            return {
+                "success": True,
+                "message": f"Data export generated for {email}",
+                "export_data": export_data,
+                "export_url": f"/admin/privacy-requests/{request_id}/download"  # Placeholder URL
+            }
+            
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        logger.error(f"Error exporting user data for request {request_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export user data")
+
+@app.post("/admin/privacy-requests/{request_id}/delete-data")
+async def delete_user_data_for_request(
+    request_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete user data for a specific privacy request
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get the privacy request
+            cursor.execute(f"""
+                SELECT user_email, request_type FROM privacy_requests 
+                WHERE id = {placeholder}
+            """, (request_id,))
+            
+            request_row = cursor.fetchone()
+            if not request_row:
+                raise HTTPException(status_code=404, detail="Privacy request not found")
+            
+            email = request_row[0]
+            request_type = request_row[1]
+            
+            if request_type not in ["delete", "deletion"]:
+                raise HTTPException(status_code=400, detail="Delete only available for deletion requests")
+            
+            # Perform data deletion (reuse existing logic)
+            deleted_items = {}
+            
+            # Get user ID
+            cursor.execute(f"SELECT id FROM users WHERE email = {placeholder}", (email,))
+            user_row = cursor.fetchone()
+            
+            if user_row:
+                user_id = user_row[0]
+                
+                # Delete user's events (and cascade related data)
+                cursor.execute(f"DELETE FROM event_interests WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
+                cursor.execute(f"DELETE FROM event_views WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
+                cursor.execute(f"DELETE FROM events WHERE created_by = {placeholder}", (user_id,))
+                deleted_items["events"] = cursor.rowcount
+                
+                # Delete user's interests
+                cursor.execute(f"DELETE FROM event_interests WHERE user_id = {placeholder}", (user_id,))
+                deleted_items["interests"] = cursor.rowcount
+                
+                # Delete user's page visits
+                cursor.execute(f"DELETE FROM page_visits WHERE user_id = {placeholder}", (user_id,))
+                deleted_items["page_visits"] = cursor.rowcount
+                
+                # Delete user account
+                cursor.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
+                deleted_items["user_account"] = cursor.rowcount
+            
+            # Delete reports by email (even if no user account)
+            cursor.execute(f"DELETE FROM event_reports WHERE reporter_email = {placeholder}", (email,))
+            deleted_items["reports"] = cursor.rowcount
+            
+            # Update privacy request status
+            cursor.execute(f"""
+                UPDATE privacy_requests 
+                SET status = 'completed', completed_at = {placeholder}
+                WHERE id = {placeholder}
+            """, (datetime.now().isoformat(), request_id))
+            
+            conn.commit()
+            
+            return {
+                "success": True,
+                "message": f"All data for {email} has been deleted",
+                "deleted_items": deleted_items,
+                "deletion_date": datetime.now().isoformat()
+            }
+            
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        logger.error(f"Error deleting user data for request {request_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete user data")
+
