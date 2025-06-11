@@ -92,6 +92,9 @@ def get_cors_origins():
 @app.middleware("http")
 async def cors_handler(request, call_next):
     # Log the request for debugging (reduced logging for performance)
+    if request.url.path == "/api/report-event":
+        logger.info(f"🚨 CORS MIDDLEWARE: {request.method} {request.url.path}")
+        logger.info(f"🚨 Headers: {dict(request.headers)}")
     origin = request.headers.get("origin")
     
     # Handle preflight requests
@@ -6850,6 +6853,12 @@ async def get_page_visits_analytics(
         logger.error(f"Error fetching page visits analytics: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch page visits analytics: {str(e)}")
 
+
+@app.get("/api/report-event")
+async def report_event_test():
+    """Test if the report endpoint is reachable"""
+    logger.info("🧪 GET /api/report-event endpoint reached")
+    return {"message": "Report endpoint is working", "method": "GET"}
 
 @app.post("/api/report-event")
 async def report_event(report_data: dict):
