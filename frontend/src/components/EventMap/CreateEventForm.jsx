@@ -19,6 +19,7 @@ import {
 import categories from './categoryConfig';
 import { AuthContext } from './AuthContext';
 import AddressAutocomplete from './AddressAutocomplete';
+import PrivacyNotice from '../PrivacyNotice';
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
@@ -644,6 +645,9 @@ const CreateEventForm = ({
               )}
             </div>
           </div>
+
+          {/* Privacy Notice */}
+          <PrivacyNotice context="event_creation" />
 
           <div className="pt-4 border-t border-themed">
             <button 

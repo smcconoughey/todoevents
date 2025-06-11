@@ -1,7 +1,10 @@
-import React from 'react';
-import { Shield, AlertCircle, FileText, Mail } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, AlertCircle, FileText, Mail, UserCheck } from 'lucide-react';
+import PrivacyRequestForm from './PrivacyRequestForm';
 
 const LegalPage = () => {
+  const [showPrivacyForm, setShowPrivacyForm] = useState(false);
+
   return (
     <div className="min-h-screen bg-themed-surface text-themed-primary">
       {/* Header */}
@@ -205,6 +208,130 @@ const LegalPage = () => {
           </div>
         </section>
 
+        {/* California Privacy Rights (CCPA/CPRA) */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">California Privacy Rights (CCPA/CPRA)</h2>
+          
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-4">
+            <p className="text-themed-primary leading-relaxed">
+              If you are a California resident, you have specific rights regarding your personal information under the 
+              California Consumer Privacy Act (CCPA) and California Privacy Rights Act (CPRA).
+            </p>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-themed-primary mb-3">Your California Rights:</h3>
+                <ul className="space-y-3 text-themed-primary">
+                  <li className="flex items-start gap-2">
+                    <span className="text-spark-yellow mt-1">•</span>
+                    <div>
+                      <strong>Right to Know/Access:</strong> Request a copy of the personal data we have collected about you, 
+                      including categories of data, sources, business purposes, and third parties we share it with.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-spark-yellow mt-1">•</span>
+                    <div>
+                      <strong>Right to Delete:</strong> Request deletion of your personal data ("right to be forgotten"). 
+                      We will process deletion requests within 45 days.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-spark-yellow mt-1">•</span>
+                    <div>
+                      <strong>Right to Opt-Out:</strong> Todo-Events does not sell personal data. However, you may contact us 
+                      at support@todo-events.com to restrict data sharing with service providers.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-spark-yellow mt-1">•</span>
+                    <div>
+                      <strong>Right to Non-Discrimination:</strong> We will not discriminate against you for exercising your privacy rights.
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <h4 className="font-medium text-themed-primary mb-2">How to Exercise Your Rights:</h4>
+                <p className="text-themed-primary">
+                  To exercise any of these rights, please email us at{' '}
+                  <a href="mailto:privacy@todo-events.com" className="text-pin-blue hover:underline">
+                    privacy@todo-events.com
+                  </a>{' '}
+                  with "California Privacy Request" in the subject line. Include:
+                </p>
+                <ul className="mt-2 space-y-1 text-themed-primary text-sm">
+                  <li>• Your full name and email address associated with your account</li>
+                  <li>• Specific request type (access, deletion, opt-out)</li>
+                  <li>• Verification information (we may request additional verification)</li>
+                </ul>
+              </div>
+              
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                <p className="text-themed-primary">
+                  <strong>Response Time:</strong> We will respond to verified requests within 45 days. 
+                  If additional time is needed, we will notify you and may extend the response period by an additional 45 days.
+                </p>
+              </div>
+
+              {/* Privacy Request Button */}
+              <div className="border-t border-themed pt-4">
+                <button
+                  onClick={() => setShowPrivacyForm(true)}
+                  className="btn-yellow-themed flex items-center gap-2"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  Submit Privacy Request
+                </button>
+                <p className="text-xs text-themed-muted mt-2">
+                  Secure form to exercise your California privacy rights (data access, deletion, or opt-out)
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Data We Collect (Detailed) */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Categories of Personal Information Collected</h2>
+          
+          <div className="bg-themed-surface border border-themed rounded-lg p-6">
+            <div className="space-y-4">
+              <p className="text-themed-primary leading-relaxed">
+                For transparency and compliance, here are the specific categories of personal information we collect:
+              </p>
+              
+              <div className="grid gap-4">
+                <div className="border border-themed rounded-lg p-4">
+                  <h4 className="font-medium text-themed-primary mb-2">Account Information</h4>
+                  <p className="text-themed-secondary text-sm">Email address, name, password (encrypted), account preferences</p>
+                </div>
+                
+                <div className="border border-themed rounded-lg p-4">
+                  <h4 className="font-medium text-themed-primary mb-2">Usage Data</h4>
+                  <p className="text-themed-secondary text-sm">Page visits, event interactions, interest clicks, session data, IP address</p>
+                </div>
+                
+                <div className="border border-themed rounded-lg p-4">
+                  <h4 className="font-medium text-themed-primary mb-2">Technical Information</h4>
+                  <p className="text-themed-secondary text-sm">Browser type, device information, browser fingerprint (for anonymous users)</p>
+                </div>
+                
+                <div className="border border-themed rounded-lg p-4">
+                  <h4 className="font-medium text-themed-primary mb-2">Content Submitted</h4>
+                  <p className="text-themed-secondary text-sm">Event details, descriptions, images, vendor information, reports submitted</p>
+                </div>
+                
+                <div className="border border-themed rounded-lg p-4">
+                  <h4 className="font-medium text-themed-primary mb-2">Location Data</h4>
+                  <p className="text-themed-secondary text-sm">Event locations, approximate user location (for local events), IP-based location</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Contact */}
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-themed-primary flex items-center gap-2">
@@ -214,13 +341,21 @@ const LegalPage = () => {
           
           <div className="bg-themed-surface border border-themed rounded-lg p-6">
             <p className="text-themed-primary leading-relaxed mb-4">
-              For all inquiries regarding these terms, licensing, or support, please contact:
+              For all inquiries regarding these terms, licensing, or support:
             </p>
             
             <div className="space-y-2 text-themed-primary">
-              <p><strong>Email:</strong> <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">support@todo-events.com</a></p>
+              <p><strong>General Inquiries:</strong> <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">support@todo-events.com</a></p>
+              <p><strong>Privacy Requests:</strong> <a href="mailto:privacy@todo-events.com" className="text-pin-blue hover:underline">privacy@todo-events.com</a></p>
               <p><strong>Company:</strong> Watchtower AB, Inc</p>
               <p><strong>Website:</strong> <a href="https://todo-events.com" className="text-pin-blue hover:underline">https://todo-events.com</a></p>
+            </div>
+            
+            <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-themed-primary text-sm">
+                <strong>California Residents:</strong> For privacy-related requests, please use privacy@todo-events.com 
+                with "California Privacy Request" in the subject line.
+              </p>
             </div>
           </div>
         </section>
@@ -232,6 +367,12 @@ const LegalPage = () => {
           </p>
         </div>
       </div>
+
+      {/* Privacy Request Dialog */}
+      <PrivacyRequestForm 
+        isOpen={showPrivacyForm} 
+        onClose={() => setShowPrivacyForm(false)} 
+      />
     </div>
   );
 };

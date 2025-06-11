@@ -547,10 +547,41 @@ def init_db():
                             visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
                         )''')
+
+                # Create privacy requests table for CCPA compliance
+                c.execute('''CREATE TABLE IF NOT EXISTS privacy_requests (
+                            id SERIAL PRIMARY KEY,
+                            request_type TEXT NOT NULL CHECK (request_type IN ('access', 'delete', 'opt_out')),
+                            email TEXT NOT NULL,
+                            full_name TEXT,
+                            verification_info TEXT,
+                            details TEXT,
+                            status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'denied')),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            admin_notes TEXT
+                        )''')
+
+                # Create event reports table for reporting functionality
+                c.execute('''CREATE TABLE IF NOT EXISTS event_reports (
+                            id SERIAL PRIMARY KEY,
+                            event_id INTEGER NOT NULL,
+                            event_title TEXT,
+                            event_address TEXT,
+                            event_date TEXT,
+                            reason TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            reporter_email TEXT NOT NULL,
+                            reporter_name TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            status TEXT DEFAULT 'pending',
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+                        )''')
                 
                 # Ensure tables are committed
                 conn.commit()
-                logger.info("✅ Interest and view tracking tables created/verified")
+                logger.info("✅ Interest, view tracking, privacy requests, and event reports tables created/verified")
             else:
                 # SQLite table creation (existing code)
                 c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -682,9 +713,40 @@ def init_db():
                             visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
                         )''')
+
+                # Create privacy requests table for CCPA compliance
+                c.execute('''CREATE TABLE IF NOT EXISTS privacy_requests (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            request_type TEXT NOT NULL CHECK (request_type IN ('access', 'delete', 'opt_out')),
+                            email TEXT NOT NULL,
+                            full_name TEXT,
+                            verification_info TEXT,
+                            details TEXT,
+                            status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'denied')),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            admin_notes TEXT
+                        )''')
+
+                # Create event reports table for reporting functionality
+                c.execute('''CREATE TABLE IF NOT EXISTS event_reports (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            event_id INTEGER NOT NULL,
+                            event_title TEXT,
+                            event_address TEXT,
+                            event_date TEXT,
+                            reason TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            reporter_email TEXT NOT NULL,
+                            reporter_name TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            status TEXT DEFAULT 'pending',
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+                        )''')
                 
                 # SQLite does not have information_schema, so we skip the schema fixes
-                # The tracking tables are created correctly above for SQLite
+                # The tracking, privacy, and reporting tables are created correctly above for SQLite
             
             # Ensure password_resets table exists
             if IS_PRODUCTION and DB_URL:
@@ -6929,6 +6991,297 @@ async def report_event(report_data: dict):
     except Exception as e:
         logger.error(f"Error processing event report: {e}")
         raise HTTPException(status_code=500, detail="Failed to submit report. Please contact support@todo-events.com directly.")
+
+# CCPA/Privacy Compliance Endpoints
+
+class PrivacyRequestType(str, Enum):
+    ACCESS = "access"
+    DELETE = "delete"
+    OPT_OUT = "opt_out"
+
+class PrivacyRequest(BaseModel):
+    request_type: PrivacyRequestType
+    email: EmailStr
+    full_name: Optional[str] = None
+    verification_info: Optional[str] = None
+    details: Optional[str] = None
+
+@app.post("/api/privacy/request")
+async def submit_privacy_request(request: PrivacyRequest):
+    """
+    Handle CCPA privacy requests (access, deletion, opt-out)
+    """
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Log the privacy request
+            cursor.execute("""
+                INSERT INTO privacy_requests 
+                (request_type, email, full_name, verification_info, details, status, created_at)
+                VALUES (?, ?, ?, ?, ?, 'pending', ?)
+            """, (
+                request.request_type,
+                request.email,
+                request.full_name,
+                request.verification_info,
+                request.details,
+                datetime.now().isoformat()
+            ))
+            
+            request_id = cursor.lastrowid
+            conn.commit()
+            
+                                     # Send confirmation email
+            try:
+                from email_config import EmailService
+                email_service = EmailService()
+                email_service.send_privacy_request_email(request.email, request.request_type, request_id)
+            except Exception as e:
+                logger.error(f"Failed to send privacy request confirmation email: {e}")
+            
+            return {
+                "success": True,
+                "message": f"Privacy request submitted successfully. Request ID: {request_id}",
+                "request_id": request_id,
+                "estimated_response_time": "45 days"
+            }
+            
+    except Exception as e:
+        logger.error(f"Privacy request submission error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit privacy request")
+
+@app.get("/api/privacy/data/{email}")
+async def get_user_data_export(email: str, verification_code: str = None):
+    """
+    Export all data associated with a user email (for CCPA access requests)
+    This endpoint should be protected and only used by admins or with proper verification
+    """
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            user_data = {}
+            
+            # Get user account data
+            cursor.execute("SELECT id, email, role, created_at FROM users WHERE email = ?", (email,))
+            user_row = cursor.fetchone()
+            
+            if user_row:
+                user_data["account"] = {
+                    "id": user_row[0],
+                    "email": user_row[1], 
+                    "role": user_row[2],
+                    "created_at": user_row[3]
+                }
+                user_id = user_row[0]
+                
+                # Get events created by user
+                cursor.execute("""
+                    SELECT id, title, description, date, start_time, end_time, address, 
+                           category, created_at, updated_at
+                    FROM events WHERE created_by = ?
+                """, (user_id,))
+                events = cursor.fetchall()
+                
+                user_data["events_created"] = [
+                    {
+                        "id": row[0], "title": row[1], "description": row[2],
+                        "date": row[3], "start_time": row[4], "end_time": row[5],
+                        "address": row[6], "category": row[7],
+                        "created_at": row[8], "updated_at": row[9]
+                    } for row in events
+                ]
+                
+                # Get interest data
+                cursor.execute("""
+                    SELECT event_id, interested, created_at, updated_at
+                    FROM event_interests WHERE user_id = ?
+                """, (user_id,))
+                interests = cursor.fetchall()
+                
+                user_data["event_interests"] = [
+                    {
+                        "event_id": row[0], "interested": bool(row[1]),
+                        "created_at": row[2], "updated_at": row[3]
+                    } for row in interests
+                ]
+                
+                # Get page visit data
+                cursor.execute("""
+                    SELECT page_type, page_path, visited_at
+                    FROM page_visits WHERE user_id = ?
+                    ORDER BY visited_at DESC LIMIT 100
+                """, (user_id,))
+                visits = cursor.fetchall()
+                
+                user_data["page_visits"] = [
+                    {
+                        "page_type": row[0], "page_path": row[1], 
+                        "visited_at": row[2]
+                    } for row in visits
+                ]
+            
+            # Also check for anonymous data by email (from reports, etc.)
+            cursor.execute("""
+                SELECT id, event_id, reason, details, created_at
+                FROM event_reports WHERE reporter_email = ?
+            """, (email,))
+            reports = cursor.fetchall()
+            
+            if reports:
+                user_data["reports_submitted"] = [
+                    {
+                        "id": row[0], "event_id": row[1], "reason": row[2],
+                        "details": row[3], "created_at": row[4]
+                    } for row in reports
+                ]
+            
+            return {
+                "email": email,
+                "data_export": user_data,
+                "export_date": datetime.now().isoformat(),
+                "retention_policy": "Data is retained as needed for service operation. Contact privacy@todo-events.com for specific retention periods."
+            }
+            
+    except Exception as e:
+        logger.error(f"Data export error for {email}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export user data")
+
+@app.delete("/api/privacy/delete/{email}")
+async def delete_user_data(email: str, verification_code: str = None, current_user: dict = Depends(get_current_user)):
+    """
+    Delete all data associated with a user email (for CCPA deletion requests)
+    Only accessible by admins
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db_transaction() as conn:
+            cursor = conn.cursor()
+            
+            # Get user ID first
+            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+            user_row = cursor.fetchone()
+            
+            deleted_items = {}
+            
+            if user_row:
+                user_id = user_row[0]
+                
+                # Delete user's events (and cascade related data)
+                cursor.execute("DELETE FROM event_interests WHERE event_id IN (SELECT id FROM events WHERE created_by = ?)", (user_id,))
+                cursor.execute("DELETE FROM event_views WHERE event_id IN (SELECT id FROM events WHERE created_by = ?)", (user_id,))
+                cursor.execute("DELETE FROM events WHERE created_by = ?", (user_id,))
+                deleted_items["events"] = cursor.rowcount
+                
+                # Delete user's interests
+                cursor.execute("DELETE FROM event_interests WHERE user_id = ?", (user_id,))
+                deleted_items["interests"] = cursor.rowcount
+                
+                # Delete user's page visits
+                cursor.execute("DELETE FROM page_visits WHERE user_id = ?", (user_id,))
+                deleted_items["page_visits"] = cursor.rowcount
+                
+                # Delete user account
+                cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                deleted_items["user_account"] = cursor.rowcount
+            
+            # Delete reports by email (even if no user account)
+            cursor.execute("DELETE FROM event_reports WHERE reporter_email = ?", (email,))
+            deleted_items["reports"] = cursor.rowcount
+            
+            # Update privacy request status
+            cursor.execute("""
+                UPDATE privacy_requests 
+                SET status = 'completed', completed_at = ?
+                WHERE email = ? AND request_type = 'delete'
+            """, (datetime.now().isoformat(), email))
+            
+            conn.commit()
+            
+            return {
+                "success": True,
+                "message": f"All data for {email} has been deleted",
+                "deleted_items": deleted_items,
+                "deletion_date": datetime.now().isoformat()
+            }
+            
+    except Exception as e:
+        logger.error(f"Data deletion error for {email}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete user data")
+
+@app.get("/admin/privacy/requests")
+async def list_privacy_requests(current_user: dict = Depends(get_current_user)):
+    """
+    List all privacy requests for admin review
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, request_type, email, full_name, details, status, 
+                       created_at, completed_at
+                FROM privacy_requests 
+                ORDER BY created_at DESC
+            """)
+            
+            requests = cursor.fetchall()
+            
+            return [
+                {
+                    "id": row[0],
+                    "request_type": row[1],
+                    "email": row[2],
+                    "full_name": row[3],
+                    "details": row[4],
+                    "status": row[5],
+                    "created_at": row[6],
+                    "completed_at": row[7]
+                } for row in requests
+            ]
+            
+    except Exception as e:
+        logger.error(f"Error listing privacy requests: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list privacy requests")
+
+@app.put("/admin/privacy/requests/{request_id}/status")
+async def update_privacy_request_status(
+    request_id: int, 
+    status: str, 
+    notes: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Update privacy request status
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            completed_at = datetime.now().isoformat() if status == "completed" else None
+            
+            cursor.execute("""
+                UPDATE privacy_requests 
+                SET status = ?, completed_at = ?, admin_notes = ?
+                WHERE id = ?
+            """, (status, completed_at, notes, request_id))
+            
+            conn.commit()
+            
+            return {"success": True, "message": "Privacy request status updated"}
+            
+    except Exception as e:
+        logger.error(f"Error updating privacy request status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update privacy request status")
 
 @app.get("/debug/test-email")
 async def debug_test_email():

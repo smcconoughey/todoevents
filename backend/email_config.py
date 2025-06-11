@@ -210,6 +210,162 @@ class EmailService:
         
         return self.send_email(to_email, subject, html_content, text_content)
     
+    def send_privacy_request_email(self, to_email: str, request_type: str, request_id: int) -> bool:
+        """Send privacy request confirmation email"""
+        subject = f"Privacy Request Confirmation - Todo Events (#{request_id})"
+        
+        request_type_display = {
+            'access': 'Data Access Request',
+            'delete': 'Data Deletion Request', 
+            'opt_out': 'Opt-Out Request'
+        }.get(request_type, 'Privacy Request')
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Privacy Request Confirmation - Todo Events</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #6366f1, #3b82f6); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .request-id {{ background: #f0f9ff; border: 2px solid #3b82f6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .request-id h2 {{ color: #1d4ed8; margin: 0; font-size: 24px; }}
+                .info-box {{ background: #f8fafc; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🛡️ Todo Events Privacy</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Request Confirmation</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Privacy Request Received</h2>
+                    
+                    <p>We have received your <strong>{request_type_display}</strong> for your Todo Events account.</p>
+                    
+                    <div class="request-id">
+                        <h2>Request ID: #{request_id}</h2>
+                        <p style="margin: 10px 0 0 0; color: #666;">Keep this ID for your records</p>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h3 style="margin-top: 0;">What happens next?</h3>
+                        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                            <li><strong>Processing Time:</strong> We will respond within 45 days as required by law</li>
+                            <li><strong>Verification:</strong> We may contact you to verify your identity</li>
+                            <li><strong>Updates:</strong> You'll receive email updates on your request status</li>
+                            <li><strong>Questions:</strong> Contact us at <a href="mailto:privacy@todo-events.com">privacy@todo-events.com</a></li>
+                        </ul>
+                    </div>
+                    
+                    {self._get_request_specific_info(request_type)}
+                    
+                    <p>If you have any questions about this request or our privacy practices, please don't hesitate to contact our privacy team at <a href="mailto:privacy@todo-events.com">privacy@todo-events.com</a>.</p>
+                    
+                    <p>Thank you,<br>The Todo Events Privacy Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2025 Watchtower AB, Inc. Your privacy matters to us.</p>
+                    <p>This email was sent to {to_email} regarding request #{request_id}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        Todo Events - Privacy Request Confirmation
+        
+        We have received your {request_type_display} for your Todo Events account.
+        
+        Request ID: #{request_id}
+        Keep this ID for your records.
+        
+        What happens next?
+        - Processing Time: We will respond within 45 days as required by law
+        - Verification: We may contact you to verify your identity  
+        - Updates: You'll receive email updates on your request status
+        - Questions: Contact us at privacy@todo-events.com
+        
+        {self._get_request_specific_text(request_type)}
+        
+        If you have any questions, please contact privacy@todo-events.com.
+        
+        Thank you,
+        The Todo Events Privacy Team
+        
+        This email was sent to {to_email} regarding request #{request_id}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+    
+    def _get_request_specific_info(self, request_type: str) -> str:
+        """Get request-specific information for HTML emails"""
+        if request_type == 'access':
+            return '''
+            <div class="info-box">
+                <h3 style="margin-top: 0;">Data Access Request Details</h3>
+                <p>We will provide you with a complete export of all personal data we have collected about you, including:</p>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                    <li>Account information and preferences</li>
+                    <li>Events you've created or shown interest in</li>
+                    <li>Page visit history and usage analytics</li>
+                    <li>Any reports or communications you've submitted</li>
+                </ul>
+            </div>
+            '''
+        elif request_type == 'delete':
+            return '''
+            <div class="info-box">
+                <h3 style="margin-top: 0;">Data Deletion Request Details</h3>
+                <p>We will permanently delete all personal data associated with your account, including:</p>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                    <li>Your user account and login credentials</li>
+                    <li>Events you've created (these will be removed from the platform)</li>
+                    <li>Your interest history and page visit data</li>
+                    <li>Any reports or feedback you've submitted</li>
+                </ul>
+                <p><strong>Note:</strong> This action cannot be undone. You will need to create a new account if you wish to use our services again.</p>
+            </div>
+            '''
+        elif request_type == 'opt_out':
+            return '''
+            <div class="info-box">
+                <h3 style="margin-top: 0;">Opt-Out Request Details</h3>
+                <p>We will restrict the use of your personal data as follows:</p>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                    <li>Stop processing your data for marketing purposes</li>
+                    <li>Limit analytics and tracking to essential functions only</li>
+                    <li>Prevent sharing of your data with third parties</li>
+                    <li>Maintain minimal data necessary for service operation</li>
+                </ul>
+            </div>
+            '''
+        return ''
+    
+    def _get_request_specific_text(self, request_type: str) -> str:
+        """Get request-specific information for text emails"""
+        if request_type == 'access':
+            return '''Data Access Request Details:
+We will provide you with a complete export of all personal data we have collected about you, including account information, events, page visits, and communications.'''
+        elif request_type == 'delete':
+            return '''Data Deletion Request Details:
+We will permanently delete all personal data associated with your account. This action cannot be undone.'''
+        elif request_type == 'opt_out':
+            return '''Opt-Out Request Details:
+We will restrict the use of your personal data for marketing, analytics, and third-party sharing while maintaining minimal data for service operation.'''
+        return ''
+    
     def send_welcome_email(self, to_email: str, user_name: str) -> bool:
         """Send welcome email for new users"""
         subject = "Welcome to Todo Events!"

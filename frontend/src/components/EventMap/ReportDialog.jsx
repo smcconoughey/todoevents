@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
+import PrivacyNotice from '../PrivacyNotice';
 
 const ReportDialog = ({ isOpen, onClose, event }) => {
   const [selectedReason, setSelectedReason] = useState('');
@@ -196,6 +197,9 @@ const ReportDialog = ({ isOpen, onClose, event }) => {
               />
             </div>
           </div>
+
+          {/* Privacy Notice */}
+          <PrivacyNotice context="report" compact={true} />
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-themed">
