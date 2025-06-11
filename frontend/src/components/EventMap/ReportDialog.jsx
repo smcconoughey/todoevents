@@ -91,7 +91,22 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get('content-type');
+      let result;
+      
+      if (contentType && contentType.includes('application/json')) {
+        const text = await response.text();
+        if (text.trim()) {
+          result = JSON.parse(text);
+        } else {
+          // Empty response, assume success
+          result = { success: true };
+        }
+      } else {
+        // Non-JSON response, assume success if status is ok
+        result = { success: true };
+      }
       
       if (result.success) {
         setIsSubmitted(true);
@@ -156,42 +171,33 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="dialog-themed max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="dialog-themed max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
-            <AlertTriangle className="w-6 h-6 text-yellow-400" />
-            Report Event
+          <DialogTitle className="flex items-center gap-2 text-white text-lg">
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            Report "{event.title}"
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          {/* Event Info */}
-          <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-            <div className="text-sm text-white/70 mb-1">Reporting:</div>
-            <div className="text-white font-medium">{event.title}</div>
-            <div className="text-xs text-white/60">ID: {event.id}</div>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6 py-2">
 
           {/* Report Category */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="text-sm font-medium text-white">
-              Reason for reporting <span className="text-red-400">*</span>
+              What's the issue? <span className="text-red-400">*</span>
             </label>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2">
               {reportCategories.map((category) => (
-                <label key={category.value} className="flex items-start gap-3 p-3 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-colors">
+                <label key={category.value} className="flex items-center gap-3 p-2 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-colors">
                   <input
                     type="radio"
                     name="category"
                     value={category.value}
                     checked={formData.category === category.value}
                     onChange={handleInputChange}
-                    className="mt-1 w-4 h-4 text-pin-blue border-white/30 focus:ring-pin-blue focus:ring-offset-0 bg-transparent"
+                    className="w-4 h-4 text-pin-blue border-white/30 focus:ring-pin-blue focus:ring-offset-0 bg-transparent"
                   />
-                  <div>
-                    <div className="text-white font-medium text-sm">{category.label}</div>
-                    <div className="text-white/60 text-xs">{category.description}</div>
-                  </div>
+                  <div className="text-white text-sm">{category.label}</div>
                 </label>
               ))}
             </div>
@@ -200,7 +206,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           {/* Description */}
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium text-white">
-              Description <span className="text-red-400">*</span>
+              Details <span className="text-red-400">*</span>
             </label>
             <textarea
               id="description"
@@ -208,8 +214,8 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
               value={formData.description}
               onChange={handleInputChange}
               placeholder="Please provide details about the issue..."
-              className="input-themed min-h-[100px] resize-y"
-              rows={4}
+              className="input-themed min-h-[80px] resize-y"
+              rows={3}
             />
             <div className="text-xs text-white/50">
               {formData.description.length}/500 characters
@@ -217,10 +223,10 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           </div>
 
           {/* Contact Info */}
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-2">
               <label htmlFor="userEmail" className="text-sm font-medium text-white">
-                Your Email <span className="text-red-400">*</span>
+                Email <span className="text-red-400">*</span>
               </label>
               <input
                 type="email"
@@ -236,7 +242,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
             
             <div className="space-y-2">
               <label htmlFor="userName" className="text-sm font-medium text-white">
-                Your Name (optional)
+                Name (optional)
               </label>
               <input
                 type="text"
@@ -261,7 +267,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           )}
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <Button
               type="button"
               variant="ghost"
@@ -284,15 +290,15 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Send className="w-4 h-4" />
-                  Submit Report
+                  Submit
                 </div>
               )}
             </Button>
           </div>
 
           {/* Privacy Notice */}
-          <div className="text-xs text-white/50 pt-2 border-t border-white/10">
-            Your report will be sent to our moderation team. We may contact you for additional information.
+          <div className="text-xs text-white/40 pt-1 text-center">
+            Report will be sent to our moderation team for review.
           </div>
         </form>
       </DialogContent>

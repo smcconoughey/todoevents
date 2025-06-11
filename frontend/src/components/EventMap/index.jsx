@@ -499,11 +499,12 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
             <div className="pt-3 border-t border-white/10">
               <Button
                 variant="ghost"
-                className="w-full text-white/70 hover:text-white hover:bg-white/5 font-medium transition-all duration-200 text-sm"
+                size="sm"
+                className="text-white/50 hover:text-white/80 hover:bg-white/5 transition-all duration-200 text-xs px-2 py-1"
                 onClick={onReport}
               >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Report Event
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Report
               </Button>
             </div>
             
@@ -3715,11 +3716,12 @@ const EventMap = ({
                 <div className="pt-3 border-t border-white/10">
                   <Button
                     variant="ghost"
-                    className="w-full text-white/70 hover:text-white hover:bg-white/5 font-medium transition-all duration-200 text-sm min-h-[40px]"
+                    size="sm"
+                    className="text-white/50 hover:text-white/80 hover:bg-white/5 transition-all duration-200 text-xs px-2 py-1"
                     onClick={() => setShowReportDialog(true)}
                   >
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    Report Event
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    Report
                   </Button>
                 </div>
                 
