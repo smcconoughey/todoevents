@@ -11514,6 +11514,75 @@ async def debug_privacy_requests_table():
             "database_type": "PostgreSQL" if (IS_PRODUCTION and DB_URL) else "SQLite"
         }
 
+@app.post("/debug/create-privacy-table")
+async def create_privacy_table():
+    """Create the missing privacy_requests table"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            if IS_PRODUCTION and DB_URL:  # PostgreSQL
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS privacy_requests (
+                        id SERIAL PRIMARY KEY,
+                        request_type VARCHAR(50) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
+                        full_name VARCHAR(255),
+                        verification_info TEXT,
+                        details TEXT,
+                        status VARCHAR(50) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP,
+                        admin_notes TEXT
+                    )
+                """)
+                conn.commit()
+                
+                # Verify table was created
+                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'privacy_requests'")
+                columns = cursor.fetchall()
+                
+                return {
+                    "success": True,
+                    "message": "privacy_requests table created successfully",
+                    "columns": [col[0] for col in columns],
+                    "database_type": "PostgreSQL"
+                }
+            else:  # SQLite
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS privacy_requests (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        request_type TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        full_name TEXT,
+                        verification_info TEXT,
+                        details TEXT,
+                        status TEXT DEFAULT 'pending',
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TEXT,
+                        admin_notes TEXT
+                    )
+                """)
+                conn.commit()
+                
+                # Verify table was created
+                cursor.execute("PRAGMA table_info(privacy_requests)")
+                columns = cursor.fetchall()
+                
+                return {
+                    "success": True,
+                    "message": "privacy_requests table created successfully",
+                    "columns": columns,
+                    "database_type": "SQLite"
+                }
+                
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "database_type": "PostgreSQL" if (IS_PRODUCTION and DB_URL) else "SQLite"
+        }
+
 # =============================================================================
 # ADMIN PRIVACY MANAGEMENT ENDPOINTS
 # =============================================================================
