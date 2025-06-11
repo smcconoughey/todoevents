@@ -36,7 +36,7 @@ class EmailService:
         self.logger.info(f"👤 Username: {self.config['smtp_username']}")
         self.logger.info(f"📨 From: {self.config['from_email']}")
     
-    def send_email(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
+    def send_email(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None, cc_email: Optional[str] = None) -> bool:
         """Send an email using SMTP"""
         
         # Check if credentials are available
@@ -54,6 +54,10 @@ class EmailService:
             msg['Subject'] = subject
             msg['From'] = f"{self.config['from_name']} <{self.config['from_email']}>"
             msg['To'] = to_email
+            
+            # Add CC if specified
+            if cc_email:
+                msg['Cc'] = cc_email
             
             # Add text version if provided
             if text_content:
@@ -75,7 +79,12 @@ class EmailService:
                     server.login(self.config['smtp_username'], self.config['smtp_password'])
                     
                     self.logger.info("📬 Sending message...")
-                    server.send_message(msg)
+                    # Prepare recipient list (to + cc)
+                    recipients = [to_email]
+                    if cc_email:
+                        recipients.append(cc_email)
+                        self.logger.info(f"📧 CC: {cc_email}")
+                    server.send_message(msg, to_addrs=recipients)
             else:
                 # Port 587 (and others) use explicit TLS (STARTTLS)
                 self.logger.info("🔐 Using STARTTLS connection")
@@ -87,7 +96,12 @@ class EmailService:
                     server.login(self.config['smtp_username'], self.config['smtp_password'])
                     
                     self.logger.info("📬 Sending message...")
-                    server.send_message(msg)
+                    # Prepare recipient list (to + cc)
+                    recipients = [to_email]
+                    if cc_email:
+                        recipients.append(cc_email)
+                        self.logger.info(f"📧 CC: {cc_email}")
+                    server.send_message(msg, to_addrs=recipients)
             
             self.logger.info(f"✅ Email sent successfully to {to_email}")
             return True
@@ -210,7 +224,7 @@ class EmailService:
         
         return self.send_email(to_email, subject, html_content, text_content)
     
-    def send_privacy_request_email(self, to_email: str, request_type: str, request_id: int) -> bool:
+    def send_privacy_request_email(self, to_email: str, request_type: str, request_id: int, user_details: dict = None) -> bool:
         """Send privacy request confirmation email"""
         subject = f"Privacy Request Confirmation - Todo Events (#{request_id})"
         
@@ -220,7 +234,25 @@ class EmailService:
             'opt_out': 'Opt-Out Request'
         }.get(request_type, 'Privacy Request')
         
-        # Create HTML content
+        # Create HTML content with enhanced support team information
+        support_section = ""
+        if user_details:
+            support_section = f"""
+            <div class="info-box" style="background: #fff8dc; border-left: 4px solid #f59e0b;">
+                <h3 style="margin-top: 0; color: #f59e0b;">📋 Support Team Information</h3>
+                <p><strong>Request Details:</strong></p>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                    <li><strong>Email:</strong> {to_email}</li>
+                    <li><strong>Full Name:</strong> {user_details.get('full_name', 'Not provided')}</li>
+                    <li><strong>Request Type:</strong> {request_type_display}</li>
+                    <li><strong>Verification Info:</strong> {user_details.get('verification_info', 'Not provided')}</li>
+                    <li><strong>Additional Details:</strong> {user_details.get('details', 'None provided')}</li>
+                    <li><strong>Submitted:</strong> {user_details.get('created_at', 'Just now')}</li>
+                </ul>
+                <p style="margin-top: 15px; font-size: 14px; color: #666;">This information is provided for support team reference.</p>
+            </div>
+            """
+        
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -256,6 +288,8 @@ class EmailService:
                         <p style="margin: 10px 0 0 0; color: #666;">Keep this ID for your records</p>
                     </div>
                     
+                    {support_section}
+                    
                     <div class="info-box">
                         <h3 style="margin-top: 0;">What happens next?</h3>
                         <ul style="margin: 10px 0 0 0; padding-left: 20px;">
@@ -282,7 +316,21 @@ class EmailService:
         </html>
         """
         
-        # Create text version
+        # Create text version with support team details
+        support_text = ""
+        if user_details:
+            support_text = f"""
+        
+        === SUPPORT TEAM INFORMATION ===
+        Email: {to_email}
+        Full Name: {user_details.get('full_name', 'Not provided')}
+        Request Type: {request_type_display}
+        Verification Info: {user_details.get('verification_info', 'Not provided')}
+        Additional Details: {user_details.get('details', 'None provided')}
+        Submitted: {user_details.get('created_at', 'Just now')}
+        ==============================
+        """
+        
         text_content = f"""
         Todo Events - Privacy Request Confirmation
         
@@ -290,6 +338,7 @@ class EmailService:
         
         Request ID: #{request_id}
         Keep this ID for your records.
+        {support_text}
         
         What happens next?
         - Processing Time: We will respond within 45 days as required by law
@@ -307,7 +356,14 @@ class EmailService:
         This email was sent to {to_email} regarding request #{request_id}.
         """
         
-        return self.send_email(to_email, subject, html_content, text_content)
+        # Send email with CC to support team
+        return self.send_email(
+            to_email=to_email, 
+            subject=subject, 
+            html_content=html_content, 
+            text_content=text_content,
+            cc_email="support@todo-events.com"
+        )
     
     def _get_request_specific_info(self, request_type: str) -> str:
         """Get request-specific information for HTML emails"""

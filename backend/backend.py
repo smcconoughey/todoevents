@@ -11026,11 +11026,25 @@ async def submit_privacy_request(request: PrivacyRequest):
             request_id = cursor.lastrowid
             conn.commit()
             
-            # Send confirmation email
+            # Send confirmation email with user details
             try:
                 from email_config import EmailService
                 email_service = EmailService()
-                email_service.send_privacy_request_email(request.email, request.request_type, request_id)
+                
+                # Prepare user details for the email
+                user_details = {
+                    'full_name': request.full_name,
+                    'verification_info': request.verification_info,
+                    'details': request.details,
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+                }
+                
+                email_service.send_privacy_request_email(
+                    request.email, 
+                    request.request_type, 
+                    request_id, 
+                    user_details
+                )
             except Exception as e:
                 logger.error(f"Failed to send privacy request confirmation email: {e}")
             
