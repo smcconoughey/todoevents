@@ -160,19 +160,19 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
   if (isSubmitted) {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="dialog-themed max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white">
-              <CheckCircle className="w-6 h-6 text-green-400" />
+        <DialogContent className="dialog-themed max-w-md p-6">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="flex items-center gap-2 text-white text-base">
+              <CheckCircle className="w-5 h-5 text-green-400" />
               Report Submitted
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="text-center space-y-3">
-              <div className="text-white/90">
+          <div className="space-y-3">
+            <div className="text-center space-y-2">
+              <div className="text-white/90 text-sm">
                 Thank you for your report. We have received your submission and will review it shortly.
               </div>
-              <div className="text-sm text-white/70">
+              <div className="text-xs text-white/70">
                 If this is an urgent matter, please contact us directly at{' '}
                 <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">
                   support@todo-events.com
@@ -187,31 +187,31 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="dialog-themed max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="flex items-center gap-2 text-white text-lg">
-            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+      <DialogContent className="dialog-themed max-w-md max-h-[90vh] overflow-y-auto p-6">
+        <DialogHeader className="pb-3">
+          <DialogTitle className="flex items-center gap-2 text-white text-base">
+            <AlertTriangle className="w-4 h-4 text-yellow-400" />
             Report "{event.title}"
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6 pb-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
 
           {/* Report Category */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <label className="text-sm font-medium text-white">
               What's the issue? <span className="text-red-400">*</span>
             </label>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-1.5">
               {reportCategories.map((category) => (
-                <label key={category.value} className="flex items-center gap-3 p-3 rounded-lg border border-white/10 hover:bg-white/5 cursor-pointer transition-colors">
+                <label key={category.value} className="flex items-center gap-2 p-2 rounded-md border border-white/10 hover:bg-white/5 cursor-pointer transition-colors">
                   <input
                     type="radio"
                     name="category"
                     value={category.value}
                     checked={formData.category === category.value}
                     onChange={handleInputChange}
-                    className="w-4 h-4 text-pin-blue border-white/30 focus:ring-pin-blue focus:ring-offset-0 bg-transparent"
+                    className="w-3.5 h-3.5 text-pin-blue border-white/30 focus:ring-pin-blue focus:ring-offset-0 bg-transparent"
                   />
                   <div className="text-white text-sm">{category.label}</div>
                 </label>
@@ -220,7 +220,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label htmlFor="description" className="text-sm font-medium text-white">
               Details <span className="text-red-400">*</span>
             </label>
@@ -230,8 +230,8 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
               value={formData.description}
               onChange={handleInputChange}
               placeholder="Please provide details about the issue..."
-              className="input-themed min-h-[100px] resize-y"
-              rows={4}
+              className="input-themed min-h-[80px] resize-y text-sm"
+              rows={3}
             />
             <div className="text-xs text-white/50">
               {formData.description.length}/500 characters
@@ -239,8 +239,8 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           </div>
 
           {/* Contact Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <div className="space-y-1.5">
               <label htmlFor="userEmail" className="text-sm font-medium text-white">
                 Email <span className="text-red-400">*</span>
               </label>
@@ -251,12 +251,12 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
                 value={formData.userEmail}
                 onChange={handleInputChange}
                 placeholder="your.email@example.com"
-                className="input-themed"
+                className="input-themed text-sm"
                 required
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label htmlFor="userName" className="text-sm font-medium text-white">
                 Name (optional)
               </label>
@@ -267,7 +267,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
                 value={formData.userName}
                 onChange={handleInputChange}
                 placeholder="Your name"
-                className="input-themed"
+                className="input-themed text-sm"
               />
             </div>
           </div>
@@ -283,29 +283,29 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           )}
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2.5 pt-3">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="flex-1 text-white/70 hover:text-white hover:bg-white/10"
+              className="flex-1 text-white/70 hover:text-white hover:bg-white/10 text-sm py-2"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 btn-primary"
+              className="flex-1 btn-primary text-sm py-2"
             >
               {isSubmitting ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   Submitting...
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4" />
+                <div className="flex items-center gap-1.5">
+                  <Send className="w-3.5 h-3.5" />
                   Submit
                 </div>
               )}
@@ -313,7 +313,7 @@ const ReportDialog = ({ isOpen, onClose, event, user }) => {
           </div>
 
           {/* Privacy Notice */}
-          <div className="text-xs text-white/40 pt-3 text-center">
+          <div className="text-xs text-white/40 pt-2 text-center">
             Report will be sent to our moderation team for review.
           </div>
         </form>
