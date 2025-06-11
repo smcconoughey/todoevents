@@ -122,4 +122,28 @@ Passwords must meet the following requirements:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the TODO-EVENTS COMMERCIAL LICENSE AGREEMENT.
+
+**Copyright © 2025 Watchtower AB, Inc - All rights reserved.**
+
+### Important License Terms
+
+**STRICTLY PROHIBITED without written agreement:**
+- Commercial, governmental, educational, or public-facing deployment
+- Hosting or deploying private instances
+- Forking, modifying, or creating derivative versions
+- Bypassing licensing or access control mechanisms
+- Using in competing platforms or services
+
+### Premium Features
+Access to premium features (vendor portals, analytics, SMS alerts, public maps) requires:
+- Payment of applicable fees
+- Execution of service contract
+- Written authorization from Watchtower AB, Inc
+
+### Contact for Licensing
+**Watchtower AB, Inc**
+- Email: support@todo-events.com  
+- Website: todo-events.com
+
+See the LICENSE file for complete terms and conditions. 

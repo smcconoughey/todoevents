@@ -7,6 +7,7 @@ import EventMap from './components/EventMap';
 import HostsPage from './components/HostsPage';
 import EventCreatorPage from './components/EventCreatorPage';
 import FlyerPage from './components/FlyerPage';
+import LegalPage from './components/LegalPage';
 import WelcomePopup from './components/WelcomePopup';
 import { initGoogleMaps } from './googleMapsLoader';
 import { testApiUrl } from './config';
@@ -199,8 +200,9 @@ function App() {
             <Route path="/how-it-works" element={<EventMap mapsLoaded={mapsLoaded} />} />
             <Route path="/create-event" element={<EventMap mapsLoaded={mapsLoaded} />} />
             <Route path="/contact" element={<EventMap mapsLoaded={mapsLoaded} />} />
-            <Route path="/privacy" element={<EventMap mapsLoaded={mapsLoaded} />} />
-            <Route path="/terms" element={<EventMap mapsLoaded={mapsLoaded} />} />
+                    <Route path="/privacy" element={<EventMap mapsLoaded={mapsLoaded} />} />
+        <Route path="/terms" element={<EventMap mapsLoaded={mapsLoaded} />} />
+        <Route path="/legal" element={<LegalPage />} />
             
             {/* Fallback for unknown routes */}
             <Route path="*" element={<EventMap mapsLoaded={mapsLoaded} />} />
