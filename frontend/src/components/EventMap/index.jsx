@@ -2101,7 +2101,15 @@ const EventMap = ({
                 <ThemeToggle />
                 {user ? (
                   <div className="flex items-center gap-2">
-
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                      onClick={() => window.open('/legal', '_blank')}
+                      title="Privacy Policy & Terms"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -2785,7 +2793,18 @@ const EventMap = ({
                   <ThemeToggle />
                   {user ? (
                     <div className="flex items-center gap-2">
-
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                        onClick={() => {
+                          window.open('/legal', '_blank');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        title="Privacy Policy & Terms"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
