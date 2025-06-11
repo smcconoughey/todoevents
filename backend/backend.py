@@ -8471,6 +8471,22 @@ async def create_tracking_tables():
                 )
             """)
             
+            # Create privacy_requests table for CCPA compliance
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS privacy_requests (
+                    id SERIAL PRIMARY KEY,
+                    request_type TEXT NOT NULL CHECK (request_type IN ('access', 'delete', 'opt_out')),
+                    email TEXT NOT NULL,
+                    full_name TEXT,
+                    verification_info TEXT,
+                    details TEXT,
+                    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'denied')),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    admin_notes TEXT
+                )
+            """)
+            
             # Fix NULL counter values in existing events
             cursor.execute("UPDATE events SET interest_count = 0 WHERE interest_count IS NULL")
             cursor.execute("UPDATE events SET view_count = 0 WHERE view_count IS NULL")
@@ -8479,8 +8495,8 @@ async def create_tracking_tables():
             
             return {
                 "success": True,
-                "message": "Tracking tables created successfully",
-                "tables_created": ["event_interests", "event_views", "page_visits"],
+                "message": "All tables created successfully",
+                "tables_created": ["event_interests", "event_views", "page_visits", "privacy_requests"],
                 "events_updated": True
             }
             
