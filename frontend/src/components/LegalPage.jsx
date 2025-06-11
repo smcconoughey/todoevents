@@ -256,8 +256,8 @@ const LegalPage = () => {
                 <h4 className="font-medium text-themed-primary mb-2">How to Exercise Your Rights:</h4>
                 <p className="text-themed-primary">
                   To exercise any of these rights, please email us at{' '}
-                  <a href="mailto:privacy@todo-events.com" className="text-pin-blue hover:underline">
-                    privacy@todo-events.com
+                            <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">
+            support@todo-events.com
                   </a>{' '}
                   with "California Privacy Request" in the subject line. Include:
                 </p>
@@ -346,14 +346,14 @@ const LegalPage = () => {
             
             <div className="space-y-2 text-themed-primary">
               <p><strong>General Inquiries:</strong> <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">support@todo-events.com</a></p>
-              <p><strong>Privacy Requests:</strong> <a href="mailto:privacy@todo-events.com" className="text-pin-blue hover:underline">privacy@todo-events.com</a></p>
+              <p><strong>Privacy Requests:</strong> <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">support@todo-events.com</a></p>
               <p><strong>Company:</strong> Watchtower AB, Inc</p>
               <p><strong>Website:</strong> <a href="https://todo-events.com" className="text-pin-blue hover:underline">https://todo-events.com</a></p>
             </div>
             
             <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
               <p className="text-themed-primary text-sm">
-                <strong>California Residents:</strong> For privacy-related requests, please use privacy@todo-events.com 
+                <strong>California Residents:</strong> For privacy-related requests, please use support@todo-events.com 
                 with "California Privacy Request" in the subject line.
               </p>
             </div>

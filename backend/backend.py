@@ -11135,7 +11135,7 @@ async def get_user_data_export(email: str, verification_code: str = None):
                 "email": email,
                 "data_export": user_data,
                 "export_date": datetime.now().isoformat(),
-                "retention_policy": "Data is retained as needed for service operation. Contact privacy@todo-events.com for specific retention periods."
+                "retention_policy": "Data is retained as needed for service operation. Contact support@todo-events.com for specific retention periods."
             }
             
     except Exception as e:

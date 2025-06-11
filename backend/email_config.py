@@ -262,13 +262,13 @@ class EmailService:
                             <li><strong>Processing Time:</strong> We will respond within 45 days as required by law</li>
                             <li><strong>Verification:</strong> We may contact you to verify your identity</li>
                             <li><strong>Updates:</strong> You'll receive email updates on your request status</li>
-                            <li><strong>Questions:</strong> Contact us at <a href="mailto:privacy@todo-events.com">privacy@todo-events.com</a></li>
+                            <li><strong>Questions:</strong> Contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a></li>
                         </ul>
                     </div>
                     
                     {self._get_request_specific_info(request_type)}
                     
-                    <p>If you have any questions about this request or our privacy practices, please don't hesitate to contact our privacy team at <a href="mailto:privacy@todo-events.com">privacy@todo-events.com</a>.</p>
+                    <p>If you have any questions about this request or our privacy practices, please don't hesitate to contact our privacy team at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
                     
                     <p>Thank you,<br>The Todo Events Privacy Team</p>
                 </div>
@@ -295,11 +295,11 @@ class EmailService:
         - Processing Time: We will respond within 45 days as required by law
         - Verification: We may contact you to verify your identity  
         - Updates: You'll receive email updates on your request status
-        - Questions: Contact us at privacy@todo-events.com
+        - Questions: Contact us at support@todo-events.com
         
         {self._get_request_specific_text(request_type)}
         
-        If you have any questions, please contact privacy@todo-events.com.
+        If you have any questions, please contact support@todo-events.com.
         
         Thank you,
         The Todo Events Privacy Team

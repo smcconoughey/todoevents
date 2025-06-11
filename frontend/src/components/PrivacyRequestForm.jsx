@@ -54,7 +54,7 @@ const PrivacyRequestForm = ({ isOpen, onClose }) => {
       setSubmitted(true);
     } catch (error) {
       console.error('Privacy request error:', error);
-      alert('Failed to submit privacy request. Please try again or contact privacy@todo-events.com directly.');
+              alert('Failed to submit privacy request. Please try again or contact support@todo-events.com directly.');
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +108,7 @@ const PrivacyRequestForm = ({ isOpen, onClose }) => {
                 <li>• We will respond within 45 days as required by law</li>
                 <li>• You'll receive email updates on your request status</li>
                 <li>• We may contact you to verify your identity</li>
-                <li>• For questions, contact privacy@todo-events.com</li>
+                <li>• For questions, contact support@todo-events.com</li>
               </ul>
             </div>
 

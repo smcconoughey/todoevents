@@ -25,8 +25,8 @@ const PrivacyNotice = ({ context = "general", compact = false }) => {
           </a>
           {' • '}
           <span className="font-medium">California residents:</span>{' '}
-          <a href="mailto:privacy@todo-events.com" className="text-pin-blue hover:underline">
-            privacy@todo-events.com
+                      <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">
+              support@todo-events.com
           </a>
         </p>
       </div>
@@ -47,7 +47,7 @@ const PrivacyNotice = ({ context = "general", compact = false }) => {
           </p>
           <p className="mt-1">
             <strong>California residents:</strong> You have rights regarding your personal data.{' '}
-            <a href="mailto:privacy@todo-events.com" className="text-pin-blue hover:underline">
+            <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">
               Contact us
             </a>{' '}
             for access, deletion, or opt-out requests.
