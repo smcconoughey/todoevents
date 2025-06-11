@@ -11015,6 +11015,7 @@ async def submit_privacy_request(request: PrivacyRequest):
             
             # Use different approach for PostgreSQL vs SQLite
             if IS_PRODUCTION and DB_URL:  # PostgreSQL
+                logger.debug(f"Using PostgreSQL, inserting privacy request for {request.email}")
                 cursor.execute(f"""
                     INSERT INTO privacy_requests 
                     (request_type, email, full_name, verification_info, details, status, created_at)
@@ -11030,8 +11031,15 @@ async def submit_privacy_request(request: PrivacyRequest):
                     created_at
                 ))
                 result = cursor.fetchone()
-                request_id = result[0] if result else None
+                logger.debug(f"PostgreSQL insert result: {result}")
+                if result and len(result) > 0:
+                    request_id = result[0]
+                    logger.debug(f"Extracted request_id: {request_id}")
+                else:
+                    logger.error(f"PostgreSQL RETURNING failed, result: {result}")
+                    raise ValueError("Failed to get ID from PostgreSQL RETURNING clause")
             else:  # SQLite
+                logger.debug(f"Using SQLite, inserting privacy request for {request.email}")
                 cursor.execute(f"""
                     INSERT INTO privacy_requests 
                     (request_type, email, full_name, verification_info, details, status, created_at)
@@ -11046,9 +11054,11 @@ async def submit_privacy_request(request: PrivacyRequest):
                     created_at
                 ))
                 request_id = cursor.lastrowid
+                logger.debug(f"SQLite lastrowid: {request_id}")
             
-            if not request_id:
-                raise ValueError("Failed to get ID for created privacy request")
+            if not request_id or request_id == 0:
+                logger.error(f"Invalid request_id after insert: {request_id}")
+                raise ValueError(f"Failed to get valid ID for created privacy request, got: {request_id}")
                 
             conn.commit()
             
@@ -11404,6 +11414,105 @@ async def debug_page_visits():
             
     except Exception as e:
         return {"error": str(e), "traceback": str(e.__traceback__)}
+
+@app.get("/debug/privacy-requests-table")
+async def debug_privacy_requests_table():
+    """Debug endpoint to check privacy_requests table structure and test insert"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if table exists and get structure
+            if IS_PRODUCTION and DB_URL:
+                cursor.execute("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'privacy_requests' ORDER BY ordinal_position")
+                columns = cursor.fetchall()
+                
+                # Check for sequence/auto-increment
+                cursor.execute("SELECT column_default FROM information_schema.columns WHERE table_name = 'privacy_requests' AND column_name = 'id'")
+                id_default = cursor.fetchone()
+                
+                cursor.execute("SELECT COUNT(*) FROM privacy_requests")
+                count = get_count_from_result(cursor.fetchone())
+                
+                cursor.execute("SELECT id, request_type, email, status, created_at FROM privacy_requests ORDER BY created_at DESC LIMIT 5")
+                recent_requests = cursor.fetchall()
+                
+                # Test the RETURNING clause
+                placeholder = get_placeholder()
+                cursor.execute(f"""
+                    INSERT INTO privacy_requests 
+                    (request_type, email, full_name, verification_info, details, status, created_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                """, (
+                    'access',
+                    'debug@test.com',
+                    'Debug Test',
+                    'Test verification',
+                    'Debug test request',
+                    'pending',
+                    datetime.now().isoformat()
+                ))
+                test_result = cursor.fetchone()
+                test_id = test_result[0] if test_result else None
+                
+                # Clean up test record
+                if test_id:
+                    cursor.execute(f"DELETE FROM privacy_requests WHERE id = {placeholder}", (test_id,))
+                
+                conn.commit()
+                
+            else:
+                cursor.execute("PRAGMA table_info(privacy_requests)")
+                columns = cursor.fetchall()
+                
+                cursor.execute("SELECT COUNT(*) FROM privacy_requests")
+                count = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT id, request_type, email, status, created_at FROM privacy_requests ORDER BY created_at DESC LIMIT 5")
+                recent_requests = cursor.fetchall()
+                
+                # Test insert for SQLite
+                placeholder = get_placeholder()
+                cursor.execute(f"""
+                    INSERT INTO privacy_requests 
+                    (request_type, email, full_name, verification_info, details, status, created_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                """, (
+                    'access',
+                    'debug@test.com',
+                    'Debug Test',
+                    'Test verification',
+                    'Debug test request',
+                    'pending',
+                    datetime.now().isoformat()
+                ))
+                test_id = cursor.lastrowid
+                
+                # Clean up test record
+                if test_id:
+                    cursor.execute(f"DELETE FROM privacy_requests WHERE id = {placeholder}", (test_id,))
+                
+                conn.commit()
+                id_default = "AUTO_INCREMENT"
+            
+            return {
+                "table_exists": True,
+                "columns": [str(col) for col in columns],
+                "id_column_default": str(id_default) if 'id_default' in locals() else "Unknown",
+                "total_requests": count,
+                "recent_requests": [str(req) for req in recent_requests],
+                "test_insert_id": test_id,
+                "test_insert_success": test_id is not None and test_id > 0,
+                "database_type": "PostgreSQL" if (IS_PRODUCTION and DB_URL) else "SQLite"
+            }
+            
+    except Exception as e:
+        return {
+            "error": str(e),
+            "table_exists": False,
+            "database_type": "PostgreSQL" if (IS_PRODUCTION and DB_URL) else "SQLite"
+        }
 
 # =============================================================================
 # ADMIN PRIVACY MANAGEMENT ENDPOINTS
