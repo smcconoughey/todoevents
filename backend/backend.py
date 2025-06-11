@@ -11009,22 +11009,50 @@ async def submit_privacy_request(request: PrivacyRequest):
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Log the privacy request
+            # Log the privacy request with proper database compatibility
             placeholder = get_placeholder()
-            cursor.execute(f"""
-                INSERT INTO privacy_requests 
-                (request_type, email, full_name, verification_info, details)
-                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-            """, (
-                request.request_type,
-                request.email,
-                request.full_name,
-                request.verification_info,
-                request.details
-            ))
+            created_at = datetime.now().isoformat()
             
-            request_id = cursor.lastrowid
+            # Use different approach for PostgreSQL vs SQLite
+            if IS_PRODUCTION and DB_URL:  # PostgreSQL
+                cursor.execute(f"""
+                    INSERT INTO privacy_requests 
+                    (request_type, email, full_name, verification_info, details, status, created_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                """, (
+                    request.request_type,
+                    request.email,
+                    request.full_name,
+                    request.verification_info,
+                    request.details,
+                    'pending',
+                    created_at
+                ))
+                result = cursor.fetchone()
+                request_id = result[0] if result else None
+            else:  # SQLite
+                cursor.execute(f"""
+                    INSERT INTO privacy_requests 
+                    (request_type, email, full_name, verification_info, details, status, created_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                """, (
+                    request.request_type,
+                    request.email,
+                    request.full_name,
+                    request.verification_info,
+                    request.details,
+                    'pending',
+                    created_at
+                ))
+                request_id = cursor.lastrowid
+            
+            if not request_id:
+                raise ValueError("Failed to get ID for created privacy request")
+                
             conn.commit()
+            
+            logger.info(f"Privacy request {request_id} created successfully for {request.email} - type: {request.request_type}")
             
             # Send confirmation email with user details
             try:
@@ -11036,7 +11064,7 @@ async def submit_privacy_request(request: PrivacyRequest):
                     'full_name': request.full_name,
                     'verification_info': request.verification_info,
                     'details': request.details,
-                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+                    'created_at': created_at
                 }
                 
                 email_service.send_privacy_request_email(
@@ -11045,8 +11073,10 @@ async def submit_privacy_request(request: PrivacyRequest):
                     request_id, 
                     user_details
                 )
+                logger.info(f"Privacy request confirmation email sent for request {request_id}")
             except Exception as e:
-                logger.error(f"Failed to send privacy request confirmation email: {e}")
+                logger.error(f"Failed to send privacy request confirmation email for request {request_id}: {e}")
+                # Don't fail the entire request if email fails
             
             return {
                 "success": True,
@@ -11393,8 +11423,8 @@ async def list_admin_privacy_requests(current_user: dict = Depends(get_current_u
             cursor = conn.cursor()
             
             cursor.execute(f"""
-                SELECT id, request_type, user_email, full_name, 
-                       additional_details, verification_info, status, 
+                SELECT id, request_type, email, full_name, 
+                       details, verification_info, status, 
                        created_at, completed_at, admin_notes
                 FROM privacy_requests 
                 ORDER BY created_at DESC
@@ -11406,9 +11436,9 @@ async def list_admin_privacy_requests(current_user: dict = Depends(get_current_u
                 {
                     "id": row[0],
                     "request_type": row[1],
-                    "user_email": row[2],
+                    "user_email": row[2],  # Map email to user_email for frontend compatibility
                     "full_name": row[3],
-                    "additional_details": row[4],
+                    "additional_details": row[4],  # Map details to additional_details for frontend
                     "verification_info": row[5],
                     "status": row[6] or "pending",
                     "created_at": row[7],
@@ -11479,7 +11509,7 @@ async def export_user_data_for_request(
             
             # Get the privacy request
             cursor.execute(f"""
-                SELECT user_email, request_type FROM privacy_requests 
+                SELECT email, request_type FROM privacy_requests 
                 WHERE id = {placeholder}
             """, (request_id,))
             
@@ -11626,7 +11656,7 @@ async def delete_user_data_for_request(
             
             # Get the privacy request
             cursor.execute(f"""
-                SELECT user_email, request_type FROM privacy_requests 
+                SELECT email, request_type FROM privacy_requests 
                 WHERE id = {placeholder}
             """, (request_id,))
             
