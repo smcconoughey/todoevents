@@ -11010,10 +11010,11 @@ async def submit_privacy_request(request: PrivacyRequest):
             cursor = conn.cursor()
             
             # Log the privacy request
-            cursor.execute("""
+            placeholder = get_placeholder()
+            cursor.execute(f"""
                 INSERT INTO privacy_requests 
                 (request_type, email, full_name, verification_info, details)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
             """, (
                 request.request_type,
                 request.email,
@@ -11057,7 +11058,8 @@ async def get_user_data_export(email: str, verification_code: str = None):
             user_data = {}
             
             # Get user account data
-            cursor.execute("SELECT id, email, role, created_at FROM users WHERE email = ?", (email,))
+            placeholder = get_placeholder()
+            cursor.execute(f"SELECT id, email, role, created_at FROM users WHERE email = {placeholder}", (email,))
             user_row = cursor.fetchone()
             
             if user_row:
@@ -11070,10 +11072,10 @@ async def get_user_data_export(email: str, verification_code: str = None):
                 user_id = user_row[0]
                 
                 # Get events created by user
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT id, title, description, date, start_time, end_time, address, 
                            category, created_at, updated_at
-                    FROM events WHERE created_by = ?
+                    FROM events WHERE created_by = {placeholder}
                 """, (user_id,))
                 events = cursor.fetchall()
                 
@@ -11087,9 +11089,9 @@ async def get_user_data_export(email: str, verification_code: str = None):
                 ]
                 
                 # Get interest data
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT event_id, interested, created_at, updated_at
-                    FROM event_interests WHERE user_id = ?
+                    FROM event_interests WHERE user_id = {placeholder}
                 """, (user_id,))
                 interests = cursor.fetchall()
                 
@@ -11101,9 +11103,9 @@ async def get_user_data_export(email: str, verification_code: str = None):
                 ]
                 
                 # Get page visit data
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT page_type, page_path, visited_at
-                    FROM page_visits WHERE user_id = ?
+                    FROM page_visits WHERE user_id = {placeholder}
                     ORDER BY visited_at DESC LIMIT 100
                 """, (user_id,))
                 visits = cursor.fetchall()
@@ -11116,9 +11118,9 @@ async def get_user_data_export(email: str, verification_code: str = None):
                 ]
             
             # Also check for anonymous data by email (from reports, etc.)
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT id, event_id, reason, details, created_at
-                FROM event_reports WHERE reporter_email = ?
+                FROM event_reports WHERE reporter_email = {placeholder}
             """, (email,))
             reports = cursor.fetchall()
             
@@ -11153,9 +11155,10 @@ async def delete_user_data(email: str, verification_code: str = None, current_us
     try:
         with get_db_transaction() as conn:
             cursor = conn.cursor()
+            placeholder = get_placeholder()
             
             # Get user ID first
-            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+            cursor.execute(f"SELECT id FROM users WHERE email = {placeholder}", (email,))
             user_row = cursor.fetchone()
             
             deleted_items = {}
@@ -11164,32 +11167,32 @@ async def delete_user_data(email: str, verification_code: str = None, current_us
                 user_id = user_row[0]
                 
                 # Delete user's events (and cascade related data)
-                cursor.execute("DELETE FROM event_interests WHERE event_id IN (SELECT id FROM events WHERE created_by = ?)", (user_id,))
-                cursor.execute("DELETE FROM event_views WHERE event_id IN (SELECT id FROM events WHERE created_by = ?)", (user_id,))
-                cursor.execute("DELETE FROM events WHERE created_by = ?", (user_id,))
+                cursor.execute(f"DELETE FROM event_interests WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
+                cursor.execute(f"DELETE FROM event_views WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
+                cursor.execute(f"DELETE FROM events WHERE created_by = {placeholder}", (user_id,))
                 deleted_items["events"] = cursor.rowcount
                 
                 # Delete user's interests
-                cursor.execute("DELETE FROM event_interests WHERE user_id = ?", (user_id,))
+                cursor.execute(f"DELETE FROM event_interests WHERE user_id = {placeholder}", (user_id,))
                 deleted_items["interests"] = cursor.rowcount
                 
                 # Delete user's page visits
-                cursor.execute("DELETE FROM page_visits WHERE user_id = ?", (user_id,))
+                cursor.execute(f"DELETE FROM page_visits WHERE user_id = {placeholder}", (user_id,))
                 deleted_items["page_visits"] = cursor.rowcount
                 
                 # Delete user account
-                cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                cursor.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
                 deleted_items["user_account"] = cursor.rowcount
             
             # Delete reports by email (even if no user account)
-            cursor.execute("DELETE FROM event_reports WHERE reporter_email = ?", (email,))
+            cursor.execute(f"DELETE FROM event_reports WHERE reporter_email = {placeholder}", (email,))
             deleted_items["reports"] = cursor.rowcount
             
             # Update privacy request status
-            cursor.execute("""
+            cursor.execute(f"""
                 UPDATE privacy_requests 
-                SET status = 'completed', completed_at = ?
-                WHERE email = ? AND request_type = 'delete'
+                SET status = 'completed', completed_at = {placeholder}
+                WHERE email = {placeholder} AND request_type = 'delete'
             """, (datetime.now().isoformat(), email))
             
             conn.commit()
