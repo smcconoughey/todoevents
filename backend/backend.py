@@ -6850,6 +6850,68 @@ async def get_page_visits_analytics(
         logger.error(f"Error fetching page visits analytics: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch page visits analytics: {str(e)}")
 
+
+@app.post("/api/report-event")
+async def report_event(report_data: dict):
+    """Report an event for inappropriate content, incorrect information, etc."""
+    try:
+        # Validate required fields
+        required_fields = ['eventId', 'eventTitle', 'category', 'description', 'reporterEmail']
+        for field in required_fields:
+            if not report_data.get(field):
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate email format
+        email = report_data.get('reporterEmail', '').strip()
+        if '@' not in email or '.' not in email:
+            raise HTTPException(status_code=400, detail="Invalid email address")
+        
+        # Validate description length
+        description = report_data.get('description', '').strip()
+        if len(description) < 10:
+            raise HTTPException(status_code=400, detail="Description must be at least 10 characters")
+        
+        # Send email notification
+        try:
+            from email_config import EmailService
+            email_service = EmailService()
+            
+            report_reason = report_data.get('reason', report_data.get('category', 'Unknown'))
+            subject = f"Event Report: {report_reason} - Event ID {report_data['eventId']}"
+            
+            html_content = f"""
+            <h2>Event Report Received</h2>
+            <p><strong>Event ID:</strong> {report_data['eventId']}</p>
+            <p><strong>Event Title:</strong> {report_data['eventTitle']}</p>
+            <p><strong>Report Type:</strong> {report_reason}</p>
+            <p><strong>Reporter:</strong> {report_data.get('reporterName', 'Anonymous')} ({email})</p>
+            <p><strong>Description:</strong> {description}</p>
+            <p><strong>Time:</strong> {report_data.get('reportedAt', 'N/A')}</p>
+            """
+            
+            email_sent = email_service.send_email(
+                to_email="support@todo-events.com",
+                subject=subject,
+                html_content=html_content
+            )
+            
+        except Exception as e:
+            logger.error(f"Error sending report email: {e}")
+        
+        # Log the report
+        logger.info(f"Event report received - Event ID: {report_data['eventId']}, Type: {report_reason}, Reporter: {email}")
+        
+        return {
+            "success": True,
+            "message": "Report submitted successfully. Our team will review it shortly."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing event report: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit report. Please contact support@todo-events.com directly.")
+
 @app.get("/debug/page-visits")
 async def debug_page_visits():
     """Debug endpoint to check page visits table"""

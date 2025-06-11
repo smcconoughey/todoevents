@@ -8,6 +8,7 @@ import CalendarFilter from "./CalendarFilter";
 import MapContainer from "./MapContainer";
 import ShareCard from "./ShareCard";
 import FirstTimeSignInPopup from "../FirstTimeSignInPopup";
+import ReportDialog from './ReportDialog';
 
 import { getMarkerStyle, setMarkerStyle } from "./markerUtils";
 import categories, { getCategory } from "./categoryConfig";
@@ -43,6 +44,7 @@ import {
   Search,
 
   Navigation,
+  AlertTriangle,
   AlertCircle,
   HelpCircle,
   Users,
@@ -249,7 +251,7 @@ const getTimePeriod = (timeString) => {
   }
 };
 
-const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, setActiveTab, shareCardRef, downloadStatus, handleDownload, handleCopyLink, handleFacebookShare, setExternalLinkDialog }) => {
+const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, activeTab, setActiveTab, shareCardRef, downloadStatus, handleDownload, handleCopyLink, handleFacebookShare, setExternalLinkDialog }) => {
   // Add comprehensive null checks
   if (!event || typeof event !== 'object') {
     return (
@@ -493,6 +495,18 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             {/* Add event interaction components to the details panel */}
             <EventInteractionComponents eventId={String(event.id)} />
             
+            {/* Report Button - available to all users */}
+            <div className="pt-3 border-t border-white/10">
+              <Button
+                variant="ghost"
+                className="w-full text-white/70 hover:text-white hover:bg-white/5 font-medium transition-all duration-200 text-sm"
+                onClick={onReport}
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Report Event
+              </Button>
+            </div>
+            
             {user && (user.id === event.created_by || user.role === 'admin') && (
               <div className="pt-4 space-y-3 border-t border-white/10">
                 <Button
@@ -724,6 +738,7 @@ const EventMap = ({
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [externalLinkDialog, setExternalLinkDialog] = useState({ isOpen: false, url: '' });
   const [showFirstTimeSignInPopup, setShowFirstTimeSignInPopup] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [showEmailContactPopup, setShowEmailContactPopup] = useState(false);
   // Add new state for misc filters
   const [miscFilters, setMiscFilters] = useState({
@@ -3477,6 +3492,7 @@ const EventMap = ({
                     });
                   }}
                   onDelete={handleEventDelete}
+                  onReport={() => setShowReportDialog(true)}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
                   shareCardRef={shareCardRef}
@@ -3695,6 +3711,18 @@ const EventMap = ({
                 {/* Event Interaction Components */}
                 <EventInteractionComponents eventId={String(selectedEvent.id)} />
                 
+                {/* Report Button - available to all users on mobile */}
+                <div className="pt-3 border-t border-white/10">
+                  <Button
+                    variant="ghost"
+                    className="w-full text-white/70 hover:text-white hover:bg-white/5 font-medium transition-all duration-200 text-sm min-h-[40px]"
+                    onClick={() => setShowReportDialog(true)}
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Report Event
+                  </Button>
+                </div>
+                
                 {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
                   <div className="pt-3 space-y-2 border-t border-white/10">
                     <Button
@@ -3840,6 +3868,14 @@ const EventMap = ({
       <EmailContactPopup
         isOpen={showEmailContactPopup}
         onClose={() => setShowEmailContactPopup(false)}
+      />
+
+      {/* Report Event Dialog */}
+      <ReportDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        event={selectedEvent}
+        user={user}
       />
     </div>
   );
