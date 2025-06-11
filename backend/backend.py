@@ -11012,15 +11012,14 @@ async def submit_privacy_request(request: PrivacyRequest):
             # Log the privacy request
             cursor.execute("""
                 INSERT INTO privacy_requests 
-                (request_type, email, full_name, verification_info, details, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (request_type, email, full_name, verification_info, details)
+                VALUES (?, ?, ?, ?, ?)
             """, (
                 request.request_type,
                 request.email,
                 request.full_name,
                 request.verification_info,
-                request.details,
-                datetime.now().isoformat()
+                request.details
             ))
             
             request_id = cursor.lastrowid
