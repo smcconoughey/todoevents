@@ -16,7 +16,7 @@ const LegalPage = () => {
           </div>
           <p className="text-themed-secondary">
             Effective Date: January 1, 2025<br />
-            Last Updated: January 1, 2025
+            Last Updated: June 11, 2025
           </p>
         </div>
       </div>
