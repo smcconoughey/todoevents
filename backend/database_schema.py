@@ -36,6 +36,9 @@ EVENT_FIELDS = [
     ('host_name', 'TEXT'),
     ('organizer_url', 'TEXT'),
     
+    # Premium features
+    ('verified', 'BOOLEAN DEFAULT FALSE'),
+    
     # SEO fields
     ('slug', 'TEXT'),
     ('is_published', 'BOOLEAN DEFAULT TRUE'),

@@ -373,7 +373,6 @@ def validate_recurring_event(event_data, user_role):
     # For now, just return the event data unchanged
     # Can be enhanced later with actual validation logic
     return event_data
-
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -419,6 +418,7 @@ def init_db():
                         event_url TEXT,
                         host_name TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        verified BOOLEAN DEFAULT FALSE,
                         FOREIGN KEY(created_by) REFERENCES users(id)
                     )
                 ''')
@@ -502,6 +502,12 @@ def init_db():
                     if not column_exists('events', 'secondary_category'):
                         c.execute('ALTER TABLE events ADD COLUMN secondary_category TEXT')
                         logger.info("✅ Added 'secondary_category' column")
+                        conn.commit()
+                        
+                    # Add verified column if it doesn't exist
+                    if not column_exists('events', 'verified'):
+                        c.execute('ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE')
+                        logger.info("✅ Added 'verified' column")
                         conn.commit()
                         
                 except Exception as migration_error:
@@ -631,6 +637,7 @@ def init_db():
                                 event_url TEXT,
                                 host_name TEXT,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                verified BOOLEAN DEFAULT FALSE,
                                 FOREIGN KEY(created_by) REFERENCES users(id)
                             )''')
                 else:
@@ -680,6 +687,11 @@ def init_db():
                     if 'secondary_category' not in columns:
                         c.execute('''ALTER TABLE events ADD COLUMN secondary_category TEXT''')
                         logger.info("Added secondary_category column")
+                    
+                    # Add verified column if it doesn't exist
+                    if 'verified' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE''')
+                        logger.info("Added verified column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1008,7 +1020,6 @@ class AutomatedTaskManager:
     'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
     'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
 ]
-        
         sitemap += f'''
 
   <!-- Category pages -->'''
@@ -1721,7 +1732,6 @@ class PasswordValidator:
             validation_result["strength"] = "strong"
         
         return validation_result
-
 # Pydantic Models
 class EventBase(BaseModel):
     title: str
@@ -1749,6 +1759,8 @@ class EventBase(BaseModel):
     event_url: Optional[str] = None     # External event URL
     host_name: Optional[str] = None     # Organization/host name
     organizer_url: Optional[str] = None # Organizer website
+    # Premium features
+    verified: Optional[bool] = False    # Event verification status
     # SEO fields
     slug: Optional[str] = None          # URL-friendly slug
     is_published: Optional[bool] = True # Publication status
@@ -2533,7 +2545,7 @@ async def list_events(
                        COALESCE(interest_count, 0) as interest_count,
                        COALESCE(view_count, 0) as view_count,
                        fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
-                       start_datetime, end_datetime, updated_at
+                       start_datetime, end_datetime, updated_at, verified
                        {location_select}
                 FROM events 
                 {where_clause}
@@ -2568,7 +2580,7 @@ async def list_events(
                             'end_date', 'category', 'address', 'city', 'state', 'country', 'lat', 'lng', 'recurring',
                             'frequency', 'created_by', 'created_at', 'interest_count', 'view_count',
                             'fee_required', 'price', 'currency', 'event_url', 'host_name', 'organizer_url', 'slug', 'is_published',
-                            'start_datetime', 'end_datetime', 'updated_at'
+                            'start_datetime', 'end_datetime', 'updated_at', 'verified'
                         ]
                         if location_select:
                             column_names.append('distance_miles')
@@ -2629,7 +2641,7 @@ async def read_event(event_id: int):
                          COALESCE(interest_count, 0) as interest_count,
                          COALESCE(view_count, 0) as view_count,
                          fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
-                         start_datetime, end_datetime, updated_at
+                         start_datetime, end_datetime, updated_at, verified
                          FROM events WHERE id = {placeholder}""", (event_id,))
             event = c.fetchone()
             
@@ -2790,7 +2802,8 @@ def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
         'short_description', 'city', 'state', 'country', 
         'interest_count', 'view_count', 'fee_required', 'event_url', 
         'host_name', 'organizer_url', 'slug', 'price', 'currency',
-        'start_datetime', 'end_datetime', 'geo_hash', 'is_published'
+        'start_datetime', 'end_datetime', 'geo_hash', 'is_published',
+        'verified'
     ]
     logger.warning(f"🔄 Using enhanced fallback columns ({len(fallback_columns)}) for {table_name}")
     return fallback_columns
@@ -3061,6 +3074,11 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Add required fields that might be missing from the form data
                 filtered_event_data['created_by'] = current_user["id"]
                 filtered_event_data['created_at'] = datetime.now().isoformat()
+                
+                # Auto-verify events for premium users
+                if current_user.get('role') in ['premium', 'admin']:
+                    filtered_event_data['verified'] = True
+                
                 if 'lat' not in filtered_event_data:
                     filtered_event_data['lat'] = lat_rounded
                 if 'lng' not in filtered_event_data:
@@ -3990,8 +4008,45 @@ async def get_dynamic_sitemap():
     except Exception as e:
         logger.error(f"Error serving dynamic sitemap: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating sitemap")
+# Admin endpoint to toggle event verification
+@app.put("/admin/events/{event_id}/verification")
+async def toggle_event_verification(
+    event_id: int,
+    verification_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Toggle event verification status (admin-only)
+    """
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    verified = verification_data.get('verified', False)
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if event exists
+            c.execute(f"SELECT * FROM events WHERE id = {placeholder}", (event_id,))
+            event = c.fetchone()
+            
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            # Update verification status
+            c.execute(f"UPDATE events SET verified = {placeholder} WHERE id = {placeholder}", (verified, event_id))
+            conn.commit()
+            
+            return {"detail": f"Event verification {'enabled' if verified else 'disabled'} successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating event verification {event_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating event verification")
 
-# Utility functions for interests and views
+@app.get("/admin/activity-logs")
 def generate_browser_fingerprint(request: Request) -> str:
     """Generate a browser fingerprint for anonymous users"""
     import hashlib
@@ -4411,6 +4466,7 @@ def init_db():
                         event_url TEXT,
                         host_name TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        verified BOOLEAN DEFAULT FALSE,
                         FOREIGN KEY(created_by) REFERENCES users(id)
                     )
                 ''')
@@ -4494,6 +4550,12 @@ def init_db():
                     if not column_exists('events', 'secondary_category'):
                         c.execute('ALTER TABLE events ADD COLUMN secondary_category TEXT')
                         logger.info("✅ Added 'secondary_category' column")
+                        conn.commit()
+                        
+                    # Add verified column if it doesn't exist
+                    if not column_exists('events', 'verified'):
+                        c.execute('ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE')
+                        logger.info("✅ Added 'verified' column")
                         conn.commit()
                         
                 except Exception as migration_error:
@@ -4623,6 +4685,7 @@ def init_db():
                                 event_url TEXT,
                                 host_name TEXT,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                verified BOOLEAN DEFAULT FALSE,
                                 FOREIGN KEY(created_by) REFERENCES users(id)
                             )''')
                 else:
@@ -4672,6 +4735,11 @@ def init_db():
                     if 'secondary_category' not in columns:
                         c.execute('''ALTER TABLE events ADD COLUMN secondary_category TEXT''')
                         logger.info("Added secondary_category column")
+                    
+                    # Add verified column if it doesn't exist
+                    if 'verified' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE''')
+                        logger.info("Added verified column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -5742,6 +5810,8 @@ class EventBase(BaseModel):
     event_url: Optional[str] = None     # External event URL
     host_name: Optional[str] = None     # Organization/host name
     organizer_url: Optional[str] = None # Organizer website
+    # Premium features
+    verified: Optional[bool] = False    # Event verification status
     # SEO fields
     slug: Optional[str] = None          # URL-friendly slug
     is_published: Optional[bool] = True # Publication status
@@ -6527,7 +6597,7 @@ async def list_events(
                        COALESCE(interest_count, 0) as interest_count,
                        COALESCE(view_count, 0) as view_count,
                        fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
-                       start_datetime, end_datetime, updated_at
+                       start_datetime, end_datetime, updated_at, verified
                        {location_select}
                 FROM events 
                 {where_clause}
@@ -6562,7 +6632,7 @@ async def list_events(
                             'end_date', 'category', 'address', 'city', 'state', 'country', 'lat', 'lng', 'recurring',
                             'frequency', 'created_by', 'created_at', 'interest_count', 'view_count',
                             'fee_required', 'price', 'currency', 'event_url', 'host_name', 'organizer_url', 'slug', 'is_published',
-                            'start_datetime', 'end_datetime', 'updated_at'
+                            'start_datetime', 'end_datetime', 'updated_at', 'verified'
                         ]
                         if location_select:
                             column_names.append('distance_miles')
@@ -6623,7 +6693,7 @@ async def read_event(event_id: int):
                          COALESCE(interest_count, 0) as interest_count,
                          COALESCE(view_count, 0) as view_count,
                          fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
-                         start_datetime, end_datetime, updated_at
+                         start_datetime, end_datetime, updated_at, verified
                          FROM events WHERE id = {placeholder}""", (event_id,))
             event = c.fetchone()
             
@@ -6784,7 +6854,8 @@ def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
         'short_description', 'city', 'state', 'country', 
         'interest_count', 'view_count', 'fee_required', 'event_url', 
         'host_name', 'organizer_url', 'slug', 'price', 'currency',
-        'start_datetime', 'end_datetime', 'geo_hash', 'is_published'
+        'start_datetime', 'end_datetime', 'geo_hash', 'is_published',
+        'verified'
     ]
     logger.warning(f"🔄 Using enhanced fallback columns ({len(fallback_columns)}) for {table_name}")
     return fallback_columns
@@ -7056,6 +7127,11 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 # Add required fields that might be missing from the form data
                 filtered_event_data['created_by'] = current_user["id"]
                 filtered_event_data['created_at'] = datetime.now().isoformat()
+                
+                # Auto-verify events for premium users
+                if current_user.get('role') in ['premium', 'admin']:
+                    filtered_event_data['verified'] = True
+                
                 if 'lat' not in filtered_event_data:
                     filtered_event_data['lat'] = lat_rounded
                 if 'lng' not in filtered_event_data:
@@ -8324,6 +8400,82 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
         "role": current_user['role'],
         "user_id": current_user['id']
     }
+
+# Premium User Analytics Endpoint
+@app.get("/users/analytics")
+async def get_user_analytics(current_user: dict = Depends(get_current_user)):
+    """
+    Get analytics data for premium users
+    """
+    if current_user['role'] not in ['premium', 'admin']:
+        raise HTTPException(status_code=403, detail="Premium access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get user's events with analytics
+            cursor.execute(f"""
+                SELECT id, title, date, start_time, view_count, interest_count, verified
+                FROM events 
+                WHERE created_by = {placeholder}
+                ORDER BY date DESC
+            """, (current_user['id'],))
+            
+            events = cursor.fetchall()
+            
+            # Calculate overall stats
+            total_events = len(events)
+            total_views = sum(event.get('view_count', 0) or 0 for event in events)
+            total_interests = sum(event.get('interest_count', 0) or 0 for event in events)
+            avg_views = round(total_views / total_events) if total_events > 0 else 0
+            
+            # Get recent view/interest activity (last 30 days)
+            thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+            
+            # Get view trends
+            cursor.execute(f"""
+                SELECT DATE(ev.created_at) as date, COUNT(*) as views
+                FROM event_views ev
+                JOIN events e ON ev.event_id = e.id
+                WHERE e.created_by = {placeholder} AND ev.created_at >= {placeholder}
+                GROUP BY DATE(ev.created_at)
+                ORDER BY date
+            """, (current_user['id'], thirty_days_ago))
+            
+            view_trends = cursor.fetchall()
+            
+            # Get interest trends
+            cursor.execute(f"""
+                SELECT DATE(ei.created_at) as date, COUNT(*) as interests
+                FROM event_interests ei
+                JOIN events e ON ei.event_id = e.id
+                WHERE e.created_by = {placeholder} AND ei.created_at >= {placeholder}
+                GROUP BY DATE(ei.created_at)
+                ORDER BY date
+            """, (current_user['id'], thirty_days_ago))
+            
+            interest_trends = cursor.fetchall()
+            
+            return {
+                "overview": {
+                    "total_events": total_events,
+                    "total_views": total_views,
+                    "total_interests": total_interests,
+                    "avg_views_per_event": avg_views
+                },
+                "events": [dict(event) for event in events],
+                "trends": {
+                    "views": [dict(trend) for trend in view_trends],
+                    "interests": [dict(trend) for trend in interest_trends]
+                },
+                "period": "last_30_days"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting user analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving analytics")
 
 # Main execution block
 if __name__ == "__main__":
@@ -11702,7 +11854,6 @@ async def create_privacy_table():
             "error": str(e),
             "database_type": "PostgreSQL" if (IS_PRODUCTION and DB_URL) else "SQLite"
         }
-
 @app.post("/debug/test-privacy-insert")
 async def debug_test_privacy_insert():
     """Debug endpoint to test privacy request insertion with detailed error info"""
@@ -11806,387 +11957,3 @@ async def debug_test_privacy_insert():
             "traceback": traceback.format_exc(),
             "debug_info": debug_info if 'debug_info' in locals() else {}
         }
-# =============================================================================
-# ADMIN PRIVACY MANAGEMENT ENDPOINTS - Updated with robust error handling
-# =============================================================================
-@app.get("/admin/privacy-requests")
-async def list_admin_privacy_requests(current_user: dict = Depends(get_current_user)):
-    """
-    List all privacy requests for admin dashboard (with hyphen path)
-    """
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    placeholder = get_placeholder()
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # First, check if the table exists and create it if it doesn't
-            try:
-                cursor.execute("SELECT COUNT(*) FROM privacy_requests LIMIT 1")
-            except Exception as table_error:
-                logger.warning(f"privacy_requests table doesn't exist, creating it: {table_error}")
-                
-                # Create the table
-                if IS_PRODUCTION and DB_URL:  # PostgreSQL
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS privacy_requests (
-                            id SERIAL PRIMARY KEY,
-                            request_type VARCHAR(50) NOT NULL,
-                            email VARCHAR(255) NOT NULL,
-                            full_name VARCHAR(255),
-                            verification_info TEXT,
-                            details TEXT,
-                            status VARCHAR(50) DEFAULT 'pending',
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            completed_at TIMESTAMP,
-                            admin_notes TEXT
-                        )
-                    """)
-                else:  # SQLite
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS privacy_requests (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            request_type TEXT NOT NULL,
-                            email TEXT NOT NULL,
-                            full_name TEXT,
-                            verification_info TEXT,
-                            details TEXT,
-                            status TEXT DEFAULT 'pending',
-                            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                            completed_at TEXT,
-                            admin_notes TEXT
-                        )
-                    """)
-                conn.commit()
-                logger.info("privacy_requests table created successfully")
-            
-            cursor.execute(f"""
-                SELECT id, request_type, email, full_name, 
-                       details, verification_info, status, 
-                       created_at, completed_at, admin_notes
-                FROM privacy_requests 
-                ORDER BY created_at DESC
-            """)
-            
-            requests = cursor.fetchall()
-            
-            # Handle different row formats
-            result_list = []
-            for row in requests:
-                try:
-                    if hasattr(row, 'keys') and hasattr(row, 'values'):
-                        # Dictionary-like row
-                        request_dict = {
-                            "id": row.get('id'),
-                            "request_type": row.get('request_type'),
-                            "user_email": row.get('email'),  # Map email to user_email for frontend compatibility
-                            "full_name": row.get('full_name'),
-                            "additional_details": row.get('details'),  # Map details to additional_details for frontend
-                            "verification_info": row.get('verification_info'),
-                            "status": row.get('status') or "pending",
-                            "created_at": row.get('created_at'),
-                            "completed_at": row.get('completed_at'),
-                            "admin_notes": row.get('admin_notes')
-                        }
-                    else:
-                        # Tuple-like row
-                        request_dict = {
-                            "id": row[0],
-                            "request_type": row[1],
-                            "user_email": row[2],  # Map email to user_email for frontend compatibility
-                            "full_name": row[3],
-                            "additional_details": row[4],  # Map details to additional_details for frontend
-                            "verification_info": row[5],
-                            "status": row[6] or "pending",
-                            "created_at": row[7],
-                            "completed_at": row[8],
-                            "admin_notes": row[9]
-                        }
-                    result_list.append(request_dict)
-                except (IndexError, KeyError, TypeError) as e:
-                    logger.error(f"Error processing privacy request row: {e}, row: {row}")
-                    continue
-            
-            return result_list
-            
-    except Exception as e:
-        logger.error(f"Error listing admin privacy requests: {e}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Failed to list privacy requests: {str(e)}")
-
-@app.put("/admin/privacy-requests/{request_id}/status")
-async def update_admin_privacy_request_status(
-    request_id: int, 
-    update_data: dict,  # Expecting {"status": "...", "admin_notes": "..."}
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    Update privacy request status (with hyphen path for admin dashboard)
-    """
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    placeholder = get_placeholder()
-    status = update_data.get("status")
-    admin_notes = update_data.get("admin_notes", "")
-    
-    if not status:
-        raise HTTPException(status_code=400, detail="Status is required")
-    
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            completed_at = datetime.now().isoformat() if status == "completed" else None
-            
-            cursor.execute(f"""
-                UPDATE privacy_requests 
-                SET status = {placeholder}, completed_at = {placeholder}, admin_notes = {placeholder}
-                WHERE id = {placeholder}
-            """, (status, completed_at, admin_notes, request_id))
-            
-            conn.commit()
-            
-            return {"success": True, "message": "Privacy request status updated"}
-            
-    except Exception as e:
-        logger.error(f"Error updating admin privacy request status: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update privacy request status")
-
-@app.post("/admin/privacy-requests/{request_id}/export")
-async def export_user_data_for_request(
-    request_id: int,
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    Export user data for a specific privacy request
-    """
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    placeholder = get_placeholder()
-    
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # Get the privacy request
-            cursor.execute(f"""
-                SELECT email, request_type FROM privacy_requests 
-                WHERE id = {placeholder}
-            """, (request_id,))
-            
-            request_row = cursor.fetchone()
-            if not request_row:
-                raise HTTPException(status_code=404, detail="Privacy request not found")
-            
-            email = request_row[0]
-            request_type = request_row[1]
-            
-            if request_type != "access":
-                raise HTTPException(status_code=400, detail="Export only available for access requests")
-            
-            # Get user data (reuse existing logic)
-            user_data = {}
-            
-            # Get user account
-            cursor.execute(f"SELECT id, email, role FROM users WHERE email = {placeholder}", (email,))
-            user_row = cursor.fetchone()
-            
-            if user_row:
-                user_data["user_account"] = {
-                    "id": user_row[0],
-                    "email": user_row[1],
-                    "role": user_row[2]
-                }
-                
-                user_id = user_row[0]
-                
-                # Get user's events
-                cursor.execute(f"""
-                    SELECT id, title, description, date, start_time, end_time, category, address, lat, lng
-                    FROM events WHERE created_by = {placeholder}
-                """, (user_id,))
-                events = cursor.fetchall()
-                
-                user_data["events"] = [
-                    {
-                        "id": event[0],
-                        "title": event[1],
-                        "description": event[2],
-                        "date": event[3],
-                        "start_time": event[4],
-                        "end_time": event[5],
-                        "category": event[6],
-                        "address": event[7],
-                        "lat": event[8],
-                        "lng": event[9]
-                    } for event in events
-                ]
-                
-                # Get user's interests
-                cursor.execute(f"""
-                    SELECT e.id, e.title, ei.interested_at
-                    FROM event_interests ei
-                    JOIN events e ON ei.event_id = e.id
-                    WHERE ei.user_id = {placeholder}
-                """, (user_id,))
-                interests = cursor.fetchall()
-                
-                user_data["interests"] = [
-                    {
-                        "event_id": interest[0],
-                        "event_title": interest[1],
-                        "interested_at": interest[2]
-                    } for interest in interests
-                ]
-                
-                # Get page visits
-                cursor.execute(f"""
-                    SELECT page_type, page_path, visited_at
-                    FROM page_visits WHERE user_id = {placeholder}
-                    ORDER BY visited_at DESC
-                """, (user_id,))
-                visits = cursor.fetchall()
-                
-                user_data["page_visits"] = [
-                    {
-                        "page_type": visit[0],
-                        "page_path": visit[1],
-                        "visited_at": visit[2]
-                    } for visit in visits
-                ]
-                
-            else:
-                user_data["user_account"] = None
-                user_data["events"] = []
-                user_data["interests"] = []
-                user_data["page_visits"] = []
-            
-            # Get any reports by this email
-            cursor.execute(f"""
-                SELECT event_id, report_type, details, reported_at
-                FROM event_reports WHERE reporter_email = {placeholder}
-            """, (email,))
-            reports = cursor.fetchall()
-            
-            user_data["reports"] = [
-                {
-                    "event_id": report[0],
-                    "report_type": report[1],
-                    "details": report[2],
-                    "reported_at": report[3]
-                } for report in reports
-            ]
-            
-            # Generate export file (simplified - in production you might want to create actual files)
-            export_data = {
-                "export_date": datetime.now().isoformat(),
-                "request_id": request_id,
-                "user_email": email,
-                "data": user_data
-            }
-            
-            return {
-                "success": True,
-                "message": f"Data export generated for {email}",
-                "export_data": export_data,
-                "export_url": f"/admin/privacy-requests/{request_id}/download"  # Placeholder URL
-            }
-            
-    except HTTPException as http_ex:
-        raise http_ex
-    except Exception as e:
-        logger.error(f"Error exporting user data for request {request_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to export user data")
-
-@app.post("/admin/privacy-requests/{request_id}/delete-data")
-async def delete_user_data_for_request(
-    request_id: int,
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    Delete user data for a specific privacy request
-    """
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    placeholder = get_placeholder()
-    
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # Get the privacy request
-            cursor.execute(f"""
-                SELECT email, request_type FROM privacy_requests 
-                WHERE id = {placeholder}
-            """, (request_id,))
-            
-            request_row = cursor.fetchone()
-            if not request_row:
-                raise HTTPException(status_code=404, detail="Privacy request not found")
-            
-            email = request_row[0]
-            request_type = request_row[1]
-            
-            if request_type not in ["delete", "deletion"]:
-                raise HTTPException(status_code=400, detail="Delete only available for deletion requests")
-            
-            # Perform data deletion (reuse existing logic)
-            deleted_items = {}
-            
-            # Get user ID
-            cursor.execute(f"SELECT id FROM users WHERE email = {placeholder}", (email,))
-            user_row = cursor.fetchone()
-            
-            if user_row:
-                user_id = user_row[0]
-                
-                # Delete user's events (and cascade related data)
-                cursor.execute(f"DELETE FROM event_interests WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
-                cursor.execute(f"DELETE FROM event_views WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
-                cursor.execute(f"DELETE FROM events WHERE created_by = {placeholder}", (user_id,))
-                deleted_items["events"] = cursor.rowcount
-                
-                # Delete user's interests
-                cursor.execute(f"DELETE FROM event_interests WHERE user_id = {placeholder}", (user_id,))
-                deleted_items["interests"] = cursor.rowcount
-                
-                # Delete user's page visits
-                cursor.execute(f"DELETE FROM page_visits WHERE user_id = {placeholder}", (user_id,))
-                deleted_items["page_visits"] = cursor.rowcount
-                
-                # Delete user account
-                cursor.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
-                deleted_items["user_account"] = cursor.rowcount
-            
-            # Delete reports by email (even if no user account)
-            cursor.execute(f"DELETE FROM event_reports WHERE reporter_email = {placeholder}", (email,))
-            deleted_items["reports"] = cursor.rowcount
-            
-            # Update privacy request status
-            cursor.execute(f"""
-                UPDATE privacy_requests 
-                SET status = 'completed', completed_at = {placeholder}
-                WHERE id = {placeholder}
-            """, (datetime.now().isoformat(), request_id))
-            
-            conn.commit()
-            
-            return {
-                "success": True,
-                "message": f"All data for {email} has been deleted",
-                "deleted_items": deleted_items,
-                "deletion_date": datetime.now().isoformat()
-            }
-            
-    except HTTPException as http_ex:
-        raise http_ex
-    except Exception as e:
-        logger.error(f"Error deleting user data for request {request_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete user data")
-
