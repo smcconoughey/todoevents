@@ -9629,6 +9629,32 @@ async def get_user_analytics(
                     "engagement_rate": engagement
                 })
             
+            # Geographic performance analysis
+            geographic_stats = {}
+            for event in event_list:
+                city = event.get('city', 'Unknown')
+                state = event.get('state', 'Unknown')
+                location = f"{city}, {state}" if city != 'Unknown' and state != 'Unknown' else city if city != 'Unknown' else 'Unknown Location'
+                
+                if location not in geographic_stats:
+                    geographic_stats[location] = {"events": 0, "views": 0, "interests": 0}
+                geographic_stats[location]["events"] += 1
+                geographic_stats[location]["views"] += event.get('view_count', 0) or 0
+                geographic_stats[location]["interests"] += event.get('interest_count', 0) or 0
+
+            # Create time series data (last 30 days)
+            from datetime import datetime, timedelta
+            time_series_data = {}
+            for i in range(30):
+                date = (datetime.now() - timedelta(days=29-i)).strftime('%Y-%m-%d')
+                time_series_data[date] = {"views": 0, "interests": 0, "events_created": 0}
+            
+            # Add actual event creation dates
+            for event in event_list:
+                created_date = event.get('created_at', '').split('T')[0] if event.get('created_at') else None
+                if created_date and created_date in time_series_data:
+                    time_series_data[created_date]["events_created"] += 1
+            
             # Always return comprehensive format that frontend expects
             response_data = {
                 "summary": {
@@ -9641,8 +9667,8 @@ async def get_user_analytics(
                     "period_days": period_days
                 },
                 "category_performance": category_performance,
-                "geographic_distribution": {},  # Empty object for now
-                "time_series": {date: {"views": 0, "interests": 0, "events_created": 0} for date in []},  # Empty for now
+                "geographic_distribution": geographic_stats,
+                "time_series": time_series_data,
                 "top_performing_events": sorted(event_list, key=lambda x: x.get('view_count', 0), reverse=True)[:10],
                 "all_events": event_list
             }

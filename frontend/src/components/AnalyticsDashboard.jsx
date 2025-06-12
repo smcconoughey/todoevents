@@ -81,7 +81,7 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
   }
 
   const summary = analytics?.summary || {};
-  const categoryData = analytics?.category_performance || {};
+  const categoryData = analytics?.category_performance || [];
   const geoData = analytics?.geographic_distribution || {};
   const timeSeriesData = analytics?.time_series || {};
   const topEvents = analytics?.top_performing_events || [];
@@ -100,9 +100,9 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
     events: timeSeriesData[date]?.events_created || 0
   }));
 
-  // Top categories by performance
-  const topCategories = Object.entries(categoryData)
-    .sort(([,a], [,b]) => (b.views + b.interests) - (a.views + a.interests))
+  // Top categories by performance (categoryData is now an array)
+  const topCategories = categoryData
+    .sort((a, b) => (b.views + b.interests) - (a.views + a.interests))
     .slice(0, 5);
 
   // Top locations by performance
@@ -251,7 +251,7 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
             </div>
             <div>
               <p className="text-sm text-themed-secondary">Active Categories</p>
-              <p className="text-2xl font-semibold text-themed-primary">{Object.keys(categoryData).length}</p>
+              <p className="text-2xl font-semibold text-themed-primary">{categoryData.length}</p>
             </div>
           </div>
         </div>
@@ -324,16 +324,16 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
         <div className="bg-themed-surface rounded-lg border border-themed p-6">
           <h3 className="text-lg font-semibold text-themed-primary mb-4">Top Performing Categories</h3>
           <div className="space-y-3">
-            {topCategories.map(([category, stats], index) => {
-              const total = stats.views + stats.interests;
-              const maxTotal = Math.max(...topCategories.map(([,s]) => s.views + s.interests));
+            {topCategories.map((categoryObj, index) => {
+              const total = categoryObj.views + categoryObj.interests;
+              const maxTotal = Math.max(...topCategories.map(c => c.views + c.interests));
               const width = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
               
               return (
-                <div key={category} className="space-y-2">
+                <div key={categoryObj.category} className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-themed-primary capitalize">{category}</span>
-                    <span className="text-sm text-themed-secondary">{stats.events} events</span>
+                    <span className="font-medium text-themed-primary capitalize">{categoryObj.category}</span>
+                    <span className="text-sm text-themed-secondary">{categoryObj.events} events</span>
                   </div>
                   <div className="bg-themed-surface-hover rounded-full h-2">
                     <div 
@@ -342,8 +342,8 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
                     />
                   </div>
                   <div className="flex justify-between text-xs text-themed-secondary">
-                    <span>{stats.views} views • {stats.interests} interests</span>
-                    <span>{((stats.interests / Math.max(stats.views, 1)) * 100).toFixed(1)}% engagement</span>
+                    <span>{categoryObj.views} views • {categoryObj.interests} interests</span>
+                    <span>{categoryObj.engagement_rate}% engagement</span>
                   </div>
                 </div>
               );
@@ -467,9 +467,9 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
             <div className="bg-themed-surface/50 rounded-lg p-4">
               <h4 className="font-medium text-themed-primary mb-2">Top Category</h4>
               <p className="text-sm text-themed-secondary">
-                <span className="capitalize font-medium">{topCategories[0][0]}</span> is your best performing category with{' '}
-                {topCategories[0][1].views} views and{' '}
-                {((topCategories[0][1].interests / Math.max(topCategories[0][1].views, 1)) * 100).toFixed(1)}% engagement rate.
+                <span className="capitalize font-medium">{topCategories[0].category}</span> is your best performing category with{' '}
+                {topCategories[0].views} views and{' '}
+                {topCategories[0].engagement_rate}% engagement rate.
               </p>
             </div>
           )}
