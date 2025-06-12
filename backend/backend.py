@@ -9588,67 +9588,49 @@ async def get_user_analytics(
                 logger.warning(f"Could not get trend data: {trend_error}")
                 # Continue with empty trends
             
-            # Base response
+            # Calculate engagement rate
+            engagement_rate = round((total_interests / total_views * 100), 2) if total_views > 0 else 0
+            avg_interests = round(total_interests / total_events) if total_events > 0 else 0
+            
+            # Category performance
+            category_stats = {}
+            for event in event_list:
+                cat = event.get('category', 'Other')
+                if cat not in category_stats:
+                    category_stats[cat] = {"events": 0, "views": 0, "interests": 0}
+                category_stats[cat]["events"] += 1
+                category_stats[cat]["views"] += event.get('view_count', 0) or 0
+                category_stats[cat]["interests"] += event.get('interest_count', 0) or 0
+            
+            # Convert to list format
+            category_performance = []
+            for cat, stats in category_stats.items():
+                engagement = round((stats["interests"] / stats["views"] * 100), 2) if stats["views"] > 0 else 0
+                category_performance.append({
+                    "category": cat,
+                    "events": stats["events"],
+                    "views": stats["views"], 
+                    "interests": stats["interests"],
+                    "engagement_rate": engagement
+                })
+            
+            # Always return comprehensive format that frontend expects
             response_data = {
-                "overview": {
+                "summary": {
                     "total_events": total_events,
                     "total_views": total_views,
                     "total_interests": total_interests,
-                    "avg_views_per_event": avg_views
+                    "avg_views_per_event": avg_views,
+                    "avg_interests_per_event": avg_interests,
+                    "engagement_rate_percent": engagement_rate,
+                    "period_days": period_days
                 },
-                "events": event_list,
-                "trends": {
-                    "views": view_trends,
-                    "interests": interest_trends
-                },
-                "period": "last_30_days"
+                "category_performance": category_performance,
+                "geographic_distribution": {},  # Empty object for now
+                "time_series": {date: {"views": 0, "interests": 0, "events_created": 0} for date in []},  # Empty for now
+                "top_performing_events": sorted(event_list, key=lambda x: x.get('view_count', 0), reverse=True)[:10],
+                "all_events": event_list
             }
-            
-            # Always provide comprehensive data for premium users
-            if True:  # Make it always comprehensive
-                # Calculate engagement rate
-                engagement_rate = round((total_interests / total_views * 100), 2) if total_views > 0 else 0
-                avg_interests = round(total_interests / total_events) if total_events > 0 else 0
-                
-                # Category performance
-                category_stats = {}
-                for event in event_list:
-                    cat = event.get('category', 'Other')
-                    if cat not in category_stats:
-                        category_stats[cat] = {"events": 0, "views": 0, "interests": 0}
-                    category_stats[cat]["events"] += 1
-                    category_stats[cat]["views"] += event.get('view_count', 0) or 0
-                    category_stats[cat]["interests"] += event.get('interest_count', 0) or 0
-                
-                # Convert to list format
-                category_performance = []
-                for cat, stats in category_stats.items():
-                    engagement = round((stats["interests"] / stats["views"] * 100), 2) if stats["views"] > 0 else 0
-                    category_performance.append({
-                        "category": cat,
-                        "events": stats["events"],
-                        "views": stats["views"], 
-                        "interests": stats["interests"],
-                        "engagement_rate": engagement
-                    })
-                
-                # Enhanced response for comprehensive mode
-                response_data = {
-                    "summary": {
-                        "total_events": total_events,
-                        "total_views": total_views,
-                        "total_interests": total_interests,
-                        "avg_views_per_event": avg_views,
-                        "avg_interests_per_event": avg_interests,
-                        "engagement_rate_percent": engagement_rate,
-                        "period_days": period_days
-                    },
-                    "category_performance": category_performance,
-                    "geographic_distribution": [],  # Can be enhanced later
-                    "time_series": view_trends,
-                    "top_performing_events": sorted(event_list, key=lambda x: x.get('view_count', 0), reverse=True)[:10],
-                    "all_events": event_list
-                }
             
             # Handle CSV export if requested
             if export_csv:
