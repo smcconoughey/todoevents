@@ -9482,6 +9482,7 @@ async def options_comprehensive_analytics():
 
 @app.get("/users/analytics/comprehensive")
 async def get_comprehensive_analytics(
+    request: Request,
     current_user: dict = Depends(get_current_user),
     period_days: int = 30,
     include_demographics: bool = True
@@ -9606,7 +9607,8 @@ async def get_comprehensive_analytics(
             # Engagement rates
             engagement_rate = round((total_interests / total_views * 100), 2) if total_views > 0 else 0
             
-            return {
+            # Prepare response data
+            response_data = {
                 "summary": {
                     "total_events": total_events,
                     "total_views": total_views,
@@ -9622,6 +9624,15 @@ async def get_comprehensive_analytics(
                 "top_performing_events": top_events,
                 "all_events": events
             }
+            
+            # Create response with CORS headers
+            response = JSONResponse(content=response_data)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            
+            return response
             
     except Exception as e:
         logger.error(f"Error getting comprehensive analytics: {str(e)}")
@@ -9753,7 +9764,13 @@ async def export_analytics_csv(
         return Response(
             content=csv_content,
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization"
+            }
         )
         
     except Exception as e:
@@ -12698,6 +12715,40 @@ async def track_page_visit_endpoint(
     except Exception as e:
         logger.error(f"Error in page visit tracking endpoint: {e}")
         return {"success": False, "error": "Failed to track visit"}
+
+@app.post("/admin/verify-premium-events")
+async def verify_premium_events(current_user: dict = Depends(get_current_user)):
+    """
+    Verify all existing events created by premium users
+    """
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Find all events created by premium users that aren't verified
+            cursor.execute(f"""
+                UPDATE events 
+                SET verified = TRUE 
+                WHERE created_by IN (
+                    SELECT id FROM users WHERE role IN ('premium', 'admin')
+                ) AND verified = FALSE
+            """)
+            
+            affected_rows = cursor.rowcount
+            
+            return {
+                "success": True,
+                "verified_events": affected_rows,
+                "message": f"Verified {affected_rows} events from premium users"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error verifying premium events: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error verifying premium events")
 
 @app.get("/admin/analytics/page-visits")
 async def get_page_visits_analytics(
