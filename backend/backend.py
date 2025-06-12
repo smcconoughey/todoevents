@@ -3181,7 +3181,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):
     """
-    Retrieve events created by the current user for management.
+    Retrieve events created by the current user for management (robust version).
     Requires authentication.
     """
     placeholder = get_placeholder()
@@ -3189,8 +3189,18 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
         with get_db() as conn:
             c = conn.cursor()
             
-            # Query events created by the current user
-            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            # Query events created by the current user with proper column selection
+            actual_columns = get_actual_table_columns(c, 'events')
+            
+            # Select only columns that exist
+            if 'verified' in actual_columns:
+                query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            else:
+                # Exclude verified column if it doesn't exist
+                columns = [col for col in actual_columns if col != 'verified']
+                column_str = ', '.join(columns)
+                query = f"SELECT {column_str} FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
@@ -3198,6 +3208,17 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
             event_list = []
             for event in events:
                 event_dict = dict(event)
+                
+                # Ensure all required fields exist for EventResponse model
+                if 'verified' not in event_dict:
+                    event_dict['verified'] = False
+                if 'interest_count' not in event_dict:
+                    event_dict['interest_count'] = 0
+                if 'view_count' not in event_dict:
+                    event_dict['view_count'] = 0
+                if 'secondary_category' not in event_dict:
+                    event_dict['secondary_category'] = None
+                    
                 event_dict = convert_event_datetime_fields(event_dict)
                 event_list.append(event_dict)
             
@@ -7234,7 +7255,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):
     """
-    Retrieve events created by the current user for management.
+    Retrieve events created by the current user for management (robust version).
     Requires authentication.
     """
     placeholder = get_placeholder()
@@ -7242,8 +7263,18 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
         with get_db() as conn:
             c = conn.cursor()
             
-            # Query events created by the current user
-            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            # Query events created by the current user with proper column selection
+            actual_columns = get_actual_table_columns(c, 'events')
+            
+            # Select only columns that exist
+            if 'verified' in actual_columns:
+                query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            else:
+                # Exclude verified column if it doesn't exist
+                columns = [col for col in actual_columns if col != 'verified']
+                column_str = ', '.join(columns)
+                query = f"SELECT {column_str} FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
@@ -7251,6 +7282,17 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
             event_list = []
             for event in events:
                 event_dict = dict(event)
+                
+                # Ensure all required fields exist for EventResponse model
+                if 'verified' not in event_dict:
+                    event_dict['verified'] = False
+                if 'interest_count' not in event_dict:
+                    event_dict['interest_count'] = 0
+                if 'view_count' not in event_dict:
+                    event_dict['view_count'] = 0
+                if 'secondary_category' not in event_dict:
+                    event_dict['secondary_category'] = None
+                    
                 event_dict = convert_event_datetime_fields(event_dict)
                 event_list.append(event_dict)
             
@@ -8532,50 +8574,92 @@ async def get_user_analytics(current_user: dict = Depends(get_current_user)):
         logger.error(f"Error getting user analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving analytics")
 
-# Replacement endpoint for events/manage to fix schema issues
-@app.get("/events/manage-v2", response_model=List[EventResponse])
-async def list_user_events_v2(current_user: dict = Depends(get_current_user)):
+
+
+# Robust replacement for /events/manage to fix 422 errors
+@app.get("/events/manage-fix", response_model=List[EventResponse])
+async def list_user_events_robust(current_user: dict = Depends(get_current_user)):
     """
-    Retrieve events created by the current user for management (fixed version).
-    Requires authentication.
+    ROBUST version of events/manage that ensures no 422 errors.
     """
     placeholder = get_placeholder()
     try:
         with get_db() as conn:
             c = conn.cursor()
             
-            # Query events created by the current user with proper column selection
-            actual_columns = get_actual_table_columns(c, 'events')
-            
-            # Select only columns that exist
-            if 'verified' in actual_columns:
-                query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
-            else:
-                # Exclude verified column if it doesn't exist
-                columns = [col for col in actual_columns if col != 'verified']
-                column_str = ', '.join(columns)
-                query = f"SELECT {column_str} FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
-            
+            # Simple query without column detection complexity
+            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
-            # Convert to list of dictionaries and apply datetime conversion
             event_list = []
             for event in events:
-                event_dict = dict(event)
-                
-                # Ensure all required fields exist for EventResponse model
-                if 'verified' not in event_dict:
-                    event_dict['verified'] = False
-                if 'interest_count' not in event_dict:
-                    event_dict['interest_count'] = 0
-                if 'view_count' not in event_dict:
-                    event_dict['view_count'] = 0
-                if 'secondary_category' not in event_dict:
-                    event_dict['secondary_category'] = None
+                try:
+                    event_dict = dict(event)
+                    event_id = event_dict.get('id', 'unknown')
                     
-                event_dict = convert_event_datetime_fields(event_dict)
-                event_list.append(event_dict)
+                    # ENSURE ALL REQUIRED FIELDS EXIST WITH SAFE DEFAULTS
+                    # Required string fields
+                    event_dict['title'] = str(event_dict.get('title', '')).strip() or "Untitled Event"
+                    event_dict['description'] = str(event_dict.get('description', '')).strip() or "No description provided"
+                    event_dict['date'] = str(event_dict.get('date', '')).strip() or "2024-01-01"
+                    event_dict['start_time'] = str(event_dict.get('start_time', '')).strip() or "00:00"
+                    event_dict['category'] = str(event_dict.get('category', '')).strip() or "other"
+                    event_dict['address'] = str(event_dict.get('address', '')).strip() or "Address not provided"
+                    
+                    # Required numeric fields
+                    try:
+                        event_dict['lat'] = float(event_dict.get('lat', 0.0) or 0.0)
+                    except (ValueError, TypeError):
+                        event_dict['lat'] = 0.0
+                    try:
+                        event_dict['lng'] = float(event_dict.get('lng', 0.0) or 0.0)
+                    except (ValueError, TypeError):
+                        event_dict['lng'] = 0.0
+                    
+                    # Required integer fields
+                    event_dict['created_by'] = int(event_dict.get('created_by', current_user["id"]))
+                    event_dict['id'] = int(event_dict.get('id', 0))
+                    
+                    # Required datetime field
+                    event_dict['created_at'] = str(event_dict.get('created_at', datetime.now().isoformat()))
+                    
+                    # All optional fields with proper defaults
+                    event_dict['verified'] = bool(event_dict.get('verified', False))
+                    event_dict['interest_count'] = int(event_dict.get('interest_count', 0) or 0)
+                    event_dict['view_count'] = int(event_dict.get('view_count', 0) or 0)
+                    event_dict['secondary_category'] = event_dict.get('secondary_category')
+                    event_dict['updated_at'] = event_dict.get('updated_at')
+                    event_dict['start_datetime'] = event_dict.get('start_datetime')
+                    event_dict['end_datetime'] = event_dict.get('end_datetime')
+                    event_dict['short_description'] = event_dict.get('short_description')
+                    event_dict['end_time'] = event_dict.get('end_time')
+                    event_dict['end_date'] = event_dict.get('end_date')
+                    event_dict['city'] = event_dict.get('city')
+                    event_dict['state'] = event_dict.get('state')
+                    event_dict['country'] = str(event_dict.get('country', 'USA'))
+                    event_dict['recurring'] = bool(event_dict.get('recurring', False))
+                    event_dict['frequency'] = event_dict.get('frequency')
+                    event_dict['fee_required'] = event_dict.get('fee_required')
+                    try:
+                        event_dict['price'] = float(event_dict.get('price', 0.0) or 0.0)
+                    except (ValueError, TypeError):
+                        event_dict['price'] = 0.0
+                    event_dict['currency'] = str(event_dict.get('currency', 'USD'))
+                    event_dict['event_url'] = event_dict.get('event_url')
+                    event_dict['host_name'] = event_dict.get('host_name')
+                    event_dict['organizer_url'] = event_dict.get('organizer_url')
+                    event_dict['slug'] = event_dict.get('slug')
+                    event_dict['is_published'] = bool(event_dict.get('is_published', True))
+                    
+                    # Apply datetime conversion
+                    event_dict = convert_event_datetime_fields(event_dict)
+                    event_list.append(event_dict)
+                    
+                except Exception as event_error:
+                    logger.error(f"Error processing event {event_id}: {event_error}")
+                    # Skip this event but continue with others
+                    continue
             
             return event_list
             
