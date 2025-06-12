@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { X, Plus, Clock, Calendar, AlertCircle, MapPin } from 'lucide-react';
+import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Star, Crown, Repeat, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,8 @@ const CreateEventForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
   const [isSameDay, setIsSameDay] = useState(true);
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [premiumFeatures, setPremiumFeatures] = useState({});
   
   const [formData, setFormData] = useState({
     title: '',
@@ -48,6 +50,8 @@ const CreateEventForm = ({
     secondary_category: '',
     address: '',
     location: null,
+    recurring: false,
+    frequency: '',
     // New UX enhancement fields
     fee_required: '',
     event_url: '',
@@ -73,6 +77,8 @@ const CreateEventForm = ({
             lng: initialEvent.lng,
             address: initialEvent.address
           } : null,
+          recurring: initialEvent.recurring || false,
+          frequency: initialEvent.frequency || '',
           // New UX enhancement fields
           fee_required: initialEvent.fee_required || '',
           event_url: initialEvent.event_url || '',
@@ -94,6 +100,8 @@ const CreateEventForm = ({
           secondary_category: '',
           address: '',
           location: null,
+          recurring: false,
+          frequency: '',
           // New UX enhancement fields
           fee_required: '',
           event_url: '',
@@ -105,6 +113,36 @@ const CreateEventForm = ({
       }
     }
   }, [isOpen, initialEvent]);
+
+  // Check premium status when user changes
+  useEffect(() => {
+    const checkPremiumStatus = async () => {
+      if (!user || !token) {
+        setIsPremiumUser(false);
+        setPremiumFeatures({});
+        return;
+      }
+
+      try {
+        const response = await fetchWithTimeout(`${API_URL}/users/premium-status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }, 10000);
+
+        setIsPremiumUser(response.is_premium);
+        setPremiumFeatures(response.features);
+      } catch (error) {
+        console.error('Error checking premium status:', error);
+        setIsPremiumUser(false);
+        setPremiumFeatures({});
+      }
+    };
+
+    if (isOpen) {
+      checkPremiumStatus();
+    }
+  }, [user, token, isOpen]);
 
   // Update location when selected
   useEffect(() => {
@@ -256,6 +294,18 @@ const CreateEventForm = ({
       setError('End date must be after the event start date');
       return false;
     }
+    
+    // Premium feature validation
+    if (formData.recurring && !isPremiumUser) {
+      setError('Recurring events are a premium feature. Please upgrade to create recurring events.');
+      return false;
+    }
+    
+    if (formData.recurring && (!formData.frequency || formData.frequency === '')) {
+      setError('Please select a frequency for recurring events');
+      return false;
+    }
+    
     return true;
   };
 
@@ -297,8 +347,8 @@ const CreateEventForm = ({
         address: formData.address.trim(),
         lat: formData.location.lat,
         lng: formData.location.lng,
-        recurring: false,
-        frequency: null,
+        recurring: formData.recurring,
+        frequency: formData.frequency,
         // New UX enhancement fields
         fee_required: formData.fee_required.trim() || null,
         event_url: formData.event_url.trim() || null,
@@ -592,6 +642,121 @@ const CreateEventForm = ({
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Premium Recurring Events Section */}
+          <div className={`space-y-3 ${isPremiumUser ? 'relative' : ''}`}>
+            {isPremiumUser && (
+              <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-yellow-500/20 rounded-lg -z-10"></div>
+            )}
+            <div className={`space-y-3 ${isPremiumUser ? 'p-4 rounded-lg border-2 border-yellow-500/30 bg-yellow-500/5' : 'opacity-60'}`}>
+              <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
+                <Repeat className="w-4 h-4" />
+                Recurring Events
+                {isPremiumUser ? (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 rounded-full">
+                    <Crown className="w-3 h-3 text-yellow-600" />
+                    <span className="text-xs font-medium text-yellow-700">Premium</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-gray-500/20 rounded-full">
+                    <Star className="w-3 h-3 text-gray-600" />
+                    <span className="text-xs font-medium text-gray-600">Premium Only</span>
+                  </div>
+                )}
+              </h3>
+              
+              {!isPremiumUser && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="text-yellow-700 font-medium">Upgrade to Premium</p>
+                      <p className="text-yellow-600">Create recurring events that automatically repeat daily, weekly, monthly, or yearly. Perfect for regular meetups, classes, and ongoing events.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-themed-secondary">Recurring Event</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="recurring"
+                      checked={formData.recurring}
+                      onChange={(e) => setFormData(prev => ({ ...prev, recurring: e.target.checked, frequency: e.target.checked ? prev.frequency : '' }))}
+                      disabled={!isPremiumUser}
+                      className={`w-4 h-4 rounded border-themed bg-themed-surface focus:ring-2 ${
+                        isPremiumUser 
+                          ? 'text-yellow-600 focus:ring-yellow-500/50' 
+                          : 'text-gray-400 cursor-not-allowed'
+                      }`}
+                    />
+                    <label htmlFor="recurring" className={`text-sm font-medium ${isPremiumUser ? 'text-themed-secondary' : 'text-gray-500'}`}>
+                      This event repeats regularly
+                    </label>
+                  </div>
+                </div>
+
+                {formData.recurring && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-themed-secondary">Frequency</label>
+                    <Select 
+                      value={formData.frequency || ""} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}
+                      disabled={!isPremiumUser}
+                    >
+                      <SelectTrigger className={`input-themed h-10 ${isPremiumUser ? 'border-yellow-500/30' : ''}`}>
+                        <SelectValue placeholder="Select frequency..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-blue-500" />
+                            <span>Daily</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="weekly">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-green-500" />
+                            <span>Weekly</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="monthly">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-purple-500" />
+                            <span>Monthly</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="yearly">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-orange-500" />
+                            <span>Yearly</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              
+              {formData.recurring && formData.frequency && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="text-blue-700 font-medium">Recurring Event Preview</p>
+                      <p className="text-blue-600">
+                        This event will repeat {formData.frequency} starting from {formData.date || 'the selected date'}. 
+                        Attendees will see future occurrences automatically.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

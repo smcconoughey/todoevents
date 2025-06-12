@@ -190,6 +190,7 @@ DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
 class UserRole(str, Enum):
     ADMIN = "admin"
     USER = "user"
+    PREMIUM = "premium"
 
 # Database context manager with retry logic
 @contextmanager
@@ -777,7 +778,6 @@ def init_db():
         logger.error(f"Error initializing database: {str(e)}")
         # Don't raise the exception here - this allows the app to start even if DB init fails
         # We'll handle DB errors at the endpoint level
-
 def create_default_admin_user(conn):
     """Create default admin user if none exists"""
     try:
@@ -1276,9 +1276,7 @@ class AutomatedTaskManager:
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
-
 </urlset>
-
 <!-- Note: This sitemap was automatically generated on {current_date} -->
 <!-- Contains {len(events)} individual events and comprehensive SEO URLs -->
 '''
@@ -2017,7 +2015,6 @@ async def get_current_user_optional_no_exception(authorization: str = Header(Non
     except Exception as e:
         logger.error(f"Error in optional user auth: {str(e)}")
         return None
-
 # Authentication Endpoints
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -2787,7 +2784,6 @@ def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
     ]
     logger.warning(f"🔄 Using enhanced fallback columns ({len(fallback_columns)}) for {table_name}")
     return fallback_columns
-
 def auto_populate_seo_fields(event_data: dict) -> dict:
     """Auto-populate SEO fields for new events using enhanced logic"""
     import re
@@ -2976,6 +2972,9 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
     
     # Convert Pydantic model to dict for processing
     event_data = event.dict()
+    
+    # Validate recurring events for premium users only
+    event_data = validate_recurring_event(event_data, current_user['role'])
     
     # Log the original event data for debugging
     logger.info(f"Creating event: {event_data}")
@@ -4184,6 +4183,7 @@ DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
 class UserRole(str, Enum):
     ADMIN = "admin"
     USER = "user"
+    PREMIUM = "premium"
 
 # Database context manager with retry logic
 @contextmanager
@@ -4356,7 +4356,6 @@ def format_cursor_row(row, column_names):
     else:
         # SQLite returns tuples
         return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
-
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -4992,7 +4991,6 @@ class AutomatedTaskManager:
     'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
     'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
 ]
-        
         sitemap += f'''
 
   <!-- Category pages -->'''
@@ -5707,7 +5705,6 @@ class PasswordValidator:
             validation_result["strength"] = "strong"
         
         return validation_result
-
 # Pydantic Models
 class EventBase(BaseModel):
     title: str
@@ -6971,6 +6968,9 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
     # Convert Pydantic model to dict for processing
     event_data = event.dict()
     
+    # Validate recurring events for premium users only
+    event_data = validate_recurring_event(event_data, current_user['role'])
+    
     # Log the original event data for debugging
     logger.info(f"Creating event: {event_data}")
     
@@ -7975,8 +7975,6 @@ async def get_dynamic_sitemap():
     except Exception as e:
         logger.error(f"Error serving dynamic sitemap: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating sitemap")
-
-# Utility functions for interests and views
 def generate_browser_fingerprint(request: Request) -> str:
     """Generate a browser fingerprint for anonymous users"""
     import hashlib
@@ -8689,12 +8687,10 @@ async def debug_test_ux_fields():
     except Exception as e:
         logger.error(f"Error in UX fields debug test: {str(e)}")
         return {"error": str(e)}
-
 # Simple memory cache for frequently accessed data with improved memory management
 import time
 from typing import Dict, Any
 import threading
-
 class SimpleCache:
     def __init__(self, ttl_seconds: int = 300, max_size: int = 1000):  # 5 minute TTL, max 1000 items
         self.cache: Dict[str, Dict[str, Any]] = {}
@@ -9478,7 +9474,6 @@ async def get_events_by_location(
                 "slug": f"{state.lower()}/{city.lower()}"
             }
         }
-
 @app.get("/api/events/{event_id}/share-card")
 async def get_event_share_card(event_id: int):
     """Generate auto-generated share card for social media"""
@@ -10958,7 +10953,6 @@ async def report_event_test():
     """Test if the report endpoint is reachable"""
     logger.info("🧪 GET /api/report-event endpoint reached")
     return {"message": "Report endpoint is working", "method": "GET"}
-
 @app.post("/api/report-event")
 async def report_event(report_data: dict):
     """Report an event for inappropriate content, incorrect information, etc."""
@@ -11753,11 +11747,9 @@ async def debug_test_privacy_insert():
             "traceback": traceback.format_exc(),
             "debug_info": debug_info if 'debug_info' in locals() else {}
         }
-
 # =============================================================================
 # ADMIN PRIVACY MANAGEMENT ENDPOINTS
 # =============================================================================
-
 @app.get("/admin/privacy-requests")
 async def list_admin_privacy_requests(current_user: dict = Depends(get_current_user)):
     """
@@ -12072,4 +12064,3 @@ async def delete_user_data_for_request(
     except Exception as e:
         logger.error(f"Error deleting user data for request {request_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete user data")
-
