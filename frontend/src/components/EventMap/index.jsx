@@ -56,7 +56,8 @@ import {
   Lightbulb,
   Sun,
   Moon,
-  Cog
+  Cog,
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,6 +77,7 @@ import ExternalLinkWarning from './ExternalLinkWarning';
 import EmailContactPopup from './EmailContactPopup';
 import { batchedSync } from '@/utils/batchedSync';
 import { WebIcon } from './WebIcons';
+import UserDropdown from "../UserDropdown";
 
 // Simple page visit tracking (privacy-friendly)
 const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
@@ -370,7 +372,15 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
               <Icon className={`w-6 h-6 ${category.color}`} />
             </div>
             <div className="flex flex-col">
-              <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
+                {event.verified && (
+                  <div className="flex items-center gap-1 bg-green-500/20 px-2 py-1 rounded-full border border-green-500/30">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-xs font-medium text-green-400">Verified</span>
+                  </div>
+                )}
+              </div>
               <span className="text-xs event-id-text font-mono">ID: {event.id}</span>
             </div>
           </div>
@@ -2100,25 +2110,7 @@ const EventMap = ({
                       </Button>
                 <ThemeToggle />
                 {user ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                      onClick={() => window.open('/legal', '_blank')}
-                      title="Privacy Policy & Terms"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                      onClick={logout}
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <UserDropdown />
                 ) : (
                   <Button
                     variant="ghost"
@@ -2792,31 +2784,7 @@ const EventMap = ({
                         </Button>
                   <ThemeToggle />
                   {user ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                        onClick={() => {
-                          window.open('/legal', '_blank');
-                          setIsMobileMenuOpen(false);
-                        }}
-                        title="Privacy Policy & Terms"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-                        onClick={() => {
-                          logout();
-                          setIsMobileMenuOpen(false);
-                        }}
-                      >
-                        <LogOut className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <UserDropdown />
                   ) : (
                     <Button
                       variant="ghost"
