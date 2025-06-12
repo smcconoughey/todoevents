@@ -9598,6 +9598,35 @@ async def get_user_analytics(current_user: dict = Depends(get_current_user)):
 
 
 
+# Temporary debug version without Pydantic validation
+@app.get("/events/manage-debug")
+async def list_user_events_debug(current_user: dict = Depends(get_current_user)):
+    """Debug version without Pydantic validation to isolate the issue"""
+    logger.info(f"🔍 /events/manage-debug called by user {current_user.get('id', 'unknown')}")
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Simple query
+            c.execute(f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time LIMIT 5", (current_user["id"],))
+            events = c.fetchall()
+            
+            raw_events = []
+            for event in events:
+                raw_events.append(dict(event))
+            
+            return {
+                "success": True,
+                "count": len(raw_events),
+                "events": raw_events,
+                "user_id": current_user["id"]
+            }
+    except Exception as e:
+        logger.error(f"Debug endpoint error: {str(e)}")
+        return {"success": False, "error": str(e)}
+
 # Robust replacement for /events/manage to fix 422 errors
 @app.get("/events/manage-fix", response_model=List[EventResponse])
 async def list_user_events_robust(current_user: dict = Depends(get_current_user)):
