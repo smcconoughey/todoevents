@@ -44,7 +44,7 @@ const AccountPage = () => {
       setLoading(true);
       
       // Fetch user events
-      const eventsResponse = await fetch(`${API_URL}/events/manage-fix`, {
+      const eventsResponse = await fetch(`${API_URL}/user/events`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
