@@ -9627,6 +9627,59 @@ async def list_user_events_debug(current_user: dict = Depends(get_current_user))
         logger.error(f"Debug endpoint error: {str(e)}")
         return {"success": False, "error": str(e)}
 
+# Temporary version without response model to isolate Pydantic validation issues
+@app.get("/events/manage-fix-no-validation")
+async def list_user_events_no_validation(current_user: dict = Depends(get_current_user)):
+    """Version without response_model to test if Pydantic validation is the issue"""
+    logger.info(f"🔍 /events/manage-fix-no-validation called by user {current_user.get('id', 'unknown')}")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Simple query without column detection complexity
+            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            logger.info(f"🔍 Executing query: {query} with user_id={current_user['id']}")
+            c.execute(query, (current_user["id"],))
+            events = c.fetchall()
+            
+            logger.info(f"🔍 Found {len(events)} events for user {current_user['id']}")
+            
+            event_list = []
+            for i, event in enumerate(events):
+                try:
+                    event_dict = dict(event)
+                    event_id = event_dict.get('id', 'unknown')
+                    
+                    logger.info(f"🔍 Processing event {i+1}/{len(events)}: ID={event_id}")
+                    
+                    # Just convert to dict and add minimal required fields
+                    event_dict = dict(event)
+                    
+                    # Apply basic datetime conversion if needed
+                    try:
+                        event_dict = convert_event_datetime_fields(event_dict)
+                        logger.info(f"🔍 Event {event_id}: Successfully processed and converted")
+                    except Exception as conversion_error:
+                        logger.error(f"🔍 Event {event_id}: Datetime conversion failed: {conversion_error}")
+                        # Continue with original event_dict if conversion fails
+                    
+                    event_list.append(event_dict)
+                    
+                except Exception as event_error:
+                    logger.error(f"🔍 Error processing event {event_id}: {event_error}")
+                    logger.error(f"🔍 Event data: {dict(event)}")
+                    continue
+            
+            logger.info(f"🔍 Successfully processed {len(event_list)} events, returning response")
+            return event_list
+            
+    except Exception as e:
+        logger.error(f"🔍 Critical error in /events/manage-fix-no-validation: {str(e)}")
+        logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+        return {"error": str(e), "traceback": traceback.format_exc()}
+
 # Robust replacement for /events/manage to fix 422 errors
 @app.get("/events/manage-fix", response_model=List[EventResponse])
 async def list_user_events_robust(current_user: dict = Depends(get_current_user)):
@@ -9752,6 +9805,11 @@ if __name__ == "__main__":
         port=port, 
         reload=not IS_PRODUCTION  # Only use reload in development
     )
+
+@app.get("/debug/test-422")
+async def debug_test_422():
+    """Test endpoint to check if 422 is from authentication or data processing"""
+    return {"message": "If you see this, the 422 error is not from the endpoint itself", "status": "working"}
 
 @app.get("/debug/events-simple")
 async def debug_events_simple(current_user: dict = Depends(get_current_user)):
