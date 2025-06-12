@@ -9602,8 +9602,10 @@ async def get_user_analytics(current_user: dict = Depends(get_current_user)):
 @app.get("/events/manage-fix", response_model=List[EventResponse])
 async def list_user_events_robust(current_user: dict = Depends(get_current_user)):
     """
-    ROBUST version of events/manage that ensures no 422 errors.
+    ROBUST version of events/manage that ensures no 422 errors with detailed logging.
     """
+    logger.info(f"🔍 /events/manage-fix called by user {current_user.get('id', 'unknown')} ({current_user.get('email', 'unknown')})")
+    
     placeholder = get_placeholder()
     try:
         with get_db() as conn:
@@ -9611,14 +9613,19 @@ async def list_user_events_robust(current_user: dict = Depends(get_current_user)
             
             # Simple query without column detection complexity
             query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            logger.info(f"🔍 Executing query: {query} with user_id={current_user['id']}")
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
+            logger.info(f"🔍 Found {len(events)} events for user {current_user['id']}")
+            
             event_list = []
-            for event in events:
+            for i, event in enumerate(events):
                 try:
                     event_dict = dict(event)
                     event_id = event_dict.get('id', 'unknown')
+                    
+                    logger.info(f"🔍 Processing event {i+1}/{len(events)}: ID={event_id}")
                     
                     # ENSURE ALL REQUIRED FIELDS EXIST WITH SAFE DEFAULTS
                     # Required string fields
@@ -9633,10 +9640,12 @@ async def list_user_events_robust(current_user: dict = Depends(get_current_user)
                     try:
                         event_dict['lat'] = float(event_dict.get('lat', 0.0) or 0.0)
                     except (ValueError, TypeError):
+                        logger.warning(f"🔍 Event {event_id}: Invalid lat value, using default 0.0")
                         event_dict['lat'] = 0.0
                     try:
                         event_dict['lng'] = float(event_dict.get('lng', 0.0) or 0.0)
                     except (ValueError, TypeError):
+                        logger.warning(f"🔍 Event {event_id}: Invalid lng value, using default 0.0")
                         event_dict['lng'] = 0.0
                     
                     # Required integer fields
@@ -9666,6 +9675,7 @@ async def list_user_events_robust(current_user: dict = Depends(get_current_user)
                     try:
                         event_dict['price'] = float(event_dict.get('price', 0.0) or 0.0)
                     except (ValueError, TypeError):
+                        logger.warning(f"🔍 Event {event_id}: Invalid price value, using default 0.0")
                         event_dict['price'] = 0.0
                     event_dict['currency'] = str(event_dict.get('currency', 'USD'))
                     event_dict['event_url'] = event_dict.get('event_url')
@@ -9674,20 +9684,29 @@ async def list_user_events_robust(current_user: dict = Depends(get_current_user)
                     event_dict['slug'] = event_dict.get('slug')
                     event_dict['is_published'] = bool(event_dict.get('is_published', True))
                     
-                    # Apply datetime conversion
-                    event_dict = convert_event_datetime_fields(event_dict)
+                    # Apply datetime conversion and log any issues
+                    try:
+                        event_dict = convert_event_datetime_fields(event_dict)
+                        logger.info(f"🔍 Event {event_id}: Successfully processed and converted")
+                    except Exception as conversion_error:
+                        logger.error(f"🔍 Event {event_id}: Datetime conversion failed: {conversion_error}")
+                        # Continue with original event_dict if conversion fails
+                    
                     event_list.append(event_dict)
                     
                 except Exception as event_error:
-                    logger.error(f"Error processing event {event_id}: {event_error}")
+                    logger.error(f"🔍 Error processing event {event_id}: {event_error}")
+                    logger.error(f"🔍 Event data: {dict(event)}")
                     # Skip this event but continue with others
                     continue
             
+            logger.info(f"🔍 Successfully processed {len(event_list)} events, returning response")
             return event_list
             
     except Exception as e:
-        logger.error(f"Error retrieving user events: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving user events")
+        logger.error(f"🔍 Critical error in /events/manage-fix: {str(e)}")
+        logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving user events: {str(e)}")
 
 # Main execution block
 if __name__ == "__main__":
@@ -9704,6 +9723,37 @@ if __name__ == "__main__":
         port=port, 
         reload=not IS_PRODUCTION  # Only use reload in development
     )
+
+@app.get("/debug/events-simple")
+async def debug_events_simple(current_user: dict = Depends(get_current_user)):
+    """Simple debug endpoint to test event retrieval without complex processing"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Simple count query first
+            c.execute(f"SELECT COUNT(*) FROM events WHERE created_by = {placeholder}", (current_user["id"],))
+            count = get_count_from_result(c.fetchone())
+            
+            # Get first few events raw
+            c.execute(f"SELECT * FROM events WHERE created_by = {placeholder} LIMIT 3", (current_user["id"],))
+            events = c.fetchall()
+            
+            raw_events = []
+            for event in events:
+                raw_events.append(dict(event))
+            
+            return {
+                "user_id": current_user["id"],
+                "user_email": current_user.get("email", "unknown"),
+                "total_events": count,
+                "sample_events": raw_events,
+                "database_type": "PostgreSQL" if IS_PRODUCTION and DB_URL else "SQLite"
+            }
+    except Exception as e:
+        logger.error(f"Debug events simple error: {str(e)}")
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 @app.get("/debug/schema")
 async def debug_schema():
