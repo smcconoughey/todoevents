@@ -11057,13 +11057,30 @@ async def submit_privacy_request(request: PrivacyRequest):
             if IS_PRODUCTION and DB_URL:  # PostgreSQL
                 logger.debug(f"Using PostgreSQL, inserting privacy request for {request.email}")
                 
-                # Test if table exists first
+                # Test if table exists first, create if it doesn't
                 try:
                     cursor.execute("SELECT COUNT(*) FROM privacy_requests LIMIT 1")
                     logger.debug("privacy_requests table exists and is accessible")
                 except Exception as table_error:
-                    logger.error(f"privacy_requests table issue: {table_error}")
-                    raise HTTPException(status_code=500, detail=f"Database table error: {table_error}")
+                    logger.warning(f"privacy_requests table doesn't exist, creating it: {table_error}")
+                    
+                    # Create the table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS privacy_requests (
+                            id SERIAL PRIMARY KEY,
+                            request_type VARCHAR(50) NOT NULL,
+                            email VARCHAR(255) NOT NULL,
+                            full_name VARCHAR(255),
+                            verification_info TEXT,
+                            details TEXT,
+                            status VARCHAR(50) DEFAULT 'pending',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            admin_notes TEXT
+                        )
+                    """)
+                    conn.commit()
+                    logger.info("privacy_requests table created successfully")
                 
                 insert_sql = f"""
                     INSERT INTO privacy_requests 
@@ -11086,10 +11103,30 @@ async def submit_privacy_request(request: PrivacyRequest):
                 
                 cursor.execute(insert_sql, insert_values)
                 result = cursor.fetchone()
-                logger.debug(f"PostgreSQL insert result: {result}")
-                if result and len(result) > 0:
-                    request_id = result[0]
+                logger.debug(f"PostgreSQL insert result: {result}, type: {type(result)}")
+                
+                # Handle different result formats from PostgreSQL drivers
+                if result:
+                    if hasattr(result, 'keys') and hasattr(result, 'values'):
+                        # psycopg2 RealDictRow or similar
+                        request_id = result.get('id') or result.get(0)
+                    elif isinstance(result, (list, tuple)) and len(result) > 0:
+                        # Tuple or list result
+                        request_id = result[0]
+                    elif hasattr(result, '__getitem__'):
+                        # Try direct indexing
+                        try:
+                            request_id = result[0]
+                        except (KeyError, IndexError):
+                            request_id = result.get('id') if hasattr(result, 'get') else None
+                    else:
+                        request_id = None
+                    
                     logger.debug(f"Extracted request_id: {request_id}")
+                    
+                    if not request_id:
+                        logger.error(f"Could not extract ID from result: {result}")
+                        raise ValueError("Failed to get ID from PostgreSQL RETURNING clause")
                 else:
                     logger.error(f"PostgreSQL RETURNING failed, result: {result}")
                     raise ValueError("Failed to get ID from PostgreSQL RETURNING clause")
@@ -11748,7 +11785,7 @@ async def debug_test_privacy_insert():
             "debug_info": debug_info if 'debug_info' in locals() else {}
         }
 # =============================================================================
-# ADMIN PRIVACY MANAGEMENT ENDPOINTS
+# ADMIN PRIVACY MANAGEMENT ENDPOINTS - Updated with robust error handling
 # =============================================================================
 @app.get("/admin/privacy-requests")
 async def list_admin_privacy_requests(current_user: dict = Depends(get_current_user)):
@@ -11763,6 +11800,46 @@ async def list_admin_privacy_requests(current_user: dict = Depends(get_current_u
         with get_db() as conn:
             cursor = conn.cursor()
             
+            # First, check if the table exists and create it if it doesn't
+            try:
+                cursor.execute("SELECT COUNT(*) FROM privacy_requests LIMIT 1")
+            except Exception as table_error:
+                logger.warning(f"privacy_requests table doesn't exist, creating it: {table_error}")
+                
+                # Create the table
+                if IS_PRODUCTION and DB_URL:  # PostgreSQL
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS privacy_requests (
+                            id SERIAL PRIMARY KEY,
+                            request_type VARCHAR(50) NOT NULL,
+                            email VARCHAR(255) NOT NULL,
+                            full_name VARCHAR(255),
+                            verification_info TEXT,
+                            details TEXT,
+                            status VARCHAR(50) DEFAULT 'pending',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            admin_notes TEXT
+                        )
+                    """)
+                else:  # SQLite
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS privacy_requests (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            request_type TEXT NOT NULL,
+                            email TEXT NOT NULL,
+                            full_name TEXT,
+                            verification_info TEXT,
+                            details TEXT,
+                            status TEXT DEFAULT 'pending',
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TEXT,
+                            admin_notes TEXT
+                        )
+                    """)
+                conn.commit()
+                logger.info("privacy_requests table created successfully")
+            
             cursor.execute(f"""
                 SELECT id, request_type, email, full_name, 
                        details, verification_info, status, 
@@ -11773,24 +11850,50 @@ async def list_admin_privacy_requests(current_user: dict = Depends(get_current_u
             
             requests = cursor.fetchall()
             
-            return [
-                {
-                    "id": row[0],
-                    "request_type": row[1],
-                    "user_email": row[2],  # Map email to user_email for frontend compatibility
-                    "full_name": row[3],
-                    "additional_details": row[4],  # Map details to additional_details for frontend
-                    "verification_info": row[5],
-                    "status": row[6] or "pending",
-                    "created_at": row[7],
-                    "completed_at": row[8],
-                    "admin_notes": row[9]
-                } for row in requests
-            ]
+            # Handle different row formats
+            result_list = []
+            for row in requests:
+                try:
+                    if hasattr(row, 'keys') and hasattr(row, 'values'):
+                        # Dictionary-like row
+                        request_dict = {
+                            "id": row.get('id'),
+                            "request_type": row.get('request_type'),
+                            "user_email": row.get('email'),  # Map email to user_email for frontend compatibility
+                            "full_name": row.get('full_name'),
+                            "additional_details": row.get('details'),  # Map details to additional_details for frontend
+                            "verification_info": row.get('verification_info'),
+                            "status": row.get('status') or "pending",
+                            "created_at": row.get('created_at'),
+                            "completed_at": row.get('completed_at'),
+                            "admin_notes": row.get('admin_notes')
+                        }
+                    else:
+                        # Tuple-like row
+                        request_dict = {
+                            "id": row[0],
+                            "request_type": row[1],
+                            "user_email": row[2],  # Map email to user_email for frontend compatibility
+                            "full_name": row[3],
+                            "additional_details": row[4],  # Map details to additional_details for frontend
+                            "verification_info": row[5],
+                            "status": row[6] or "pending",
+                            "created_at": row[7],
+                            "completed_at": row[8],
+                            "admin_notes": row[9]
+                        }
+                    result_list.append(request_dict)
+                except (IndexError, KeyError, TypeError) as e:
+                    logger.error(f"Error processing privacy request row: {e}, row: {row}")
+                    continue
+            
+            return result_list
             
     except Exception as e:
         logger.error(f"Error listing admin privacy requests: {e}")
-        raise HTTPException(status_code=500, detail="Failed to list privacy requests")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to list privacy requests: {str(e)}")
 
 @app.put("/admin/privacy-requests/{request_id}/status")
 async def update_admin_privacy_request_status(

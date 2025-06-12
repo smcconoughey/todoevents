@@ -312,7 +312,7 @@ const UserEditModal = ({ user, isOpen, onClose, onSave }) => {
               disabled={isResettingPassword}
               className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
             >
-              {isResettingPassword ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+              {isResettingPassword ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
