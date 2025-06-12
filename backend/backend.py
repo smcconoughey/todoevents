@@ -9754,7 +9754,7 @@ async def get_event_analytics(
                 f"""SELECT id, title, description, date, start_time, category, city, state, 
                            created_by, COALESCE(view_count, 0) as view_count, 
                            COALESCE(interest_count, 0) as interest_count,
-                           created_at
+                           created_at, slug
                     FROM events 
                     WHERE id = {placeholder}""", 
                 (event_id,)
@@ -9799,8 +9799,30 @@ async def get_event_analytics(
                     "interests": daily_interests
                 }
             
-            # Geographic data based on event location
-            location = f"{event['city']}, {event['state']}" if event['city'] and event['state'] else event['city'] or 'Unknown'
+            # Extract location from city/state or slug
+            location = 'Unknown Location'
+            city = event.get('city', '').strip() if event.get('city') else ''
+            state = event.get('state', '').strip() if event.get('state') else ''
+            slug = event.get('slug', '').strip() if event.get('slug') else ''
+            
+            if city and state:
+                location = f"{city}, {state}"
+            elif city:
+                location = city
+            elif slug:
+                # Extract location from slug: us/fl/daytona-beach/events/test-734175
+                try:
+                    slug_parts = slug.split('/')
+                    if len(slug_parts) >= 3 and slug_parts[0] and slug_parts[1] and slug_parts[2]:
+                        country = slug_parts[0].upper()  # us -> US
+                        state_code = slug_parts[1].upper()    # fl -> FL 
+                        city_slug = slug_parts[2].replace('-', ' ').title()  # daytona-beach -> Daytona Beach
+                        location = f"{city_slug}, {state_code}, {country}"
+                        logger.info(f"📍 Extracted location from slug: '{slug}' -> '{location}'")
+                except Exception as e:
+                    logger.warning(f"Could not parse location from slug '{slug}': {e}")
+                    location = 'Unknown Location'
+            
             geographic_data = {
                 location: {
                     "views": total_views,
@@ -9829,14 +9851,23 @@ async def get_event_analytics(
                 "Other": int(total_views * 0.27)
             }
             
+            # Log the extracted data for debugging
+            logger.info(f"🔍 Event analytics for {event_id}: title='{event['title']}', category='{event['category']}', location='{location}', slug='{event.get('slug', 'None')}'")
+            
+            # Enhanced category handling
+            category = event['category'] or 'Other'
+            if not category or category.strip() == '':
+                category = 'Other'
+            
             response_data = {
                 "event": {
                     "id": event['id'],
-                    "title": event['title'],
-                    "description": event['description'],
+                    "title": event['title'] or 'Untitled Event',
+                    "description": event['description'] or '',
                     "date": event['date'],
-                    "category": event['category'],
-                    "location": location
+                    "category": category,
+                    "location": location,
+                    "slug": event.get('slug', '')
                 },
                 "summary": {
                     "total_views": total_views,
@@ -9852,6 +9883,12 @@ async def get_event_analytics(
                     "view_velocity": round(total_views / max(1, (current_date - created_date).days), 2),
                     "interest_conversion": engagement_rate,
                     "days_active": max(1, (current_date - created_date).days)
+                },
+                "debug_info": {
+                    "original_city": event.get('city', ''),
+                    "original_state": event.get('state', ''),
+                    "original_category": event.get('category', ''),
+                    "slug": event.get('slug', '')
                 }
             }
             

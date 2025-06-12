@@ -96,10 +96,11 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Event analytics received:', data);
         setEventAnalytics(data);
         setSelectedEventId(eventId);
       } else {
-        console.error('Failed to fetch event analytics:', response.status);
+        console.error('Failed to fetch event analytics:', response.status, await response.text());
       }
     } catch (error) {
       console.error('Error fetching event analytics:', error);
@@ -160,36 +161,54 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 750,
+        easing: 'easeInOutCubic'
+      },
       plugins: {
         legend: { 
-          position: 'top',
+          position: window.innerWidth < 768 ? 'bottom' : 'top',
           labels: {
             usePointStyle: true,
-            font: { size: 12, weight: 'bold' }
+            font: { size: window.innerWidth < 768 ? 10 : 12, weight: 'bold' },
+            padding: 15
           }
         },
         title: { 
           display: true, 
           text: `${label} Over Time (Non-Cumulative)`,
-          font: { size: 16, weight: 'bold' }
+          font: { size: window.innerWidth < 768 ? 14 : 16, weight: 'bold' }
         },
         tooltip: {
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
           titleColor: '#ffffff',
           bodyColor: '#ffffff',
           cornerRadius: 8,
-          displayColors: true
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.parsed.y.toLocaleString()}`;
+            }
+          }
         }
       },
       scales: {
         y: { 
           beginAtZero: true,
           grid: { color: 'rgba(0, 0, 0, 0.1)' },
-          ticks: { font: { size: 11 } }
+          ticks: { 
+            font: { size: window.innerWidth < 768 ? 9 : 11 },
+            callback: function(value) {
+              return value >= 1000 ? `${(value/1000).toFixed(1)}k` : value;
+            }
+          }
         },
         x: {
           grid: { color: 'rgba(0, 0, 0, 0.1)' },
-          ticks: { font: { size: 11 } }
+          ticks: { 
+            font: { size: window.innerWidth < 768 ? 9 : 11 },
+            maxRotation: window.innerWidth < 768 ? 45 : 0
+          }
         }
       },
       interaction: {
@@ -215,29 +234,46 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 800,
+        easing: 'easeInOutCubic'
+      },
       plugins: {
         legend: { display: false },
         title: { 
           display: true, 
           text: title,
-          font: { size: 16, weight: 'bold' }
+          font: { size: window.innerWidth < 768 ? 14 : 16, weight: 'bold' }
         },
         tooltip: {
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
           titleColor: '#ffffff',
           bodyColor: '#ffffff',
-          cornerRadius: 8
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.parsed.y.toLocaleString()}`;
+            }
+          }
         }
       },
       scales: {
         y: { 
           beginAtZero: true,
           grid: { color: 'rgba(0, 0, 0, 0.1)' },
-          ticks: { font: { size: 11 } }
+          ticks: { 
+            font: { size: window.innerWidth < 768 ? 9 : 11 },
+            callback: function(value) {
+              return value >= 1000 ? `${(value/1000).toFixed(1)}k` : value;
+            }
+          }
         },
         x: {
           grid: { display: false },
-          ticks: { font: { size: 11 } }
+          ticks: { 
+            font: { size: window.innerWidth < 768 ? 9 : 11 },
+            maxRotation: window.innerWidth < 768 ? 45 : 0
+          }
         }
       }
     }
@@ -266,25 +302,36 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 1000,
+        easing: 'easeInOutCubic'
+      },
       plugins: {
         legend: { 
-          position: 'right',
+          position: window.innerWidth < 768 ? 'bottom' : 'right',
           labels: {
             usePointStyle: true,
-            font: { size: 12 },
-            padding: 20
+            font: { size: window.innerWidth < 768 ? 10 : 12 },
+            padding: window.innerWidth < 768 ? 15 : 20
           }
         },
         title: { 
           display: true, 
           text: title,
-          font: { size: 16, weight: 'bold' }
+          font: { size: window.innerWidth < 768 ? 14 : 16, weight: 'bold' }
         },
         tooltip: {
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
           titleColor: '#ffffff',
           bodyColor: '#ffffff',
-          cornerRadius: 8
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = ((context.parsed / total) * 100).toFixed(1);
+              return `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`;
+            }
+          }
         }
       }
     }
@@ -339,7 +386,12 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
     <div className="space-y-6">
       {/* Header with Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-semibold text-themed-primary">Marketing Analytics Dashboard</h2>
+        <div>
+          <h2 className="text-2xl font-semibold text-themed-primary">Marketing Analytics Dashboard</h2>
+          <p className="text-themed-secondary mt-1">
+            Comprehensive insights and beautiful visualizations for your events
+          </p>
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Period Selector */}
@@ -354,6 +406,17 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
             <option value={365}>Last year</option>
           </select>
           
+          {/* Refresh Button */}
+          <Button 
+            onClick={fetchAnalytics}
+            variant="outline" 
+            className="flex items-center gap-2"
+            disabled={loading}
+          >
+            <Activity className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+
           {/* CSV Export Dropdown */}
           <div className="relative group">
             <Button className="bg-pin-blue text-white hover:bg-pin-blue-600 flex items-center gap-2">
@@ -391,6 +454,34 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
           </div>
         </div>
       </div>
+
+      {/* Quick Performance Summary */}
+      {analytics && (
+        <div className="bg-gradient-to-r from-pin-blue/10 via-purple-500/10 to-teal-500/10 rounded-lg border border-themed p-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <h3 className="text-lg font-semibold text-themed-primary mb-2">Overall Performance</h3>
+              <p className="text-themed-secondary">
+                {summary.total_events} events • {summary.total_views} total views • {engagementRate}% engagement rate
+              </p>
+            </div>
+            <div className="flex gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-pin-blue">{summary.avg_views_per_event || 0}</div>
+                <div className="text-xs text-themed-secondary">Avg Views/Event</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-500">{categoryData.length}</div>
+                <div className="text-xs text-themed-secondary">Active Categories</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-500">{Object.keys(geoData).length}</div>
+                <div className="text-xs text-themed-secondary">Locations</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -634,11 +725,35 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
 
           {eventAnalytics && !eventLoading && (
             <div className="border-t border-themed pt-6">
-              <div className="flex items-center gap-3 mb-6">
-                <h4 className="text-xl font-semibold text-themed-primary">{eventAnalytics.event.title}</h4>
-                <span className="px-2 py-1 bg-pin-blue/10 text-pin-blue rounded text-sm">
-                  {eventAnalytics.summary.engagement_rate}% engagement
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h4 className="text-xl font-semibold text-themed-primary mb-2">{eventAnalytics.event.title}</h4>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-themed-secondary">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(eventAnalytics.event.date).toLocaleDateString()}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {eventAnalytics.event.location}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Target className="w-3 h-3" />
+                      {eventAnalytics.event.category}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-pin-blue/10 text-pin-blue rounded-full text-sm font-medium">
+                    {eventAnalytics.summary.engagement_rate}% engagement
+                  </span>
+                  <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-sm font-medium">
+                    {eventAnalytics.summary.total_views} views
+                  </span>
+                  <span className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-sm font-medium">
+                    {eventAnalytics.summary.total_interests} interests
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -717,6 +832,33 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Debug Information (for development) */}
+              {eventAnalytics.debug_info && (
+                <div className="mt-6 p-4 bg-themed-surface-hover rounded-lg border border-themed">
+                  <h5 className="font-medium text-themed-primary mb-2">Debug Information</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-themed-secondary">
+                    <div>
+                      <span className="font-medium">Original City:</span> {eventAnalytics.debug_info.original_city || 'None'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Original State:</span> {eventAnalytics.debug_info.original_state || 'None'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Original Category:</span> {eventAnalytics.debug_info.original_category || 'None'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Slug:</span> {eventAnalytics.debug_info.slug || 'None'}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="font-medium">Extracted Location:</span> {eventAnalytics.event.location}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="font-medium">Final Category:</span> {eventAnalytics.event.category}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
