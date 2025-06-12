@@ -9467,22 +9467,10 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
 
 # Enhanced Marketing Analytics Endpoints
 
-@app.options("/users/analytics/comprehensive")
-async def options_comprehensive_analytics():
-    """Handle CORS preflight for comprehensive analytics"""
-    return JSONResponse(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            "Access-Control-Allow-Credentials": "true",
-        }
-    )
+# Remove redundant OPTIONS handler - FastAPI CORS middleware handles this
 
 @app.get("/users/analytics/comprehensive")
 async def get_comprehensive_analytics(
-    request: Request,
     current_user: dict = Depends(get_current_user),
     period_days: int = 30,
     include_demographics: bool = True
@@ -9607,8 +9595,7 @@ async def get_comprehensive_analytics(
             # Engagement rates
             engagement_rate = round((total_interests / total_views * 100), 2) if total_views > 0 else 0
             
-            # Prepare response data
-            response_data = {
+            return {
                 "summary": {
                     "total_events": total_events,
                     "total_views": total_views,
@@ -9625,31 +9612,11 @@ async def get_comprehensive_analytics(
                 "all_events": events
             }
             
-            # Create response with CORS headers
-            response = JSONResponse(content=response_data)
-            response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-            
-            return response
-            
     except Exception as e:
         logger.error(f"Error getting comprehensive analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving analytics")
 
-@app.options("/users/analytics/export/csv")
-async def options_export_analytics_csv():
-    """Handle CORS preflight for CSV export"""
-    return JSONResponse(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            "Access-Control-Allow-Credentials": "true",
-        }
-    )
+# Remove redundant OPTIONS handler - FastAPI CORS middleware handles this
 
 @app.get("/users/analytics/export/csv")
 async def export_analytics_csv(
@@ -9764,13 +9731,7 @@ async def export_analytics_csv(
         return Response(
             content=csv_content,
             media_type="text/csv",
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization"
-            }
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
         
     except Exception as e:
