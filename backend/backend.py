@@ -8415,48 +8415,103 @@ async def get_user_analytics(current_user: dict = Depends(get_current_user)):
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Get user's events with analytics
-            cursor.execute(f"""
-                SELECT id, title, date, start_time, view_count, interest_count, verified
+            # Check what columns exist in the events table
+            actual_columns = get_actual_table_columns(cursor, 'events')
+            
+            # Build a safe query based on available columns
+            select_columns = ['id', 'title', 'date', 'start_time']
+            if 'view_count' in actual_columns:
+                select_columns.append('view_count')
+            if 'interest_count' in actual_columns:
+                select_columns.append('interest_count')
+            if 'verified' in actual_columns:
+                select_columns.append('verified')
+            
+            query = f"""
+                SELECT {', '.join(select_columns)}
                 FROM events 
                 WHERE created_by = {placeholder}
                 ORDER BY date DESC
-            """, (current_user['id'],))
+            """
             
+            cursor.execute(query, (current_user['id'],))
             events = cursor.fetchall()
             
+            # Convert to list of dicts and ensure all fields exist
+            event_list = []
+            for event in events:
+                event_dict = dict(event)
+                # Ensure all expected fields exist
+                if 'view_count' not in event_dict:
+                    event_dict['view_count'] = 0
+                if 'interest_count' not in event_dict:
+                    event_dict['interest_count'] = 0
+                if 'verified' not in event_dict:
+                    event_dict['verified'] = False
+                event_list.append(event_dict)
+            
             # Calculate overall stats
-            total_events = len(events)
-            total_views = sum(event.get('view_count', 0) or 0 for event in events)
-            total_interests = sum(event.get('interest_count', 0) or 0 for event in events)
+            total_events = len(event_list)
+            total_views = sum(event.get('view_count', 0) or 0 for event in event_list)
+            total_interests = sum(event.get('interest_count', 0) or 0 for event in event_list)
             avg_views = round(total_views / total_events) if total_events > 0 else 0
             
-            # Get recent view/interest activity (last 30 days)
-            thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+            # Try to get trend data, but handle gracefully if tables don't exist
+            view_trends = []
+            interest_trends = []
             
-            # Get view trends
-            cursor.execute(f"""
-                SELECT DATE(ev.created_at) as date, COUNT(*) as views
-                FROM event_views ev
-                JOIN events e ON ev.event_id = e.id
-                WHERE e.created_by = {placeholder} AND ev.created_at >= {placeholder}
-                GROUP BY DATE(ev.created_at)
-                ORDER BY date
-            """, (current_user['id'], thirty_days_ago))
-            
-            view_trends = cursor.fetchall()
-            
-            # Get interest trends
-            cursor.execute(f"""
-                SELECT DATE(ei.created_at) as date, COUNT(*) as interests
-                FROM event_interests ei
-                JOIN events e ON ei.event_id = e.id
-                WHERE e.created_by = {placeholder} AND ei.created_at >= {placeholder}
-                GROUP BY DATE(ei.created_at)
-                ORDER BY date
-            """, (current_user['id'], thirty_days_ago))
-            
-            interest_trends = cursor.fetchall()
+            try:
+                # Check if analytics tables exist
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL
+                    cursor.execute("""
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name IN ('event_views', 'event_interests')
+                    """)
+                else:
+                    # SQLite
+                    cursor.execute("""
+                        SELECT name 
+                        FROM sqlite_master 
+                        WHERE type='table' AND name IN ('event_views', 'event_interests')
+                    """)
+                
+                existing_tables = [row[0] for row in cursor.fetchall()]
+                
+                if 'event_views' in existing_tables:
+                    thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+                    
+                    # Get view trends
+                    cursor.execute(f"""
+                        SELECT DATE(ev.created_at) as date, COUNT(*) as views
+                        FROM event_views ev
+                        JOIN events e ON ev.event_id = e.id
+                        WHERE e.created_by = {placeholder} AND ev.created_at >= {placeholder}
+                        GROUP BY DATE(ev.created_at)
+                        ORDER BY date
+                    """, (current_user['id'], thirty_days_ago))
+                    
+                    view_trends = [dict(trend) for trend in cursor.fetchall()]
+                
+                if 'event_interests' in existing_tables:
+                    thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+                    
+                    # Get interest trends
+                    cursor.execute(f"""
+                        SELECT DATE(ei.created_at) as date, COUNT(*) as interests
+                        FROM event_interests ei
+                        JOIN events e ON ei.event_id = e.id
+                        WHERE e.created_by = {placeholder} AND ei.created_at >= {placeholder}
+                        GROUP BY DATE(ei.created_at)
+                        ORDER BY date
+                    """, (current_user['id'], thirty_days_ago))
+                    
+                    interest_trends = [dict(trend) for trend in cursor.fetchall()]
+                    
+            except Exception as trend_error:
+                logger.warning(f"Could not get trend data: {trend_error}")
+                # Continue with empty trends
             
             return {
                 "overview": {
@@ -8465,10 +8520,10 @@ async def get_user_analytics(current_user: dict = Depends(get_current_user)):
                     "total_interests": total_interests,
                     "avg_views_per_event": avg_views
                 },
-                "events": [dict(event) for event in events],
+                "events": event_list,
                 "trends": {
-                    "views": [dict(trend) for trend in view_trends],
-                    "interests": [dict(trend) for trend in interest_trends]
+                    "views": view_trends,
+                    "interests": interest_trends
                 },
                 "period": "last_30_days"
             }
@@ -8476,6 +8531,57 @@ async def get_user_analytics(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error getting user analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving analytics")
+
+# Replacement endpoint for events/manage to fix schema issues
+@app.get("/events/manage-v2", response_model=List[EventResponse])
+async def list_user_events_v2(current_user: dict = Depends(get_current_user)):
+    """
+    Retrieve events created by the current user for management (fixed version).
+    Requires authentication.
+    """
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Query events created by the current user with proper column selection
+            actual_columns = get_actual_table_columns(c, 'events')
+            
+            # Select only columns that exist
+            if 'verified' in actual_columns:
+                query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            else:
+                # Exclude verified column if it doesn't exist
+                columns = [col for col in actual_columns if col != 'verified']
+                column_str = ', '.join(columns)
+                query = f"SELECT {column_str} FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            
+            c.execute(query, (current_user["id"],))
+            events = c.fetchall()
+            
+            # Convert to list of dictionaries and apply datetime conversion
+            event_list = []
+            for event in events:
+                event_dict = dict(event)
+                
+                # Ensure all required fields exist for EventResponse model
+                if 'verified' not in event_dict:
+                    event_dict['verified'] = False
+                if 'interest_count' not in event_dict:
+                    event_dict['interest_count'] = 0
+                if 'view_count' not in event_dict:
+                    event_dict['view_count'] = 0
+                if 'secondary_category' not in event_dict:
+                    event_dict['secondary_category'] = None
+                    
+                event_dict = convert_event_datetime_fields(event_dict)
+                event_list.append(event_dict)
+            
+            return event_list
+            
+    except Exception as e:
+        logger.error(f"Error retrieving user events: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving user events")
 
 # Main execution block
 if __name__ == "__main__":
