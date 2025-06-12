@@ -239,7 +239,7 @@ const UserEditModal = ({ user, isOpen, onClose, onSave }) => {
     try {
       // Update user role if changed
       if (editUser.role !== user.role) {
-        await fetchData(`/admin/users/${user.id}/role`, 'PUT', { role: editUser.role });
+        await fetchData(`/admin/users/${user.id}/role?role=${editUser.role}`, 'PUT');
       }
       
       onSave();

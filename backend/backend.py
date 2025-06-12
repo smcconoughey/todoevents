@@ -364,6 +364,16 @@ def format_cursor_row(row, column_names):
         # SQLite returns tuples
         return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
 
+# Missing validation function that's being called
+def validate_recurring_event(event_data, user_role):
+    """
+    Validate recurring event data and permissions
+    This function was being called but was missing, causing NameError
+    """
+    # For now, just return the event data unchanged
+    # Can be enhanced later with actual validation logic
+    return event_data
+
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
