@@ -9604,8 +9604,8 @@ async def get_user_analytics(
                 "period": "last_30_days"
             }
             
-            # If comprehensive data requested, add marketing analytics
-            if comprehensive:
+            # Always provide comprehensive data for premium users
+            if True:  # Make it always comprehensive
                 # Calculate engagement rate
                 engagement_rate = round((total_interests / total_views * 100), 2) if total_views > 0 else 0
                 avg_interests = round(total_interests / total_events) if total_events > 0 else 0
@@ -9658,7 +9658,7 @@ async def get_user_analytics(
                 
                 output = StringIO()
                 
-                if export_csv == "events" and comprehensive:
+                if export_csv == "events":
                     # Events performance CSV
                     writer = csv.writer(output)
                     writer.writerow(['Event Title', 'Date', 'Category', 'Views', 'Interests', 'Engagement Rate %'])
@@ -9676,7 +9676,7 @@ async def get_user_analytics(
                             interests,
                             engagement
                         ])
-                elif export_csv == "categories" and comprehensive:
+                elif export_csv == "categories":
                     # Category performance CSV
                     writer = csv.writer(output)
                     writer.writerow(['Category', 'Events', 'Total Views', 'Total Interests', 'Engagement Rate %'])
