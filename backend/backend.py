@@ -9627,6 +9627,85 @@ async def list_user_events_debug(current_user: dict = Depends(get_current_user))
         logger.error(f"Debug endpoint error: {str(e)}")
         return {"success": False, "error": str(e)}
 
+# Simple user events endpoint - replaces complex manage-fix endpoints
+@app.get("/user/events", response_model=List[EventResponse])
+async def get_user_events(current_user: dict = Depends(get_current_user)):
+    """Get all events created by the current user - simple and reliable"""
+    logger.info(f"🔍 /user/events called by user {current_user.get('id', 'unknown')} ({current_user.get('email', 'unknown')})")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Simple, reliable query for user's events
+            query = f"""
+                SELECT id, title, description, short_description, date, start_time, end_time, end_date, 
+                       category, secondary_category, address, city, state, country, lat, lng, recurring, frequency, 
+                       created_by, created_at, updated_at, start_datetime, end_datetime,
+                       COALESCE(interest_count, 0) as interest_count,
+                       COALESCE(view_count, 0) as view_count,
+                       fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published, verified
+                FROM events 
+                WHERE created_by = {placeholder}
+                ORDER BY date DESC, start_time DESC
+            """
+            
+            logger.info(f"🔍 Executing query for user {current_user['id']}")
+            c.execute(query, (current_user["id"],))
+            events = c.fetchall()
+            
+            logger.info(f"🔍 Found {len(events)} events for user {current_user['id']}")
+            
+            event_list = []
+            for event in events:
+                try:
+                    # Convert to dict
+                    event_dict = dict(event)
+                    
+                    # Apply datetime conversion
+                    event_dict = convert_event_datetime_fields(event_dict)
+                    
+                    # Ensure required fields have safe values
+                    event_dict['title'] = event_dict.get('title') or "Untitled Event"
+                    event_dict['description'] = event_dict.get('description') or "No description"
+                    event_dict['address'] = event_dict.get('address') or "Address not provided"
+                    event_dict['category'] = event_dict.get('category') or "other"
+                    event_dict['date'] = event_dict.get('date') or "2024-01-01"
+                    event_dict['start_time'] = event_dict.get('start_time') or "00:00"
+                    event_dict['lat'] = float(event_dict.get('lat') or 0.0)
+                    event_dict['lng'] = float(event_dict.get('lng') or 0.0)
+                    event_dict['recurring'] = bool(event_dict.get('recurring', False))
+                    event_dict['interest_count'] = int(event_dict.get('interest_count', 0) or 0)
+                    event_dict['view_count'] = int(event_dict.get('view_count', 0) or 0)
+                    event_dict['verified'] = bool(event_dict.get('verified', False))
+                    event_dict['is_published'] = bool(event_dict.get('is_published', True))
+                    event_dict['country'] = event_dict.get('country') or "USA"
+                    event_dict['currency'] = event_dict.get('currency') or "USD"
+                    event_dict['price'] = float(event_dict.get('price', 0.0) or 0.0)
+                    
+                    # Handle optional string fields
+                    optional_fields = ['short_description', 'end_time', 'end_date', 'secondary_category', 
+                                     'city', 'state', 'frequency', 'fee_required', 'event_url', 
+                                     'host_name', 'organizer_url', 'slug', 'updated_at', 
+                                     'start_datetime', 'end_datetime']
+                    for field in optional_fields:
+                        if field in event_dict and event_dict[field] is None:
+                            event_dict[field] = ""
+                    
+                    event_list.append(event_dict)
+                    
+                except Exception as event_error:
+                    logger.error(f"🔍 Error processing event {event.get('id', 'unknown')}: {event_error}")
+                    continue
+            
+            logger.info(f"🔍 Successfully processed {len(event_list)} events")
+            return event_list
+            
+    except Exception as e:
+        logger.error(f"🔍 Error in /user/events: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving user events: {str(e)}")
+
 # Temporary version without response model to isolate Pydantic validation issues
 @app.get("/events/manage-fix-no-validation")
 async def list_user_events_no_validation(current_user: dict = Depends(get_current_user)):
