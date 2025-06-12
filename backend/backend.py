@@ -3181,7 +3181,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):
     """
-    Retrieve events created by the current user for management.
+    Retrieve events created by the current user for management (robust version).
     Requires authentication.
     """
     placeholder = get_placeholder()
@@ -3189,8 +3189,18 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
         with get_db() as conn:
             c = conn.cursor()
             
-            # Query events created by the current user
-            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            # Query events created by the current user with proper column selection
+            actual_columns = get_actual_table_columns(c, 'events')
+            
+            # Select only columns that exist
+            if 'verified' in actual_columns:
+                query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            else:
+                # Exclude verified column if it doesn't exist
+                columns = [col for col in actual_columns if col != 'verified']
+                column_str = ', '.join(columns)
+                query = f"SELECT {column_str} FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
@@ -3198,6 +3208,17 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
             event_list = []
             for event in events:
                 event_dict = dict(event)
+                
+                # Ensure all required fields exist for EventResponse model
+                if 'verified' not in event_dict:
+                    event_dict['verified'] = False
+                if 'interest_count' not in event_dict:
+                    event_dict['interest_count'] = 0
+                if 'view_count' not in event_dict:
+                    event_dict['view_count'] = 0
+                if 'secondary_category' not in event_dict:
+                    event_dict['secondary_category'] = None
+                    
                 event_dict = convert_event_datetime_fields(event_dict)
                 event_list.append(event_dict)
             
@@ -7234,7 +7255,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):
     """
-    Retrieve events created by the current user for management.
+    Retrieve events created by the current user for management (robust version).
     Requires authentication.
     """
     placeholder = get_placeholder()
@@ -7242,8 +7263,18 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
         with get_db() as conn:
             c = conn.cursor()
             
-            # Query events created by the current user
-            query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            # Query events created by the current user with proper column selection
+            actual_columns = get_actual_table_columns(c, 'events')
+            
+            # Select only columns that exist
+            if 'verified' in actual_columns:
+                query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            else:
+                # Exclude verified column if it doesn't exist
+                columns = [col for col in actual_columns if col != 'verified']
+                column_str = ', '.join(columns)
+                query = f"SELECT {column_str} FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            
             c.execute(query, (current_user["id"],))
             events = c.fetchall()
             
@@ -7251,6 +7282,17 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
             event_list = []
             for event in events:
                 event_dict = dict(event)
+                
+                # Ensure all required fields exist for EventResponse model
+                if 'verified' not in event_dict:
+                    event_dict['verified'] = False
+                if 'interest_count' not in event_dict:
+                    event_dict['interest_count'] = 0
+                if 'view_count' not in event_dict:
+                    event_dict['view_count'] = 0
+                if 'secondary_category' not in event_dict:
+                    event_dict['secondary_category'] = None
+                    
                 event_dict = convert_event_datetime_fields(event_dict)
                 event_list.append(event_dict)
             
@@ -8533,10 +8575,10 @@ async def get_user_analytics(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Error retrieving analytics")
 
 # Replacement endpoint for events/manage to fix schema issues
-@app.get("/events/manage-v2", response_model=List[EventResponse])
-async def list_user_events_v2(current_user: dict = Depends(get_current_user)):
+@app.get("/events/manage", response_model=List[EventResponse])
+async def list_user_events(current_user: dict = Depends(get_current_user)):
     """
-    Retrieve events created by the current user for management (fixed version).
+    Retrieve events created by the current user for management (robust version).
     Requires authentication.
     """
     placeholder = get_placeholder()
