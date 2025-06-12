@@ -9467,6 +9467,19 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
 
 # Enhanced Marketing Analytics Endpoints
 
+@app.options("/users/analytics/comprehensive")
+async def options_comprehensive_analytics():
+    """Handle CORS preflight for comprehensive analytics"""
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
+
 @app.get("/users/analytics/comprehensive")
 async def get_comprehensive_analytics(
     current_user: dict = Depends(get_current_user),
@@ -9613,6 +9626,19 @@ async def get_comprehensive_analytics(
     except Exception as e:
         logger.error(f"Error getting comprehensive analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving analytics")
+
+@app.options("/users/analytics/export/csv")
+async def options_export_analytics_csv():
+    """Handle CORS preflight for CSV export"""
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 @app.get("/users/analytics/export/csv")
 async def export_analytics_csv(
