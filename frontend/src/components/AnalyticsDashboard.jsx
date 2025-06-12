@@ -2,22 +2,68 @@ import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Eye, Heart, TrendingUp, Download, BarChart3, 
   PieChart, CheckCircle, MapPin, Filter, Users, Activity,
-  DollarSign, Clock, Target, Zap, Globe, Award
+  DollarSign, Clock, Target, Zap, Globe, Award, ArrowRight,
+  MousePointer, Share2, Wifi
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { API_URL } from '@/config';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
   const [analytics, setAnalytics] = useState(null);
+  const [eventAnalytics, setEventAnalytics] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [eventLoading, setEventLoading] = useState(false);
   const [periodDays, setPeriodDays] = useState(30);
   const [selectedMetric, setSelectedMetric] = useState('views');
+
+  // Chart theme - beautiful non-cumulative styling
+  const chartTheme = {
+    colors: {
+      primary: '#3B82F6',
+      secondary: '#10B981', 
+      accent: '#F59E0B',
+      danger: '#EF4444',
+      purple: '#8B5CF6',
+      pink: '#EC4899',
+      teal: '#14B8A6',
+      orange: '#F97316'
+    }
+  };
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-              const response = await fetch(`${API_URL}/users/analytics`, {
+      const response = await fetch(`${API_URL}/users/analytics`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -34,6 +80,31 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
       console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEventAnalytics = async (eventId) => {
+    setEventLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/events/${eventId}/analytics`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEventAnalytics(data);
+        setSelectedEventId(eventId);
+      } else {
+        console.error('Failed to fetch event analytics:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching event analytics:', error);
+    } finally {
+      setEventLoading(false);
     }
   };
 
@@ -64,6 +135,160 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
       console.error('Error downloading CSV:', error);
     }
   };
+
+  // Chart configurations - beautiful and interactive
+  const createLineChartConfig = (data, label, color, isSmooth = true) => ({
+    data: {
+      labels: Object.keys(data).map(date => 
+        new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      ),
+      datasets: [{
+        label: label,
+        data: Object.values(data).map(d => d[selectedMetric] || 0),
+        borderColor: color,
+        backgroundColor: color + '20',
+        fill: true,
+        tension: isSmooth ? 0.4 : 0,
+        borderWidth: 3,
+        pointBackgroundColor: color,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { 
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            font: { size: 12, weight: 'bold' }
+          }
+        },
+        title: { 
+          display: true, 
+          text: `${label} Over Time (Non-Cumulative)`,
+          font: { size: 16, weight: 'bold' }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          cornerRadius: 8,
+          displayColors: true
+        }
+      },
+      scales: {
+        y: { 
+          beginAtZero: true,
+          grid: { color: 'rgba(0, 0, 0, 0.1)' },
+          ticks: { font: { size: 11 } }
+        },
+        x: {
+          grid: { color: 'rgba(0, 0, 0, 0.1)' },
+          ticks: { font: { size: 11 } }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      }
+    }
+  });
+
+  const createBarChartConfig = (data, title, color) => ({
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+        label: title,
+        data: Object.values(data),
+        backgroundColor: color + '80',
+        borderColor: color,
+        borderWidth: 2,
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        title: { 
+          display: true, 
+          text: title,
+          font: { size: 16, weight: 'bold' }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          cornerRadius: 8
+        }
+      },
+      scales: {
+        y: { 
+          beginAtZero: true,
+          grid: { color: 'rgba(0, 0, 0, 0.1)' },
+          ticks: { font: { size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+
+  const createPieChartConfig = (data, title) => ({
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+        data: Object.values(data),
+        backgroundColor: [
+          chartTheme.colors.primary,
+          chartTheme.colors.secondary,
+          chartTheme.colors.accent,
+          chartTheme.colors.purple,
+          chartTheme.colors.pink,
+          chartTheme.colors.teal,
+          chartTheme.colors.orange,
+          chartTheme.colors.danger
+        ],
+        borderColor: '#ffffff',
+        borderWidth: 3,
+        hoverBorderWidth: 5,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { 
+          position: 'right',
+          labels: {
+            usePointStyle: true,
+            font: { size: 12 },
+            padding: 20
+          }
+        },
+        title: { 
+          display: true, 
+          text: title,
+          font: { size: 16, weight: 'bold' }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          cornerRadius: 8
+        }
+      }
+    }
+  });
 
   useEffect(() => {
     fetchAnalytics();
@@ -269,122 +494,233 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
         </div>
       </div>
 
-      {/* Time Series Chart */}
+      {/* Beautiful Time Series Chart */}
       <div className="bg-themed-surface rounded-lg border border-themed p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-themed-primary">Performance Over Time</h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-themed-primary">Performance Over Time (Non-Cumulative)</h3>
           <div className="flex gap-2">
             <button 
               onClick={() => setSelectedMetric('views')}
-              className={`px-3 py-1 text-sm rounded ${selectedMetric === 'views' ? 'bg-pin-blue text-white' : 'text-themed-secondary'}`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedMetric === 'views' ? 'bg-pin-blue text-white' : 'bg-themed text-themed-secondary hover:bg-themed-surface-hover'
+              }`}
             >
               Views
             </button>
             <button 
               onClick={() => setSelectedMetric('interests')}
-              className={`px-3 py-1 text-sm rounded ${selectedMetric === 'interests' ? 'bg-pin-blue text-white' : 'text-themed-secondary'}`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedMetric === 'interests' ? 'bg-pin-blue text-white' : 'bg-themed text-themed-secondary hover:bg-themed-surface-hover'
+              }`}
             >
               Interests
             </button>
             <button 
-              onClick={() => setSelectedMetric('events')}
-              className={`px-3 py-1 text-sm rounded ${selectedMetric === 'events' ? 'bg-pin-blue text-white' : 'text-themed-secondary'}`}
+              onClick={() => setSelectedMetric('events_created')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedMetric === 'events_created' ? 'bg-pin-blue text-white' : 'bg-themed text-themed-secondary hover:bg-themed-surface-hover'
+              }`}
             >
               Events Created
             </button>
           </div>
         </div>
         
-        {/* Simple Bar Chart */}
-        <div className="h-64 flex items-end justify-between gap-1 p-4 bg-themed-surface-hover rounded">
-          {chartData.slice(-14).map((point, index) => {
-            const value = point[selectedMetric];
-            const maxValue = Math.max(...chartData.map(p => p[selectedMetric]));
-            const height = maxValue > 0 ? (value / maxValue) * 200 : 0;
-            
-            return (
-              <div key={index} className="flex flex-col items-center">
-                <div 
-                  className="bg-pin-blue rounded-t w-6 min-h-[2px] transition-all duration-300"
-                  style={{ height: `${height}px` }}
-                  title={`${point.date}: ${value} ${selectedMetric}`}
-                />
-                <span className="text-xs text-themed-secondary mt-2 transform -rotate-45 origin-top-left">
-                  {point.date}
+        {/* Beautiful Interactive Line Chart */}
+        <div className="h-80">
+          {timeSeriesData && Object.keys(timeSeriesData).length > 0 ? (
+            <Line {...createLineChartConfig(
+              timeSeriesData, 
+              selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1).replace('_', ' '), 
+              chartTheme.colors.primary
+            )} />
+          ) : (
+            <div className="h-full flex items-center justify-center text-themed-secondary">
+              <div className="text-center">
+                <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No time series data available</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Beautiful Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Category Performance Chart */}
+        <div className="bg-themed-surface rounded-lg border border-themed p-6">
+          <h3 className="text-lg font-semibold text-themed-primary mb-4">Category Performance</h3>
+          <div className="h-80">
+            {categoryData.length > 0 ? (
+              <Doughnut {...createPieChartConfig(
+                Object.fromEntries(categoryData.map(cat => [cat.category, cat.views + cat.interests])),
+                'Performance by Category'
+              )} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-themed-secondary">
+                <div className="text-center">
+                  <PieChart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No category data available</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Geographic Performance Chart */}
+        <div className="bg-themed-surface rounded-lg border border-themed p-6">
+          <h3 className="text-lg font-semibold text-themed-primary mb-4">Geographic Performance</h3>
+          <div className="h-80">
+            {Object.keys(geoData).length > 0 ? (
+              <Bar {...createBarChartConfig(
+                Object.fromEntries(
+                  Object.entries(geoData).map(([location, stats]) => [
+                    location.length > 15 ? location.substring(0, 15) + '...' : location,
+                    stats.views + stats.interests
+                  ])
+                ),
+                'Views + Interests by Location',
+                chartTheme.colors.teal
+              )} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-themed-secondary">
+                <div className="text-center">
+                  <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No geographic data available</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Event-Specific Analytics Section */}
+      {topEvents.length > 0 && (
+        <div className="bg-themed-surface rounded-lg border border-themed p-6">
+          <h3 className="text-lg font-semibold text-themed-primary mb-4">Event-Specific Analytics</h3>
+          <p className="text-themed-secondary mb-4">Click on any event to view detailed analytics with beautiful charts</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {topEvents.slice(0, 6).map((event) => (
+              <div 
+                key={event.id}
+                onClick={() => fetchEventAnalytics(event.id)}
+                className="p-4 border border-themed rounded-lg hover:bg-themed-surface-hover cursor-pointer transition-colors"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-themed-primary truncate">{event.title}</h4>
+                  <ArrowRight className="w-4 h-4 text-pin-blue" />
+                </div>
+                <div className="text-sm text-themed-secondary">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Eye className="w-3 h-3" />
+                    <span>{event.view_count || 0} views</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Heart className="w-3 h-3" />
+                    <span>{event.interest_count || 0} interests</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Event Analytics Display */}
+          {eventLoading && (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pin-blue"></div>
+            </div>
+          )}
+
+          {eventAnalytics && !eventLoading && (
+            <div className="border-t border-themed pt-6">
+              <div className="flex items-center gap-3 mb-6">
+                <h4 className="text-xl font-semibold text-themed-primary">{eventAnalytics.event.title}</h4>
+                <span className="px-2 py-1 bg-pin-blue/10 text-pin-blue rounded text-sm">
+                  {eventAnalytics.summary.engagement_rate}% engagement
                 </span>
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Performance Analysis Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Categories */}
-        <div className="bg-themed-surface rounded-lg border border-themed p-6">
-          <h3 className="text-lg font-semibold text-themed-primary mb-4">Top Performing Categories</h3>
-          <div className="space-y-3">
-            {topCategories.map((categoryObj, index) => {
-              const total = categoryObj.views + categoryObj.interests;
-              const maxTotal = Math.max(...topCategories.map(c => c.views + c.interests));
-              const width = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
-              
-              return (
-                <div key={categoryObj.category} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-themed-primary capitalize">{categoryObj.category}</span>
-                    <span className="text-sm text-themed-secondary">{categoryObj.events} events</span>
-                  </div>
-                  <div className="bg-themed-surface-hover rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-pin-blue to-purple-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${width}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-themed-secondary">
-                    <span>{categoryObj.views} views • {categoryObj.interests} interests</span>
-                    <span>{categoryObj.engagement_rate}% engagement</span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Event Time Series */}
+                <div>
+                  <h5 className="font-medium text-themed-primary mb-3">Views Over Time</h5>
+                  <div className="h-60">
+                    <Line {...createLineChartConfig(
+                      eventAnalytics.time_series,
+                      'Daily Views',
+                      chartTheme.colors.secondary
+                    )} />
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Top Locations */}
-        <div className="bg-themed-surface rounded-lg border border-themed p-6">
-          <h3 className="text-lg font-semibold text-themed-primary mb-4">Top Performing Locations</h3>
-          <div className="space-y-3">
-            {topLocations.map(([location, stats], index) => {
-              const total = stats.views + stats.interests;
-              const maxTotal = Math.max(...topLocations.map(([,s]) => s.views + s.interests));
-              const width = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
-              
-              return (
-                <div key={location} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-pin-blue" />
-                      <span className="font-medium text-themed-primary">{location}</span>
+                {/* Traffic Sources */}
+                <div>
+                  <h5 className="font-medium text-themed-primary mb-3">Traffic Sources</h5>
+                  <div className="h-60">
+                    <Pie {...createPieChartConfig(
+                      eventAnalytics.traffic_sources,
+                      'Where Viewers Come From'
+                    )} />
+                  </div>
+                </div>
+
+                {/* Peak Hours */}
+                <div>
+                  <h5 className="font-medium text-themed-primary mb-3">Peak Viewing Hours</h5>
+                  <div className="h-60">
+                    <Bar {...createBarChartConfig(
+                      eventAnalytics.peak_viewing_hours,
+                      'Views by Time of Day',
+                      chartTheme.colors.accent
+                    )} />
+                  </div>
+                </div>
+
+                {/* Performance Metrics */}
+                <div>
+                  <h5 className="font-medium text-themed-primary mb-3">Performance Metrics</h5>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-orange-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-themed-secondary">View Velocity</p>
+                        <p className="text-lg font-semibold text-themed-primary">
+                          {eventAnalytics.performance_metrics.view_velocity} views/day
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-sm text-themed-secondary">{stats.events} events</span>
-                  </div>
-                  <div className="bg-themed-surface-hover rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-emerald-400 to-teal-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${width}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-themed-secondary">
-                    <span>{stats.views} views • {stats.interests} interests</span>
-                    <span>{((stats.interests / Math.max(stats.views, 1)) * 100).toFixed(1)}% engagement</span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-teal-500/10 rounded-lg flex items-center justify-center">
+                        <Target className="w-5 h-5 text-teal-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-themed-secondary">Days Active</p>
+                        <p className="text-lg font-semibold text-themed-primary">
+                          {eventAnalytics.performance_metrics.days_active} days
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                        <Activity className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-themed-secondary">Total Engagement</p>
+                        <p className="text-lg font-semibold text-themed-primary">
+                          {eventAnalytics.summary.total_views + eventAnalytics.summary.total_interests} interactions
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Top Performing Events */}
       <div className="bg-themed-surface rounded-lg border border-themed">
@@ -436,14 +772,25 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
                       </span>
                     </td>
                     <td className="p-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEventSelect(event)}
-                        className="text-pin-blue hover:text-pin-blue-600"
-                      >
-                        View Details
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fetchEventAnalytics(event.id)}
+                          className="text-pin-blue hover:text-pin-blue-600"
+                        >
+                          <BarChart3 className="w-4 h-4 mr-1" />
+                          Analytics
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEventSelect(event)}
+                          className="text-themed-secondary hover:text-themed-primary"
+                        >
+                          View Details
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -463,13 +810,13 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {topCategories.length > 0 && (
+          {categoryData.length > 0 && (
             <div className="bg-themed-surface/50 rounded-lg p-4">
               <h4 className="font-medium text-themed-primary mb-2">Top Category</h4>
               <p className="text-sm text-themed-secondary">
-                <span className="capitalize font-medium">{topCategories[0].category}</span> is your best performing category with{' '}
-                {topCategories[0].views} views and{' '}
-                {topCategories[0].engagement_rate}% engagement rate.
+                <span className="capitalize font-medium">{categoryData[0].category}</span> is your best performing category with{' '}
+                {categoryData[0].views} views and{' '}
+                {categoryData[0].engagement_rate}% engagement rate.
               </p>
             </div>
           )}
