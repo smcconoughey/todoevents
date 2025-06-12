@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './EventMap/AuthContext';
 import { Button } from './ui/button';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import { 
   User, 
   Calendar, 
@@ -314,118 +315,11 @@ const AccountPage = () => {
             )}
 
             {activeTab === 'analytics' && isPremium && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-semibold text-themed-primary">Analytics Dashboard</h2>
-                
-                {/* Overview Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-themed-surface rounded-lg border border-themed p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-pin-blue/10 rounded-lg flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-pin-blue" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-themed-secondary">Total Events</p>
-                        <p className="text-2xl font-semibold text-themed-primary">{userEvents.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-themed-surface rounded-lg border border-themed p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                        <Eye className="w-5 h-5 text-green-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-themed-secondary">Total Views</p>
-                        <p className="text-2xl font-semibold text-themed-primary">
-                          {userEvents.reduce((sum, event) => sum + (event.view_count || 0), 0)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-themed-surface rounded-lg border border-themed p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
-                        <Heart className="w-5 h-5 text-red-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-themed-secondary">Total Interests</p>
-                        <p className="text-2xl font-semibold text-themed-primary">
-                          {userEvents.reduce((sum, event) => sum + (event.interest_count || 0), 0)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-themed-surface rounded-lg border border-themed p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-amber-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-themed-secondary">Avg. Views</p>
-                        <p className="text-2xl font-semibold text-themed-primary">
-                          {userEvents.length > 0 
-                            ? Math.round(userEvents.reduce((sum, event) => sum + (event.view_count || 0), 0) / userEvents.length)
-                            : 0
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Event Performance Table */}
-                <div className="bg-themed-surface rounded-lg border border-themed">
-                  <div className="p-6 border-b border-themed">
-                    <h3 className="text-lg font-semibold text-themed-primary">Event Performance</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-themed-surface-hover">
-                        <tr>
-                          <th className="text-left p-4 text-sm font-medium text-themed-secondary">Event</th>
-                          <th className="text-left p-4 text-sm font-medium text-themed-secondary">Date</th>
-                          <th className="text-left p-4 text-sm font-medium text-themed-secondary">Views</th>
-                          <th className="text-left p-4 text-sm font-medium text-themed-secondary">Interests</th>
-                          <th className="text-left p-4 text-sm font-medium text-themed-secondary">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {userEvents.map((event) => (
-                          <tr key={event.id} className="border-t border-themed hover:bg-themed-surface-hover">
-                            <td className="p-4">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-themed-primary">{event.title}</span>
-                                {(isPremium || event.verified) && (
-                                  <CheckCircle className="w-4 h-4 text-green-500" title="Verified Event" />
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-4 text-themed-secondary">
-                              {new Date(event.date).toLocaleDateString()}
-                            </td>
-                            <td className="p-4 text-themed-secondary">{event.view_count || 0}</td>
-                            <td className="p-4 text-themed-secondary">{event.interest_count || 0}</td>
-                            <td className="p-4">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSelectedEvent(event)}
-                                className="text-pin-blue hover:text-pin-blue-600"
-                              >
-                                View Details
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <AnalyticsDashboard 
+                userEvents={userEvents} 
+                user={user}
+                onEventSelect={setSelectedEvent}
+              />
             )}
 
             {activeTab === 'premium' && !isPremium && (
@@ -476,12 +370,12 @@ const AccountPage = () => {
 
                   <div className="bg-white/50 dark:bg-white/5 rounded-lg p-6 backdrop-blur-sm border border-white/20">
                     <div className="flex items-center gap-3 mb-4">
-                      <Sparkles className="w-5 h-5 text-amber-500" />
-                      <span className="font-semibold text-themed-primary">Coming Soon</span>
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <span className="font-semibold text-themed-primary">Analytics Now Available!</span>
                     </div>
                     <p className="text-themed-secondary">
-                      Premium features are currently in development. We're working hard to bring you the best 
-                      event analytics and verification system. Stay tuned for updates!
+                      Comprehensive marketing analytics with detailed insights, performance charts, and downloadable CSV reports 
+                      are now live for premium users. Get engagement metrics, category analysis, geographic data, and more!
                     </p>
                   </div>
                 </div>
@@ -531,8 +425,8 @@ const AccountPage = () => {
                 <div className="h-64 flex items-center justify-center border border-themed-tertiary rounded-lg bg-themed-surface">
                   <div className="text-center text-themed-secondary">
                     <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Detailed analytics charts coming soon</p>
-                    <p className="text-sm">Premium analytics dashboard in development</p>
+                    <p>Event-specific analytics views coming soon</p>
+                    <p className="text-sm">Visit the Analytics tab for comprehensive dashboard</p>
                   </div>
                 </div>
               </div>

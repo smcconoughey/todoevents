@@ -9465,6 +9465,275 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
         "user_id": current_user['id']
     }
 
+# Enhanced Marketing Analytics Endpoints
+
+@app.get("/users/analytics/comprehensive")
+async def get_comprehensive_analytics(
+    current_user: dict = Depends(get_current_user),
+    period_days: int = 30,
+    include_demographics: bool = True
+):
+    """
+    Comprehensive analytics for marketers with detailed insights
+    """
+    if current_user['role'] not in ['premium', 'admin']:
+        raise HTTPException(status_code=403, detail="Premium access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Date range calculation
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=period_days)
+            
+            # Get comprehensive event data
+            cursor.execute(f"""
+                SELECT 
+                    e.id, e.title, e.description, e.date, e.start_time, e.category, e.secondary_category,
+                    e.address, e.city, e.state, e.country, e.lat, e.lng, e.created_at,
+                    COALESCE(e.view_count, 0) as view_count,
+                    COALESCE(e.interest_count, 0) as interest_count,
+                    e.price, e.currency, e.fee_required, e.verified
+                FROM events e 
+                WHERE e.created_by = {placeholder}
+                ORDER BY e.created_at DESC
+            """, (current_user['id'],))
+            
+            events = [dict(row) for row in cursor.fetchall()]
+            
+            # Calculate performance metrics
+            total_events = len(events)
+            total_views = sum(e.get('view_count', 0) for e in events)
+            total_interests = sum(e.get('interest_count', 0) for e in events)
+            avg_views = round(total_views / total_events) if total_events > 0 else 0
+            avg_interests = round(total_interests / total_events) if total_events > 0 else 0
+            
+            # Category performance analysis
+            category_stats = {}
+            for event in events:
+                cat = event.get('category', 'other')
+                if cat not in category_stats:
+                    category_stats[cat] = {
+                        'events': 0, 'views': 0, 'interests': 0, 'avg_views': 0, 'avg_interests': 0
+                    }
+                category_stats[cat]['events'] += 1
+                category_stats[cat]['views'] += event.get('view_count', 0)
+                category_stats[cat]['interests'] += event.get('interest_count', 0)
+            
+            # Calculate averages for categories
+            for cat_data in category_stats.values():
+                if cat_data['events'] > 0:
+                    cat_data['avg_views'] = round(cat_data['views'] / cat_data['events'], 1)
+                    cat_data['avg_interests'] = round(cat_data['interests'] / cat_data['events'], 1)
+            
+            # Geographic analysis
+            geographic_stats = {}
+            for event in events:
+                location = f"{event.get('city', 'Unknown')}, {event.get('state', 'Unknown')}"
+                if location not in geographic_stats:
+                    geographic_stats[location] = {'events': 0, 'views': 0, 'interests': 0}
+                geographic_stats[location]['events'] += 1
+                geographic_stats[location]['views'] += event.get('view_count', 0)
+                geographic_stats[location]['interests'] += event.get('interest_count', 0)
+            
+            # Time-based performance (last 30 days)
+            daily_stats = {}
+            for i in range(period_days):
+                date = (start_date + timedelta(days=i)).strftime('%Y-%m-%d')
+                daily_stats[date] = {'views': 0, 'interests': 0, 'events_created': 0}
+            
+            # Get time-series data from tracking tables if available
+            try:
+                # Views over time
+                cursor.execute(f"""
+                    SELECT DATE(ev.viewed_at) as date, COUNT(*) as views
+                    FROM event_views ev
+                    JOIN events e ON ev.event_id = e.id
+                    WHERE e.created_by = {placeholder} 
+                    AND ev.viewed_at >= {placeholder}
+                    GROUP BY DATE(ev.viewed_at)
+                    ORDER BY date
+                """, (current_user['id'], start_date.isoformat()))
+                
+                for row in cursor.fetchall():
+                    date_str = str(row[0]) if row[0] else None
+                    if date_str and date_str in daily_stats:
+                        daily_stats[date_str]['views'] = row[1]
+                
+                # Interests over time  
+                cursor.execute(f"""
+                    SELECT DATE(ei.created_at) as date, COUNT(*) as interests
+                    FROM event_interests ei
+                    JOIN events e ON ei.event_id = e.id
+                    WHERE e.created_by = {placeholder}
+                    AND ei.created_at >= {placeholder}
+                    GROUP BY DATE(ei.created_at)
+                    ORDER BY date
+                """, (current_user['id'], start_date.isoformat()))
+                
+                for row in cursor.fetchall():
+                    date_str = str(row[0]) if row[0] else None
+                    if date_str and date_str in daily_stats:
+                        daily_stats[date_str]['interests'] = row[1]
+                        
+            except Exception as time_error:
+                logger.warning(f"Could not get time-series data: {time_error}")
+            
+            # Event creation timeline
+            for event in events:
+                created_date = event.get('created_at', '').split('T')[0] if event.get('created_at') else None
+                if created_date and created_date in daily_stats:
+                    daily_stats[created_date]['events_created'] += 1
+            
+            # Top performing events
+            top_events = sorted(events, key=lambda x: x.get('view_count', 0) + x.get('interest_count', 0), reverse=True)[:10]
+            
+            # Engagement rates
+            engagement_rate = round((total_interests / total_views * 100), 2) if total_views > 0 else 0
+            
+            return {
+                "summary": {
+                    "total_events": total_events,
+                    "total_views": total_views,
+                    "total_interests": total_interests,
+                    "avg_views_per_event": avg_views,
+                    "avg_interests_per_event": avg_interests,
+                    "engagement_rate_percent": engagement_rate,
+                    "period_days": period_days
+                },
+                "category_performance": category_stats,
+                "geographic_distribution": geographic_stats,
+                "time_series": daily_stats,
+                "top_performing_events": top_events,
+                "all_events": events
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting comprehensive analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving analytics")
+
+@app.get("/users/analytics/export/csv")
+async def export_analytics_csv(
+    current_user: dict = Depends(get_current_user),
+    report_type: str = "events",  # events, analytics, performance
+    period_days: int = 30
+):
+    """
+    Export analytics data as CSV for marketing analysis
+    """
+    if current_user['role'] not in ['premium', 'admin']:
+        raise HTTPException(status_code=403, detail="Premium access required")
+    
+    try:
+        import io
+        import csv
+        
+        # Get comprehensive analytics data
+        analytics_data = await get_comprehensive_analytics(current_user, period_days, True)
+        
+        output = io.StringIO()
+        
+        if report_type == "events":
+            # Events performance report
+            writer = csv.writer(output)
+            writer.writerow([
+                'Event ID', 'Title', 'Category', 'Secondary Category', 'Date', 'Start Time',
+                'City', 'State', 'Country', 'Views', 'Interests', 'Engagement Rate %',
+                'Price', 'Currency', 'Fee Required', 'Verified', 'Created At'
+            ])
+            
+            for event in analytics_data['all_events']:
+                engagement = round((event.get('interest_count', 0) / max(event.get('view_count', 1), 1)) * 100, 2)
+                writer.writerow([
+                    event.get('id', ''),
+                    event.get('title', ''),
+                    event.get('category', ''),
+                    event.get('secondary_category', ''),
+                    event.get('date', ''),
+                    event.get('start_time', ''),
+                    event.get('city', ''),
+                    event.get('state', ''),
+                    event.get('country', ''),
+                    event.get('view_count', 0),
+                    event.get('interest_count', 0),
+                    engagement,
+                    event.get('price', 0),
+                    event.get('currency', 'USD'),
+                    event.get('fee_required', ''),
+                    event.get('verified', False),
+                    event.get('created_at', '')
+                ])
+        
+        elif report_type == "categories":
+            # Category performance report
+            writer = csv.writer(output)
+            writer.writerow([
+                'Category', 'Total Events', 'Total Views', 'Total Interests', 
+                'Avg Views per Event', 'Avg Interests per Event', 'Engagement Rate %'
+            ])
+            
+            for category, stats in analytics_data['category_performance'].items():
+                engagement = round((stats['interests'] / max(stats['views'], 1)) * 100, 2)
+                writer.writerow([
+                    category,
+                    stats['events'],
+                    stats['views'],
+                    stats['interests'],
+                    stats['avg_views'],
+                    stats['avg_interests'],
+                    engagement
+                ])
+        
+        elif report_type == "geographic":
+            # Geographic performance report
+            writer = csv.writer(output)
+            writer.writerow(['Location', 'Total Events', 'Total Views', 'Total Interests', 'Avg Engagement'])
+            
+            for location, stats in analytics_data['geographic_distribution'].items():
+                avg_engagement = round((stats['interests'] / max(stats['views'], 1)) * 100, 2)
+                writer.writerow([
+                    location,
+                    stats['events'],
+                    stats['views'],
+                    stats['interests'],
+                    avg_engagement
+                ])
+        
+        elif report_type == "timeseries":
+            # Time series data report
+            writer = csv.writer(output)
+            writer.writerow(['Date', 'Views', 'Interests', 'Events Created', 'Daily Engagement Rate %'])
+            
+            for date, stats in analytics_data['time_series'].items():
+                engagement = round((stats['interests'] / max(stats['views'], 1)) * 100, 2)
+                writer.writerow([
+                    date,
+                    stats['views'],
+                    stats['interests'],
+                    stats['events_created'],
+                    engagement
+                ])
+        
+        csv_content = output.getvalue()
+        output.close()
+        
+        # Return as downloadable file
+        from fastapi.responses import Response
+        
+        filename = f"todoevents_analytics_{report_type}_{period_days}days_{datetime.now().strftime('%Y%m%d')}.csv"
+        
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error exporting CSV: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating CSV export")
+
 # Premium User Analytics Endpoint
 @app.get("/users/analytics")
 async def get_user_analytics(current_user: dict = Depends(get_current_user)):
