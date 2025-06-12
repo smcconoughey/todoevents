@@ -5,8 +5,7 @@ import {
   DollarSign, Clock, Target, Zap, Globe, Award
 } from 'lucide-react';
 import { Button } from './ui/button';
-
-const API_URL = process.env.REACT_APP_API_URL || 'https://todoevents-1.onrender.com';
+import { API_URL } from '@/config';
 
 const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
   const [analytics, setAnalytics] = useState(null);
