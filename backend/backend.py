@@ -9471,6 +9471,21 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
 
 # CSV export now handled by main /users/analytics endpoint with export_csv parameter
 
+# Add explicit OPTIONS handler for analytics endpoint
+@app.options("/users/analytics")
+async def options_user_analytics():
+    """Handle CORS preflight for user analytics"""
+    from fastapi.responses import Response
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
+
 # Premium User Analytics Endpoint
 @app.get("/users/analytics")
 async def get_user_analytics(
@@ -9681,7 +9696,14 @@ async def get_user_analytics(
                     headers={"Content-Disposition": f"attachment; filename={filename}"}
                 )
             
-            return response_data
+            # Return with explicit CORS headers
+            from fastapi.responses import JSONResponse
+            response = JSONResponse(content=response_data)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            return response
             
     except Exception as e:
         logger.error(f"Error getting user analytics: {str(e)}")
