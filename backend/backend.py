@@ -12177,3 +12177,15 @@ async def delete_user_data_for_request(
     except Exception as e:
         logger.error(f"Error deleting user data for request {request_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete user data")
+
+# Premium Status Endpoint
+@app.get("/users/premium-status")
+async def get_premium_status(current_user: dict = Depends(get_current_user)):
+    """
+    Get user's premium status
+    """
+    return {
+        "is_premium": current_user['role'] in ['premium', 'admin'],
+        "role": current_user['role'],
+        "user_id": current_user['id']
+    }
