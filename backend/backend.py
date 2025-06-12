@@ -1020,6 +1020,1028 @@ class AutomatedTaskManager:
     'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
     'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
 ]
+import os
+import re
+import sqlite3
+import logging
+import time
+import json
+import traceback
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
+from contextlib import contextmanager
+from enum import Enum
+import asyncio
+import threading
+
+# Import SEO utilities
+try:
+    from seo_utils import SEOEventProcessor, generate_event_json_ld, generate_seo_metadata, slugify
+except ImportError:
+    print("⚠️ SEO utilities not available - install seo_utils.py for full SEO features")
+    def slugify(text): return text.lower().replace(' ', '-')
+    SEOEventProcessor = None
+
+import uvicorn
+from dotenv import load_dotenv
+
+from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Request, Header
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, Response, JSONResponse
+
+from pydantic import BaseModel, EmailStr, validator
+from passlib.context import CryptContext
+import jwt
+
+# Scheduler imports
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+import httpx
+
+# Load environment variables
+load_dotenv()
+
+# Security configuration
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key-for-development-only")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+
+# Environment configuration 
+IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
+DB_URL = os.getenv("DATABASE_URL", None)
+
+# Password hashing setup
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Create FastAPI app
+app = FastAPI(title="EventFinder API")
+
+# Dynamic CORS origins based on environment
+def get_cors_origins():
+    base_origins = [
+        "http://localhost:5173",  # Local Vite dev server
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",  # Admin dashboard local
+        "http://127.0.0.1:5174",
+    ]
+    
+    if IS_PRODUCTION:
+        # In production, add common Render.com patterns including the actual deployed URL
+        production_origins = [
+            "https://todoevents.onrender.com",  # Actual frontend URL
+            "https://eventfinder-api.onrender.com",
+            "https://eventfinder-web.onrender.com", 
+            "https://eventfinder-admin.onrender.com",
+            "https://todoevents-1.onrender.com",
+            "https://todoevents-1-frontend.onrender.com", 
+            "https://todoevents-1-web.onrender.com",
+            "https://todoevents-api.onrender.com",
+            "https://todoevents-frontend.onrender.com",
+            "https://todoevents-web.onrender.com",
+        ]
+        return base_origins + production_origins
+    else:
+        return base_origins
+
+# Custom CORS middleware for flexible Render.com handling
+@app.middleware("http")
+async def cors_handler(request, call_next):
+    # Log the request for debugging (reduced logging for performance)
+    if request.url.path == "/api/report-event":
+        logger.info(f"🚨 CORS MIDDLEWARE: {request.method} {request.url.path}")
+        logger.info(f"🚨 Headers: {dict(request.headers)}")
+    origin = request.headers.get("origin")
+    
+    # Handle preflight requests
+    if request.method == "OPTIONS":
+        # Determine allowed origin
+        allowed_origin = "*"  # Default fallback
+        
+        if origin:
+            # Allow localhost and 127.0.0.1 for development
+            if ("localhost" in origin or "127.0.0.1" in origin):
+                allowed_origin = origin
+            # Allow Render.com domains for production
+            elif ".onrender.com" in origin:
+                allowed_origin = origin
+            # Allow the actual domain
+            elif "todo-events.com" in origin:
+                allowed_origin = origin
+            else:
+                allowed_origin = origin
+        
+        # Return proper preflight response
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": allowed_origin,
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "86400",
+            }
+        )
+    
+    try:
+        # Call the next middleware or endpoint handler
+        response = await call_next(request)
+        
+        # Add CORS headers to successful responses
+        if origin:
+            # Determine allowed origin for response
+            allowed_origin = "*"
+            if ("localhost" in origin or "127.0.0.1" in origin or 
+                ".onrender.com" in origin or "todo-events.com" in origin):
+                allowed_origin = origin
+            
+            response.headers["Access-Control-Allow-Origin"] = allowed_origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma"
+        
+        return response
+        
+    except Exception as e:
+        # Handle exceptions and ensure CORS headers are added to error responses
+        logger.error(f"Error during request processing: {str(e)}")
+        
+        # Create response with error details
+        status_code = 500
+        if isinstance(e, HTTPException):
+            status_code = e.status_code
+            
+        error_response = JSONResponse(
+            status_code=status_code,
+            content={"detail": str(e)},
+        )
+        
+        # Add CORS headers to error response
+        if origin:
+            allowed_origin = "*"
+            if ("localhost" in origin or "127.0.0.1" in origin or 
+                ".onrender.com" in origin or "todo-events.com" in origin):
+                allowed_origin = origin
+                
+            error_response.headers["Access-Control-Allow-Origin"] = allowed_origin
+            error_response.headers["Access-Control-Allow-Credentials"] = "true"
+            
+        return error_response
+
+# CORS middleware with dynamic origins (as fallback)
+# Commenting out the built-in CORS middleware since we have custom CORS handling
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=get_cors_origins(),
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+#     allow_headers=["*"],
+#     max_age=86400,  # Cache preflight requests for 24 hours
+# )
+
+# Database file for SQLite (development only)
+DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
+
+# Enums
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+    PREMIUM = "premium"
+
+# Database context manager with retry logic
+@contextmanager
+def get_db_transaction():
+    """
+    Get database connection with transaction control - properly handles autocommit for PostgreSQL
+    
+    CRITICAL FIX: PostgreSQL connections default to autocommit=True which prevents manual 
+    transaction control (BEGIN/COMMIT/ROLLBACK). This function temporarily disables autocommit
+    to allow explicit transaction management, then restores the original setting.
+    
+    This fixes the "set_session cannot be used inside a transaction" error.
+    """
+    if IS_PRODUCTION and DB_URL:
+        # In production with PostgreSQL
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        
+        conn = None
+        original_autocommit = None
+        
+        try:
+            conn = psycopg2.connect(
+                DB_URL,
+                cursor_factory=RealDictCursor,
+                connect_timeout=8,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=5,
+                keepalives_count=3,
+                application_name='todoevents'
+            )
+            
+            # Store original autocommit setting and disable it for transaction control
+            original_autocommit = conn.autocommit
+            conn.autocommit = False  # CRITICAL: Disable autocommit for manual transactions
+            
+            yield conn
+            
+        finally:
+            if conn:
+                # Restore original autocommit setting
+                if original_autocommit is not None:
+                    try:
+                        conn.autocommit = original_autocommit
+                    except:
+                        pass
+                conn.close()
+    else:
+        # Local development with SQLite
+        conn = sqlite3.connect(DB_FILE, timeout=10)
+        conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')
+        conn.execute('PRAGMA cache_size=10000')
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+@contextmanager
+def get_db():
+    if IS_PRODUCTION and DB_URL:
+        # In production with PostgreSQL
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        
+        # Reduced retry count for faster failover
+        retry_count = 2  # Reduced from 3
+        conn = None
+        
+        for attempt in range(retry_count):
+            try:
+                # Optimized connection parameters for faster connections
+                conn = psycopg2.connect(
+                    DB_URL,
+                    cursor_factory=RealDictCursor,
+                    connect_timeout=8,  # Reduced from 10
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=5,
+                    keepalives_count=3,
+                    # Add connection pooling parameters
+                    application_name='todoevents'
+                )
+                
+                # Set autocommit for read operations to reduce lock time
+                conn.autocommit = True
+                break  # Connection successful, exit retry loop
+                
+            except Exception as e:
+                if conn:
+                    try:
+                        conn.close()
+                        conn = None
+                    except:
+                        pass
+                
+                error_msg = str(e)
+                
+                if attempt < retry_count - 1:
+                    # Faster backoff for production
+                    wait_time = 1  # Reduced wait time
+                    time.sleep(wait_time)
+                else:
+                    logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
+                    # Instead of falling back to SQLite, raise a proper HTTP exception
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Database connection failed. Please try again later."
+                    )
+        
+        # If we made it here, conn should be valid
+        try:
+            yield conn
+        finally:
+            if conn:
+                conn.close()
+    else:
+        # Local development with SQLite - optimized
+        conn = sqlite3.connect(DB_FILE, timeout=10)  # Add timeout
+        conn.row_factory = sqlite3.Row
+        # Enable WAL mode for better concurrent access
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')  # Faster than FULL
+        conn.execute('PRAGMA cache_size=10000')    # Increase cache
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+# Helper function to get placeholder style based on environment
+def get_placeholder():
+    if IS_PRODUCTION and DB_URL:
+        return "%s"  # PostgreSQL uses %s
+    else:
+        return "?"   # SQLite uses ?
+
+# Helper function to get count from cursor result (handles both SQLite and PostgreSQL)
+def get_count_from_result(cursor_result):
+    """Extract count value from cursor result, handling both SQLite tuples and PostgreSQL RealDictRow"""
+    if cursor_result is None:
+        return 0
+    
+    # Check if this is a dict-like object (PostgreSQL RealDictRow)
+    if isinstance(cursor_result, dict) or hasattr(cursor_result, 'get'):
+        # PostgreSQL RealDictCursor returns dict-like objects
+        # Try various count column names
+        for key in ['count', 'COUNT(*)', 'count(*)', 'cnt']:
+            if hasattr(cursor_result, 'get'):
+                value = cursor_result.get(key)
+            else:
+                value = cursor_result.get(key, None)
+            if value is not None:
+                return value
+        # If no count key found, return the first value
+        if hasattr(cursor_result, 'values'):
+            values = list(cursor_result.values())
+            return values[0] if values else 0
+        return 0
+    else:
+        # SQLite returns tuples
+        return cursor_result[0] if cursor_result and len(cursor_result) > 0 else 0
+
+def format_cursor_row(row, column_names):
+    """Format a single cursor row for both SQLite and PostgreSQL compatibility"""
+    if isinstance(row, dict) or hasattr(row, 'get'):
+        # PostgreSQL RealDictCursor returns dict-like objects
+        return {col: row.get(col) for col in column_names}
+    else:
+        # SQLite returns tuples
+        return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
+
+# Missing validation function that's being called
+def validate_recurring_event(event_data, user_role):
+    """
+    Validate recurring event data and permissions
+    This function was being called but was missing, causing NameError
+    """
+    # For now, just return the event data unchanged
+    # Can be enhanced later with actual validation logic
+    return event_data
+# Database initialization
+# Force production database migration for interest/view tracking - v2.1
+def init_db():
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL table creation
+                
+                # Create users table
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS users (
+                        id SERIAL PRIMARY KEY,
+                        email TEXT UNIQUE NOT NULL,
+                        hashed_password TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                # Create events table with user relationship
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS events (
+                        id SERIAL PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        start_time TEXT NOT NULL,
+                        end_time TEXT,
+                        end_date TEXT,
+                        category TEXT NOT NULL,
+                        secondary_category TEXT,
+                        address TEXT NOT NULL,
+                        lat REAL NOT NULL,
+                        lng REAL NOT NULL,
+                        recurring BOOLEAN NOT NULL DEFAULT FALSE,
+                        frequency TEXT,
+                        created_by INTEGER,
+                        interest_count INTEGER DEFAULT 0,
+                        view_count INTEGER DEFAULT 0,
+                        fee_required TEXT,
+                        event_url TEXT,
+                        host_name TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        verified BOOLEAN DEFAULT FALSE,
+                        FOREIGN KEY(created_by) REFERENCES users(id)
+                    )
+                ''')
+                
+                # Add migration for existing events to have start_time and end_time
+                try:
+                    # Use PostgreSQL-compatible column checking method with fallback
+                    def column_exists(table_name, column_name):
+                        try:
+                            # Try information_schema first
+                            c.execute("""
+                                SELECT column_name FROM information_schema.columns 
+                                WHERE table_name = %s AND column_name = %s
+                            """, (table_name, column_name))
+                            return c.fetchone() is not None
+                        except Exception:
+                            # Fallback: try to add column and catch error if it exists
+                            try:
+                                c.execute(f'ALTER TABLE {table_name} ADD COLUMN {column_name}_test_temp TEXT')
+                                c.execute(f'ALTER TABLE {table_name} DROP COLUMN {column_name}_test_temp')
+                                # If we got here, column doesn't exist
+                                return False
+                            except Exception:
+                                # If adding temp column failed, assume original column exists
+                                return True
+                    
+                    # Check if we need to migrate old 'time' column to 'start_time'
+                    if column_exists('events', 'time'):
+                        # Migrate old 'time' column to 'start_time'
+                        c.execute('ALTER TABLE events RENAME COLUMN time TO start_time')
+                        logger.info("✅ Migrated 'time' column to 'start_time'")
+                        conn.commit()
+                        
+                    # Add start_time column if it doesn't exist
+                    if not column_exists('events', 'start_time'):
+                        c.execute('ALTER TABLE events ADD COLUMN start_time TEXT DEFAULT \'12:00\'')
+                        logger.info("✅ Added 'start_time' column")
+                        conn.commit()
+                        
+                    # Add end_time column if it doesn't exist
+                    if not column_exists('events', 'end_time'):
+                        c.execute('ALTER TABLE events ADD COLUMN end_time TEXT')
+                        logger.info("✅ Added 'end_time' column")
+                        conn.commit()
+                        
+                    # Add end_date column if it doesn't exist
+                    if not column_exists('events', 'end_date'):
+                        c.execute('ALTER TABLE events ADD COLUMN end_date TEXT')
+                        logger.info("✅ Added 'end_date' column")
+                        conn.commit()
+                    
+                    # Add interest_count column if it doesn't exist
+                    if not column_exists('events', 'interest_count'):
+                        c.execute('ALTER TABLE events ADD COLUMN interest_count INTEGER DEFAULT 0')
+                        logger.info("✅ Added 'interest_count' column")
+                        conn.commit()
+                    
+                    # Add view_count column if it doesn't exist
+                    if not column_exists('events', 'view_count'):
+                        c.execute('ALTER TABLE events ADD COLUMN view_count INTEGER DEFAULT 0')
+                        logger.info("✅ Added 'view_count' column")
+                        conn.commit()
+                    
+                    # Add new UX enhancement columns
+                    if not column_exists('events', 'fee_required'):
+                        c.execute('ALTER TABLE events ADD COLUMN fee_required TEXT')
+                        logger.info("✅ Added 'fee_required' column")
+                        conn.commit()
+                    
+                    if not column_exists('events', 'event_url'):
+                        c.execute('ALTER TABLE events ADD COLUMN event_url TEXT')
+                        logger.info("✅ Added 'event_url' column")
+                        conn.commit()
+                    
+                    if not column_exists('events', 'host_name'):
+                        c.execute('ALTER TABLE events ADD COLUMN host_name TEXT')
+                        logger.info("✅ Added 'host_name' column")
+                        conn.commit()
+                    
+                    # Add secondary_category column if it doesn't exist
+                    if not column_exists('events', 'secondary_category'):
+                        c.execute('ALTER TABLE events ADD COLUMN secondary_category TEXT')
+                        logger.info("✅ Added 'secondary_category' column")
+                        conn.commit()
+                        
+                    # Add verified column if it doesn't exist
+                    if not column_exists('events', 'verified'):
+                        c.execute('ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE')
+                        logger.info("✅ Added 'verified' column")
+                        conn.commit()
+                        
+                except Exception as migration_error:
+                    logger.error(f"❌ Schema fix error: {migration_error}")
+                    # Don't fail the entire initialization, just log the error
+                    try:
+                        conn.rollback()
+                    except:
+                        pass
+                
+                # Create activity_logs table
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS activity_logs (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER,
+                        action TEXT NOT NULL,
+                        details TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(user_id) REFERENCES users(id)
+                    )
+                ''')
+                
+                # Create interest tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
+                            id SERIAL PRIMARY KEY,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
+                # Create view tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_views (
+                            id SERIAL PRIMARY KEY,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                            viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
+                # Create page visits tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
+                            id SERIAL PRIMARY KEY,
+                            page_type TEXT NOT NULL,
+                            page_path TEXT NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'anonymous',
+                            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+
+                # Create privacy requests table for CCPA compliance
+                c.execute('''CREATE TABLE IF NOT EXISTS privacy_requests (
+                            id SERIAL PRIMARY KEY,
+                            request_type TEXT NOT NULL CHECK (request_type IN ('access', 'delete', 'opt_out')),
+                            email TEXT NOT NULL,
+                            full_name TEXT,
+                            verification_info TEXT,
+                            details TEXT,
+                            status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'denied')),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            admin_notes TEXT
+                        )''')
+
+                # Create event reports table for reporting functionality
+                c.execute('''CREATE TABLE IF NOT EXISTS event_reports (
+                            id SERIAL PRIMARY KEY,
+                            event_id INTEGER NOT NULL,
+                            event_title TEXT,
+                            event_address TEXT,
+                            event_date TEXT,
+                            reason TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            reporter_email TEXT NOT NULL,
+                            reporter_name TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            status TEXT DEFAULT 'pending',
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+                        )''')
+                
+                # Ensure tables are committed
+                conn.commit()
+                logger.info("✅ Interest, view tracking, privacy requests, and event reports tables created/verified")
+            else:
+                # SQLite table creation (existing code)
+                c.execute('''CREATE TABLE IF NOT EXISTS users (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            email TEXT UNIQUE NOT NULL,
+                            hashed_password TEXT NOT NULL,
+                            role TEXT NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )''')
+                
+                # Check if events table exists and needs migration
+                c.execute('''PRAGMA table_info(events)''')
+                columns = [column[1] for column in c.fetchall()]
+                
+                if 'events' not in [table[0] for table in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]:
+                    # Create new table with updated schema
+                    c.execute('''CREATE TABLE events (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title TEXT NOT NULL,
+                                description TEXT NOT NULL,
+                                date TEXT NOT NULL,
+                                start_time TEXT NOT NULL,
+                                end_time TEXT,
+                                end_date TEXT,
+                                category TEXT NOT NULL,
+                                secondary_category TEXT,
+                                address TEXT NOT NULL,
+                                lat REAL NOT NULL,
+                                lng REAL NOT NULL,
+                                recurring BOOLEAN NOT NULL DEFAULT 0,
+                                frequency TEXT,
+                                created_by INTEGER,
+                                interest_count INTEGER DEFAULT 0,
+                                view_count INTEGER DEFAULT 0,
+                                fee_required TEXT,
+                                event_url TEXT,
+                                host_name TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                verified BOOLEAN DEFAULT FALSE,
+                                FOREIGN KEY(created_by) REFERENCES users(id)
+                            )''')
+                else:
+                    # Migrate existing table
+                    if 'time' in columns and 'start_time' not in columns:
+                        # Rename time to start_time
+                        c.execute('''ALTER TABLE events RENAME COLUMN time TO start_time''')
+                        logger.info("Migrated 'time' column to 'start_time'")
+                    
+                    if 'start_time' not in columns:
+                        # Add start_time column with default value from time column if it exists
+                        if 'time' in columns:
+                            c.execute('''ALTER TABLE events ADD COLUMN start_time TEXT''')
+                            c.execute('''UPDATE events SET start_time = time WHERE start_time IS NULL''')
+                            logger.info("Added start_time column and migrated from time")
+                        else:
+                            c.execute('''ALTER TABLE events ADD COLUMN start_time TEXT DEFAULT "12:00"''')
+                            logger.info("Added start_time column with default value")
+                    
+                    if 'end_time' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN end_time TEXT''')
+                        logger.info("Added end_time column")
+                    
+                    # Add interest_count and view_count columns if they don't exist
+                    if 'interest_count' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN interest_count INTEGER DEFAULT 0''')
+                        logger.info("Added interest_count column")
+                    
+                    if 'view_count' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN view_count INTEGER DEFAULT 0''')
+                        logger.info("Added view_count column")
+                    
+                    # Add new UX enhancement columns for SQLite
+                    if 'fee_required' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN fee_required TEXT''')
+                        logger.info("Added fee_required column")
+                    
+                    if 'event_url' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN event_url TEXT''')
+                        logger.info("Added event_url column")
+                    
+                    if 'host_name' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN host_name TEXT''')
+                        logger.info("Added host_name column")
+                    
+                    # Add secondary_category column if it doesn't exist  
+                    if 'secondary_category' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN secondary_category TEXT''')
+                        logger.info("Added secondary_category column")
+                    
+                    # Add verified column if it doesn't exist
+                    if 'verified' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE''')
+                        logger.info("Added verified column")
+                
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER,
+                            action TEXT NOT NULL,
+                            details TEXT,
+                            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY(user_id) REFERENCES users(id)
+                        )''')
+                
+                # Create interest tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_interests (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
+                # Create view tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS event_views (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            event_id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'legacy',
+                            viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(event_id, user_id, browser_fingerprint),
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+                
+                # Create page visits tracking table
+                c.execute('''CREATE TABLE IF NOT EXISTS page_visits (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            page_type TEXT NOT NULL,
+                            page_path TEXT NOT NULL,
+                            user_id INTEGER,
+                            browser_fingerprint TEXT NOT NULL DEFAULT 'anonymous',
+                            visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+                        )''')
+
+                # Create privacy requests table for CCPA compliance
+                c.execute('''CREATE TABLE IF NOT EXISTS privacy_requests (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            request_type TEXT NOT NULL CHECK (request_type IN ('access', 'delete', 'opt_out')),
+                            email TEXT NOT NULL,
+                            full_name TEXT,
+                            verification_info TEXT,
+                            details TEXT,
+                            status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'denied')),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            admin_notes TEXT
+                        )''')
+
+                # Create event reports table for reporting functionality
+                c.execute('''CREATE TABLE IF NOT EXISTS event_reports (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            event_id INTEGER NOT NULL,
+                            event_title TEXT,
+                            event_address TEXT,
+                            event_date TEXT,
+                            reason TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            reporter_email TEXT NOT NULL,
+                            reporter_name TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            status TEXT DEFAULT 'pending',
+                            FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+                        )''')
+                
+                # SQLite does not have information_schema, so we skip the schema fixes
+                # The tracking, privacy, and reporting tables are created correctly above for SQLite
+            
+            # Ensure password_resets table exists
+            if IS_PRODUCTION and DB_URL:
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS password_resets (
+                        id SERIAL PRIMARY KEY,
+                        email TEXT NOT NULL,
+                        reset_code TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                ''')
+            else:
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS password_resets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        email TEXT NOT NULL,
+                        reset_code TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                ''')
+            
+            # Check for default admin user and create if needed
+            # create_default_admin_user(conn)  # Moved to after security functions are defined
+            
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
+        # Don't raise the exception here - this allows the app to start even if DB init fails
+        # We'll handle DB errors at the endpoint level
+def create_default_admin_user(conn):
+    """Create default admin user if none exists"""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if any admin users exist
+        cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
+        admin_count = get_count_from_result(cursor.fetchone())
+        
+        if admin_count == 0:
+            logger.info("No admin users found. Creating default admin user...")
+            
+            # Use a secure random password that must be changed
+            import secrets
+            import string
+            
+            # Generate a random 16-character password
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
+            
+            hashed_password = get_password_hash(admin_password)
+            
+            cursor.execute(
+                "INSERT INTO users (email, hashed_password, role) VALUES (?, ?, ?)",
+                ("admin@todo-events.com", hashed_password, "admin")
+            )
+            conn.commit()
+            
+            logger.info("✅ Default admin user created:")
+            logger.info(f"   📧 Email: admin@todo-events.com")
+            logger.info(f"   🔑 Password: {admin_password}")
+            logger.info("⚠️ IMPORTANT: Change this password after first login!")
+            
+        else:
+            logger.info(f"Found {admin_count} existing admin users. Default admin creation skipped.")
+            
+    except Exception as e:
+        logger.error(f"Error creating default admin user: {str(e)}")
+        return False
+    
+    return True
+
+# Initialize database
+try:
+    init_db()
+except Exception as e:
+    logger.error(f"Database initialization failed: {str(e)}")
+
+# =====================================================
+# AUTOMATED AI SYNC SYSTEM
+# =====================================================
+
+class AutomatedTaskManager:
+    """
+    Manages automated tasks for AI search optimization:
+    - Sitemap generation and updates
+    - Event data refresh
+    - AI tool synchronization
+    - Performance monitoring
+    """
+    
+    def __init__(self):
+        self.scheduler = BackgroundScheduler()
+        self.last_sitemap_update = None
+        self.last_event_refresh = None
+        self.task_status = {
+            "sitemap_generation": {"status": "pending", "last_run": None, "next_run": None},
+            "event_refresh": {"status": "pending", "last_run": None, "next_run": None},
+            "ai_sync": {"status": "pending", "last_run": None, "next_run": None}
+        }
+        
+    async def generate_sitemap_automatically(self):
+        """Generate sitemap with current event data"""
+        try:
+            logger.info("🔄 Starting automated sitemap generation...")
+            
+            # Get current events from database
+            events = await self.get_current_events()
+            
+            # Generate sitemap content
+            sitemap_content = await self.build_sitemap_content(events)
+            
+            # Save to file (in production, this could be uploaded to S3/CDN)
+            await self.save_sitemap(sitemap_content)
+            
+            # Update task status
+            self.task_status["sitemap_generation"]["status"] = "completed"
+            self.task_status["sitemap_generation"]["last_run"] = datetime.utcnow().isoformat()
+            self.last_sitemap_update = datetime.utcnow()
+            
+            logger.info("✅ Automated sitemap generation completed successfully")
+            
+            # Notify search engines about the update
+            await self.ping_search_engines()
+            
+        except Exception as e:
+            logger.error(f"❌ Automated sitemap generation failed: {str(e)}")
+            self.task_status["sitemap_generation"]["status"] = "failed"
+    
+    async def refresh_event_data(self):
+        """Refresh and optimize event data for AI consumption"""
+        try:
+            logger.info("🔄 Starting automated event data refresh...")
+            
+            # Clean up expired events
+            await self.cleanup_expired_events()
+            
+            # Update event search index (if implemented)
+            await self.update_search_index()
+            
+            # Cache popular queries for faster AI responses
+            await self.cache_popular_queries()
+            
+            self.task_status["event_refresh"]["status"] = "completed"
+            self.task_status["event_refresh"]["last_run"] = datetime.utcnow().isoformat()
+            self.last_event_refresh = datetime.utcnow()
+            
+            logger.info("✅ Automated event data refresh completed")
+            
+        except Exception as e:
+            logger.error(f"❌ Automated event data refresh failed: {str(e)}")
+            self.task_status["event_refresh"]["status"] = "failed"
+    
+    async def sync_with_ai_tools(self):
+        """Optimize data specifically for AI tool consumption"""
+        try:
+            logger.info("🤖 Starting AI tools synchronization...")
+            
+            # Update AI-optimized cache
+            await self.update_ai_cache()
+            
+            # Test AI endpoint responsiveness
+            await self.test_ai_endpoint()
+            
+            # Update structured data if needed
+            await self.validate_structured_data()
+            
+            self.task_status["ai_sync"]["status"] = "completed"
+            self.task_status["ai_sync"]["last_run"] = datetime.utcnow().isoformat()
+            
+            logger.info("✅ AI tools synchronization completed")
+            
+        except Exception as e:
+            logger.error(f"❌ AI tools synchronization failed: {str(e)}")
+            self.task_status["ai_sync"]["status"] = "failed"
+    
+    async def get_current_events(self):
+        """Get current and upcoming events from database"""
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                
+                # Use proper date comparison for both PostgreSQL and SQLite
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL - cast date text to date for comparison
+                    c.execute("""
+                        SELECT id, title, description, date, start_time, end_time, end_date, category, 
+                               address, lat, lng, created_at, slug, is_published
+                        FROM events 
+                        WHERE CAST(date AS DATE) >= (CURRENT_DATE - INTERVAL '30 days')::DATE 
+                        AND (is_published = true OR is_published IS NULL)
+                        ORDER BY CAST(date AS DATE), start_time
+                    """)
+                else:
+                    # SQLite
+                    c.execute("""
+                        SELECT id, title, description, date, start_time, end_time, end_date, category, 
+                               address, lat, lng, created_at, slug, is_published
+                        FROM events 
+                        WHERE date::date >= CURRENT_DATE AND (is_published = 1 OR is_published IS NULL)
+                        ORDER BY date, start_time
+                    """)
+                return [dict(row) for row in c.fetchall()]
+        except Exception as e:
+            logger.error(f"Error fetching events for sitemap: {str(e)}")
+            return []
+    
+    async def build_sitemap_content(self, events):
+        """Build sitemap XML content with current events"""
+        current_date = datetime.utcnow().strftime('%Y-%m-%d')
+        domain = "https://todo-events.com"
+        
+        # Start with static sitemap structure
+        sitemap = f'''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Homepage - Primary landing page -->
+  <url>
+    <loc>{domain}/</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>{domain}/images/pin-logo.svg</image:loc>
+      <image:caption>todo-events logo - Local event discovery platform</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Main navigation pages -->
+  <url>
+    <loc>{domain}/hosts</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{domain}/creators</loc>
+    <lastmod>{current_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>'''
+        
+        # Add category pages - both query param and SEO-friendly formats
+        categories = [
+    'food-drink', 'music', 'arts', 'sports', 'automotive', 'airshows', 'vehicle-sports', 
+    'community', 'religious', 'education', 'veteran', 'cookout', 'networking',
+    'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
+    'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
+]
         sitemap += f'''
 
   <!-- Category pages -->'''
