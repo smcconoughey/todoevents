@@ -18,7 +18,7 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/users/analytics/comprehensive?period_days=${periodDays}`, {
+              const response = await fetch(`${API_URL}/users/analytics?period_days=${periodDays}&comprehensive=true`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -41,7 +41,7 @@ const AnalyticsDashboard = ({ userEvents, user, onEventSelect }) => {
   const downloadCSV = async (reportType) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/users/analytics/export/csv?report_type=${reportType}&period_days=${periodDays}`, {
+      const response = await fetch(`${API_URL}/users/analytics?export_csv=${reportType}&period_days=${periodDays}&comprehensive=true`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
