@@ -3065,6 +3065,329 @@ const AdminDashboard = () => {
     );
   };
 
+  // Premium Management Component
+  const PremiumManagement = () => {
+    const [premiumUsers, setPremiumUsers] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteMonths, setInviteMonths] = useState(1);
+    const [inviteMessage, setInviteMessage] = useState('');
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [grantingPremium, setGrantingPremium] = useState(null);
+    const [grantMonths, setGrantMonths] = useState(1);
+
+    const fetchPremiumUsers = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchData('/admin/premium-users');
+        setPremiumUsers(data.users || []);
+      } catch (error) {
+        setError(`Failed to fetch premium users: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      fetchPremiumUsers();
+    }, []);
+
+    const handleGrantPremium = async (userId) => {
+      try {
+        await fetchData(`/admin/users/${userId}/grant-premium`, 'POST', {
+          months: grantMonths
+        });
+        setGrantingPremium(null);
+        setGrantMonths(1);
+        fetchPremiumUsers();
+        setError(null);
+      } catch (error) {
+        setError(`Failed to grant premium: ${error.message}`);
+      }
+    };
+
+    const handleRemovePremium = async (userId) => {
+      if (!confirm('Are you sure you want to remove premium access from this user?')) return;
+      
+      try {
+        await fetchData(`/admin/users/${userId}/remove-premium`, 'DELETE');
+        fetchPremiumUsers();
+        setError(null);
+      } catch (error) {
+        setError(`Failed to remove premium: ${error.message}`);
+      }
+    };
+
+    const handleInviteUser = async () => {
+      try {
+        const response = await fetchData('/admin/premium-invite', 'POST', {
+          email: inviteEmail,
+          months: inviteMonths,
+          message: inviteMessage
+        });
+        
+        setShowInviteModal(false);
+        setInviteEmail('');
+        setInviteMonths(1);
+        setInviteMessage('');
+        
+        if (response.user_exists) {
+          setError(`User ${inviteEmail} already exists with role: ${response.current_role}`);
+        } else {
+          setError(null);
+          alert(`Premium invitation sent to ${inviteEmail}`);
+        }
+      } catch (error) {
+        setError(`Failed to send invitation: ${error.message}`);
+      }
+    };
+
+    const handleNotifyUser = async (userId) => {
+      try {
+        await fetchData(`/admin/users/${userId}/notify-premium`, 'POST');
+        alert('Premium notification sent successfully');
+      } catch (error) {
+        setError(`Failed to send notification: ${error.message}`);
+      }
+    };
+
+    const formatDate = (dateString) => {
+      if (!dateString) return 'Never';
+      return new Date(dateString).toLocaleDateString();
+    };
+
+    const isExpired = (dateString) => {
+      if (!dateString) return false;
+      return new Date(dateString) < new Date();
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header with Actions */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-800">Premium Management</h2>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Invite Premium User
+            </button>
+            <button
+              onClick={fetchPremiumUsers}
+              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 flex items-center"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Premium Users Table */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="px-6 py-4 border-b">
+            <h3 className="text-lg font-semibold text-gray-800">Premium Users ({premiumUsers.length})</h3>
+          </div>
+          
+          {loading ? (
+            <div className="p-8 text-center">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+              <p>Loading premium users...</p>
+            </div>
+          ) : premiumUsers.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <UserCheck className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No premium users found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Granted By</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {premiumUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{user.email}</div>
+                          <div className="text-sm text-gray-500">ID: {user.id}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.role === 'premium' ? 'bg-purple-100 text-purple-800' : 
+                          user.role === 'admin' ? 'bg-red-100 text-red-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(user.premium_expires_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.granted_by_email || 'System'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.is_expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {user.is_expired ? 'Expired' : 'Active'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => setGrantingPremium(user)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Extend Premium"
+                        >
+                          <Clock className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleNotifyUser(user.id)}
+                          className="text-green-600 hover:text-green-900"
+                          title="Send Notification"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemovePremium(user.id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Remove Premium"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Invite Modal */}
+        <Modal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          title="Invite Premium User"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="user@example.com"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Premium Duration (Months)
+              </label>
+              <select
+                value={inviteMonths}
+                onChange={(e) => setInviteMonths(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={1}>1 Month</option>
+                <option value={3}>3 Months</option>
+                <option value={6}>6 Months</option>
+                <option value={12}>12 Months</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Custom Message (Optional)
+              </label>
+              <textarea
+                value={inviteMessage}
+                onChange={(e) => setInviteMessage(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                placeholder="Welcome to our premium service..."
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInviteUser}
+                disabled={!inviteEmail}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              >
+                Send Invitation
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Grant Premium Modal */}
+        <Modal
+          isOpen={!!grantingPremium}
+          onClose={() => setGrantingPremium(null)}
+          title={`Extend Premium for ${grantingPremium?.email}`}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Months
+              </label>
+              <select
+                value={grantMonths}
+                onChange={(e) => setGrantMonths(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={1}>1 Month</option>
+                <option value={3}>3 Months</option>
+                <option value={6}>6 Months</option>
+                <option value={12}>12 Months</option>
+              </select>
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                onClick={() => setGrantingPremium(null)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleGrantPremium(grantingPremium.id)}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Grant Premium
+              </button>
+            </div>
+          </div>
+        </Modal>
+      </div>
+    );
+  };
+
   // Moderation Tools Component
   const ModerationTools = () => {
     return (
@@ -3144,6 +3467,7 @@ const AdminDashboard = () => {
               { name: 'Users', icon: <Users className="mr-2" />, tab: 'users' },
               { name: 'Events', icon: <Calendar className="mr-2" />, tab: 'events' },
               { name: 'Privacy', icon: <FileText className="mr-2" />, tab: 'privacy' },
+              { name: 'Premium', icon: <UserCheck className="mr-2" />, tab: 'premium' },
               { name: 'Bulk Import', icon: <Plus className="mr-2" />, tab: 'bulk' },
               { name: 'Analytics', icon: <BarChart2 className="mr-2" />, tab: 'analytics' },
               { name: 'Moderation', icon: <Shield className="mr-2" />, tab: 'moderation' }
@@ -3205,6 +3529,7 @@ const AdminDashboard = () => {
           {activeTab === 'users' && <UserManagement />}
           {activeTab === 'events' && <EventManagement />}
           {activeTab === 'privacy' && <PrivacyManagement />}
+          {activeTab === 'premium' && <PremiumManagement />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'moderation' && <ModerationTools />}
           {activeTab === 'bulk' && <BulkOperations />}
