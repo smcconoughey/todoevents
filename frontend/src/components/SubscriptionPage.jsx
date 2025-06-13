@@ -132,7 +132,7 @@ const SubscriptionPage = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <div className="max-w-4xl mx-auto p-3 sm:p-4 space-y-4 sm:space-y-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-themed-secondary" />
@@ -156,14 +156,14 @@ const SubscriptionPage = () => {
         ) : (
           <div className="space-y-6">
             {/* Premium Status Card */}
-            <div className="bg-themed-surface border border-themed rounded-lg p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-white" />
+            <div className="bg-themed-surface border border-themed rounded-lg p-4 sm:p-6">
+              <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-themed-primary">Premium Account Active</h2>
-                  <p className="text-sm text-themed-secondary">You have access to all premium features</p>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base sm:text-lg font-semibold text-themed-primary">Premium Account Active</h2>
+                  <p className="text-xs sm:text-sm text-themed-secondary">You have access to all premium features</p>
                 </div>
               </div>
             </div>
@@ -182,22 +182,22 @@ const SubscriptionPage = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="flex items-center gap-3 p-3 bg-themed-background rounded-lg">
-                    <CreditCard className="w-5 h-5 text-themed-secondary" />
-                    <div>
-                      <p className="text-sm text-themed-secondary">Amount</p>
-                      <p className="font-medium text-themed-primary">
+                    <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-themed-secondary flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-themed-secondary">Amount</p>
+                      <p className="font-medium text-themed-primary text-sm sm:text-base">
                         {formatAmount(sub.amount, sub.currency)}/month
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 p-3 bg-themed-background rounded-lg">
-                    <Calendar className="w-5 h-5 text-themed-secondary" />
-                    <div>
-                      <p className="text-sm text-themed-secondary">Next Billing Date</p>
-                      <p className="font-medium text-themed-primary">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-themed-secondary flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-themed-secondary">Next Billing Date</p>
+                      <p className="font-medium text-themed-primary text-sm sm:text-base">
                         {formatDate(sub.current_period_end)}
                       </p>
                     </div>
@@ -253,7 +253,7 @@ const SubscriptionPage = () => {
                       </Button>
                     </div>
                     <p className="text-xs text-themed-secondary">
-                      <strong>Cancel at Period End:</strong> Keep access until {formatDate(sub.current_period_end)}.<br/>
+                      <strong>Cancel at Period End:</strong> Keep access until {formatDate(sub.current_period_end)}.<br className="hidden sm:block"/>
                       <strong>Cancel Immediately:</strong> Lose access right away, no refund for current period.
                     </p>
                   </div>

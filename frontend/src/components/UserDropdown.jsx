@@ -68,7 +68,7 @@ const UserDropdown = () => {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 sm:w-72 bg-themed-surface border border-themed rounded-lg shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-themed-surface border border-themed rounded-lg shadow-xl z-50 overflow-hidden">
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-themed bg-themed-surface-hover">
             <div className="flex items-center gap-3">
