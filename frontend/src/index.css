@@ -610,13 +610,8 @@ body {
   h3 { font-size: 1.125rem; line-height: 1.3; font-weight: 500; }
 
   /* MOBILE ONLY: Targeted filter overrides */
-  /* Target the main filter container divs specifically */
-  div[class*="space-y-2"][class*="p-3"],
-  div[class*="space-y-2"][class*="p-2"],
-  div[class*="space-y-3"][class*="p-3"] {
-    background-color: var(--bg-card) !important;
-    border-color: var(--border-color) !important;
-  }
+  /* DO NOT target main panels - they should remain translucent */
+  /* Remove this section as it was breaking translucent backgrounds */
 
   /* Target filter section buttons specifically */
   div[class*="space-y-2"] button,
@@ -643,14 +638,14 @@ body {
     color: white !important;
   }
 
-  /* Ultra-aggressive button override for any button in filter areas */
-  [class*="space-y"] button:not([class*="bg-pin-blue"]):not([class*="btn-primary"]):not([class*="btn-secondary"]) {
+  /* More targeted button override - only for small filter buttons */
+  div[class*="space-y-2"] button[class*="text-xs"]:not([class*="bg-pin-blue"]):not([class*="btn-primary"]):not([class*="btn-secondary"]) {
     background-color: var(--bg-card) !important;
     color: var(--text-secondary) !important;
     border-color: var(--border-color) !important;
   }
 
-  [class*="space-y"] button:not([class*="bg-pin-blue"]):not([class*="btn-primary"]):not([class*="btn-secondary"]):hover {
+  div[class*="space-y-2"] button[class*="text-xs"]:not([class*="bg-pin-blue"]):not([class*="btn-primary"]):not([class*="btn-secondary"]):hover {
     background-color: var(--bg-card-hover) !important;
   }
 
@@ -659,15 +654,22 @@ body {
     /* This will be overridden by more specific selectors but ensures fallback */
   }
 
-  /* Override any div that has hardcoded background patterns */
-  div[class*="bg-white"],
-  div[class*="bg-black"] {
+  /* MUCH more specific targeting - only filter buttons, not panels */
+  /* Target only buttons within grid layouts (search radius buttons) */
+  div[class*="grid-cols-3"] button[class*="bg-white"],
+  div[class*="grid-cols-2"] button[class*="bg-white"],
+  div[class*="grid"] button[class*="bg-white"],
+  div[class*="grid-cols-3"] button[class*="bg-black"],
+  div[class*="grid-cols-2"] button[class*="bg-black"],
+  div[class*="grid"] button[class*="bg-black"] {
     background-color: var(--bg-card) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
   }
 
-  /* Override any button that has hardcoded background patterns */
-  button[class*="bg-white"]:not([class*="bg-pin-blue"]),
-  button[class*="bg-black"]:not([class*="bg-pin-blue"]) {
+  /* Target only small buttons with specific size classes (filter preset buttons) */
+  button[class*="px-2"][class*="py-1"][class*="bg-white"]:not([class*="bg-pin-blue"]),
+  button[class*="px-2"][class*="py-1"][class*="bg-black"]:not([class*="bg-pin-blue"]) {
     background-color: var(--bg-card) !important;
     color: var(--text-secondary) !important;
     border-color: var(--border-color) !important;
