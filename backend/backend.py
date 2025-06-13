@@ -3294,9 +3294,6 @@ async def create_user(user: UserCreate):
         else:
             raise HTTPException(status_code=500, detail="Error creating user")
 
-@app.get("/users/me", response_model=UserResponse)
-async def read_users_me(current_user: dict = Depends(get_current_user)):
-    return current_user
 
 # Password Strength Check Endpoint
 @app.post("/password-strength")
@@ -7367,9 +7364,6 @@ async def create_user(user: UserCreate):
         else:
             raise HTTPException(status_code=500, detail="Error creating user")
 
-@app.get("/users/me", response_model=UserResponse)
-async def read_users_me(current_user: dict = Depends(get_current_user)):
-    return current_user
 
 # Password Strength Check Endpoint
 @app.post("/password-strength")
@@ -14432,8 +14426,13 @@ async def verify_premium_events_simple():
             }
             
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "message": "Error verifying premium events"
-        } 
+                    return {
+                "success": False,
+                "error": str(e),
+                "message": "Error verifying premium events"
+            }
+
+@app.get("/users/me", response_model=UserResponse)
+async def read_users_me(current_user: dict = Depends(get_current_user)):
+    """Get current user information"""
+    return current_user 
