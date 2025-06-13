@@ -9663,20 +9663,26 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
         
         subscription_info = []
         for sub in subscriptions.data:
-            # Safely handle timestamp conversions
+            # Debug: Log subscription object structure
+            logger.info(f"Processing subscription: {sub.id}, status: {sub.status}")
+            logger.info(f"Available subscription attributes: {list(sub.keys()) if hasattr(sub, 'keys') else 'No keys method'}")
+            # Safely handle timestamp conversions using getattr to avoid AttributeError
             try:
-                current_period_start = datetime.fromtimestamp(sub.current_period_start).isoformat() if sub.current_period_start else None
-            except (ValueError, TypeError, OSError):
+                current_period_start_ts = getattr(sub, 'current_period_start', None)
+                current_period_start = datetime.fromtimestamp(current_period_start_ts).isoformat() if current_period_start_ts else None
+            except (ValueError, TypeError, OSError, AttributeError):
                 current_period_start = None
                 
             try:
-                current_period_end = datetime.fromtimestamp(sub.current_period_end).isoformat() if sub.current_period_end else None
-            except (ValueError, TypeError, OSError):
+                current_period_end_ts = getattr(sub, 'current_period_end', None)
+                current_period_end = datetime.fromtimestamp(current_period_end_ts).isoformat() if current_period_end_ts else None
+            except (ValueError, TypeError, OSError, AttributeError):
                 current_period_end = None
                 
             try:
-                canceled_at = datetime.fromtimestamp(sub.canceled_at).isoformat() if sub.canceled_at else None
-            except (ValueError, TypeError, OSError):
+                canceled_at_ts = getattr(sub, 'canceled_at', None)
+                canceled_at = datetime.fromtimestamp(canceled_at_ts).isoformat() if canceled_at_ts else None
+            except (ValueError, TypeError, OSError, AttributeError):
                 canceled_at = None
             
             # Safely get price information
