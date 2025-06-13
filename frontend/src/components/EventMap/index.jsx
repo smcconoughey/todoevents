@@ -778,6 +778,8 @@ const EventMap = ({
   const [miscFilters, setMiscFilters] = useState({
     feeFilter: 'all' // 'all', 'free', 'paid'
   });
+  // Track events that were manually closed to prevent re-opening from URL
+  const [manuallyClosed, setManuallyClosed] = useState(new Set());
 
 
   const mapRef = useRef(null);
@@ -1168,6 +1170,8 @@ const EventMap = ({
       if (currentPath === '/' || !currentPath.startsWith('/e/')) {
         console.log('Clearing event due to popstate - URL:', currentPath);
         setSelectedEvent(null);
+        // Clear manually closed events when navigating away
+        setManuallyClosed(new Set());
       }
     };
 
@@ -1191,9 +1195,22 @@ const EventMap = ({
         const targetEvent = events.find(event => event.slug === slug);
         
         if (targetEvent) {
-          // Only select the event if no event is currently selected or if it's a different event
-          // This prevents re-selecting the same event after user closes it
-          if (!selectedEvent || selectedEvent.id !== targetEvent.id) {
+          // Check if this event was manually closed by the user
+          const eventIdentifier = targetEvent.slug || targetEvent.id;
+          const wasManuallyFlosed = manuallyClosed.has(eventIdentifier);
+          
+          console.log('URL handler check:', {
+            eventSlug: slug,
+            eventTitle: targetEvent.title,
+            wasManuallyFlosed,
+            selectedEventId: selectedEvent?.id,
+            targetEventId: targetEvent.id
+          });
+          
+          // Only select the event if:
+          // 1. No event is currently selected OR it's a different event
+          // 2. AND the event was not manually closed by the user
+          if ((!selectedEvent || selectedEvent.id !== targetEvent.id) && !wasManuallyFlosed) {
             console.log('URL handler: Selecting event from slug:', targetEvent.title);
             setSelectedEvent(targetEvent);
             setActiveTab('details'); // Start with details tab
@@ -1206,6 +1223,8 @@ const EventMap = ({
                 address: targetEvent.address
               });
             }
+          } else if (wasManuallyFlosed) {
+            console.log('URL handler: Skipping event - was manually closed:', targetEvent.title);
           }
         } else {
           console.warn(`Event with slug "${slug}" not found in current events list`);
@@ -1294,7 +1313,7 @@ const EventMap = ({
         }
       }
     }
-  }, [events.length, user, slug]); // Remove selectedEvent dependency to prevent race conditions
+  }, [events.length, user, slug, manuallyClosed]); // Include manuallyClosed to react to close actions
 
   const handleAddressSelect = (data) => {
     setSelectedLocation({
@@ -1379,6 +1398,12 @@ const EventMap = ({
     console.log('Desktop close button clicked');
     console.log('Closing event details, selectedEvent:', selectedEvent?.title);
     
+    // Mark this event as manually closed to prevent re-opening from URL
+    if (selectedEvent) {
+      setManuallyClosed(prev => new Set(prev).add(selectedEvent.slug || selectedEvent.id));
+      console.log('Marked event as manually closed:', selectedEvent.slug || selectedEvent.id);
+    }
+    
     // Clear the selected event state immediately
     setSelectedEvent(null);
     console.log('Event cleared immediately');
@@ -1422,6 +1447,15 @@ const EventMap = ({
     }
 
     console.log('Selecting event:', event.title);
+    
+    // Clear manually closed flag when user actively selects an event
+    const eventIdentifier = event.slug || event.id;
+    setManuallyClosed(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(eventIdentifier);
+      return newSet;
+    });
+    
     setSelectedEvent(event);
     
     // Track event detail view

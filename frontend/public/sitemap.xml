@@ -1532,24 +1532,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/chalk-the-walk-art-festival-virginia-beach-boardwalk</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/chalk-the-walk-art-festival-virginia-beach-boardwalk</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/chalk-the-walk-art-festival-virginia-beach-boardwalk</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/father-and-son-field-day-eustis</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -1563,6 +1545,24 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/14/father-and-son-field-day-eustis</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/chalk-the-walk-art-festival-virginia-beach-boardwalk</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/chalk-the-walk-art-festival-virginia-beach-boardwalk</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/chalk-the-walk-art-festival-virginia-beach-boardwalk</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
@@ -1784,24 +1784,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749071838</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749071838</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/16/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749071838</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749070642</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
@@ -1815,6 +1797,24 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/16/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749070642</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/16/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
@@ -1838,19 +1838,37 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
+    <loc>https://todo-events.com/events/can-you-dig-it-grades-2-3-1749071381</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
+    <loc>https://todo-events.com/e/can-you-dig-it-grades-2-3-1749071381</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/16/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
+    <loc>https://todo-events.com/events/2025/06/16/can-you-dig-it-grades-2-3-1749071381</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749071838</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749071838</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/16/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749071838</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
@@ -1892,24 +1910,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/can-you-dig-it-grades-2-3-1749071381</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/can-you-dig-it-grades-2-3-1749071381</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/16/can-you-dig-it-grades-2-3-1749071381</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/the-bug-club-science-adventure-1749072654</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
@@ -1928,24 +1928,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/baking-with-honeypie-bakeshop-the-best-peach-pies-1749071381</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/baking-with-honeypie-bakeshop-the-best-peach-pies-1749071381</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/18/baking-with-honeypie-bakeshop-the-best-peach-pies-1749071381</loc>
-    <lastmod>2025-06-13</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/the-bug-club-w-omni-1749072075</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
@@ -1959,6 +1941,24 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/18/the-bug-club-w-omni-1749072075</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/baking-with-honeypie-bakeshop-the-best-peach-pies-1749071381</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/baking-with-honeypie-bakeshop-the-best-peach-pies-1749071381</loc>
+    <lastmod>2025-06-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/18/baking-with-honeypie-bakeshop-the-best-peach-pies-1749071381</loc>
     <lastmod>2025-06-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
