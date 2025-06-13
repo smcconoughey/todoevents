@@ -1137,19 +1137,21 @@ const EventMap = ({
         const targetEvent = events.find(event => event.slug === slug);
         
         if (targetEvent) {
-          // Always select the event from the URL, regardless of current selection
-          // This ensures proper event switching when URLs change
-          console.log('URL handler: Selecting event from slug:', targetEvent.title);
-          setSelectedEvent(targetEvent);
-          setActiveTab('details'); // Start with details tab
-          
-          // If the event has coordinates, center the map on it
-          if (targetEvent.lat && targetEvent.lng) {
-            setSelectedLocation({
-              lat: targetEvent.lat,
-              lng: targetEvent.lng,
-              address: targetEvent.address
-            });
+          // Only select the event if no event is currently selected or if it's a different event
+          // This prevents re-selecting the same event after user closes it
+          if (!selectedEvent || selectedEvent.id !== targetEvent.id) {
+            console.log('URL handler: Selecting event from slug:', targetEvent.title);
+            setSelectedEvent(targetEvent);
+            setActiveTab('details'); // Start with details tab
+            
+            // If the event has coordinates, center the map on it
+            if (targetEvent.lat && targetEvent.lng) {
+              setSelectedLocation({
+                lat: targetEvent.lat,
+                lng: targetEvent.lng,
+                address: targetEvent.address
+              });
+            }
           }
         } else {
           console.warn(`Event with slug "${slug}" not found in current events list`);
@@ -1157,8 +1159,8 @@ const EventMap = ({
           // navigate('/');
         }
       }
-      // Clear selected event if we're not on an event URL
-      else if (!currentPath.startsWith('/e/') && selectedEvent) {
+      // Clear selected event if we're not on an event URL and an event is selected
+      else if (!currentPath.startsWith('/e/') && !currentPath.includes('?event=') && selectedEvent) {
         console.log('🧹 URL handler: Clearing selected event - not on event URL');
         setSelectedEvent(null);
       }
@@ -1464,13 +1466,26 @@ const EventMap = ({
         throw new Error('Invalid response from server');
       }
 
-      // Update events list
+      // Update events list and select the newly created event
       await fetchEvents();
       
       setIsCreateFormOpen(false);
       setEditingEvent(null);
       setSelectedLocation(null);
-      setSelectedEvent(createdEvent);
+      
+      // Use a timeout to ensure events state has been updated, then select the created event
+      setTimeout(() => {
+        setEvents(currentEvents => {
+          const refreshedEvent = currentEvents.find(e => e.id === createdEvent.id);
+          if (refreshedEvent) {
+            setSelectedEvent(refreshedEvent);
+          } else {
+            setSelectedEvent(createdEvent);
+          }
+          return currentEvents;
+        });
+      }, 100);
+      
       setError(null); // Clear any existing errors on success
 
     } catch (error) {
