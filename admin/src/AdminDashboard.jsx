@@ -2726,10 +2726,14 @@ const AdminDashboard = () => {
     // Filtered privacy requests
     const filteredRequests = useMemo(() => {
       return privacyRequests.filter(request => {
+        const email = request.email || request.user_email || '';
+        const fullName = request.full_name || '';
+        const id = request.id ? request.id.toString() : '';
+        
         const matchesSearch = 
-          request.user_email.toLowerCase().includes(privacySearch.toLowerCase()) ||
-          request.full_name.toLowerCase().includes(privacySearch.toLowerCase()) ||
-          request.id.toString().includes(privacySearch);
+          email.toLowerCase().includes(privacySearch.toLowerCase()) ||
+          fullName.toLowerCase().includes(privacySearch.toLowerCase()) ||
+          id.includes(privacySearch);
         
         const matchesStatus = privacyFilterStatus === 'all' || request.status === privacyFilterStatus;
         const matchesType = privacyFilterType === 'all' || request.request_type === privacyFilterType;
@@ -2751,8 +2755,8 @@ const AdminDashboard = () => {
     const getTypeIcon = (type) => {
       switch (type) {
         case 'access': return <Eye className="w-4 h-4" />;
-        case 'deletion': return <Trash2 className="w-4 h-4" />;
-        case 'portability': return <Download className="w-4 h-4" />;
+        case 'delete': return <Trash2 className="w-4 h-4" />;
+        case 'opt_out': return <X className="w-4 h-4" />;
         default: return <FileText className="w-4 h-4" />;
       }
     };
@@ -2901,8 +2905,8 @@ const AdminDashboard = () => {
             >
               <option value="all">All Types</option>
               <option value="access">Data Access</option>
-              <option value="deletion">Data Deletion</option>
-              <option value="portability">Data Portability</option>
+              <option value="delete">Data Deletion</option>
+              <option value="opt_out">Opt Out</option>
             </select>
 
             <button
@@ -2976,8 +2980,8 @@ const AdminDashboard = () => {
                       </td>
                       <td className="p-3">
                         <div>
-                          <div className="font-medium">{request.full_name}</div>
-                          <div className="text-sm text-gray-500">{request.user_email}</div>
+                          <div className="font-medium">{request.full_name || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{request.email || request.user_email || 'N/A'}</div>
                         </div>
                       </td>
                       <td className="p-3">
