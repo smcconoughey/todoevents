@@ -9553,6 +9553,30 @@ async def test_webhook():
     """Simple test endpoint to verify webhook URL is reachable"""
     return {"status": "ok", "message": "Webhook endpoint is reachable", "timestamp": datetime.utcnow().isoformat()}
 
+@app.get("/debug/user-status/{user_id}")
+async def debug_user_status_simple(user_id: int):
+    """Quick user status check - no auth required for debugging"""
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT id, email, role, premium_expires_at FROM users WHERE id = {placeholder}", (user_id,))
+            user = cursor.fetchone()
+            
+            if not user:
+                return {"error": "User not found"}
+            
+            return {
+                "user_id": user['id'],
+                "email": user['email'],
+                "role": user['role'],
+                "premium_expires_at": user.get('premium_expires_at'),
+                "is_premium": user['role'] in ['premium', 'admin'],
+                "current_utc": datetime.utcnow().isoformat()
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events"""
