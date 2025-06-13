@@ -37,7 +37,7 @@ export const ThemeProvider = ({ children }) => {
     return isDarkMode ? THEME_DARK : THEME_LIGHT;
   });
 
-  // Update the data-theme attribute on the document element when theme changes
+  // Update the data-theme attribute and mobile meta tags when theme changes
   useEffect(() => {
     console.log('Theme changed to:', theme);
     
@@ -47,6 +47,55 @@ export const ThemeProvider = ({ children }) => {
     // Apply additional classes to body for more styling options
     document.body.classList.remove('dark-mode', 'light-mode', 'glass-mode');
     document.body.classList.add(`${theme}-mode`);
+    
+    // Update mobile theme meta tags
+    const updateMobileThemeColor = () => {
+      const themeColors = {
+        [THEME_LIGHT]: {
+          themeColor: '#3C92FF',    // Pin blue for light theme
+          background: '#FAFBFC',     // Light background
+          statusBar: 'default'       // Dark text on light background
+        },
+        [THEME_DARK]: {
+          themeColor: '#2684FF',     // Pin blue for dark theme
+          background: '#0f0f0f',     // Dark background
+          statusBar: 'light-content' // Light text on dark background
+        },
+        [THEME_GLASS]: {
+          themeColor: '#60A5FA',     // Softer blue for frost theme
+          background: '#D6F3FF',     // Light blue background
+          statusBar: 'default'       // Dark text on light background
+        }
+      };
+
+      const currentTheme = themeColors[theme] || themeColors[THEME_LIGHT];
+
+      // Update theme-color meta tag
+      let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute('content', currentTheme.themeColor);
+      } else {
+        themeColorMeta = document.createElement('meta');
+        themeColorMeta.setAttribute('name', 'theme-color');
+        themeColorMeta.setAttribute('content', currentTheme.themeColor);
+        document.head.appendChild(themeColorMeta);
+      }
+
+      // Update iOS status bar style
+      let statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+      if (statusBarMeta) {
+        statusBarMeta.setAttribute('content', currentTheme.statusBar);
+      } else {
+        statusBarMeta = document.createElement('meta');
+        statusBarMeta.setAttribute('name', 'apple-mobile-web-app-status-bar-style');
+        statusBarMeta.setAttribute('content', currentTheme.statusBar);
+        document.head.appendChild(statusBarMeta);
+      }
+
+      console.log(`Updated mobile theme: ${currentTheme.themeColor} (${theme})`);
+    };
+
+    updateMobileThemeColor();
     
     // Store in localStorage for persistence
     localStorage.setItem('theme', theme);
