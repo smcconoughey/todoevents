@@ -40,7 +40,7 @@ export const DialogContent = ({ children, className = "", "aria-describedby": ar
 
   return (
     <div 
-      className={`bg-themed-surface rounded-lg shadow-xl max-h-[90vh] overflow-y-auto w-[90vw] max-w-[500px] mx-auto ${className}`}
+      className={`bg-themed-surface border border-themed rounded-lg shadow-xl max-h-[90vh] overflow-y-auto w-[90vw] max-w-[500px] mx-auto ${className}`}
       role="dialog"
       aria-modal="true"
       aria-describedby={descriptionId}

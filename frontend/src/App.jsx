@@ -117,7 +117,7 @@ function App() {
             <h2 className="text-2xl font-display font-bold text-themed-primary">todo-events</h2>
             <p className="text-lg font-body text-themed-secondary">Find local events wherever you are.</p>
             <div className="space-y-2">
-              <div className="w-48 mx-auto bg-neutral-800 rounded-full h-2">
+              <div className="w-48 mx-auto bg-themed-surface-hover rounded-full h-2">
                 <div className="bg-spark-yellow h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
               </div>
               <p className="font-body text-themed-secondary">Initializing Google Maps API</p>

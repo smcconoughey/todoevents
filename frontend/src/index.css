@@ -832,6 +832,11 @@ body {
   border-radius: 8px !important;
 }
 
+.bg-themed-overlay {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
 .border-themed {
   border-color: var(--border-color) !important;
   border-radius: 8px !important;

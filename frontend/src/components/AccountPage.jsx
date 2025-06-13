@@ -395,7 +395,7 @@ const AccountPage = () => {
 
       {/* Event Analytics Modal for Premium Users */}
       {selectedEvent && isPremium && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-themed-overlay flex items-center justify-center p-4 z-50">
           <div className="bg-themed-surface rounded-lg border border-themed max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-themed flex items-center justify-between">
               <h3 className="text-lg font-semibold text-themed-primary">{selectedEvent.title} - Analytics</h3>
