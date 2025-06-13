@@ -1275,24 +1275,68 @@ const EventMap = ({
     
     return true;
   }).sort((a, b) => {
-    // If address is set, sort by distance (closest first)
+    // Calculate priority scores for both events
+    const calculatePriorityScore = (event) => {
+      let score = 0;
+      
+      // Distance component (when location is set)
+      if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+        const distance = calculateDistance(
+          selectedLocation.lat,
+          selectedLocation.lng,
+          event.lat,
+          event.lng
+        );
+        // Closeness factor: inverse of distance (closer = higher score)
+        // Add 1 to avoid division by zero, normalize to reasonable range
+        const closeness = 1 / (distance + 0.1);
+        score += closeness * 100; // Scale up for better weighting
+      }
+      
+      // Verification multiplier (2x boost for verified events)
+      const verificationMultiplier = event.verified ? 2 : 1;
+      score *= verificationMultiplier;
+      
+      // Interest count component (0.1 * interest_count)
+      const interestCount = event.interest_count || 0;
+      score += 0.1 * interestCount;
+      
+      return score;
+    };
+    
+    // If address is set, use priority scoring
     if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
-      const distanceA = calculateDistance(
-        selectedLocation.lat,
-        selectedLocation.lng,
-        a.lat,
-        a.lng
-      );
-      const distanceB = calculateDistance(
-        selectedLocation.lat,
-        selectedLocation.lng,
-        b.lat,
-        b.lng
-      );
-      return distanceA - distanceB;
+      const scoreA = calculatePriorityScore(a);
+      const scoreB = calculatePriorityScore(b);
+      
+      // Higher score = higher priority (sort descending)
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
+      
+      // Fallback to date if scores are equal
+      const dateA = new Date(`${a.date} ${a.start_time}`);
+      const dateB = new Date(`${b.date} ${b.start_time}`);
+      return dateA - dateB;
     }
     
-    // Otherwise, sort by date and time (earliest first)
+    // When no location is set, prioritize verified events, then by interest, then by date
+    const verifiedA = a.verified ? 1 : 0;
+    const verifiedB = b.verified ? 1 : 0;
+    
+    if (verifiedB !== verifiedA) {
+      return verifiedB - verifiedA; // Verified events first
+    }
+    
+    // Then by interest count
+    const interestA = a.interest_count || 0;
+    const interestB = b.interest_count || 0;
+    
+    if (interestB !== interestA) {
+      return interestB - interestA; // Higher interest first
+    }
+    
+    // Finally by date and time (earliest first)
     const dateA = new Date(`${a.date} ${a.start_time}`);
     const dateB = new Date(`${b.date} ${b.start_time}`);
     return dateA - dateB;
