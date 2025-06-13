@@ -9701,12 +9701,24 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             
             if not current_period_end:
                 try:
-                    # Use billing_cycle_anchor if available
-                    billing_anchor_ts = getattr(sub, 'billing_cycle_anchor', None)
-                    if billing_anchor_ts:
-                        current_period_end = datetime.fromtimestamp(billing_anchor_ts).isoformat()
-                except (ValueError, TypeError, OSError, AttributeError):
-                    pass
+                    # Try to get billing period from latest invoice
+                    latest_invoice_id = getattr(sub, 'latest_invoice', None)
+                    if latest_invoice_id:
+                        logger.info(f"Fetching latest invoice: {latest_invoice_id}")
+                        invoice = stripe.Invoice.retrieve(latest_invoice_id)
+                        if invoice:
+                            current_period_start = datetime.fromtimestamp(invoice.period_start).isoformat() if hasattr(invoice, 'period_start') else current_period_start
+                            current_period_end = datetime.fromtimestamp(invoice.period_end).isoformat() if hasattr(invoice, 'period_end') else current_period_end
+                            logger.info(f"Got billing period from invoice: {current_period_start} to {current_period_end}")
+                except Exception as invoice_error:
+                    logger.warning(f"Could not fetch invoice data: {invoice_error}")
+                    # Fallback to billing_cycle_anchor if available
+                    try:
+                        billing_anchor_ts = getattr(sub, 'billing_cycle_anchor', None)
+                        if billing_anchor_ts:
+                            current_period_end = datetime.fromtimestamp(billing_anchor_ts).isoformat()
+                    except (ValueError, TypeError, OSError, AttributeError):
+                        pass
                 
             try:
                 canceled_at_ts = getattr(sub, 'canceled_at', None)
@@ -9739,6 +9751,7 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             
             # Log what we found for debugging
             logger.info(f"Subscription pricing: amount={amount}, currency={currency}")
+            logger.info(f"Final billing period: start={current_period_start}, end={current_period_end}")
             
             subscription_info.append({
                 "id": getattr(sub, 'id', 'unknown'),
