@@ -7,7 +7,6 @@ import os
 import sys
 import time
 import logging
-from contextlib import contextmanager
 
 # Add current directory to path to import backend modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -112,10 +111,11 @@ def optimize_database():
             
             conn.commit()
             logger.info("✅ Database optimization completed successfully!")
-            
+            return True
+
     except Exception as e:
         logger.error(f"❌ Database optimization failed: {str(e)}")
-        raise
+        return False
 
 def test_performance():
     """Test database query performance after optimization"""
