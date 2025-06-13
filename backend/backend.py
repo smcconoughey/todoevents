@@ -14435,4 +14435,67 @@ async def verify_premium_events_simple():
 @app.get("/users/me", response_model=UserResponse)
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     """Get current user information"""
-    return current_user 
+    return current_user
+
+@app.post("/debug/fix-privacy-table")
+async def fix_privacy_table():
+    """Fix privacy requests table creation with better error handling"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            results = []
+            
+            # Create privacy_requests table with IF NOT EXISTS
+            try:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS privacy_requests (
+                        id SERIAL PRIMARY KEY,
+                        request_type VARCHAR(50) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
+                        full_name VARCHAR(255),
+                        details TEXT,
+                        status VARCHAR(20) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP NULL,
+                        admin_notes TEXT
+                    )
+                """)
+                results.append("✅ Privacy requests table created/verified")
+                
+                # Test if we can insert a sample record
+                cursor.execute("""
+                    INSERT INTO privacy_requests (request_type, email, full_name, details, status)
+                    VALUES ('access', 'test@example.com', 'Test User', 'Test privacy request', 'pending')
+                    ON CONFLICT DO NOTHING
+                """)
+                results.append("✅ Sample record inserted successfully")
+                
+                # Count existing records
+                cursor.execute("SELECT COUNT(*) FROM privacy_requests")
+                count = cursor.fetchone()
+                record_count = count[0] if isinstance(count, (tuple, list)) else count
+                results.append(f"ℹ️ Current record count: {record_count}")
+                
+                conn.commit()
+                
+                return {
+                    "success": True,
+                    "message": "Privacy requests table fixed successfully",
+                    "results": results
+                }
+                
+            except Exception as e:
+                conn.rollback()
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "message": "Error creating privacy requests table",
+                    "results": results
+                }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Database connection error"
+        } 
