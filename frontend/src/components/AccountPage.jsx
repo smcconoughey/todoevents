@@ -33,6 +33,7 @@ const AccountPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState('events');
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -43,13 +44,20 @@ const AccountPage = () => {
     // Handle Stripe success/cancel redirects
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
-      // Payment was successful, refresh user data to get updated premium status
+      setPaymentStatus('success');
+      // Clean up URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      // Refresh user data after a short delay
       setTimeout(() => {
-        window.location.reload(); // Refresh to get updated user status
+        fetchUserData();
       }, 1000);
     } else if (urlParams.get('cancelled') === 'true') {
-      // Payment was cancelled, show message
-      console.log('Payment cancelled by user');
+      setPaymentStatus('cancelled');
+      // Clean up URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     }
     
     fetchUserData();
@@ -122,6 +130,12 @@ const AccountPage = () => {
   const handleUpgradeToPremium = async () => {
     setUpgradeLoading(true);
     try {
+      // First, test if Stripe config is available
+      const configResponse = await fetch(`${API_URL}/stripe/config`);
+      if (!configResponse.ok) {
+        throw new Error('Stripe configuration not available');
+      }
+      
       const response = await fetch(`${API_URL}/stripe/create-checkout-session`, {
         method: 'POST',
         headers: {
@@ -130,16 +144,33 @@ const AccountPage = () => {
         }
       });
 
-      if (response.ok) {
-        const { checkout_url } = await response.json();
-        // Redirect to Stripe checkout
-        window.location.href = checkout_url;
-      } else {
-        throw new Error('Failed to create checkout session');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: Failed to create checkout session`);
       }
+
+      const { checkout_url } = await response.json();
+      
+      if (!checkout_url) {
+        throw new Error('No checkout URL received from server');
+      }
+      
+      console.log('✅ Stripe checkout session created, redirecting...');
+      // Redirect to Stripe checkout
+      window.location.href = checkout_url;
+      
     } catch (error) {
       console.error('Error upgrading to premium:', error);
-      alert('Sorry, there was an error processing your upgrade. Please try again.');
+      
+      let errorMessage = 'Sorry, there was an error processing your upgrade. Please try again.';
+      
+      if (error.message.includes('configuration not available')) {
+        errorMessage = 'Payment system is not configured yet. Please contact support.';
+      } else if (error.message.includes('Failed to create checkout session')) {
+        errorMessage = 'Unable to create payment session. Please check your connection and try again.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setUpgradeLoading(false);
     }
@@ -164,6 +195,39 @@ const AccountPage = () => {
 
   return (
     <div className="min-h-screen bg-themed-background">
+      {/* Payment Status Messages */}
+      {paymentStatus === 'success' && (
+        <div className="bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 p-4 mb-4 mx-4 mt-4 rounded-lg">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Payment Successful!</span>
+          </div>
+          <p className="text-sm mt-1">Welcome to TodoEvents Premium! Your account has been upgraded and you now have access to all premium features.</p>
+          <button 
+            onClick={() => setPaymentStatus(null)}
+            className="text-sm underline mt-2 hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      
+      {paymentStatus === 'cancelled' && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-700 dark:text-yellow-400 p-4 mb-4 mx-4 mt-4 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            <span className="font-medium">Payment Cancelled</span>
+          </div>
+          <p className="text-sm mt-1">No worries! You can upgrade to premium anytime. Your current account and data remain unchanged.</p>
+          <button 
+            onClick={() => setPaymentStatus(null)}
+            className="text-sm underline mt-2 hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-themed-surface border-b border-themed">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
@@ -449,6 +513,23 @@ const AccountPage = () => {
                     <p className="text-sm text-themed-secondary mt-3">
                       Secure payment powered by Stripe • Cancel anytime
                     </p>
+                  </div>
+
+                  {/* Testing Section */}
+                  <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">🧪 Testing Mode</h3>
+                    <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                      <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
+                      <p><strong>Expiry:</strong> Any future date (e.g., 12/34)</p>
+                      <p><strong>CVC:</strong> Any 3 digits (e.g., 123)</p>
+                      <p><strong>ZIP:</strong> Any valid ZIP code</p>
+                    </div>
+                    <div className="mt-4 p-3 bg-white/50 dark:bg-white/10 rounded border">
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        💡 This is running in Stripe test mode. No real charges will be made. 
+                        Use the test card above to simulate a successful payment.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
