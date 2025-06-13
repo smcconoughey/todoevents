@@ -9697,8 +9697,8 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                 pass
             
             subscription_info.append({
-                "id": sub.id,
-                "status": sub.status,
+                "id": getattr(sub, 'id', 'unknown'),
+                "status": getattr(sub, 'status', 'unknown'),
                 "current_period_start": current_period_start,
                 "current_period_end": current_period_end,
                 "cancel_at_period_end": getattr(sub, 'cancel_at_period_end', False),
