@@ -9663,15 +9663,42 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
         
         subscription_info = []
         for sub in subscriptions.data:
+            # Safely handle timestamp conversions
+            try:
+                current_period_start = datetime.fromtimestamp(sub.current_period_start).isoformat() if sub.current_period_start else None
+            except (ValueError, TypeError, OSError):
+                current_period_start = None
+                
+            try:
+                current_period_end = datetime.fromtimestamp(sub.current_period_end).isoformat() if sub.current_period_end else None
+            except (ValueError, TypeError, OSError):
+                current_period_end = None
+                
+            try:
+                canceled_at = datetime.fromtimestamp(sub.canceled_at).isoformat() if sub.canceled_at else None
+            except (ValueError, TypeError, OSError):
+                canceled_at = None
+            
+            # Safely get price information
+            amount = 0
+            currency = "usd"
+            try:
+                if hasattr(sub, 'items') and sub.items and sub.items.data:
+                    if hasattr(sub.items.data[0], 'price') and sub.items.data[0].price:
+                        amount = getattr(sub.items.data[0].price, 'unit_amount', 0) or 0
+                        currency = getattr(sub.items.data[0].price, 'currency', 'usd') or 'usd'
+            except (AttributeError, IndexError):
+                pass
+            
             subscription_info.append({
                 "id": sub.id,
                 "status": sub.status,
-                "current_period_start": datetime.fromtimestamp(sub.current_period_start).isoformat(),
-                "current_period_end": datetime.fromtimestamp(sub.current_period_end).isoformat(),
-                "cancel_at_period_end": sub.cancel_at_period_end,
-                "canceled_at": datetime.fromtimestamp(sub.canceled_at).isoformat() if sub.canceled_at else None,
-                "amount": sub.items.data[0].price.unit_amount if sub.items.data else 0,
-                "currency": sub.items.data[0].price.currency if sub.items.data else "usd"
+                "current_period_start": current_period_start,
+                "current_period_end": current_period_end,
+                "cancel_at_period_end": getattr(sub, 'cancel_at_period_end', False),
+                "canceled_at": canceled_at,
+                "amount": amount,
+                "currency": currency
             })
         
         return {
@@ -9684,7 +9711,8 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
         
     except Exception as e:
         logger.error(f"Error getting subscription status: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get subscription status")
+        logger.error(f"Subscription status error traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to get subscription status: {str(e)}")
 
 @app.get("/test-webhook")
 async def test_webhook():
