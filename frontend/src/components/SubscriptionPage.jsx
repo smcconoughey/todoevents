@@ -300,7 +300,7 @@ const SubscriptionPage = () => {
                       </Button>
                     </div>
                     <p className="text-xs text-themed-secondary">
-                      <strong>Cancel at Period End:</strong> Keep access until {formatDate(sub.current_period_end)}.<br className="hidden sm:block"/>
+                      <strong>Cancel at Period End:</strong> Keep access until {formatDate(sub.current_period_start)}.<br className="hidden sm:block"/>
                       <strong>Cancel Immediately:</strong> Lose access right away, no refund for current period.
                     </p>
                   </div>
