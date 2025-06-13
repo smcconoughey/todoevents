@@ -13775,46 +13775,82 @@ async def list_privacy_requests(current_user: dict = Depends(get_current_user)):
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # First check if table exists and get all columns
-            if IS_PRODUCTION and DB_URL:
-                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'privacy_requests'")
-                columns = [row[0] for row in cursor.fetchall()]
-            else:
-                cursor.execute("PRAGMA table_info(privacy_requests)")
-                columns = [row[1] for row in cursor.fetchall()]
-            
-            if not columns:
-                return []  # Table doesn't exist, return empty list
-            
-            # Build query based on available columns
-            details_col = "details" if "details" in columns else ("verification_info" if "verification_info" in columns else "NULL as details")
-            completed_col = "completed_at" if "completed_at" in columns else ("admin_notes" if "admin_notes" in columns else "NULL as completed_at")
-            
-            cursor.execute(f"""
-                SELECT id, request_type, email, 
-                       COALESCE(full_name, '') as full_name, 
-                       {details_col}, 
-                       status, 
-                       created_at, 
-                       {completed_col}
-                FROM privacy_requests 
-                ORDER BY created_at DESC
-            """)
-            
-            requests = cursor.fetchall()
-            
-            return [
-                {
-                    "id": row[0],
-                    "request_type": row[1],
-                    "email": row[2],
-                    "full_name": row[3] if row[3] else "",
-                    "details": row[4] if row[4] else "",
-                    "status": row[5],
-                    "created_at": row[6],
-                    "completed_at": row[7] if row[7] else None
-                } for row in requests
-            ]
+            # Simplified approach: directly query without complex column detection
+            try:
+                cursor.execute("""
+                    SELECT id, request_type, email, 
+                           COALESCE(full_name, '') as full_name, 
+                           COALESCE(details, '') as details, 
+                           status, 
+                           created_at, 
+                           completed_at
+                    FROM privacy_requests 
+                    ORDER BY created_at DESC
+                """)
+                
+                requests = cursor.fetchall()
+                
+                result = []
+                for row in requests:
+                    # Handle both tuple and dict-like results
+                    if isinstance(row, (tuple, list)):
+                        result.append({
+                            "id": row[0],
+                            "request_type": row[1],
+                            "email": row[2],
+                            "full_name": row[3] if row[3] else "",
+                            "details": row[4] if row[4] else "",
+                            "status": row[5],
+                            "created_at": row[6],
+                            "completed_at": row[7] if row[7] else None
+                        })
+                    else:
+                        # If it's a dict-like object
+                        result.append({
+                            "id": row.get('id'),
+                            "request_type": row.get('request_type'),
+                            "email": row.get('email'),
+                            "full_name": row.get('full_name', ''),
+                            "details": row.get('details', ''),
+                            "status": row.get('status'),
+                            "created_at": row.get('created_at'),
+                            "completed_at": row.get('completed_at')
+                        })
+                
+                return result
+                
+            except Exception as query_error:
+                # If the main query fails, try alternative column names
+                try:
+                    cursor.execute("""
+                        SELECT id, request_type, email, 
+                               COALESCE(full_name, '') as full_name, 
+                               COALESCE(verification_info, details, '') as details, 
+                               status, 
+                               created_at, 
+                               COALESCE(admin_notes, completed_at) as completed_at
+                        FROM privacy_requests 
+                        ORDER BY created_at DESC
+                    """)
+                    
+                    requests = cursor.fetchall()
+                    
+                    return [
+                        {
+                            "id": row[0] if isinstance(row, (tuple, list)) else row.get('id'),
+                            "request_type": row[1] if isinstance(row, (tuple, list)) else row.get('request_type'),
+                            "email": row[2] if isinstance(row, (tuple, list)) else row.get('email'),
+                            "full_name": (row[3] if isinstance(row, (tuple, list)) else row.get('full_name', '')) or "",
+                            "details": (row[4] if isinstance(row, (tuple, list)) else row.get('details', '')) or "",
+                            "status": row[5] if isinstance(row, (tuple, list)) else row.get('status'),
+                            "created_at": row[6] if isinstance(row, (tuple, list)) else row.get('created_at'),
+                            "completed_at": (row[7] if isinstance(row, (tuple, list)) else row.get('completed_at')) or None
+                        } for row in requests
+                    ]
+                    
+                except Exception as alt_error:
+                    logger.error(f"Both privacy request queries failed: {query_error}, {alt_error}")
+                    return []
             
     except Exception as e:
         logger.error(f"Error listing privacy requests: {e}")
