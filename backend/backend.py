@@ -9577,6 +9577,53 @@ async def debug_user_status_simple(user_id: int):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/admin/quick-upgrade-user-3")
+async def quick_upgrade_user_3():
+    """Quick upgrade for user 3 since payment was successful but webhook may have been missed"""
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check current status
+            cursor.execute(f"SELECT id, email, role FROM users WHERE id = {placeholder}", (3,))
+            user = cursor.fetchone()
+            
+            if not user:
+                return {"error": "User 3 not found"}
+            
+            if user['role'] == 'premium':
+                return {"message": "User 3 is already premium", "role": user['role']}
+            
+            # Calculate expiration date (1 month from now) using UTC
+            expires_at = datetime.utcnow() + timedelta(days=30)
+            
+            # Update user to premium
+            cursor.execute(f"""
+                UPDATE users 
+                SET role = 'premium', 
+                    premium_expires_at = {placeholder}
+                WHERE id = {placeholder}
+            """, (expires_at, 3))
+            
+            rows_affected = cursor.rowcount
+            conn.commit()
+            
+            logger.info(f"✅ Manually upgraded user 3 ({user['email']}) to premium due to webhook processing issues")
+            
+            return {
+                "success": True,
+                "message": f"User 3 ({user['email']}) upgraded to premium",
+                "previous_role": user['role'],
+                "new_role": "premium",
+                "expires_at": expires_at.isoformat(),
+                "rows_affected": rows_affected
+            }
+            
+    except Exception as e:
+        logger.error(f"Error upgrading user 3: {str(e)}")
+        return {"error": str(e)}
+
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events"""
