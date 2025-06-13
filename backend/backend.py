@@ -10835,6 +10835,26 @@ async def create_tracking_tables():
             cursor.execute("UPDATE events SET interest_count = 0 WHERE interest_count IS NULL")
             cursor.execute("UPDATE events SET view_count = 0 WHERE view_count IS NULL")
             
+            # Add premium columns to users table if they don't exist
+            premium_columns_added = []
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_expires_at TIMESTAMP")
+                premium_columns_added.append("premium_expires_at")
+            except Exception as e:
+                premium_columns_added.append(f"premium_expires_at: {str(e)}")
+            
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_granted_by INTEGER")
+                premium_columns_added.append("premium_granted_by")
+            except Exception as e:
+                premium_columns_added.append(f"premium_granted_by: {str(e)}")
+            
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_invited BOOLEAN DEFAULT FALSE")
+                premium_columns_added.append("premium_invited")
+            except Exception as e:
+                premium_columns_added.append(f"premium_invited: {str(e)}")
+            
             conn.commit()
             
             # Test privacy request insertion
@@ -10865,7 +10885,8 @@ async def create_tracking_tables():
                 "message": "All tables created successfully",
                 "tables_created": ["event_interests", "event_views", "page_visits", "privacy_requests"],
                 "events_updated": True,
-                "privacy_test_insert": test_request_id
+                "privacy_test_insert": test_request_id,
+                "premium_columns_added": premium_columns_added
             }
             
     except Exception as e:
