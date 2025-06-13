@@ -9712,13 +9712,21 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                             logger.info(f"Got billing period from invoice: {current_period_start} to {current_period_end}")
                 except Exception as invoice_error:
                     logger.warning(f"Could not fetch invoice data: {invoice_error}")
-                    # Fallback to billing_cycle_anchor if available
+                    # Try to get upcoming invoice for next billing date
                     try:
-                        billing_anchor_ts = getattr(sub, 'billing_cycle_anchor', None)
-                        if billing_anchor_ts:
-                            current_period_end = datetime.fromtimestamp(billing_anchor_ts).isoformat()
-                    except (ValueError, TypeError, OSError, AttributeError):
-                        pass
+                        upcoming = stripe.Invoice.upcoming(customer=customer.id)
+                        if upcoming:
+                            current_period_end = datetime.fromtimestamp(upcoming.period_end).isoformat() if hasattr(upcoming, 'period_end') else current_period_end
+                            logger.info(f"Got next billing date from upcoming invoice: {current_period_end}")
+                    except Exception as upcoming_error:
+                        logger.warning(f"Could not fetch upcoming invoice: {upcoming_error}")
+                        # Final fallback to billing_cycle_anchor if available
+                        try:
+                            billing_anchor_ts = getattr(sub, 'billing_cycle_anchor', None)
+                            if billing_anchor_ts:
+                                current_period_end = datetime.fromtimestamp(billing_anchor_ts).isoformat()
+                        except (ValueError, TypeError, OSError, AttributeError):
+                            pass
                 
             try:
                 canceled_at_ts = getattr(sub, 'canceled_at', None)
