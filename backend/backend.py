@@ -9666,18 +9666,47 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             # Debug: Log subscription object structure
             logger.info(f"Processing subscription: {sub.id}, status: {sub.status}")
             logger.info(f"Available subscription attributes: {list(sub.keys()) if hasattr(sub, 'keys') else 'No keys method'}")
-            # Safely handle timestamp conversions using getattr to avoid AttributeError
+            # Handle different subscription timestamp fields based on what's available
+            current_period_start = None
+            current_period_end = None
+            
+            # Try current_period_start/end first (for active recurring subscriptions)
             try:
                 current_period_start_ts = getattr(sub, 'current_period_start', None)
-                current_period_start = datetime.fromtimestamp(current_period_start_ts).isoformat() if current_period_start_ts else None
+                if current_period_start_ts:
+                    current_period_start = datetime.fromtimestamp(current_period_start_ts).isoformat()
             except (ValueError, TypeError, OSError, AttributeError):
-                current_period_start = None
+                pass
                 
             try:
                 current_period_end_ts = getattr(sub, 'current_period_end', None)
-                current_period_end = datetime.fromtimestamp(current_period_end_ts).isoformat() if current_period_end_ts else None
+                if current_period_end_ts:
+                    current_period_end = datetime.fromtimestamp(current_period_end_ts).isoformat()
             except (ValueError, TypeError, OSError, AttributeError):
-                current_period_end = None
+                pass
+            
+            # Fallback to other available timestamp fields
+            if not current_period_start:
+                try:
+                    start_date_ts = getattr(sub, 'start_date', None)
+                    if start_date_ts:
+                        current_period_start = datetime.fromtimestamp(start_date_ts).isoformat()
+                except (ValueError, TypeError, OSError, AttributeError):
+                    try:
+                        created_ts = getattr(sub, 'created', None)
+                        if created_ts:
+                            current_period_start = datetime.fromtimestamp(created_ts).isoformat()
+                    except (ValueError, TypeError, OSError, AttributeError):
+                        pass
+            
+            if not current_period_end:
+                try:
+                    # Use billing_cycle_anchor if available
+                    billing_anchor_ts = getattr(sub, 'billing_cycle_anchor', None)
+                    if billing_anchor_ts:
+                        current_period_end = datetime.fromtimestamp(billing_anchor_ts).isoformat()
+                except (ValueError, TypeError, OSError, AttributeError):
+                    pass
                 
             try:
                 canceled_at_ts = getattr(sub, 'canceled_at', None)
@@ -9685,9 +9714,11 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             except (ValueError, TypeError, OSError, AttributeError):
                 canceled_at = None
             
-            # Safely get price information
+            # Safely get price information from multiple possible sources
             amount = 0
             currency = "usd"
+            
+            # Try items.data[0].price first (newer Stripe API)
             try:
                 if hasattr(sub, 'items') and sub.items and sub.items.data:
                     if hasattr(sub.items.data[0], 'price') and sub.items.data[0].price:
@@ -9695,6 +9726,19 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                         currency = getattr(sub.items.data[0].price, 'currency', 'usd') or 'usd'
             except (AttributeError, IndexError):
                 pass
+            
+            # Fallback to plan object (older Stripe API)
+            if amount == 0:
+                try:
+                    plan = getattr(sub, 'plan', None)
+                    if plan:
+                        amount = getattr(plan, 'amount', 0) or 0
+                        currency = getattr(plan, 'currency', 'usd') or 'usd'
+                except (AttributeError, TypeError):
+                    pass
+            
+            # Log what we found for debugging
+            logger.info(f"Subscription pricing: amount={amount}, currency={currency}")
             
             subscription_info.append({
                 "id": getattr(sub, 'id', 'unknown'),
