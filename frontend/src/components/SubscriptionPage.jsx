@@ -245,7 +245,7 @@ const SubscriptionPage = () => {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs sm:text-sm text-themed-secondary">Next Billing Date</p>
                       <p className="font-medium text-themed-primary text-sm sm:text-base">
-                        {formatDate(sub.current_period_end)}
+                        {formatDate(sub.current_period_start)}
                       </p>
                     </div>
                   </div>
