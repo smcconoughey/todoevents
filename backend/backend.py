@@ -14494,6 +14494,81 @@ async def fix_privacy_table():
                 }
             
     except Exception as e:
+                 return {
+             "success": False,
+             "error": str(e),
+             "message": "Database connection error"
+         }
+
+@app.get("/debug/test-privacy-requests-direct")
+async def test_privacy_requests_direct():
+    """Test privacy requests table directly without authentication"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            results = {
+                "table_check": None,
+                "count_check": None,
+                "sample_insert": None,
+                "list_requests": None
+            }
+            
+            # Test 1: Check if table exists using direct SQL
+            try:
+                cursor.execute("SELECT to_regclass('privacy_requests')")
+                table_check = cursor.fetchone()
+                results["table_check"] = {
+                    "exists": table_check[0] is not None if isinstance(table_check, (tuple, list)) else table_check is not None,
+                    "result": table_check[0] if isinstance(table_check, (tuple, list)) else table_check
+                }
+            except Exception as e:
+                results["table_check"] = {"error": str(e)}
+            
+            # Test 2: Try to count records
+            try:
+                cursor.execute("SELECT COUNT(*) FROM privacy_requests")
+                count = cursor.fetchone()
+                results["count_check"] = {
+                    "count": count[0] if isinstance(count, (tuple, list)) else count
+                }
+            except Exception as e:
+                results["count_check"] = {"error": str(e)}
+            
+            # Test 3: Try to insert a sample record
+            try:
+                cursor.execute("""
+                    INSERT INTO privacy_requests (request_type, email, full_name, details, status)
+                    VALUES ('access', 'debug@example.com', 'Debug User', 'Debug request', 'pending')
+                    RETURNING id
+                """)
+                insert_result = cursor.fetchone()
+                conn.commit()
+                results["sample_insert"] = {
+                    "success": True,
+                    "id": insert_result[0] if isinstance(insert_result, (tuple, list)) else insert_result
+                }
+            except Exception as e:
+                results["sample_insert"] = {"error": str(e)}
+            
+            # Test 4: Try to list all requests
+            try:
+                cursor.execute("SELECT * FROM privacy_requests ORDER BY created_at DESC")
+                requests = cursor.fetchall()
+                results["list_requests"] = {
+                    "count": len(requests),
+                    "requests": [dict(zip([desc[0] for desc in cursor.description], row)) for row in requests] if requests else []
+                }
+            except Exception as e:
+                results["list_requests"] = {"error": str(e)}
+            
+            return {
+                "success": True,
+                "message": "Privacy requests test completed",
+                "results": results
+            }
+            
+    except Exception as e:
         return {
             "success": False,
             "error": str(e),
