@@ -9754,7 +9754,7 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                     # Try to get upcoming invoice preview for most accurate next billing date
                     logger.info(f"Attempting to fetch upcoming invoice preview for customer: {customer.id}")
                     # Use the correct Stripe API call for upcoming invoice preview
-                    upcoming = stripe.Invoice.create_preview(customer=customer.id)
+                    upcoming = stripe.Invoice.create_preview(customer=customer.id, subscription=sub.id)
                     if upcoming:
                         # Use upcoming invoice for the most accurate next billing information
                         if hasattr(upcoming, 'lines') and upcoming.lines and upcoming.lines.data:
