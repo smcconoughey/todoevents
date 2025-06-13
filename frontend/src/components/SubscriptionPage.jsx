@@ -37,10 +37,13 @@ const SubscriptionPage = () => {
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Subscription status error:', response.status, errorText);
         throw new Error(`HTTP ${response.status}: Failed to load subscription data`);
       }
       
       const data = await response.json();
+      console.log('Subscription data received:', data);
       setSubscriptionData(data);
     } catch (err) {
       setError('Failed to load subscription data');
