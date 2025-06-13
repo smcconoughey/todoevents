@@ -104,16 +104,28 @@ const trackPageVisit = async (pageType, pagePath = window.location.pathname) => 
 
 const normalizeDate = (date) => {
   if (!date) return null;
+  
   // Parse date as local date to avoid timezone issues
   if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    // For YYYY-MM-DD format, parse as local date
+    // For YYYY-MM-DD format, parse as local date (this is how HTML date inputs store dates)
     const [year, month, day] = date.split('-').map(Number);
-    return new Date(year, month - 1, day, 12, 0, 0, 0);
+    // Create date at start of day in local timezone to avoid timezone shifts
+    return new Date(year, month - 1, day, 0, 0, 0, 0);
   }
-  // Create date at noon to avoid timezone issues
-  const normalized = new Date(date);
-  normalized.setHours(12, 0, 0, 0);
-  return normalized;
+  
+  // If it's already a Date object, normalize it to start of day
+  if (date instanceof Date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  }
+  
+  // For other string formats, try to parse and normalize
+  const parsed = new Date(date);
+  if (isNaN(parsed.getTime())) {
+    console.warn('Invalid date:', date);
+    return null;
+  }
+  
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
 };
 
 const isDateInRange = (dateStr, range) => {
@@ -121,13 +133,37 @@ const isDateInRange = (dateStr, range) => {
 
   // Parse the event date string and normalize it
   const eventDate = normalizeDate(dateStr);
+  if (!eventDate) return false; // Invalid date should be filtered out
   
   if (range.from) {
     const fromDate = normalizeDate(range.from);
+    if (!fromDate) return false;
+    
     if (range.to) {
       const toDate = normalizeDate(range.to);
-      return eventDate >= fromDate && eventDate <= toDate;
+      if (!toDate) return false;
+      
+      // For range filtering, check if event date falls within the range (inclusive)
+      const isInRange = eventDate >= fromDate && eventDate <= toDate;
+      
+      // Debug logging for weekend filter
+      if (range.from.getDay() === 6 || range.to.getDay() === 0) { // Saturday or Sunday
+        console.log('Date range check:', {
+          eventDateStr: dateStr,
+          eventDate: eventDate.toLocaleDateString(),
+          eventTime: eventDate.getTime(),
+          fromDate: fromDate.toLocaleDateString(),
+          fromTime: fromDate.getTime(),
+          toDate: toDate.toLocaleDateString(),
+          toTime: toDate.getTime(),
+          isInRange: isInRange
+        });
+      }
+      
+      return isInRange;
     }
+    
+    // For single date filtering, check if it's the same day
     return eventDate.getTime() === fromDate.getTime();
   }
   return true;
@@ -981,36 +1017,54 @@ const EventMap = ({
       
       // Convert timeFilter to date for weekend/week filters
       if (filters.timeFilter === 'this-weekend') {
-        // Set date range for this weekend
+        // Set date range for this weekend - use local dates to avoid timezone issues
         const today = new Date();
-        const dayOfWeek = today.getDay();
-        const saturday = new Date(today);
-        saturday.setDate(today.getDate() + (6 - dayOfWeek));
-        const sunday = new Date(saturday);
-        sunday.setDate(saturday.getDate() + 1);
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        
+        // Calculate Saturday of this week
+        const daysUntilSaturday = (6 - dayOfWeek) % 7;
+        const saturday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysUntilSaturday);
+        
+        // Calculate Sunday of this week (if today is Sunday, use today; otherwise, use next Sunday)
+        const sunday = dayOfWeek === 0 
+          ? new Date(today.getFullYear(), today.getMonth(), today.getDate())
+          : new Date(saturday.getFullYear(), saturday.getMonth(), saturday.getDate() + 1);
+        
+        console.log('This weekend filter:', {
+          today: today.toLocaleDateString(),
+          dayOfWeek: dayOfWeek,
+          saturday: saturday.toLocaleDateString(),
+          sunday: sunday.toLocaleDateString(),
+          saturdayTime: saturday.getTime(),
+          sundayTime: sunday.getTime()
+        });
         
         setSelectedDate({
           from: saturday,
           to: sunday
         });
       } else if (filters.timeFilter === 'this-week') {
-        // Set date range for this week
+        // Set date range for this week - Monday to Sunday
         const today = new Date();
         const dayOfWeek = today.getDay();
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - dayOfWeek + 1);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
+        
+        // Calculate Monday of this week
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Handle Sunday as day 0
+        const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysFromMonday);
+        
+        // Calculate Sunday of this week
+        const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
         
         setSelectedDate({
           from: monday,
           to: sunday
         });
       } else if (filters.timeFilter === 'today') {
-        setSelectedDate(new Date());
+        const today = new Date();
+        setSelectedDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
       } else if (filters.timeFilter === 'tomorrow') {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const today = new Date();
+        const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
         setSelectedDate(tomorrow);
       }
     }
