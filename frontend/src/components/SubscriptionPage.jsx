@@ -102,18 +102,38 @@ const SubscriptionPage = () => {
   };
 
   const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    if (!dateStr) return 'Not available';
+    
+    try {
+      const date = new Date(dateStr);
+      // Check if date is valid and not epoch (1970)
+      if (isNaN(date.getTime()) || date.getFullYear() < 1990) {
+        return 'Not available';
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Not available';
+    }
   };
 
   const formatAmount = (amount, currency) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency?.toUpperCase() || 'USD'
-    }).format(amount / 100);
+    if (!amount || amount === 0) {
+      return 'Contact Support'; // For test subscriptions or pricing issues
+    }
+    
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency?.toUpperCase() || 'USD'
+      }).format(amount / 100);
+    } catch (error) {
+      return `${amount / 100} ${currency?.toUpperCase() || 'USD'}`;
+    }
   };
 
   if (!user || (user.role !== 'premium' && user.role !== 'admin')) {
