@@ -36,16 +36,23 @@ def optimize_database():
                 ("idx_events_category", "CREATE INDEX IF NOT EXISTS idx_events_category ON events(category)"),
                 ("idx_events_date", "CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)"),
                 ("idx_events_location", "CREATE INDEX IF NOT EXISTS idx_events_location ON events(lat, lng)"),
-                
+
                 # Indexes for tracking tables
                 ("idx_event_interests_event_id", "CREATE INDEX IF NOT EXISTS idx_event_interests_event_id ON event_interests(event_id)"),
                 ("idx_event_interests_user_fingerprint", "CREATE INDEX IF NOT EXISTS idx_event_interests_user_fingerprint ON event_interests(user_id, browser_fingerprint)"),
                 ("idx_event_views_event_id", "CREATE INDEX IF NOT EXISTS idx_event_views_event_id ON event_views(event_id)"),
                 ("idx_event_views_user_fingerprint", "CREATE INDEX IF NOT EXISTS idx_event_views_user_fingerprint ON event_views(user_id, browser_fingerprint)"),
-                
-                # Composite indexes for common filter combinations
+
+                # Composite indexes and newer fields
                 ("idx_events_category_date", "CREATE INDEX IF NOT EXISTS idx_events_category_date ON events(category, date, start_time)"),
                 ("idx_events_created_by", "CREATE INDEX IF NOT EXISTS idx_events_created_by ON events(created_by)"),
+                ("idx_events_slug", "CREATE INDEX IF NOT EXISTS idx_events_slug ON events(slug)"),
+                ("idx_events_city_state", "CREATE INDEX IF NOT EXISTS idx_events_city_state ON events(city, state)"),
+                ("idx_events_datetime", "CREATE INDEX IF NOT EXISTS idx_events_datetime ON events(start_datetime, end_datetime)"),
+                ("idx_events_published", "CREATE INDEX IF NOT EXISTS idx_events_published ON events(is_published)"),
+                ("idx_events_price", "CREATE INDEX IF NOT EXISTS idx_events_price ON events(price)"),
+                ("idx_events_updated_at", "CREATE INDEX IF NOT EXISTS idx_events_updated_at ON events(updated_at)") ,
+                ("idx_events_creator_date_time", "CREATE INDEX IF NOT EXISTS idx_events_creator_date_time ON events(created_by, date, start_time)"),
             ]
             
             logger.info("📊 Creating performance indexes...")
