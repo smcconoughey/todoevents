@@ -14500,6 +14500,79 @@ async def fix_privacy_table():
              "message": "Database connection error"
          }
 
+@app.get("/debug/admin-privacy-requests-test")
+async def test_admin_privacy_requests():
+    """Test the admin privacy requests endpoint logic without authentication"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            results = {
+                "column_check": None,
+                "direct_query": None
+            }
+            
+            # Test 1: Check column detection
+            try:
+                if IS_PRODUCTION and DB_URL:
+                    cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'privacy_requests'")
+                    columns_raw = cursor.fetchall()
+                    columns = [row[0] if isinstance(row, (tuple, list)) else row for row in columns_raw]
+                else:
+                    cursor.execute("PRAGMA table_info(privacy_requests)")
+                    columns_raw = cursor.fetchall()
+                    columns = [row[1] if isinstance(row, (tuple, list)) else row for row in columns_raw]
+                
+                results["column_check"] = {
+                    "columns_raw": columns_raw,
+                    "columns_processed": columns,
+                    "has_details": "details" in columns,
+                    "has_completed_at": "completed_at" in columns
+                }
+            except Exception as e:
+                results["column_check"] = {"error": str(e)}
+            
+            # Test 2: Direct query with simple SELECT
+            try:
+                cursor.execute("SELECT id, request_type, email, full_name, details, status, created_at FROM privacy_requests ORDER BY created_at DESC")
+                requests_raw = cursor.fetchall()
+                
+                requests = []
+                for row in requests_raw:
+                    if isinstance(row, (tuple, list)):
+                        requests.append({
+                            "id": row[0],
+                            "request_type": row[1],
+                            "email": row[2],
+                            "full_name": row[3],
+                            "details": row[4],
+                            "status": row[5],
+                            "created_at": row[6]
+                        })
+                    else:
+                        requests.append(dict(row))
+                
+                results["direct_query"] = {
+                    "count": len(requests),
+                    "requests": requests
+                }
+            except Exception as e:
+                results["direct_query"] = {"error": str(e)}
+            
+            return {
+                "success": True,
+                "is_production": IS_PRODUCTION,
+                "db_url": DB_URL is not None,
+                "results": results
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Database connection error"
+        }
+
 @app.get("/debug/test-privacy-requests-direct")
 async def test_privacy_requests_direct():
     """Test privacy requests table directly without authentication"""
