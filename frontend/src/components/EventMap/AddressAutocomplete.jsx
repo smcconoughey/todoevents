@@ -33,6 +33,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPredictions, setShowPredictions] = useState(false);
   const [manualLocation, setManualLocation] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const sessionTokenRef = useRef(null);
@@ -135,12 +136,47 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
   const handleInputChange = (e) => {
     const newValue = e.target.value;
     onChange(newValue);
+    setSelectedIndex(-1); // Reset selection when typing
     
     if (newValue.length >= 2) {
       getPlacePredictions(newValue);
     } else {
       setPredictions([]);
       setShowPredictions(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent form submission
+      
+      if (predictions.length > 0) {
+        // Use selected index if available, otherwise first prediction
+        const predictionToSelect = selectedIndex >= 0 ? predictions[selectedIndex] : predictions[0];
+        console.log('Auto-selecting prediction on Enter:', predictionToSelect.description);
+        handlePredictionSelect(predictionToSelect);
+      } else if (value.length >= 2) {
+        // Show message if user typed something but no predictions available
+        alert('No address suggestions found. Please try a different search term or select from the dropdown when available.');
+      } else {
+        // Show message if input is too short
+        alert('Please enter at least 2 characters to search for an address.');
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (predictions.length > 0) {
+        setSelectedIndex(prev => (prev + 1) % predictions.length);
+        setShowPredictions(true);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (predictions.length > 0) {
+        setSelectedIndex(prev => prev <= 0 ? predictions.length - 1 : prev - 1);
+        setShowPredictions(true);
+      }
+    } else if (e.key === 'Escape') {
+      setShowPredictions(false);
+      setSelectedIndex(-1);
     }
   };
 
@@ -185,6 +221,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       });
       
       setShowPredictions(false);
+      setSelectedIndex(-1);
     } catch (error) {
       console.error("Error handling place selection:", error);
       // Final fallback
@@ -196,6 +233,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       onChange(prediction.description);
       onSelect(locationData);
       setShowPredictions(false);
+      setSelectedIndex(-1);
     }
   };
 
@@ -275,23 +313,23 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
     
     if (!value.trim()) return;
     
-    // Create a simple mock location with a placeholder lat/lng
-    // These coordinates are for the center of the US
-    const defaultLocation = {
-      lat: 39.8283,
-      lng: -98.5795
-    };
-    
-    // Use manual location if set and valid, otherwise use default
-    let finalLocation = defaultLocation;
-    if (manualLocation && isValidCoordinate(manualLocation.lat, manualLocation.lng)) {
-      finalLocation = manualLocation;
+    // Only allow manual submission if we have custom coordinates set
+    // Otherwise, encourage users to select from predictions
+    if (!manualLocation) {
+      if (predictions.length > 0) {
+        // Auto-select the first prediction
+        handlePredictionSelect(predictions[0]);
+      } else {
+        alert('Please select an address from the dropdown suggestions or set custom coordinates first.');
+      }
+      return;
     }
     
+    // Use manual location for custom coordinate submissions
     const locationData = {
       address: value,
-      lat: finalLocation.lat,
-      lng: finalLocation.lng
+      lat: manualLocation.lat,
+      lng: manualLocation.lng
     };
     
     // Call the onSelect callback with our location data
@@ -342,28 +380,35 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
           type="text"
           value={value}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={() => value.length >= 2 && predictions.length > 0 && setShowPredictions(true)}
           className="w-full pl-10 pr-4 py-2 rounded-md bg-white/10 border-0 text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/20 transition-all"
-          placeholder="Enter address (min. 2 characters for search)"
+          placeholder="Type address and select from dropdown (or press Enter for first option)"
           autoComplete="off"
         />
         <button 
           type="submit"
           className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-xs text-white/70"
+          title={manualLocation ? "Submit with custom coordinates" : "Select from dropdown or set custom coordinates first"}
         >
-          Set
+          {manualLocation ? "Set" : "↓"}
         </button>
       </form>
       
       {showPredictions && predictions.length > 0 && (
         <div className="absolute z-50 w-full bg-neutral-800 border border-neutral-700 rounded-md shadow-lg mt-1 max-h-[200px] overflow-y-auto">
-          {predictions.map((prediction) => (
+          {predictions.map((prediction, index) => (
             <div
               key={prediction.place_id}
-              className="p-3 hover:bg-neutral-700 cursor-pointer border-t border-neutral-700 first:border-t-0"
+              className={`p-3 cursor-pointer border-t border-neutral-700 first:border-t-0 ${
+                index === selectedIndex 
+                  ? 'bg-neutral-600 text-white' 
+                  : 'hover:bg-neutral-700 text-white'
+              }`}
               onClick={() => handlePredictionSelect(prediction)}
+              onMouseEnter={() => setSelectedIndex(index)}
             >
-              <div className="text-white text-sm">{prediction.description}</div>
+              <div className="text-sm">{prediction.description}</div>
             </div>
           ))}
         </div>
