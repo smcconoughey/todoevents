@@ -67,8 +67,39 @@ An event management application with enhanced user authentication, password rese
    ```
 
 6. Access the application:
-   - Main application: http://localhost:5173
-   - Admin dashboard: http://localhost:5174 (if running separately)
+ - Main application: http://localhost:5173
+  - Admin dashboard: http://localhost:5174 (if running separately)
+
+### Android Wrapper
+
+A minimal Android wrapper is provided in the `android-app` directory. The app
+uses **Expo** with a `WebView` to load the web version of todo-events. When a
+user navigates to the subscription flow (`/subscribe`), the link opens in the
+device browser so payments are handled on the website. The wrapper adds pull-to-
+refresh and a loading indicator for a smoother mobile experience. The wrapper
+automatically follows the device's light or dark theme for a native feel.
+
+#### Running Locally
+```bash
+cd android-app
+npm install
+npm run android
+```
+
+### iOS Wrapper
+
+A minimal iOS wrapper is provided in the `ios-app` directory. It contains Swift
+source files using a `WKWebView` to embed the website. When the user navigates
+to `/subscribe`, the app opens Safari so payments occur on the web. The wrapper
+adds pull-to-refresh and a loading spinner to make the mobile app more
+responsive. It also adopts the system appearance so the colors match the user's
+selected theme.
+
+#### Running Locally
+1. Open Xcode and create a new **App** project.
+2. Replace the default Swift files with the ones from `ios-app/TodoEventsApp` and
+   merge the provided `Info.plist` settings.
+3. Build and run the project on a simulator or device running iOS 14 or later.
    
 ### Default Admin Account
 
