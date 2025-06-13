@@ -19,7 +19,8 @@ import {
   MapPin,
   Clock,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  CreditCard
 } from 'lucide-react';
 import { API_URL } from '@/config';
 
@@ -31,12 +32,26 @@ const AccountPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState('events');
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
       navigate('/');
       return;
     }
+    
+    // Handle Stripe success/cancel redirects
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      // Payment was successful, refresh user data to get updated premium status
+      setTimeout(() => {
+        window.location.reload(); // Refresh to get updated user status
+      }, 1000);
+    } else if (urlParams.get('cancelled') === 'true') {
+      // Payment was cancelled, show message
+      console.log('Payment cancelled by user');
+    }
+    
     fetchUserData();
   }, [user, navigate]);
 
@@ -102,6 +117,32 @@ const AccountPage = () => {
   const handleEditEvent = (event) => {
     // Navigate to edit mode - you'll need to implement this in your EventMap component
     navigate(`/?edit=${event.id}`);
+  };
+
+  const handleUpgradeToPremium = async () => {
+    setUpgradeLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const { checkout_url } = await response.json();
+        // Redirect to Stripe checkout
+        window.location.href = checkout_url;
+      } else {
+        throw new Error('Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Error upgrading to premium:', error);
+      alert('Sorry, there was an error processing your upgrade. Please try again.');
+    } finally {
+      setUpgradeLoading(false);
+    }
   };
 
   const isPremium = user?.role === 'premium' || user?.role === 'admin';
@@ -384,6 +425,29 @@ const AccountPage = () => {
                     <p className="text-themed-secondary">
                       Comprehensive marketing analytics with detailed insights, performance charts, and downloadable CSV reports 
                       are now live for premium users. Get engagement metrics, category analysis, geographic data, and more!
+                    </p>
+                  </div>
+
+                  <div className="text-center">
+                    <Button
+                      onClick={handleUpgradeToPremium}
+                      disabled={upgradeLoading}
+                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {upgradeLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Processing...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-5 h-5" />
+                          Upgrade to Premium - $20/month
+                        </div>
+                      )}
+                    </Button>
+                    <p className="text-sm text-themed-secondary mt-3">
+                      Secure payment powered by Stripe • Cancel anytime
                     </p>
                   </div>
                 </div>

@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from enum import Enum
 import asyncio
 import threading
+import stripe
 
 # Import SEO utilities
 try:
@@ -49,6 +50,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 # Environment configuration 
 IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
 DB_URL = os.getenv("DATABASE_URL", None)
+
+# Stripe configuration
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")  # Monthly subscription price ID
 
 # Password hashing setup
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -1072,6 +1079,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
 DB_URL = os.getenv("DATABASE_URL", None)
 
+# Stripe configuration
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")  # Monthly subscription price ID
+
 # Password hashing setup
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -1109,7 +1122,6 @@ def get_cors_origins():
         return base_origins + production_origins
     else:
         return base_origins
-
 # Custom CORS middleware for flexible Render.com handling
 @app.middleware("http")
 async def cors_handler(request, call_next):
@@ -1869,11 +1881,9 @@ try:
     init_db()
 except Exception as e:
     logger.error(f"Database initialization failed: {str(e)}")
-
 # =====================================================
 # AUTOMATED AI SYNC SYSTEM
 # =====================================================
-
 class AutomatedTaskManager:
     """
     Manages automated tasks for AI search optimization:
@@ -2660,7 +2670,6 @@ try:
         logger.info("✅ Default admin user initialization completed")
 except Exception as e:
     logger.error(f"❌ Error creating default admin user during startup: {str(e)}")
-
 # Password Validation System
 class PasswordValidator:
     """
@@ -3445,7 +3454,6 @@ async def verify_reset_code(request: PasswordResetVerify):
     except Exception as e:
         logger.error(f"Error verifying reset code: {str(e)}")
         raise HTTPException(status_code=500, detail="Error verifying reset code")
-
 @app.post("/reset-password")
 async def reset_password(request: PasswordReset):
     """Reset password with a valid reset code"""
@@ -4196,7 +4204,6 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
             status_code=400, 
             detail=f"Could not create event: {error_msg}"
         ) from None
-
 @app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):
     """
@@ -4246,7 +4253,6 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error retrieving user events: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving user events")
-
 @app.put("/events/{event_id}", response_model=EventResponse)
 async def update_event(
     event_id: int, 
@@ -4992,7 +4998,6 @@ async def get_automation_status():
             "timestamp": datetime.utcnow().isoformat()
         }
     }
-
 @app.post("/api/v1/automation/trigger/{task_name}")
 async def trigger_automated_task(task_name: str, background_tasks: BackgroundTasks):
     """Manually trigger automated tasks"""
@@ -5109,6 +5114,7 @@ from contextlib import contextmanager
 from enum import Enum
 import asyncio
 import threading
+import stripe
 
 # Import SEO utilities
 try:
@@ -5147,6 +5153,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 # Environment configuration 
 IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
 DB_URL = os.getenv("DATABASE_URL", None)
+
+# Stripe configuration
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")  # Monthly subscription price ID
 
 # Password hashing setup
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -8317,6 +8329,55 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error retrieving user events: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving user events")
+@app.get("/events/manage", response_model=List[EventResponse])
+async def list_user_events(current_user: dict = Depends(get_current_user)):
+    """
+    Retrieve events created by the current user for management (robust version).
+    Requires authentication.
+    """
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Query events created by the current user with proper column selection
+            actual_columns = get_actual_table_columns(c, 'events')
+            
+            # Select only columns that exist
+            if 'verified' in actual_columns:
+                query = f"SELECT * FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            else:
+                # Exclude verified column if it doesn't exist
+                columns = [col for col in actual_columns if col != 'verified']
+                column_str = ', '.join(columns)
+                query = f"SELECT {column_str} FROM events WHERE created_by = {placeholder} ORDER BY date, start_time"
+            
+            c.execute(query, (current_user["id"],))
+            events = c.fetchall()
+            
+            # Convert to list of dictionaries and apply datetime conversion
+            event_list = []
+            for event in events:
+                event_dict = dict(event)
+                
+                # Ensure all required fields exist for EventResponse model
+                if 'verified' not in event_dict:
+                    event_dict['verified'] = False
+                if 'interest_count' not in event_dict:
+                    event_dict['interest_count'] = 0
+                if 'view_count' not in event_dict:
+                    event_dict['view_count'] = 0
+                if 'secondary_category' not in event_dict:
+                    event_dict['secondary_category'] = None
+                    
+                event_dict = convert_event_datetime_fields(event_dict)
+                event_list.append(event_dict)
+            
+            return event_list
+            
+    except Exception as e:
+        logger.error(f"Error retrieving user events: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving user events")
 
 @app.put("/events/{event_id}", response_model=EventResponse)
 async def update_event(
@@ -9063,7 +9124,6 @@ async def get_automation_status():
             "timestamp": datetime.utcnow().isoformat()
         }
     }
-
 @app.post("/api/v1/automation/trigger/{task_name}")
 async def trigger_automated_task(task_name: str, background_tasks: BackgroundTasks):
     """Manually trigger automated tasks"""
@@ -9458,6 +9518,11 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
         "role": current_user['role'],
         "user_id": current_user['id']
     }
+
+@app.get("/stripe/config")
+async def get_stripe_config():
+    """Get Stripe publishable key for frontend"""
+    return {"publishable_key": STRIPE_PUBLISHABLE_KEY}
 
 # Enhanced Marketing Analytics Endpoints
 
@@ -9893,8 +9958,6 @@ async def get_event_analytics(
     except Exception as e:
         logger.error(f"Error getting event analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving event analytics")
-
-
 # Temporary debug version without Pydantic validation
 @app.get("/events/manage-debug")
 async def list_user_events_debug(current_user: dict = Depends(get_current_user)):
@@ -10535,7 +10598,6 @@ if __name__ == "__main__":
 async def debug_test_422():
     """Test endpoint to check if 422 is from authentication or data processing"""
     return {"message": "If you see this, the 422 error is not from the endpoint itself", "status": "working"}
-
 @app.get("/debug/events-simple")
 async def debug_events_simple(current_user: dict = Depends(get_current_user)):
     """Simple debug endpoint to test event retrieval without complex processing"""
@@ -10670,7 +10732,6 @@ async def debug_schema():
     except Exception as e:
         logger.error(f"Schema debug error: {str(e)}")
         return {"error": str(e)}
-
 @app.post("/debug/create-missing-tables")
 async def create_missing_tables():
     """Create missing tables and columns in production"""
@@ -11317,7 +11378,6 @@ def ensure_unique_slug_failsafe(cursor, base_slug: str, placeholder: str) -> str
         emergency_slug = f"{base_slug}-{int(time.time())}"
         logger.warning(f"🚨 Using emergency fallback slug: '{emergency_slug}'")
         return emergency_slug
-
 @app.get("/debug/database-info")
 async def debug_database_info():
     """Debug endpoint to check database configuration and status"""
@@ -11426,7 +11486,6 @@ async def migrate_production_database():
             "status": "error", 
             "message": f"Migration failed: {str(e)}"
         }
-
 @app.post("/admin/fix-production-database")
 async def fix_production_database():
     """Fix critical production database schema issues causing bulk import failures"""
@@ -12079,7 +12138,6 @@ async def fix_null_end_times():
     except Exception as e:
         logger.error(f"Error fixing NULL end_time values: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fixing NULL end_time values: {str(e)}")
-
 @app.get("/debug/events-raw")
 async def debug_events_raw():
     """Debug endpoint to test events query without caching"""
@@ -12173,7 +12231,6 @@ async def debug_clear_cache():
     except Exception as e:
         logger.error(f"Failed to clear cache: {str(e)}")
         return {"error": str(e)}
-
 @app.get("/debug/test-event-urls")
 async def debug_test_event_urls():
     """Test URL generation for specific events to ensure Google indexing format"""
@@ -13591,8 +13648,6 @@ async def submit_privacy_request(request: PrivacyRequest):
         # Return more detailed error for debugging
         error_detail = f"Failed to submit privacy request: {type(e).__name__}: {str(e)}"
         raise HTTPException(status_code=500, detail=error_detail)
-
-@app.get("/api/privacy/data/{email}")
 async def get_user_data_export(email: str, verification_code: str = None):
     """
     Export all data associated with a user email (for CCPA access requests)
@@ -14360,7 +14415,7 @@ async def debug_test_privacy_insert():
             "error_type": type(e).__name__,
             "traceback": traceback.format_exc(),
             "debug_info": debug_info if 'debug_info' in locals() else {}
-        }@app.post("/debug/create-missing-tables")
+        }
 async def create_missing_tables():
     """Create missing tables and columns in production"""
     try:
