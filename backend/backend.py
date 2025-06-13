@@ -13973,7 +13973,7 @@ async def debug_users_schema():
                 # SQLite - get users table columns
                 c.execute('PRAGMA table_info(users)')
                 users_columns = c.fetchall()
-                premium_columns = [col[1] for col in users_columns if col[1] in ['premium_expires_at', 'premium_granted_by', 'premium_invited']]
+                premium_columns = [col[1] if hasattr(col, '__getitem__') else str(col) for col in users_columns if (col[1] if hasattr(col, '__getitem__') else str(col)) in ['premium_expires_at', 'premium_granted_by', 'premium_invited']]
             
             return {
                 "database_type": "postgresql" if IS_PRODUCTION and DB_URL else "sqlite",
@@ -14039,7 +14039,7 @@ async def create_premium_columns():
                     WHERE table_name = 'users' 
                     AND column_name IN ('premium_expires_at', 'premium_granted_by', 'premium_invited')
                 """)
-                created_columns = [row[0] for row in cursor.fetchall()]
+                created_columns = [row['column_name'] if hasattr(row, 'keys') else row[0] for row in cursor.fetchall()]
             else:
                 cursor.execute('PRAGMA table_info(users)')
                 columns_info = cursor.fetchall()
