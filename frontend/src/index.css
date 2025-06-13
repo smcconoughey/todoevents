@@ -620,14 +620,20 @@ body {
 
   /* Target filter section buttons specifically */
   div[class*="space-y-2"] button,
-  div[class*="grid-cols-"] button {
+  div[class*="grid-cols-"] button,
+  div[class*="grid"] button,
+  button[class*="px-2"][class*="py-1"],
+  button[class*="rounded-md"] {
     background-color: var(--bg-card) !important;
     color: var(--text-secondary) !important;
     border-color: var(--border-color) !important;
   }
 
   div[class*="space-y-2"] button:hover,
-  div[class*="grid-cols-"] button:hover {
+  div[class*="grid-cols-"] button:hover,
+  div[class*="grid"] button:hover,
+  button[class*="px-2"][class*="py-1"]:hover,
+  button[class*="rounded-md"]:hover {
     background-color: var(--bg-card-hover) !important;
   }
 
@@ -635,6 +641,36 @@ body {
   button[class*="bg-pin-blue"] {
     background-color: var(--pin-blue) !important;
     color: white !important;
+  }
+
+  /* Ultra-aggressive button override for any button in filter areas */
+  [class*="space-y"] button:not([class*="bg-pin-blue"]):not([class*="btn-primary"]):not([class*="btn-secondary"]) {
+    background-color: var(--bg-card) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  [class*="space-y"] button:not([class*="bg-pin-blue"]):not([class*="btn-primary"]):not([class*="btn-secondary"]):hover {
+    background-color: var(--bg-card-hover) !important;
+  }
+
+  /* Nuclear override for any remaining hardcoded backgrounds on mobile */
+  * {
+    /* This will be overridden by more specific selectors but ensures fallback */
+  }
+
+  /* Override any div that has hardcoded background patterns */
+  div[class*="bg-white"],
+  div[class*="bg-black"] {
+    background-color: var(--bg-card) !important;
+  }
+
+  /* Override any button that has hardcoded background patterns */
+  button[class*="bg-white"]:not([class*="bg-pin-blue"]),
+  button[class*="bg-black"]:not([class*="bg-pin-blue"]) {
+    background-color: var(--bg-card) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
   }
   
   /* Better touch targets */
