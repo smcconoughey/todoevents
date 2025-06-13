@@ -10394,11 +10394,50 @@ async def invite_premium_user(
             existing_user = c.fetchone()
             
             if existing_user:
+                # For existing users, upgrade them to premium instead of returning error
+                from datetime import datetime, timedelta
+                expires_at = datetime.now() + timedelta(days=30 * request.months)
+                
+                # Update user to premium
+                c.execute(f"""
+                    UPDATE users 
+                    SET role = 'premium', 
+                        premium_expires_at = {placeholder},
+                        premium_granted_by = {placeholder}
+                    WHERE id = {placeholder}
+                """, (expires_at, current_user['id'], existing_user['id']))
+                
+                conn.commit()
+                
+                # Log the activity
+                log_activity(current_user['id'], "premium_invite_existing", f"Upgraded existing user {request.email} to {request.months} months premium")
+                
+                # Send premium notification email
+                try:
+                    from email_config import email_service
+                    email_sent = email_service.send_premium_notification_email(
+                        to_email=request.email,
+                        user_name=existing_user.get('full_name'),
+                        expires_at=expires_at.isoformat(),
+                        granted_by=current_user.get('email', 'Admin')
+                    )
+                    
+                    if email_sent:
+                        logger.info(f"✅ Premium upgrade notification email sent to {request.email}")
+                    else:
+                        logger.error(f"❌ Failed to send premium upgrade notification email to {request.email}")
+                except Exception as e:
+                    logger.error(f"❌ Error sending premium upgrade notification email: {str(e)}")
+                
                 return {
-                    "detail": "User already exists",
+                    "detail": f"Existing user upgraded to premium for {request.months} months",
                     "user_exists": True,
                     "user_id": existing_user['id'],
-                    "current_role": existing_user['role']
+                    "previous_role": existing_user['role'],
+                    "new_role": "premium",
+                    "expires_at": expires_at.isoformat(),
+                    "email": request.email,
+                    "months": request.months
                 }
             
             # Create invitation record (we'll send email here in production)
@@ -13608,6 +13647,14 @@ async def delete_user_data(email: str, verification_code: str = None, current_us
     except Exception as e:
         logger.error(f"Data deletion error for {email}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete user data")
+
+# Add alias for privacy requests endpoint (frontend expects /admin/privacy-requests)
+@app.get("/admin/privacy-requests")
+async def list_privacy_requests_alias(current_user: dict = Depends(get_current_user)):
+    """
+    Alias for privacy requests endpoint (frontend compatibility)
+    """
+    return await list_privacy_requests(current_user)
 
 @app.get("/admin/privacy/requests")
 async def list_privacy_requests(current_user: dict = Depends(get_current_user)):
