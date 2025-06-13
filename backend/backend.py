@@ -9517,7 +9517,7 @@ async def create_checkout_session(current_user: dict = Depends(get_current_user)
     """Create Stripe checkout session for premium subscription"""
     try:
         # Determine the base URL for success/cancel URLs
-        base_url = "https://todoevents.onrender.com" if IS_PRODUCTION else "http://localhost:5173"
+        base_url = "https://todo-events.com" if IS_PRODUCTION else "http://localhost:5173"
         
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
