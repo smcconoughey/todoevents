@@ -380,6 +380,91 @@ def validate_recurring_event(event_data, user_role):
     # For now, just return the event data unchanged
     # Can be enhanced later with actual validation logic
     return event_data
+
+# Manual upgrade endpoint for when webhooks fail
+@app.post("/admin/manual-premium-upgrade/{user_id}")
+async def manual_premium_upgrade(
+    user_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Manually upgrade a user to premium when webhook fails"""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get user info
+            cursor.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
+            user = cursor.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Calculate expiration date (1 month from now)
+            from datetime import datetime, timedelta
+            expires_at = datetime.now() + timedelta(days=30)
+            
+            # Update user to premium
+            cursor.execute(f"""
+                UPDATE users 
+                SET role = 'premium', 
+                    premium_expires_at = {placeholder},
+                    premium_granted_by = {placeholder}
+                WHERE id = {placeholder}
+            """, (expires_at, current_user['id'], user_id))
+            
+            conn.commit()
+            
+            # Log the activity
+            log_activity(current_user['id'], "manual_premium_upgrade", f"Manually upgraded user {user['email']} to premium due to webhook failure")
+            
+            logger.info(f"✅ Manually upgraded user {user_id} ({user['email']}) to premium")
+            
+            # Send premium notification email
+            try:
+                from email_config import email_service
+                email_sent = email_service.send_premium_notification_email(
+                    to_email=user['email'],
+                    user_name=user.get('full_name') or user['email'].split('@')[0],
+                    expires_at=expires_at.isoformat(),
+                    granted_by=f"Manual upgrade by {current_user['email']}"
+                )
+                
+                if email_sent:
+                    logger.info(f"✅ Premium notification email sent to {user['email']}")
+                else:
+                    logger.error(f"❌ Failed to send premium notification email to {user['email']}")
+            except Exception as e:
+                logger.error(f"❌ Error sending premium notification email: {str(e)}")
+            
+            return {
+                "success": True,
+                "message": f"User {user['email']} manually upgraded to premium",
+                "user_id": user_id,
+                "expires_at": expires_at.isoformat(),
+                "previous_role": user['role']
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error manually upgrading user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error upgrading user to premium")
+
+@app.get("/debug/webhook-status")
+async def check_webhook_status():
+    """Debug endpoint to check if webhook endpoint is working"""
+    return {
+        "webhook_endpoint": "/stripe/webhook",
+        "webhook_secret_configured": bool(STRIPE_WEBHOOK_SECRET),
+        "stripe_configured": bool(STRIPE_SECRET_KEY),
+        "message": "Webhook endpoint is accessible",
+        "help": "Check Stripe dashboard for webhook delivery status"
+    }
+
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -1398,15 +1483,6 @@ def format_cursor_row(row, column_names):
         # SQLite returns tuples
         return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
 
-# Missing validation function that's being called
-def validate_recurring_event(event_data, user_role):
-    """
-    Validate recurring event data and permissions
-    This function was being called but was missing, causing NameError
-    """
-    # For now, just return the event data unchanged
-    # Can be enhanced later with actual validation logic
-    return event_data
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -1828,12 +1904,13 @@ def init_db():
                 ''')
             
             # Check for default admin user and create if needed
-            # create_default_admin_user(conn)  # Moved to after security functions are defined
+            create_default_admin_user(conn)
             
     except Exception as e:
         logger.error(f"Error initializing database: {str(e)}")
         # Don't raise the exception here - this allows the app to start even if DB init fails
         # We'll handle DB errors at the endpoint level
+
 def create_default_admin_user(conn):
     """Create default admin user if none exists"""
     try:
@@ -1881,9 +1958,6 @@ try:
     init_db()
 except Exception as e:
     logger.error(f"Database initialization failed: {str(e)}")
-# =====================================================
-# AUTOMATED AI SYNC SYSTEM
-# =====================================================
 class AutomatedTaskManager:
     """
     Manages automated tasks for AI search optimization:
@@ -2670,7 +2744,6 @@ try:
         logger.info("✅ Default admin user initialization completed")
 except Exception as e:
     logger.error(f"❌ Error creating default admin user during startup: {str(e)}")
-# Password Validation System
 class PasswordValidator:
     """
     Comprehensive password validation system with detailed feedback
@@ -5053,7 +5126,6 @@ async def get_dynamic_sitemap():
     except Exception as e:
         logger.error(f"Error serving dynamic sitemap: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating sitemap")
-# Admin endpoint to toggle event verification
 @app.put("/admin/events/{event_id}/verification")
 async def toggle_event_verification(
     event_id: int,
@@ -8329,7 +8401,6 @@ async def list_user_events(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error retrieving user events: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving user events")
-@app.get("/events/manage", response_model=List[EventResponse])
 async def list_user_events(current_user: dict = Depends(get_current_user)):
     """
     Retrieve events created by the current user for management (robust version).
@@ -10190,6 +10261,7 @@ async def get_event_analytics(
     except Exception as e:
         logger.error(f"Error getting event analytics: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving event analytics")
+
 # Temporary debug version without Pydantic validation
 @app.get("/events/manage-debug")
 async def list_user_events_debug(current_user: dict = Depends(get_current_user)):
