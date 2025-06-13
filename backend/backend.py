@@ -9548,6 +9548,11 @@ async def create_checkout_session(current_user: dict = Depends(get_current_user)
         logger.error(f"Error creating checkout session: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create checkout session")
 
+@app.get("/test-webhook")
+async def test_webhook():
+    """Simple test endpoint to verify webhook URL is reachable"""
+    return {"status": "ok", "message": "Webhook endpoint is reachable", "timestamp": datetime.utcnow().isoformat()}
+
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events"""
