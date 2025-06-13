@@ -9714,101 +9714,78 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             # Debug: Log subscription object structure
             logger.info(f"Processing subscription: {sub.id}, status: {sub.status}")
             logger.info(f"Available subscription attributes: {list(sub.keys()) if hasattr(sub, 'keys') else 'No keys method'}")
-            # Handle different subscription timestamp fields based on what's available
-            current_period_start = None
-            current_period_end = None
             
-            # Try current_period_start/end first (for active recurring subscriptions)
+            # Get the actual subscription's current period (what they've already paid for)
+            actual_period_start = None
+            actual_period_end = None
+            next_billing_date = None
+            
+            # Get actual current period from subscription object first
             try:
                 current_period_start_ts = getattr(sub, 'current_period_start', None)
                 if current_period_start_ts:
-                    current_period_start = datetime.fromtimestamp(current_period_start_ts).isoformat()
-                    logger.info(f"🕒 Current period start from subscription: {current_period_start} (ts: {current_period_start_ts})")
+                    actual_period_start = datetime.fromtimestamp(current_period_start_ts).isoformat()
+                    logger.info(f"🕒 Actual current period start: {actual_period_start} (ts: {current_period_start_ts})")
             except (ValueError, TypeError, OSError, AttributeError):
                 pass
                 
             try:
                 current_period_end_ts = getattr(sub, 'current_period_end', None)
                 if current_period_end_ts:
-                    current_period_end = datetime.fromtimestamp(current_period_end_ts).isoformat()
-                    logger.info(f"🕒 Current period end from subscription: {current_period_end} (ts: {current_period_end_ts})")
+                    actual_period_end = datetime.fromtimestamp(current_period_end_ts).isoformat()
+                    logger.info(f"🕒 Actual current period end: {actual_period_end} (ts: {current_period_end_ts})")
             except (ValueError, TypeError, OSError, AttributeError):
                 pass
             
-            # Fallback to other available timestamp fields
-            if not current_period_start:
+            # Now get the next billing date from upcoming invoice (separate from current period)
+            try:
+                logger.info(f"Attempting to fetch upcoming invoice preview for customer: {customer.id}")
+                upcoming = stripe.Invoice.create_preview(customer=customer.id, subscription=sub.id)
+                if upcoming:
+                    if hasattr(upcoming, 'lines') and upcoming.lines and upcoming.lines.data:
+                        for line in upcoming.lines.data:
+                            if hasattr(line, 'period') and line.period:
+                                if hasattr(line.period, 'start') and line.period.start:
+                                    next_billing_date = datetime.fromtimestamp(line.period.start).isoformat()
+                                    logger.info(f"📅 Next billing date from upcoming invoice: {next_billing_date}")
+                                break
+                    
+                    # Also log the amount for debugging
+                    if hasattr(upcoming, 'amount_due'):
+                        logger.info(f"💰 Next invoice amount: {upcoming.amount_due}")
+                        
+            except Exception as upcoming_error:
+                logger.warning(f"⚠️ Could not fetch upcoming invoice preview: {upcoming_error}")
+                # Fallback: use current period end as next billing date if we can't get upcoming invoice
+                next_billing_date = actual_period_end
+            
+            # Fallback for missing actual period data
+            if not actual_period_start:
                 try:
                     start_date_ts = getattr(sub, 'start_date', None)
                     if start_date_ts:
-                        current_period_start = datetime.fromtimestamp(start_date_ts).isoformat()
+                        actual_period_start = datetime.fromtimestamp(start_date_ts).isoformat()
                 except (ValueError, TypeError, OSError, AttributeError):
                     try:
                         created_ts = getattr(sub, 'created', None)
                         if created_ts:
-                            current_period_start = datetime.fromtimestamp(created_ts).isoformat()
+                            actual_period_start = datetime.fromtimestamp(created_ts).isoformat()
                     except (ValueError, TypeError, OSError, AttributeError):
                         pass
-            
-            if not current_period_end:
+                        
+            if not actual_period_end:
+                # Final fallback to latest invoice if we couldn't get subscription period
                 try:
-                    # Try to get upcoming invoice preview for most accurate next billing date
-                    logger.info(f"Attempting to fetch upcoming invoice preview for customer: {customer.id}")
-                    # Use the correct Stripe API call for upcoming invoice preview
-                    upcoming = stripe.Invoice.create_preview(customer=customer.id, subscription=sub.id)
-                    if upcoming:
-                        # Use upcoming invoice for the most accurate next billing information
-                        if hasattr(upcoming, 'lines') and upcoming.lines and upcoming.lines.data:
-                            # Get the subscription line item which has the period info
-                            for line in upcoming.lines.data:
-                                if hasattr(line, 'period') and line.period:
-                                    if hasattr(line.period, 'start') and line.period.start:
-                                        current_period_start = datetime.fromtimestamp(line.period.start).isoformat()
-                                        logger.info(f"📅 Got period_start from upcoming invoice line: {current_period_start}")
-                                    if hasattr(line.period, 'end') and line.period.end:
-                                        current_period_end = datetime.fromtimestamp(line.period.end).isoformat()
-                                        logger.info(f"📅 Got period_end from upcoming invoice line: {current_period_end}")
-                                    break
-                        
-                        # Also try direct period fields on invoice
-                        if not current_period_start and hasattr(upcoming, 'period_start') and upcoming.period_start:
-                            current_period_start = datetime.fromtimestamp(upcoming.period_start).isoformat()
-                            logger.info(f"📅 Got period_start from upcoming invoice: {current_period_start}")
-                        if not current_period_end and hasattr(upcoming, 'period_end') and upcoming.period_end:
-                            current_period_end = datetime.fromtimestamp(upcoming.period_end).isoformat()
-                            logger.info(f"📅 Got period_end from upcoming invoice: {current_period_end}")
-                        
-                        logger.info(f"✅ Got billing period from upcoming invoice preview: {current_period_start} to {current_period_end}")
-                        
-                        # Also log the amount for debugging
-                        if hasattr(upcoming, 'amount_due'):
-                            logger.info(f"💰 Next invoice amount: {upcoming.amount_due}")
-                        
-                except Exception as upcoming_error:
-                    logger.warning(f"⚠️ Could not fetch upcoming invoice preview: {upcoming_error}")
-                    
-                    # Fallback to latest invoice
-                    try:
-                        latest_invoice_id = getattr(sub, 'latest_invoice', None)
-                        if latest_invoice_id:
-                            logger.info(f"Fetching latest invoice as fallback: {latest_invoice_id}")
-                            invoice = stripe.Invoice.retrieve(latest_invoice_id)
-                            if invoice:
-                                if hasattr(invoice, 'period_start') and invoice.period_start and not current_period_start:
-                                    current_period_start = datetime.fromtimestamp(invoice.period_start).isoformat()
-                                if hasattr(invoice, 'period_end') and invoice.period_end and not current_period_end:
-                                    current_period_end = datetime.fromtimestamp(invoice.period_end).isoformat()
-                                logger.info(f"Got billing period from latest invoice: {current_period_start} to {current_period_end}")
-                    except Exception as invoice_error:
-                        logger.warning(f"Could not fetch latest invoice data: {invoice_error}")
-                        
-                        # Final fallback to billing_cycle_anchor if available
-                        try:
-                            billing_anchor_ts = getattr(sub, 'billing_cycle_anchor', None)
-                            if billing_anchor_ts and not current_period_end:
-                                current_period_end = datetime.fromtimestamp(billing_anchor_ts).isoformat()
-                                logger.info(f"Using billing cycle anchor as final fallback: {current_period_end}")
-                        except (ValueError, TypeError, OSError, AttributeError):
-                            pass
+                    latest_invoice_id = getattr(sub, 'latest_invoice', None)
+                    if latest_invoice_id:
+                        logger.info(f"Fetching latest invoice as fallback: {latest_invoice_id}")
+                        invoice = stripe.Invoice.retrieve(latest_invoice_id)
+                        if invoice:
+                            if hasattr(invoice, 'period_end') and invoice.period_end:
+                                actual_period_end = datetime.fromtimestamp(invoice.period_end).isoformat()
+                                logger.info(f"Got actual period end from latest invoice: {actual_period_end}")
+                except Exception as invoice_error:
+                    logger.warning(f"Could not fetch latest invoice data: {invoice_error}")
                 
             try:
                 canceled_at_ts = getattr(sub, 'canceled_at', None)
@@ -9818,16 +9795,9 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             
             # Check if subscription is scheduled for cancellation and get the actual end date
             cancel_at_period_end = getattr(sub, 'cancel_at_period_end', False)
-            if cancel_at_period_end and not current_period_end:
-                # For scheduled cancellations, try to get the correct end date
-                try:
-                    # Check cancel_at field which might have the actual cancellation date
-                    cancel_at_ts = getattr(sub, 'cancel_at', None)
-                    if cancel_at_ts:
-                        current_period_end = datetime.fromtimestamp(cancel_at_ts).isoformat()
-                        logger.info(f"🗓️ Using cancel_at for scheduled cancellation: {current_period_end} (ts: {cancel_at_ts})")
-                except (ValueError, TypeError, OSError, AttributeError):
-                    pass
+            if cancel_at_period_end:
+                # For scheduled cancellations, use the actual current period end
+                logger.info(f"🗓️ Subscription scheduled for cancellation, access until: {actual_period_end}")
             
             # Safely get price information from multiple possible sources
             amount = 0
@@ -9854,13 +9824,14 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             
             # Log what we found for debugging
             logger.info(f"Subscription pricing: amount={amount}, currency={currency}")
-            logger.info(f"Final billing period: start={current_period_start}, end={current_period_end}")
+            logger.info(f"Actual period: start={actual_period_start}, end={actual_period_end}")
+            logger.info(f"Next billing date: {next_billing_date}")
             
             subscription_info.append({
                 "id": getattr(sub, 'id', 'unknown'),
                 "status": getattr(sub, 'status', 'unknown'),
-                "current_period_start": current_period_start,
-                "current_period_end": current_period_end,
+                "current_period_start": next_billing_date,  # When they'll be charged next
+                "current_period_end": actual_period_end,   # When their current paid period ends (for cancellation)
                 "cancel_at_period_end": getattr(sub, 'cancel_at_period_end', False),
                 "canceled_at": canceled_at,
                 "amount": amount,
