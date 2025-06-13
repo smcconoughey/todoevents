@@ -381,89 +381,7 @@ def validate_recurring_event(event_data, user_role):
     # Can be enhanced later with actual validation logic
     return event_data
 
-# Manual upgrade endpoint for when webhooks fail
-@app.post("/admin/manual-premium-upgrade/{user_id}")
-async def manual_premium_upgrade(
-    user_id: int,
-    current_user: dict = Depends(get_current_user)
-):
-    """Manually upgrade a user to premium when webhook fails"""
-    if current_user['role'] != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    placeholder = get_placeholder()
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            # Get user info
-            cursor.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
-            user = cursor.fetchone()
-            
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-            
-            # Calculate expiration date (1 month from now)
-            from datetime import datetime, timedelta
-            expires_at = datetime.now() + timedelta(days=30)
-            
-            # Update user to premium
-            cursor.execute(f"""
-                UPDATE users 
-                SET role = 'premium', 
-                    premium_expires_at = {placeholder},
-                    premium_granted_by = {placeholder}
-                WHERE id = {placeholder}
-            """, (expires_at, current_user['id'], user_id))
-            
-            conn.commit()
-            
-            # Log the activity
-            log_activity(current_user['id'], "manual_premium_upgrade", f"Manually upgraded user {user['email']} to premium due to webhook failure")
-            
-            logger.info(f"✅ Manually upgraded user {user_id} ({user['email']}) to premium")
-            
-            # Send premium notification email
-            try:
-                from email_config import email_service
-                email_sent = email_service.send_premium_notification_email(
-                    to_email=user['email'],
-                    user_name=user.get('full_name') or user['email'].split('@')[0],
-                    expires_at=expires_at.isoformat(),
-                    granted_by=f"Manual upgrade by {current_user['email']}"
-                )
-                
-                if email_sent:
-                    logger.info(f"✅ Premium notification email sent to {user['email']}")
-                else:
-                    logger.error(f"❌ Failed to send premium notification email to {user['email']}")
-            except Exception as e:
-                logger.error(f"❌ Error sending premium notification email: {str(e)}")
-            
-            return {
-                "success": True,
-                "message": f"User {user['email']} manually upgraded to premium",
-                "user_id": user_id,
-                "expires_at": expires_at.isoformat(),
-                "previous_role": user['role']
-            }
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error manually upgrading user {user_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error upgrading user to premium")
 
-@app.get("/debug/webhook-status")
-async def check_webhook_status():
-    """Debug endpoint to check if webhook endpoint is working"""
-    return {
-        "webhook_endpoint": "/stripe/webhook",
-        "webhook_secret_configured": bool(STRIPE_WEBHOOK_SECRET),
-        "stripe_configured": bool(STRIPE_SECRET_KEY),
-        "message": "Webhook endpoint is accessible",
-        "help": "Check Stripe dashboard for webhook delivery status"
-    }
 
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
@@ -2442,7 +2360,7 @@ class AutomatedTaskManager:
                 placeholder = get_placeholder()
                 
                 # Get current datetime and 32-day archive cutoff with full timestamp precision
-                current_datetime = datetime.now()
+                current_datetime = datetime.utcnow()
                 current_date = current_datetime.date()
                 archive_cutoff_datetime = current_datetime - timedelta(days=32)  # 32-day archive
                 archive_cutoff = archive_cutoff_datetime.date()
@@ -4173,7 +4091,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 
                 # Add required fields that might be missing from the form data
                 filtered_event_data['created_by'] = current_user["id"]
-                filtered_event_data['created_at'] = datetime.now().isoformat()
+                filtered_event_data['created_at'] = datetime.utcnow().isoformat()
                 
                 # Auto-verify events for premium users
                 if current_user.get('role') in ['premium', 'admin']:
@@ -4397,7 +4315,7 @@ async def update_event(
                 
                 # Add updated_at timestamp if the column exists
                 if 'updated_at' in actual_columns:
-                    filtered_event_data['updated_at'] = datetime.now().isoformat()
+                    filtered_event_data['updated_at'] = datetime.utcnow().isoformat()
                 
                 # Build dynamic UPDATE query
                 update_columns = list(filtered_event_data.keys())
@@ -6511,7 +6429,7 @@ class AutomatedTaskManager:
                 placeholder = get_placeholder()
                 
                 # Get current datetime and 32-day archive cutoff with full timestamp precision
-                current_datetime = datetime.now()
+                current_datetime = datetime.utcnow()
                 current_date = current_datetime.date()
                 archive_cutoff_datetime = current_datetime - timedelta(days=32)  # 32-day archive
                 archive_cutoff = archive_cutoff_datetime.date()
@@ -8247,7 +8165,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 
                 # Add required fields that might be missing from the form data
                 filtered_event_data['created_by'] = current_user["id"]
-                filtered_event_data['created_at'] = datetime.now().isoformat()
+                filtered_event_data['created_at'] = datetime.utcnow().isoformat()
                 
                 # Auto-verify events for premium users
                 if current_user.get('role') in ['premium', 'admin']:
@@ -8521,7 +8439,7 @@ async def update_event(
                 
                 # Add updated_at timestamp if the column exists
                 if 'updated_at' in actual_columns:
-                    filtered_event_data['updated_at'] = datetime.now().isoformat()
+                    filtered_event_data['updated_at'] = datetime.utcnow().isoformat()
                 
                 # Build dynamic UPDATE query
                 update_columns = list(filtered_event_data.keys())
@@ -9633,56 +9551,100 @@ async def create_checkout_session(current_user: dict = Depends(get_current_user)
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events"""
-    payload = await request.body()
-    sig_header = request.headers.get('stripe-signature')
+    logger.info("🔔 Webhook endpoint called")
     
     try:
+        payload = await request.body()
+        sig_header = request.headers.get('stripe-signature')
+        
+        logger.info(f"🔔 Webhook payload size: {len(payload)}, signature present: {bool(sig_header)}")
+        
+        if not STRIPE_WEBHOOK_SECRET:
+            logger.error("❌ STRIPE_WEBHOOK_SECRET not configured")
+            raise HTTPException(status_code=500, detail="Webhook secret not configured")
+        
         event = stripe.Webhook.construct_event(
             payload, sig_header, STRIPE_WEBHOOK_SECRET
         )
+        
+        logger.info(f"🔔 Received Stripe webhook: {event['type']} (ID: {event.get('id', 'unknown')})")
+        
+        # Handle the event
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
+            logger.info(f"🔔 Processing checkout.session.completed for session: {session.get('id')}")
+            await handle_successful_payment(session)
+        elif event['type'] == 'customer.subscription.created':
+            subscription = event['data']['object']
+            logger.info(f"🔔 Processing customer.subscription.created for subscription: {subscription.get('id')}")
+            await handle_subscription_created(subscription)
+        elif event['type'] == 'invoice.payment_succeeded':
+            invoice = event['data']['object']
+            logger.info(f"🔔 Processing invoice.payment_succeeded for invoice: {invoice.get('id')}")
+            await handle_subscription_renewal(invoice)
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            logger.info(f"🔔 Processing customer.subscription.deleted for subscription: {subscription.get('id')}")
+            await handle_subscription_cancelled(subscription)
+        elif event['type'] == 'customer.subscription.paused':
+            subscription = event['data']['object']
+            logger.info(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
+            await handle_subscription_paused(subscription)
+        else:
+            logger.info(f"ℹ️ Unhandled event type: {event['type']}")
+        
+        logger.info(f"✅ Successfully processed webhook {event['type']}")
+        return {"status": "success"}
+        
     except ValueError as e:
-        logger.error(f"Invalid payload: {e}")
+        logger.error(f"❌ Invalid webhook payload: {e}")
         raise HTTPException(status_code=400, detail="Invalid payload")
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f"Invalid signature: {e}")
+        logger.error(f"❌ Invalid webhook signature: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
-    
-    logger.info(f"🔔 Received Stripe webhook: {event['type']}")
-    
-    # Handle the event
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        await handle_successful_payment(session)
-    elif event['type'] == 'customer.subscription.created':
-        subscription = event['data']['object']
-        await handle_subscription_created(subscription)
-    elif event['type'] == 'invoice.payment_succeeded':
-        invoice = event['data']['object']
-        await handle_subscription_renewal(invoice)
-    elif event['type'] == 'customer.subscription.deleted':
-        subscription = event['data']['object']
-        await handle_subscription_cancelled(subscription)
-    elif event['type'] == 'customer.subscription.paused':
-        subscription = event['data']['object']
-        await handle_subscription_paused(subscription)
-    else:
-        logger.info(f"Unhandled event type: {event['type']}")
-    
-    return {"status": "success"}
+    except Exception as e:
+        logger.error(f"❌ Webhook processing error: {str(e)}")
+        logger.error(f"❌ Webhook traceback: {traceback.format_exc()}")
+        # Return 200 to prevent Stripe from retrying
+        return {"status": "error", "message": str(e)}
 
 async def handle_successful_payment(session):
     """Handle successful payment from Stripe checkout"""
     try:
+        logger.info(f"🔔 Processing successful payment for session: {session.get('id')}")
+        logger.info(f"🔔 Session metadata: {session.get('metadata', {})}")
+        
+        # Validate metadata exists
+        if 'metadata' not in session or not session['metadata']:
+            logger.error("❌ No metadata found in session")
+            raise ValueError("Session metadata missing")
+        
+        if 'user_id' not in session['metadata']:
+            logger.error("❌ user_id not found in session metadata")
+            raise ValueError("user_id missing from metadata")
+        
         user_id = int(session['metadata']['user_id'])
         user_email = session['metadata']['user_email']
         
-        # Calculate expiration date (1 month from now)
-        expires_at = datetime.now() + timedelta(days=30)
+        logger.info(f"🔔 Processing payment for user {user_id} ({user_email})")
+        
+        # Calculate expiration date (1 month from now) using UTC
+        expires_at = datetime.utcnow() + timedelta(days=30)
         
         # Update user to premium
         with get_db_transaction() as conn:
             cursor = conn.cursor()
             placeholder = get_placeholder()
+            
+            # First check if user exists
+            cursor.execute(f"SELECT id, email, role FROM users WHERE id = {placeholder}", (user_id,))
+            user = cursor.fetchone()
+            
+            if not user:
+                logger.error(f"❌ User {user_id} not found in database")
+                raise ValueError(f"User {user_id} not found")
+            
+            logger.info(f"🔔 Found user: {user['email']}, current role: {user['role']}")
             
             # Update user role and expiration
             cursor.execute(f"""
@@ -9691,12 +9653,15 @@ async def handle_successful_payment(session):
                 WHERE id = {placeholder}
             """, (expires_at, user_id))
             
+            rows_affected = cursor.rowcount
+            logger.info(f"🔔 Update query affected {rows_affected} rows")
+            
             conn.commit()
             
             # Log the activity
             log_activity(user_id, "stripe_payment_success", f"Premium subscription activated via Stripe for {user_email}")
             
-            logger.info(f"✅ Premium activated for user {user_id} ({user_email}) via Stripe payment")
+            logger.info(f"✅ Premium activated for user {user_id} ({user_email}) via Stripe payment, expires: {expires_at}")
             
             # Send premium notification email
             try:
@@ -9716,7 +9681,9 @@ async def handle_successful_payment(session):
                 logger.error(f"❌ Error sending premium notification email: {str(e)}")
         
     except Exception as e:
-        logger.error(f"Error handling successful payment: {str(e)}")
+        logger.error(f"❌ Error handling successful payment: {str(e)}")
+        logger.error(f"❌ Payment handler traceback: {traceback.format_exc()}")
+        raise  # Re-raise to let webhook handler decide how to respond
 
 async def handle_subscription_created(subscription):
     """Handle when a subscription is created in Stripe"""
@@ -9742,12 +9709,23 @@ async def handle_subscription_renewal(invoice):
         subscription = stripe.Subscription.retrieve(subscription_id)
         user_id = int(subscription['metadata']['user_id'])
         
-        # Extend premium subscription by 1 month
-        expires_at = datetime.now() + timedelta(days=30)
-        
         with get_db_transaction() as conn:
             cursor = conn.cursor()
             placeholder = get_placeholder()
+            
+            # Get current expiration date to extend it properly
+            cursor.execute(f"SELECT premium_expires_at FROM users WHERE id = {placeholder}", (user_id,))
+            user_data = cursor.fetchone()
+            
+            if user_data and user_data['premium_expires_at']:
+                # Extend existing expiration by 30 days
+                current_expires = datetime.fromisoformat(user_data['premium_expires_at'].replace('Z', '+00:00')) if isinstance(user_data['premium_expires_at'], str) else user_data['premium_expires_at']
+                # If current expiration is in the past, start from now
+                base_date = max(current_expires, datetime.utcnow()) if current_expires else datetime.utcnow()
+                expires_at = base_date + timedelta(days=30)
+            else:
+                # No existing expiration, start from now
+                expires_at = datetime.utcnow() + timedelta(days=30)
             
             cursor.execute(f"""
                 UPDATE users 
@@ -9932,7 +9910,7 @@ async def get_user_analytics(
                 existing_tables = [row[0] for row in cursor.fetchall()]
                 
                 if 'event_views' in existing_tables:
-                    thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+                    thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
                     
                     # Get view trends
                     cursor.execute(f"""
@@ -9947,7 +9925,7 @@ async def get_user_analytics(
                     view_trends = [dict(trend) for trend in cursor.fetchall()]
                 
                 if 'event_interests' in existing_tables:
-                    thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+                    thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
                     
                     # Get interest trends
                     cursor.execute(f"""
@@ -10008,7 +9986,7 @@ async def get_user_analytics(
             from datetime import datetime, timedelta
             time_series_data = {}
             for i in range(30):
-                date = (datetime.now() - timedelta(days=29-i)).strftime('%Y-%m-%d')
+                date = (datetime.utcnow() - timedelta(days=29-i)).strftime('%Y-%m-%d')
                 time_series_data[date] = {"views": 0, "interests": 0, "events_created": 0}
             
             # Add actual event creation dates
@@ -10076,7 +10054,7 @@ async def get_user_analytics(
                         ])
                 
                 csv_content = output.getvalue()
-                filename = f"todoevents_analytics_{export_csv}_{period_days}days_{datetime.now().strftime('%Y%m%d')}.csv"
+                filename = f"todoevents_analytics_{export_csv}_{period_days}days_{datetime.utcnow().strftime('%Y%m%d')}.csv"
                 
                 return Response(
                     content=csv_content,
@@ -10134,8 +10112,8 @@ async def get_event_analytics(
             from datetime import datetime, timedelta
             
             # Create mock time series data based on event creation date and current views
-            created_date = datetime.fromisoformat(event['created_at'].replace('Z', '+00:00')) if event['created_at'] else datetime.now()
-            current_date = datetime.now()
+            created_date = datetime.fromisoformat(event['created_at'].replace('Z', '+00:00')) if event['created_at'] else datetime.utcnow()
+            current_date = datetime.utcnow()
             
             time_series = {}
             total_views = event['view_count'] or 0
@@ -10478,7 +10456,7 @@ async def list_user_events_robust(current_user: dict = Depends(get_current_user)
                     event_dict['id'] = int(event_dict.get('id', 0))
                     
                     # Required datetime field
-                    event_dict['created_at'] = str(event_dict.get('created_at', datetime.now().isoformat()))
+                    event_dict['created_at'] = str(event_dict.get('created_at', datetime.utcnow().isoformat()))
                     
                     # All optional fields with proper defaults
                     event_dict['verified'] = bool(event_dict.get('verified', False))
@@ -10619,7 +10597,7 @@ async def get_premium_users(current_user: dict = Depends(get_current_user)):
                     try:
                         from datetime import datetime
                         expires_at = datetime.fromisoformat(user_dict['premium_expires_at'].replace('Z', '+00:00')) if isinstance(user_dict['premium_expires_at'], str) else user_dict['premium_expires_at']
-                        user_dict['is_expired'] = expires_at < datetime.now()
+                        user_dict['is_expired'] = expires_at < datetime.utcnow()
                     except:
                         user_dict['is_expired'] = False
                 else:
@@ -10664,7 +10642,7 @@ async def grant_premium(
             
             # Calculate expiration date
             from datetime import datetime, timedelta
-            expires_at = datetime.now() + timedelta(days=30 * request.months)
+            expires_at = datetime.utcnow() + timedelta(days=30 * request.months)
             
             # Update user to premium
             c.execute(f"""
@@ -10757,7 +10735,7 @@ async def invite_premium_user(
             if existing_user:
                 # For existing users, upgrade them to premium instead of returning error
                 from datetime import datetime, timedelta
-                expires_at = datetime.now() + timedelta(days=30 * request.months)
+                expires_at = datetime.utcnow() + timedelta(days=30 * request.months)
                 
                 # Update user to premium
                 c.execute(f"""
@@ -11218,7 +11196,7 @@ async def create_tracking_tables():
             
             # Test privacy request insertion
             try:
-                created_at = datetime.now().isoformat()
+                created_at = datetime.utcnow().isoformat()
                 cursor.execute(f"""
                     INSERT INTO privacy_requests 
                     (request_type, email, full_name, verification_info, details, status, created_at)
@@ -12693,7 +12671,7 @@ async def get_analytics_metrics(
             total_users = get_count_from_result(cursor.fetchone())
             
             # Active hosts (users with at least one event in the last month)
-            one_month_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            one_month_ago = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
             host_conditions = [f"date >= {placeholder}"]
             host_params = [one_month_ago]
             if excluded_user_ids:
@@ -12794,9 +12772,9 @@ async def get_time_series_data(
             
             # Default date range (last 90 days)
             if not start_date:
-                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+                start_date = (datetime.utcnow() - timedelta(days=90)).strftime('%Y-%m-%d')
             if not end_date:
-                end_date = datetime.now().strftime('%Y-%m-%d')
+                end_date = datetime.utcnow().strftime('%Y-%m-%d')
             
             # Build WHERE conditions for events queries
             placeholder = get_placeholder()
@@ -13593,9 +13571,9 @@ async def get_page_visits_analytics(
             
             # Default date range (last 90 days)
             if not start_date:
-                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+                start_date = (datetime.utcnow() - timedelta(days=90)).strftime('%Y-%m-%d')
             if not end_date:
-                end_date = datetime.now().strftime('%Y-%m-%d')
+                end_date = datetime.utcnow().strftime('%Y-%m-%d')
             
             # Build WHERE clause
             where_conditions = [f"DATE(visited_at) >= {placeholder}", f"DATE(visited_at) <= {placeholder}"]
@@ -13805,7 +13783,7 @@ async def submit_privacy_request(request: PrivacyRequest):
             
             # Log the privacy request with proper database compatibility
             placeholder = get_placeholder()
-            created_at = datetime.now().isoformat()
+            created_at = datetime.utcnow().isoformat()
             
             logger.debug(f"Using placeholder: {placeholder}, created_at: {created_at}")
             
@@ -14041,7 +14019,7 @@ async def get_user_data_export(email: str, verification_code: str = None):
             return {
                 "email": email,
                 "data_export": user_data,
-                "export_date": datetime.now().isoformat(),
+                "export_date": datetime.utcnow().isoformat(),
                 "retention_policy": "Data is retained as needed for service operation. Contact support@todo-events.com for specific retention periods."
             }
             
@@ -14099,7 +14077,7 @@ async def delete_user_data(email: str, verification_code: str = None, current_us
                 UPDATE privacy_requests 
                 SET status = 'completed', completed_at = {placeholder}
                 WHERE email = {placeholder} AND request_type = 'delete'
-            """, (datetime.now().isoformat(), email))
+            """, (datetime.utcnow().isoformat(), email))
             
             conn.commit()
             
@@ -14107,7 +14085,7 @@ async def delete_user_data(email: str, verification_code: str = None, current_us
                 "success": True,
                 "message": f"All data for {email} has been deleted",
                 "deleted_items": deleted_items,
-                "deletion_date": datetime.now().isoformat()
+                "deletion_date": datetime.utcnow().isoformat()
             }
             
     except Exception as e:
@@ -14233,7 +14211,7 @@ async def update_privacy_request_status(
         with get_db() as conn:
             cursor = conn.cursor()
             
-            completed_at = datetime.now().isoformat() if status == "completed" else None
+            completed_at = datetime.utcnow().isoformat() if status == "completed" else None
             
             cursor.execute("""
                 UPDATE privacy_requests 
@@ -14486,7 +14464,7 @@ async def debug_privacy_requests_table():
                     'Test verification',
                     'Debug test request',
                     'pending',
-                    datetime.now().isoformat()
+                    datetime.utcnow().isoformat()
                 ))
                 test_result = cursor.fetchone()
                 test_id = test_result[0] if test_result else None
@@ -14520,7 +14498,7 @@ async def debug_privacy_requests_table():
                     'Test verification',
                     'Debug test request',
                     'pending',
-                    datetime.now().isoformat()
+                    datetime.utcnow().isoformat()
                 ))
                 test_id = cursor.lastrowid
                 
@@ -14624,7 +14602,7 @@ async def debug_test_privacy_insert():
         debug_info = {
             "IS_PRODUCTION": IS_PRODUCTION,
             "DB_URL_exists": bool(DB_URL),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.utcnow().isoformat()
         }
         
         test_data = {
@@ -14659,7 +14637,7 @@ async def debug_test_privacy_insert():
             
             # Test 3: Try the actual insert from the main endpoint
             try:
-                created_at = datetime.now().isoformat()
+                created_at = datetime.utcnow().isoformat()
                 
                 insert_sql = f"""
                     INSERT INTO privacy_requests 
