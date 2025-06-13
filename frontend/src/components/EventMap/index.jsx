@@ -936,11 +936,16 @@ const EventMap = ({
     
     // Handle individual event slug routes
     if (eventSlug && slug) {
-      // Only handle if we don't already have this event selected
-      if (!selectedEvent || selectedEvent.slug !== slug) {
+      // Check if this event was manually closed by the user
+      const wasManuallyClosed = manuallyClosed.has(slug);
+      
+      // Only handle if we don't already have this event selected AND it wasn't manually closed
+      if ((!selectedEvent || selectedEvent.slug !== slug) && !wasManuallyClosed) {
         console.log('Preset handler: Calling handleEventFromSlug for:', slug);
         // For event routes like /e/:slug, /event/:slug, or /events/2025/06/06/:slug
         handleEventFromSlug(slug);
+      } else if (wasManuallyClosed) {
+        console.log('🚫 Preset handler: Event was manually closed, skipping:', slug);
       } else {
         console.log('🚫 Preset handler: Event already selected, skipping:', slug);
       }
@@ -957,13 +962,19 @@ const EventMap = ({
     if (Object.keys(presetFilters).length > 0) {
       applyPresetFilters(presetFilters);
     }
-  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state, selectedEvent?.slug]); // Track selectedEvent slug to prevent duplicates
+  }, [eventSlug, slug, presetCategory, category, presetFilters, city, state, selectedEvent?.slug, manuallyClosed]); // Track selectedEvent slug and manually closed events
 
   // Use a ref to track if we're currently processing a slug to prevent duplicate calls
   const processingSlugRef = useRef(null);
 
   const handleEventFromSlug = async (eventSlug) => {
     try {
+      // Check if this event was manually closed by the user
+      if (manuallyClosed.has(eventSlug)) {
+        console.log('Event was manually closed, ignoring handleEventFromSlug for:', eventSlug);
+        return;
+      }
+
       // Check if we're still on a URL that should have this event selected
       const currentPath = window.location.pathname;
       if (!currentPath.includes(eventSlug)) {
@@ -1197,12 +1208,12 @@ const EventMap = ({
         if (targetEvent) {
           // Check if this event was manually closed by the user
           const eventIdentifier = targetEvent.slug || targetEvent.id;
-          const wasManuallyFlosed = manuallyClosed.has(eventIdentifier);
+          const wasManuallyClosed = manuallyClosed.has(eventIdentifier);
           
           console.log('URL handler check:', {
             eventSlug: slug,
             eventTitle: targetEvent.title,
-            wasManuallyFlosed,
+            wasManuallyClosed,
             selectedEventId: selectedEvent?.id,
             targetEventId: targetEvent.id
           });
@@ -1210,7 +1221,7 @@ const EventMap = ({
           // Only select the event if:
           // 1. No event is currently selected OR it's a different event
           // 2. AND the event was not manually closed by the user
-          if ((!selectedEvent || selectedEvent.id !== targetEvent.id) && !wasManuallyFlosed) {
+          if ((!selectedEvent || selectedEvent.id !== targetEvent.id) && !wasManuallyClosed) {
             console.log('URL handler: Selecting event from slug:', targetEvent.title);
             setSelectedEvent(targetEvent);
             setActiveTab('details'); // Start with details tab
@@ -1223,7 +1234,7 @@ const EventMap = ({
                 address: targetEvent.address
               });
             }
-          } else if (wasManuallyFlosed) {
+          } else if (wasManuallyClosed) {
             console.log('URL handler: Skipping event - was manually closed:', targetEvent.title);
           }
         } else {
