@@ -10172,6 +10172,235 @@ async def list_user_events_robust(current_user: dict = Depends(get_current_user)
         logger.error(f"🔍 Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error retrieving user events: {str(e)}")
 
+# Premium Management Models
+class PremiumGrantRequest(BaseModel):
+    months: int = 1
+
+class PremiumInviteRequest(BaseModel):
+    email: EmailStr
+    months: int = 1
+    message: Optional[str] = None
+
+# Premium Management Endpoints
+@app.get("/admin/premium-users")
+async def get_premium_users(current_user: dict = Depends(get_current_user)):
+    """Get all premium users with their expiration dates"""
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get all users with premium role or premium expiration
+            c.execute(f"""
+                SELECT u.id, u.email, u.role, u.created_at,
+                       u.premium_expires_at, u.premium_granted_by, u.premium_invited,
+                       admin.email as granted_by_email
+                FROM users u
+                LEFT JOIN users admin ON u.premium_granted_by = admin.id
+                WHERE u.role = 'premium' OR u.premium_expires_at IS NOT NULL
+                ORDER BY u.premium_expires_at DESC NULLS LAST, u.created_at DESC
+            """)
+            
+            users = []
+            for row in c.fetchall():
+                user_dict = dict(row)
+                # Check if premium is expired
+                if user_dict['premium_expires_at']:
+                    from datetime import datetime
+                    expires_at = datetime.fromisoformat(user_dict['premium_expires_at'].replace('Z', '+00:00')) if isinstance(user_dict['premium_expires_at'], str) else user_dict['premium_expires_at']
+                    user_dict['is_expired'] = expires_at < datetime.now()
+                else:
+                    user_dict['is_expired'] = False
+                users.append(user_dict)
+            
+            return {"users": users}
+    except Exception as e:
+        logger.error(f"Error getting premium users: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving premium users")
+
+@app.post("/admin/users/{user_id}/grant-premium")
+async def grant_premium(
+    user_id: int,
+    request: PremiumGrantRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Grant premium access to a user for specified months"""
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user exists
+            c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
+            user = c.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Calculate expiration date
+            from datetime import datetime, timedelta
+            expires_at = datetime.now() + timedelta(days=30 * request.months)
+            
+            # Update user to premium
+            c.execute(f"""
+                UPDATE users 
+                SET role = 'premium', 
+                    premium_expires_at = {placeholder},
+                    premium_granted_by = {placeholder}
+                WHERE id = {placeholder}
+            """, (expires_at, current_user['id'], user_id))
+            
+            conn.commit()
+            
+            # Log the activity
+            log_activity(current_user['id'], "grant_premium", f"Granted {request.months} months premium to {user['email']}")
+            
+            return {
+                "detail": f"Premium access granted for {request.months} months",
+                "expires_at": expires_at.isoformat(),
+                "user_email": user['email']
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error granting premium to user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error granting premium access")
+
+@app.delete("/admin/users/{user_id}/remove-premium")
+async def remove_premium(
+    user_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Remove premium access from a user"""
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user exists
+            c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
+            user = c.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Update user to regular user
+            c.execute(f"""
+                UPDATE users 
+                SET role = 'user', 
+                    premium_expires_at = NULL,
+                    premium_granted_by = NULL
+                WHERE id = {placeholder}
+            """, (user_id,))
+            
+            conn.commit()
+            
+            # Log the activity
+            log_activity(current_user['id'], "remove_premium", f"Removed premium from {user['email']}")
+            
+            return {
+                "detail": "Premium access removed",
+                "user_email": user['email']
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing premium from user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error removing premium access")
+
+@app.post("/admin/premium-invite")
+async def invite_premium_user(
+    request: PremiumInviteRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Invite a new user via email with premium trial"""
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user already exists
+            c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (request.email,))
+            existing_user = c.fetchone()
+            
+            if existing_user:
+                return {
+                    "detail": "User already exists",
+                    "user_exists": True,
+                    "user_id": existing_user['id'],
+                    "current_role": existing_user['role']
+                }
+            
+            # Create invitation record (we'll send email here in production)
+            # For now, we'll just log the invitation
+            log_activity(current_user['id'], "premium_invite", f"Invited {request.email} for {request.months} months premium trial")
+            
+            # In a real implementation, you would send an email here
+            # send_premium_invitation_email(request.email, request.months, request.message)
+            
+            return {
+                "detail": f"Premium invitation sent to {request.email}",
+                "email": request.email,
+                "months": request.months,
+                "message": "Invitation email would be sent in production"
+            }
+    except Exception as e:
+        logger.error(f"Error sending premium invitation: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error sending invitation")
+
+@app.post("/admin/users/{user_id}/notify-premium")
+async def notify_premium_granted(
+    user_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Send notification to user about their premium access"""
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user exists and has premium
+            c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
+            user = c.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user['role'] != 'premium':
+                raise HTTPException(status_code=400, detail="User does not have premium access")
+            
+            # Log the notification
+            log_activity(current_user['id'], "premium_notification", f"Sent premium notification to {user['email']}")
+            
+            # In a real implementation, you would send an email here
+            # send_premium_notification_email(user['email'], user['premium_expires_at'])
+            
+            return {
+                "detail": f"Premium notification sent to {user['email']}",
+                "user_email": user['email'],
+                "message": "Notification email would be sent in production"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending premium notification: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error sending notification")
+
 # Main execution block
 if __name__ == "__main__":
     # Ensure environment variables are loaded
