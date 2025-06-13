@@ -9751,10 +9751,10 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             
             if not current_period_end:
                 try:
-                    # Try to get upcoming invoice first for most accurate next billing date
-                    logger.info(f"Attempting to fetch upcoming invoice for customer: {customer.id}")
-                    # Use the correct Stripe API call for upcoming invoice
-                    upcoming = stripe.Invoice.upcoming(customer=customer.id)
+                    # Try to get upcoming invoice preview for most accurate next billing date
+                    logger.info(f"Attempting to fetch upcoming invoice preview for customer: {customer.id}")
+                    # Use the correct Stripe API call for upcoming invoice preview
+                    upcoming = stripe.Invoice.create_preview(customer=customer.id)
                     if upcoming:
                         # Use upcoming invoice for the most accurate next billing information
                         if hasattr(upcoming, 'lines') and upcoming.lines and upcoming.lines.data:
@@ -9777,22 +9777,14 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                             current_period_end = datetime.fromtimestamp(upcoming.period_end).isoformat()
                             logger.info(f"📅 Got period_end from upcoming invoice: {current_period_end}")
                         
-                        logger.info(f"✅ Got billing period from upcoming invoice: {current_period_start} to {current_period_end}")
+                        logger.info(f"✅ Got billing period from upcoming invoice preview: {current_period_start} to {current_period_end}")
                         
                         # Also log the amount for debugging
                         if hasattr(upcoming, 'amount_due'):
                             logger.info(f"💰 Next invoice amount: {upcoming.amount_due}")
                         
                 except Exception as upcoming_error:
-                    logger.warning(f"⚠️ Could not fetch upcoming invoice: {upcoming_error}")
-                    # Let's try the actual correct way - maybe the method doesn't exist on this Stripe version
-                    try:
-                        logger.info(f"🔄 Trying alternative upcoming invoice method...")
-                        import stripe as stripe_alt
-                        upcoming = stripe_alt.Invoice.upcoming(customer=customer.id)
-                        logger.info(f"✅ Alternative method worked! Invoice: {upcoming.id if hasattr(upcoming, 'id') else 'no id'}")
-                    except Exception as alt_error:
-                        logger.warning(f"⚠️ Alternative method also failed: {alt_error}")
+                    logger.warning(f"⚠️ Could not fetch upcoming invoice preview: {upcoming_error}")
                     
                     # Fallback to latest invoice
                     try:
