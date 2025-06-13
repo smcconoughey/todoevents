@@ -10387,13 +10387,36 @@ async def notify_premium_granted(
             # Log the notification
             log_activity(current_user['id'], "premium_notification", f"Sent premium notification to {user['email']}")
             
-            # In a real implementation, you would send an email here
-            # send_premium_notification_email(user['email'], user['premium_expires_at'])
+            # Send premium notification email
+            try:
+                from email_config import email_service
+                
+                # Get the admin who granted premium access
+                granted_by_email = None
+                if user.get('premium_granted_by'):
+                    c.execute(f"SELECT email FROM users WHERE id = {placeholder}", (user['premium_granted_by'],))
+                    granted_by_user = c.fetchone()
+                    if granted_by_user:
+                        granted_by_email = granted_by_user['email']
+                
+                email_sent = email_service.send_premium_notification_email(
+                    to_email=user['email'],
+                    user_name=user.get('full_name'),
+                    expires_at=user.get('premium_expires_at'),
+                    granted_by=granted_by_email
+                )
+                
+                if email_sent:
+                    logger.info(f"✅ Premium notification email sent to {user['email']}")
+                else:
+                    logger.error(f"❌ Failed to send premium notification email to {user['email']}")
+            except Exception as e:
+                logger.error(f"❌ Error sending premium notification email: {str(e)}")
             
             return {
                 "detail": f"Premium notification sent to {user['email']}",
                 "user_email": user['email'],
-                "message": "Notification email would be sent in production"
+                "message": "Premium notification email sent successfully"
             }
     except HTTPException:
         raise

@@ -480,5 +480,362 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         return self.send_email(to_email, subject, html_content)
 
+    def send_premium_invitation_email(self, to_email: str, months: int, message: Optional[str] = None, invited_by: Optional[str] = None) -> bool:
+        """Send premium invitation email to new users"""
+        subject = "You're Invited to Todo Events Premium!"
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Premium Invitation - Todo Events</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #8e44ad, #3498db); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .premium-badge {{ background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white; padding: 15px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .premium-badge h2 {{ margin: 0; font-size: 20px; }}
+                .features {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #8e44ad; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+                .custom-message {{ background: #e8f5e8; border-left: 4px solid #27ae60; padding: 15px; margin: 20px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 Todo Events Premium</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">You're Invited!</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Congratulations!</h2>
+                    
+                    <p>You've been invited to join Todo Events Premium{f' by {invited_by}' if invited_by else ''}! We're excited to offer you exclusive access to our premium features.</p>
+                    
+                    <div class="premium-badge">
+                        <h2>🌟 {months} Month{'s' if months != 1 else ''} Premium Access</h2>
+                        <p style="margin: 5px 0 0 0;">Complimentary invitation</p>
+                    </div>
+                    
+                    {f'<div class="custom-message"><strong>Personal Message:</strong><br>{message}</div>' if message else ''}
+                    
+                    <div class="features">
+                        <h3>🚀 Premium Features Include:</h3>
+                        <ul>
+                            <li><strong>✅ Auto-Verified Events:</strong> Your events get instant verification badges</li>
+                            <li><strong>📊 Advanced Analytics:</strong> Detailed insights into your event performance</li>
+                            <li><strong>🔄 Recurring Events:</strong> Create series and repeating events easily</li>
+                            <li><strong>🎯 Priority Support:</strong> Get help faster with premium support</li>
+                            <li><strong>📈 Enhanced Visibility:</strong> Your events get better placement in search</li>
+                            <li><strong>🎨 Custom Branding:</strong> Add your personal touch to events</li>
+                        </ul>
+                    </div>
+                    
+                    <a href="https://todo-events.com/register?premium_invite=true" class="button">Accept Invitation & Sign Up</a>
+                    
+                    <p><strong>How to get started:</strong></p>
+                    <ol>
+                        <li>Click the button above to create your account</li>
+                        <li>Use this email address ({to_email}) when signing up</li>
+                        <li>Your premium access will be automatically activated</li>
+                        <li>Start creating amazing events with premium features!</li>
+                    </ol>
+                    
+                    <p>This invitation is valid for 30 days. If you have any questions, please contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
+                    
+                    <p>Welcome to the premium experience!<br>The Todo Events Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 Todo Events. Premium event hosting made simple.</p>
+                    <p>This invitation was sent to {to_email}. If you didn't expect this email, you can safely ignore it.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        Todo Events Premium Invitation
+        
+        Congratulations! You've been invited to join Todo Events Premium{f' by {invited_by}' if invited_by else ''}!
+        
+        Premium Access: {months} month{'s' if months != 1 else ''} (complimentary)
+        
+        {f'Personal Message: {message}' if message else ''}
+        
+        Premium Features Include:
+        - Auto-Verified Events: Your events get instant verification badges
+        - Advanced Analytics: Detailed insights into your event performance  
+        - Recurring Events: Create series and repeating events easily
+        - Priority Support: Get help faster with premium support
+        - Enhanced Visibility: Your events get better placement in search
+        - Custom Branding: Add your personal touch to events
+        
+        How to get started:
+        1. Visit: https://todo-events.com/register?premium_invite=true
+        2. Use this email address ({to_email}) when signing up
+        3. Your premium access will be automatically activated
+        4. Start creating amazing events with premium features!
+        
+        This invitation is valid for 30 days.
+        
+        Questions? Contact us at support@todo-events.com
+        
+        Welcome to the premium experience!
+        The Todo Events Team
+        
+        This invitation was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+    
+    def send_premium_notification_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, granted_by: Optional[str] = None) -> bool:
+        """Send notification email when premium access is granted to existing user"""
+        subject = "🌟 You've Been Upgraded to Premium!"
+        
+        # Format expiration date
+        expiry_text = ""
+        if expires_at:
+            try:
+                from datetime import datetime
+                if isinstance(expires_at, str):
+                    expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expiry_date = expires_at
+                expiry_text = f"Your premium access expires on {expiry_date.strftime('%B %d, %Y')}."
+            except:
+                expiry_text = "Check your account for premium expiration details."
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Premium Access Granted - Todo Events</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #8e44ad, #3498db); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .premium-badge {{ background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .premium-badge h2 {{ margin: 0; font-size: 24px; }}
+                .features {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #8e44ad; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+                .expiry-info {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 20px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 Todo Events Premium</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Account Upgraded!</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Great news{f', {user_name}' if user_name else ''}!</h2>
+                    
+                    <p>Your Todo Events account has been upgraded to Premium{f' by {granted_by}' if granted_by else ''}! You now have access to all our premium features.</p>
+                    
+                    <div class="premium-badge">
+                        <h2>🌟 Premium Access Activated</h2>
+                        <p style="margin: 5px 0 0 0;">All premium features are now available</p>
+                    </div>
+                    
+                    {f'<div class="expiry-info"><strong>📅 Access Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
+                    
+                    <div class="features">
+                        <h3>🚀 Your Premium Features:</h3>
+                        <ul>
+                            <li><strong>✅ Auto-Verified Events:</strong> Your events now get instant verification badges</li>
+                            <li><strong>📊 Advanced Analytics:</strong> Access detailed insights into your event performance</li>
+                            <li><strong>🔄 Recurring Events:</strong> Create series and repeating events with ease</li>
+                            <li><strong>🎯 Priority Support:</strong> Get faster help with premium support</li>
+                            <li><strong>📈 Enhanced Visibility:</strong> Your events get better placement in search results</li>
+                            <li><strong>🎨 Custom Branding:</strong> Add your personal touch to events</li>
+                        </ul>
+                    </div>
+                    
+                    <a href="https://todo-events.com/dashboard" class="button">Explore Premium Features</a>
+                    
+                    <p><strong>What's next?</strong></p>
+                    <ul>
+                        <li>Log in to your account to see the new premium features</li>
+                        <li>Create your first premium event with auto-verification</li>
+                        <li>Check out the advanced analytics for your existing events</li>
+                        <li>Explore recurring event options for regular gatherings</li>
+                    </ul>
+                    
+                    <p>If you have any questions about your premium features, please contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
+                    
+                    <p>Enjoy your premium experience!<br>The Todo Events Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 Todo Events. Premium event hosting made simple.</p>
+                    <p>This notification was sent to {to_email}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        Todo Events Premium - Account Upgraded!
+        
+        Great news{f', {user_name}' if user_name else ''}!
+        
+        Your Todo Events account has been upgraded to Premium{f' by {granted_by}' if granted_by else ''}!
+        
+        {expiry_text if expiry_text else ''}
+        
+        Your Premium Features:
+        - Auto-Verified Events: Your events now get instant verification badges
+        - Advanced Analytics: Access detailed insights into your event performance
+        - Recurring Events: Create series and repeating events with ease
+        - Priority Support: Get faster help with premium support
+        - Enhanced Visibility: Your events get better placement in search results
+        - Custom Branding: Add your personal touch to events
+        
+        What's next?
+        - Log in to your account to see the new premium features
+        - Create your first premium event with auto-verification
+        - Check out the advanced analytics for your existing events
+        - Explore recurring event options for regular gatherings
+        
+        Visit your dashboard: https://todo-events.com/dashboard
+        
+        Questions? Contact us at support@todo-events.com
+        
+        Enjoy your premium experience!
+        The Todo Events Team
+        
+        This notification was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+    
+    def send_premium_expiration_reminder_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, days_remaining: int = 7) -> bool:
+        """Send reminder email when premium access is about to expire"""
+        subject = f"⏰ Premium Access Expires in {days_remaining} Days"
+        
+        # Format expiration date
+        expiry_text = "soon"
+        if expires_at:
+            try:
+                from datetime import datetime
+                if isinstance(expires_at, str):
+                    expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expiry_date = expires_at
+                expiry_text = f"on {expiry_date.strftime('%B %d, %Y')}"
+            except:
+                expiry_text = "soon"
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Premium Expiration Reminder - Todo Events</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #e67e22, #f39c12); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .warning-badge {{ background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .warning-badge h2 {{ margin: 0; font-size: 20px; }}
+                .features {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #e67e22; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 Todo Events Premium</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Expiration Reminder</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Don't lose your premium features{f', {user_name}' if user_name else ''}!</h2>
+                    
+                    <p>Your Todo Events Premium access will expire {expiry_text}. We wanted to give you a heads up so you don't lose access to your premium features.</p>
+                    
+                    <div class="warning-badge">
+                        <h2>⏰ {days_remaining} Days Remaining</h2>
+                        <p style="margin: 5px 0 0 0;">Premium access expires {expiry_text}</p>
+                    </div>
+                    
+                    <div class="features">
+                        <h3>🌟 Features You'll Lose:</h3>
+                        <ul>
+                            <li><strong>✅ Auto-Verified Events:</strong> Events will need manual verification</li>
+                            <li><strong>📊 Advanced Analytics:</strong> Limited to basic event stats</li>
+                            <li><strong>🔄 Recurring Events:</strong> No more series or repeating events</li>
+                            <li><strong>🎯 Priority Support:</strong> Standard support response times</li>
+                            <li><strong>📈 Enhanced Visibility:</strong> Standard search placement</li>
+                            <li><strong>🎨 Custom Branding:</strong> Basic event styling only</li>
+                        </ul>
+                    </div>
+                    
+                    <a href="https://todo-events.com/premium/renew" class="button">Renew Premium Access</a>
+                    
+                    <p><strong>Want to continue with premium?</strong> Contact our team at <a href="mailto:support@todo-events.com">support@todo-events.com</a> to discuss renewal options.</p>
+                    
+                    <p>Thank you for being a premium member!<br>The Todo Events Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 Todo Events. Premium event hosting made simple.</p>
+                    <p>This reminder was sent to {to_email}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        Todo Events Premium - Expiration Reminder
+        
+        Don't lose your premium features{f', {user_name}' if user_name else ''}!
+        
+        Your Todo Events Premium access will expire {expiry_text}.
+        
+        Days Remaining: {days_remaining}
+        
+        Features You'll Lose:
+        - Auto-Verified Events: Events will need manual verification
+        - Advanced Analytics: Limited to basic event stats
+        - Recurring Events: No more series or repeating events
+        - Priority Support: Standard support response times
+        - Enhanced Visibility: Standard search placement
+        - Custom Branding: Basic event styling only
+        
+        Want to continue with premium? Contact our team at support@todo-events.com to discuss renewal options.
+        
+        Renew at: https://todo-events.com/premium/renew
+        
+        Thank you for being a premium member!
+        The Todo Events Team
+        
+        This reminder was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+
 # Create global email service instance
 email_service = EmailService() 
