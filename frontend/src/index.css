@@ -385,6 +385,21 @@
     background-color: var(--bg-card-active) !important;
     border-radius: 8px !important;
   }
+
+  /* More specific overrides for complex classes used in EventMap */
+  .bg-white\/5.dark\:bg-white\/5.light\:bg-black\/5,
+  .dark\:bg-white\/5.light\:bg-black\/5,
+  .bg-white\/5.light\:bg-black\/5 {
+    background-color: var(--bg-card) !important;
+    border-radius: 8px !important;
+  }
+
+  .bg-white\/10.dark\:bg-white\/10.light\:bg-black\/10,
+  .dark\:bg-white\/10.light\:bg-black\/10,
+  .bg-white\/10.light\:bg-black\/10 {
+    background-color: var(--bg-card-hover) !important;
+    border-radius: 8px !important;
+  }
   
   .hover\:bg-white\/10:hover {
     background-color: var(--bg-card-hover) !important;
@@ -397,6 +412,13 @@
   .hover\:bg-neutral-700:hover {
     background-color: var(--bg-card-hover) !important;
   }
+
+  /* Complex hover state overrides */
+  .hover\:bg-white\/10.dark\:hover\:bg-white\/10.light\:hover\:bg-black\/10:hover,
+  .dark\:hover\:bg-white\/10.light\:hover\:bg-black\/10:hover,
+  .hover\:bg-white\/10.light\:hover\:bg-black\/10:hover {
+    background-color: var(--bg-card-hover) !important;
+  }
   
   /* Border overrides */
   .border-white\/20 {
@@ -405,6 +427,19 @@
   
   .border-white\/10 {
     border-color: var(--border-color) !important;
+  }
+
+  /* Complex border class overrides */
+  .border-white\/10.dark\:border-white\/10.light\:border-black\/20,
+  .dark\:border-white\/10.light\:border-black\/20,
+  .border-white\/10.light\:border-black\/20 {
+    border-color: var(--border-color) !important;
+  }
+
+  .border-white\/20.dark\:border-white\/20.light\:border-black\/30,
+  .dark\:border-white\/20.light\:border-black\/30,
+  .border-white\/20.light\:border-black\/30 {
+    border-color: var(--border-color-hover) !important;
   }
   
   /* Form element improvements - Warm and inviting */

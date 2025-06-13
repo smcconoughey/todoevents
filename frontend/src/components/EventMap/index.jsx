@@ -2265,11 +2265,11 @@ const EventMap = ({
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-4">
                 {/* Location Section - Compact */}
-                <div className="space-y-2 p-3 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-lg border border-white/10 dark:border-white/10 light:border-black/20">
+                <div className="space-y-2 p-3 bg-themed-surface rounded-lg border border-themed">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-1 h-4 bg-pin-blue rounded-full"></span>
-                      <label className="text-sm font-medium text-white dark:text-white light:text-black">Location</label>
+                      <label className="text-sm font-medium text-themed-primary">Location</label>
                     </div>
                     <Button
                       variant="ghost"
@@ -2289,7 +2289,7 @@ const EventMap = ({
                   
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-white/50 dark:text-white/50 light:text-black/50">Search Radius</label>
+                    <label className="text-xs font-medium text-themed-secondary">Search Radius</label>
                     <div className="grid grid-cols-3 gap-1">
                       {proximityOptions.slice(0, 3).map(option => (
                         <button
@@ -2297,7 +2297,7 @@ const EventMap = ({
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
                             proximityRange === option.value
                               ? 'bg-pin-blue text-white border-pin-blue'
-                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                              : 'bg-themed-surface text-themed-secondary border-themed hover:bg-themed-surface-hover'
                           }`}
                           onClick={() => setProximityRange(option.value)}
                         >
@@ -2312,7 +2312,7 @@ const EventMap = ({
                           className={`px-2 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 ${
                             proximityRange === option.value
                               ? 'bg-pin-blue text-white border-pin-blue'
-                              : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10'
+                              : 'bg-themed-surface text-themed-secondary border-themed hover:bg-themed-surface-hover'
                           }`}
                           onClick={() => setProximityRange(option.value)}
                         >
@@ -2399,7 +2399,7 @@ const EventMap = ({
 
                   {/* Date Filter Tab */}
                   {activeFilterTab === 'date' && (
-                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-themed-surface-hover rounded-md border border-themed">
                       {/* Quick Date Presets */}
                       <div className="grid grid-cols-2 gap-1">
                         {[
@@ -2426,7 +2426,7 @@ const EventMap = ({
                         ].map(preset => (
                           <button
                             key={preset.label}
-                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 border border-white/20 dark:border-white/20 light:border-black/30 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/10 transition-all duration-200"
+                            className="px-2 py-1.5 text-xs font-medium rounded-md bg-themed-surface text-themed-secondary border border-themed hover:bg-themed-surface-hover transition-all duration-200"
                             onClick={() => setSelectedDate(preset.getValue())}
                           >
                             {preset.label}
@@ -2444,10 +2444,10 @@ const EventMap = ({
 
                   {/* Time Filter Tab */}
                   {activeFilterTab === 'time' && (
-                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-white/5 dark:bg-white/5 light:bg-black/5 rounded-md border border-white/10 dark:border-white/10 light:border-black/20">
-                      <div className="text-xs text-white/60 dark:text-white/60 light:text-black/60 mb-2 px-1">
-                        Filter events by time of day
-                      </div>
+                    <div className="space-y-2 animate-in fade-in duration-200 p-2 bg-themed-surface-hover rounded-md border border-themed">
+                                              <div className="text-xs text-themed-secondary mb-2 px-1">
+                          Filter events by time of day
+                        </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
                           { value: 'all', label: 'All Times', icon: '', description: 'Any time' },
