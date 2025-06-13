@@ -9553,6 +9553,28 @@ async def test_webhook():
     """Simple test endpoint to verify webhook URL is reachable"""
     return {"status": "ok", "message": "Webhook endpoint is reachable", "timestamp": datetime.utcnow().isoformat()}
 
+@app.get("/debug/webhook-hits")
+async def check_webhook_hits():
+    """Check if webhook has ever been hit by reading debug file"""
+    try:
+        if os.path.exists("/tmp/webhook_debug.log"):
+            with open("/tmp/webhook_debug.log", "r") as f:
+                hits = f.readlines()
+            return {
+                "webhook_ever_hit": True,
+                "total_hits": len(hits),
+                "last_10_hits": hits[-10:] if hits else [],
+                "latest_hit": hits[-1].strip() if hits else None
+            }
+        else:
+            return {
+                "webhook_ever_hit": False,
+                "total_hits": 0,
+                "message": "Webhook has never been hit or debug file doesn't exist"
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/debug/user-status/{user_id}")
 async def debug_user_status_simple(user_id: int):
     """Quick user status check - no auth required for debugging"""
@@ -9627,9 +9649,32 @@ async def quick_upgrade_user_3():
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events"""
-    # Log immediately when endpoint is hit
+    # FORCE IMMEDIATE LOGGING WITH MULTIPLE METHODS
+    import sys
+    import os
+    
+    # Method 1: Logger
     logger.info("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔")
-    print("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔")  # Force print to stdout
+    logger.warning("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔")
+    logger.error("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔")
+    
+    # Method 2: Print to stdout
+    print("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔")
+    
+    # Method 3: Print to stderr  
+    print("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔", file=sys.stderr)
+    
+    # Method 4: Force flush
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
+    # Method 5: Write to a file for debugging
+    try:
+        with open("/tmp/webhook_debug.log", "a") as f:
+            f.write(f"WEBHOOK HIT: {datetime.utcnow().isoformat()}\n")
+            f.flush()
+    except:
+        pass
     
     try:
         payload = await request.body()
