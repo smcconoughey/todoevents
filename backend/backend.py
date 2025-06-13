@@ -9556,60 +9556,79 @@ async def test_webhook():
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events"""
-    logger.info("🔔 Webhook endpoint called")
+    # Log immediately when endpoint is hit
+    logger.info("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔")
+    print("🔔🔔🔔 WEBHOOK ENDPOINT HIT! 🔔🔔🔔")  # Force print to stdout
     
     try:
         payload = await request.body()
         sig_header = request.headers.get('stripe-signature')
         
         logger.info(f"🔔 Webhook payload size: {len(payload)}, signature present: {bool(sig_header)}")
+        print(f"🔔 Webhook payload size: {len(payload)}, signature present: {bool(sig_header)}")
         
         if not STRIPE_WEBHOOK_SECRET:
             logger.error("❌ STRIPE_WEBHOOK_SECRET not configured")
+            print("❌ STRIPE_WEBHOOK_SECRET not configured")
             raise HTTPException(status_code=500, detail="Webhook secret not configured")
+        
+        logger.info(f"🔔 Attempting to construct Stripe event with secret: {STRIPE_WEBHOOK_SECRET[:8]}...")
+        print(f"🔔 Attempting to construct Stripe event with secret: {STRIPE_WEBHOOK_SECRET[:8]}...")
         
         event = stripe.Webhook.construct_event(
             payload, sig_header, STRIPE_WEBHOOK_SECRET
         )
         
-        logger.info(f"🔔 Received Stripe webhook: {event['type']} (ID: {event.get('id', 'unknown')})")
+        logger.info(f"🔔 SUCCESS! Received Stripe webhook: {event['type']} (ID: {event.get('id', 'unknown')})")
+        print(f"🔔 SUCCESS! Received Stripe webhook: {event['type']} (ID: {event.get('id', 'unknown')})")
         
         # Handle the event
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
             logger.info(f"🔔 Processing checkout.session.completed for session: {session.get('id')}")
+            print(f"🔔 Processing checkout.session.completed for session: {session.get('id')}")
             await handle_successful_payment(session)
         elif event['type'] == 'customer.subscription.created':
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.created for subscription: {subscription.get('id')}")
+            print(f"🔔 Processing customer.subscription.created for subscription: {subscription.get('id')}")
             await handle_subscription_created(subscription)
         elif event['type'] == 'invoice.payment_succeeded':
             invoice = event['data']['object']
             logger.info(f"🔔 Processing invoice.payment_succeeded for invoice: {invoice.get('id')}")
+            print(f"🔔 Processing invoice.payment_succeeded for invoice: {invoice.get('id')}")
             await handle_subscription_renewal(invoice)
         elif event['type'] == 'customer.subscription.deleted':
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.deleted for subscription: {subscription.get('id')}")
+            print(f"🔔 Processing customer.subscription.deleted for subscription: {subscription.get('id')}")
             await handle_subscription_cancelled(subscription)
         elif event['type'] == 'customer.subscription.paused':
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
+            print(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
             await handle_subscription_paused(subscription)
         else:
             logger.info(f"ℹ️ Unhandled event type: {event['type']}")
+            print(f"ℹ️ Unhandled event type: {event['type']}")
         
         logger.info(f"✅ Successfully processed webhook {event['type']}")
+        print(f"✅ Successfully processed webhook {event['type']}")
         return {"status": "success"}
         
     except ValueError as e:
         logger.error(f"❌ Invalid webhook payload: {e}")
+        print(f"❌ Invalid webhook payload: {e}")
         raise HTTPException(status_code=400, detail="Invalid payload")
     except stripe.error.SignatureVerificationError as e:
         logger.error(f"❌ Invalid webhook signature: {e}")
+        print(f"❌ Invalid webhook signature: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
     except Exception as e:
         logger.error(f"❌ Webhook processing error: {str(e)}")
         logger.error(f"❌ Webhook traceback: {traceback.format_exc()}")
+        print(f"❌ Webhook processing error: {str(e)}")
+        print(f"❌ Webhook traceback: {traceback.format_exc()}")
         # Return 200 to prevent Stripe from retrying
         return {"status": "error", "message": str(e)}
 
