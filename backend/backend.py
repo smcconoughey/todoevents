@@ -9548,6 +9548,144 @@ async def create_checkout_session(current_user: dict = Depends(get_current_user)
         logger.error(f"Error creating checkout session: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create checkout session")
 
+@app.post("/stripe/cancel-subscription")
+async def cancel_subscription(current_user: dict = Depends(get_current_user)):
+    """Cancel user's active subscription"""
+    try:
+        # First, find the user's active subscription in Stripe
+        customers = stripe.Customer.list(email=current_user['email'], limit=1)
+        
+        if not customers.data:
+            raise HTTPException(status_code=404, detail="No Stripe customer found")
+        
+        customer = customers.data[0]
+        
+        # Get active subscriptions for this customer
+        subscriptions = stripe.Subscription.list(
+            customer=customer.id,
+            status='active',
+            limit=10
+        )
+        
+        if not subscriptions.data:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+        
+        # Cancel the first active subscription (assuming one subscription per customer)
+        subscription = subscriptions.data[0]
+        
+        # Cancel at period end (so they keep access until billing period ends)
+        canceled_subscription = stripe.Subscription.modify(
+            subscription.id,
+            cancel_at_period_end=True
+        )
+        
+        logger.info(f"✅ Marked subscription {subscription.id} for cancellation for user {current_user['id']} ({current_user['email']})")
+        
+        return {
+            "success": True,
+            "message": "Subscription marked for cancellation",
+            "subscription_id": subscription.id,
+            "cancels_at": canceled_subscription.current_period_end,
+            "access_until": datetime.fromtimestamp(canceled_subscription.current_period_end).isoformat()
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error canceling subscription: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error canceling subscription: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+
+@app.post("/stripe/cancel-subscription-immediately")
+async def cancel_subscription_immediately(current_user: dict = Depends(get_current_user)):
+    """Cancel user's subscription immediately (loses access right away)"""
+    try:
+        # Find the user's active subscription
+        customers = stripe.Customer.list(email=current_user['email'], limit=1)
+        
+        if not customers.data:
+            raise HTTPException(status_code=404, detail="No Stripe customer found")
+        
+        customer = customers.data[0]
+        
+        # Get active subscriptions
+        subscriptions = stripe.Subscription.list(
+            customer=customer.id,
+            status='active',
+            limit=10
+        )
+        
+        if not subscriptions.data:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+        
+        subscription = subscriptions.data[0]
+        
+        # Cancel immediately
+        canceled_subscription = stripe.Subscription.cancel(subscription.id)
+        
+        logger.info(f"✅ Immediately canceled subscription {subscription.id} for user {current_user['id']} ({current_user['email']})")
+        
+        return {
+            "success": True,
+            "message": "Subscription canceled immediately",
+            "subscription_id": subscription.id,
+            "status": canceled_subscription.status
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error canceling subscription: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error canceling subscription immediately: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+
+@app.get("/stripe/subscription-status")
+async def get_detailed_subscription_status(current_user: dict = Depends(get_current_user)):
+    """Get detailed subscription status from Stripe"""
+    try:
+        # Find customer in Stripe
+        customers = stripe.Customer.list(email=current_user['email'], limit=1)
+        
+        if not customers.data:
+            return {
+                "has_stripe_customer": False,
+                "user_role": current_user['role'],
+                "is_premium": current_user['role'] in ['premium', 'admin']
+            }
+        
+        customer = customers.data[0]
+        
+        # Get all subscriptions for this customer
+        subscriptions = stripe.Subscription.list(
+            customer=customer.id,
+            limit=10
+        )
+        
+        subscription_info = []
+        for sub in subscriptions.data:
+            subscription_info.append({
+                "id": sub.id,
+                "status": sub.status,
+                "current_period_start": datetime.fromtimestamp(sub.current_period_start).isoformat(),
+                "current_period_end": datetime.fromtimestamp(sub.current_period_end).isoformat(),
+                "cancel_at_period_end": sub.cancel_at_period_end,
+                "canceled_at": datetime.fromtimestamp(sub.canceled_at).isoformat() if sub.canceled_at else None,
+                "amount": sub.items.data[0].price.unit_amount if sub.items.data else 0,
+                "currency": sub.items.data[0].price.currency if sub.items.data else "usd"
+            })
+        
+        return {
+            "has_stripe_customer": True,
+            "customer_id": customer.id,
+            "user_role": current_user['role'],
+            "is_premium": current_user['role'] in ['premium', 'admin'],
+            "subscriptions": subscription_info
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting subscription status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get subscription status")
+
 @app.get("/test-webhook")
 async def test_webhook():
     """Simple test endpoint to verify webhook URL is reachable"""
