@@ -1399,6 +1399,19 @@ const EventMap = ({
         score += closeness * 100; // Scale up for better weighting
       }
       
+      // Time proximity component (equally important as distance)
+      const eventDateTime = new Date(`${event.date} ${event.start_time}`);
+      const now = new Date();
+      const hoursUntilEvent = (eventDateTime - now) / (1000 * 60 * 60); // Convert to hours
+      
+      if (hoursUntilEvent > 0) {
+        // Time closeness: events happening sooner get higher scores
+        // Use similar inverse formula as distance, but with hours
+        // Add 1 to avoid division by zero, cap at reasonable range
+        const timeCloseness = 1 / (hoursUntilEvent / 24 + 0.1); // Normalize to days
+        score += timeCloseness * 100; // Same weight as distance
+      }
+      
       // Verification multiplier (2x boost for verified events)
       const verificationMultiplier = event.verified ? 2 : 1;
       score *= verificationMultiplier;
