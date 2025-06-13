@@ -101,6 +101,45 @@ const SubscriptionPage = () => {
     }
   };
 
+  const handleReactivateSubscription = async (subscriptionId) => {
+    if (!confirm('Are you sure you want to reactivate your subscription? This will remove the scheduled cancellation and continue your premium access.')) {
+      return;
+    }
+
+    try {
+      setCanceling(true);
+      setError(null);
+      
+      const response = await fetch(`${API_URL}/stripe/reactivate-subscription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ subscription_id: subscriptionId })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to reactivate subscription`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Reload subscription data to show updated status
+        await loadSubscriptionData();
+        
+        // Show success message
+        alert('Subscription reactivated successfully! Your premium access will continue uninterrupted.');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to reactivate subscription');
+      console.error('Error reactivating subscription:', err);
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Not available';
     
@@ -253,9 +292,9 @@ const SubscriptionPage = () => {
 
                 {sub.cancel_at_period_end && (
                   <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-3">
                       <AlertTriangle className="w-5 h-5 text-orange-600" />
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium text-orange-700 dark:text-orange-400">
                           Subscription Scheduled for Cancellation
                         </p>
@@ -264,6 +303,22 @@ const SubscriptionPage = () => {
                           You'll keep access to premium features until then.
                         </p>
                       </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleReactivateSubscription(sub.id)}
+                        disabled={canceling}
+                        variant="default"
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {canceling ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                        )}
+                        Reactivate Subscription
+                      </Button>
                     </div>
                   </div>
                 )}

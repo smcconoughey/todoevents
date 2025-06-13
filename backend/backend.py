@@ -9581,18 +9581,27 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
         
         logger.info(f"✅ Marked subscription {subscription.id} for cancellation for user {current_user['id']} ({current_user['email']})")
         
-        # Safely get cancellation date
-        cancels_at_ts = getattr(canceled_subscription, 'current_period_end', None)
-        cancels_at = None
+        # Get the correct access_until date using the same logic as subscription status
         access_until = None
-        
-        if cancels_at_ts:
+        try:
+            # Try to get the next billing date from upcoming invoice
+            upcoming = stripe.Invoice.create_preview(customer=customer.id, subscription=subscription.id)
+            if upcoming and hasattr(upcoming, 'lines') and upcoming.lines and upcoming.lines.data:
+                for line in upcoming.lines.data:
+                    if hasattr(line, 'period') and line.period and hasattr(line.period, 'start') and line.period.start:
+                        access_until = datetime.fromtimestamp(line.period.start).isoformat()
+                        logger.info(f"🗓️ Subscription will end at: {access_until}")
+                        break
+        except Exception as e:
+            logger.warning(f"Could not get upcoming invoice for cancellation date: {e}")
+            # Fallback to subscription's current period end if available
             try:
-                cancels_at = cancels_at_ts
-                access_until = datetime.fromtimestamp(cancels_at_ts).isoformat()
-                logger.info(f"🗓️ Subscription will end at: {access_until} (timestamp: {cancels_at_ts})")
+                cancels_at_ts = getattr(canceled_subscription, 'current_period_end', None)
+                if cancels_at_ts:
+                    access_until = datetime.fromtimestamp(cancels_at_ts).isoformat()
+                    logger.info(f"🗓️ Using subscription current_period_end: {access_until}")
             except (ValueError, TypeError, OSError):
-                logger.warning(f"Could not convert cancellation timestamp: {cancels_at_ts}")
+                logger.warning(f"Could not convert cancellation timestamp")
         
         # Send cancellation confirmation email
         try:
@@ -9616,7 +9625,6 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
             "success": True,
             "message": "Subscription marked for cancellation",
             "subscription_id": subscription.id,
-            "cancels_at": cancels_at,
             "access_until": access_until
         }
         
@@ -9686,6 +9694,94 @@ async def cancel_subscription_immediately(current_user: dict = Depends(get_curre
     except Exception as e:
         logger.error(f"Error canceling subscription immediately: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+
+@app.post("/stripe/reactivate-subscription")
+async def reactivate_subscription(request: dict, current_user: dict = Depends(get_current_user)):
+    """Reactivate a subscription that was scheduled for cancellation"""
+    try:
+        subscription_id = request.get('subscription_id')
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="subscription_id is required")
+        
+        # Verify the subscription belongs to this user
+        customers = stripe.Customer.list(email=current_user['email'], limit=1)
+        if not customers.data:
+            raise HTTPException(status_code=404, detail="No Stripe customer found")
+        
+        customer = customers.data[0]
+        
+        # Get the subscription to verify ownership
+        try:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            if subscription.customer != customer.id:
+                raise HTTPException(status_code=403, detail="Subscription does not belong to this customer")
+        except stripe.error.InvalidRequestError:
+            raise HTTPException(status_code=404, detail="Subscription not found")
+        
+        # Check if subscription is scheduled for cancellation
+        if not subscription.cancel_at_period_end:
+            raise HTTPException(status_code=400, detail="Subscription is not scheduled for cancellation")
+        
+        # Reactivate the subscription by removing the cancellation
+        reactivated_subscription = stripe.Subscription.modify(
+            subscription_id,
+            cancel_at_period_end=False
+        )
+        
+        logger.info(f"✅ Reactivated subscription {subscription_id} for user {current_user['id']} ({current_user['email']})")
+        
+        # Send reactivation confirmation email
+        try:
+            from email_config import email_service
+            user_name = current_user['email'].split('@')[0]
+            
+            # Get next billing date for email
+            next_billing_date = None
+            try:
+                upcoming = stripe.Invoice.create_preview(customer=customer.id, subscription=subscription_id)
+                if upcoming and hasattr(upcoming, 'lines') and upcoming.lines and upcoming.lines.data:
+                    for line in upcoming.lines.data:
+                        if hasattr(line, 'period') and line.period and hasattr(line.period, 'start') and line.period.start:
+                            next_billing_date = datetime.fromtimestamp(line.period.start).strftime('%B %d, %Y')
+                            break
+            except Exception:
+                pass
+            
+            email_content = f"""
+            <h2>🎉 Subscription Reactivated - TodoEvents</h2>
+            <p>Great news! Your TodoEvents premium subscription has been successfully reactivated.</p>
+            <p><strong>What this means:</strong></p>
+            <ul>
+                <li>✅ Your scheduled cancellation has been removed</li>
+                <li>✅ You'll continue to have premium access</li>
+                <li>✅ Billing will continue as normal</li>
+                {f"<li>📅 Your next billing date: {next_billing_date}</li>" if next_billing_date else ""}
+            </ul>
+            <p>Thank you for staying with TodoEvents Premium!</p>
+            """
+            
+            email_service.send_email(
+                current_user['email'],
+                "🎉 Subscription Reactivated - TodoEvents",
+                email_content
+            )
+            logger.info(f"✅ Sent reactivation email to {current_user['email']}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending reactivation email: {str(e)}")
+        
+        return {
+            "success": True,
+            "message": "Subscription reactivated successfully",
+            "subscription_id": subscription_id
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error reactivating subscription: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error reactivating subscription: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to reactivate subscription")
 
 @app.get("/stripe/subscription-status")
 async def get_detailed_subscription_status(current_user: dict = Depends(get_current_user)):
