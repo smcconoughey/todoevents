@@ -9753,21 +9753,46 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                 try:
                     # Try to get upcoming invoice first for most accurate next billing date
                     logger.info(f"Attempting to fetch upcoming invoice for customer: {customer.id}")
+                    # Use the correct Stripe API call for upcoming invoice
                     upcoming = stripe.Invoice.upcoming(customer=customer.id)
                     if upcoming:
                         # Use upcoming invoice for the most accurate next billing information
-                        if hasattr(upcoming, 'period_start') and upcoming.period_start:
+                        if hasattr(upcoming, 'lines') and upcoming.lines and upcoming.lines.data:
+                            # Get the subscription line item which has the period info
+                            for line in upcoming.lines.data:
+                                if hasattr(line, 'period') and line.period:
+                                    if hasattr(line.period, 'start') and line.period.start:
+                                        current_period_start = datetime.fromtimestamp(line.period.start).isoformat()
+                                        logger.info(f"📅 Got period_start from upcoming invoice line: {current_period_start}")
+                                    if hasattr(line.period, 'end') and line.period.end:
+                                        current_period_end = datetime.fromtimestamp(line.period.end).isoformat()
+                                        logger.info(f"📅 Got period_end from upcoming invoice line: {current_period_end}")
+                                    break
+                        
+                        # Also try direct period fields on invoice
+                        if not current_period_start and hasattr(upcoming, 'period_start') and upcoming.period_start:
                             current_period_start = datetime.fromtimestamp(upcoming.period_start).isoformat()
-                        if hasattr(upcoming, 'period_end') and upcoming.period_end:
+                            logger.info(f"📅 Got period_start from upcoming invoice: {current_period_start}")
+                        if not current_period_end and hasattr(upcoming, 'period_end') and upcoming.period_end:
                             current_period_end = datetime.fromtimestamp(upcoming.period_end).isoformat()
-                        logger.info(f"✅ Got accurate billing period from upcoming invoice: {current_period_start} to {current_period_end}")
+                            logger.info(f"📅 Got period_end from upcoming invoice: {current_period_end}")
+                        
+                        logger.info(f"✅ Got billing period from upcoming invoice: {current_period_start} to {current_period_end}")
                         
                         # Also log the amount for debugging
                         if hasattr(upcoming, 'amount_due'):
-                            logger.info(f"Next invoice amount: {upcoming.amount_due}")
+                            logger.info(f"💰 Next invoice amount: {upcoming.amount_due}")
                         
                 except Exception as upcoming_error:
-                    logger.warning(f"Could not fetch upcoming invoice: {upcoming_error}")
+                    logger.warning(f"⚠️ Could not fetch upcoming invoice: {upcoming_error}")
+                    # Let's try the actual correct way - maybe the method doesn't exist on this Stripe version
+                    try:
+                        logger.info(f"🔄 Trying alternative upcoming invoice method...")
+                        import stripe as stripe_alt
+                        upcoming = stripe_alt.Invoice.upcoming(customer=customer.id)
+                        logger.info(f"✅ Alternative method worked! Invoice: {upcoming.id if hasattr(upcoming, 'id') else 'no id'}")
+                    except Exception as alt_error:
+                        logger.warning(f"⚠️ Alternative method also failed: {alt_error}")
                     
                     # Fallback to latest invoice
                     try:
@@ -10054,6 +10079,11 @@ async def stripe_webhook(request: Request):
             logger.info(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
             print(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
             await handle_invoice_created(invoice)
+        elif event['type'] == 'invoice.upcoming':
+            invoice = event['data']['object']
+            logger.info(f"🔔 Processing invoice.upcoming for invoice: {invoice.get('id')}")
+            print(f"🔔 Processing invoice.upcoming for invoice: {invoice.get('id')}")
+            await handle_invoice_upcoming(invoice)
         else:
             logger.info(f"ℹ️ Unhandled event type: {event['type']}")
             print(f"ℹ️ Unhandled event type: {event['type']}")
@@ -10504,6 +10534,78 @@ async def handle_invoice_created(invoice):
     except Exception as e:
         logger.error(f"Error handling invoice creation: {str(e)}")
         logger.error(f"Invoice creation error traceback: {traceback.format_exc()}")
+
+async def handle_invoice_upcoming(invoice):
+    """Handle upcoming invoice notifications"""
+    try:
+        customer_id = invoice.get('customer')
+        invoice_id = invoice.get('id')
+        amount_due = invoice.get('amount_due', 0)
+        currency = invoice.get('currency', 'usd')
+        
+        if not customer_id:
+            logger.warning(f"No customer ID in upcoming invoice: {invoice_id}")
+            return
+        
+        # Find user by customer ID
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            cursor.execute(f"SELECT id, email FROM users WHERE stripe_customer_id = {placeholder}", (customer_id,))
+            user_data = cursor.fetchone()
+            
+            if not user_data:
+                logger.warning(f"Could not find user for customer: {customer_id}")
+                return
+            
+            user_id = user_data['id']
+            user_email = user_data['email']
+        
+        # Log upcoming invoice
+        log_activity(user_id, "stripe_invoice_upcoming", f"Upcoming invoice {invoice_id} - amount: {amount_due/100:.2f} {currency.upper()}")
+        
+        # Send upcoming payment notification email
+        try:
+            formatted_amount = f"${amount_due/100:.2f}" if currency.lower() == 'usd' else f"{amount_due/100:.2f} {currency.upper()}"
+            
+            # Get invoice period for better context
+            period_start = invoice.get('period_start')
+            period_end = invoice.get('period_end')
+            period_text = ""
+            
+            if period_start and period_end:
+                start_date = datetime.fromtimestamp(period_start).strftime('%B %d, %Y')
+                end_date = datetime.fromtimestamp(period_end).strftime('%B %d, %Y')
+                period_text = f"<p>Billing period: {start_date} - {end_date}</p>"
+            
+            from email_config import email_service
+            email_content = f"""
+            <h2>TodoEvents Premium - Upcoming Payment Reminder</h2>
+            <p>Hello,</p>
+            <p>This is a friendly reminder that your TodoEvents premium subscription payment is coming up.</p>
+            <p><strong>Amount: {formatted_amount}</strong></p>
+            {period_text}
+            <p>Your payment method will be automatically charged on your next billing date.</p>
+            <p>To update your payment method or manage your subscription, you can visit your account settings.</p>
+            <p>If you have any questions about your subscription, please don't hesitate to contact our support team.</p>
+            <p>Thank you for being a TodoEvents premium member!</p>
+            """
+            
+            email_service.send_email(
+                user_email,
+                f"TodoEvents Premium - Upcoming Payment of {formatted_amount}",
+                email_content
+            )
+            logger.info(f"✅ Sent upcoming payment notification email to {user_email} for {formatted_amount}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to send upcoming payment notification email: {str(e)}")
+        
+        logger.info(f"📅 Upcoming invoice processed for user {user_id}: {invoice_id} - {formatted_amount}")
+        
+    except Exception as e:
+        logger.error(f"Error handling upcoming invoice: {str(e)}")
+        logger.error(f"Upcoming invoice error traceback: {traceback.format_exc()}")
 
 @app.get("/stripe/subscription-status")
 async def get_subscription_status(current_user: dict = Depends(get_current_user)):
