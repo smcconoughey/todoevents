@@ -9590,8 +9590,27 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
             try:
                 cancels_at = cancels_at_ts
                 access_until = datetime.fromtimestamp(cancels_at_ts).isoformat()
+                logger.info(f"🗓️ Subscription will end at: {access_until} (timestamp: {cancels_at_ts})")
             except (ValueError, TypeError, OSError):
                 logger.warning(f"Could not convert cancellation timestamp: {cancels_at_ts}")
+        
+        # Send cancellation confirmation email
+        try:
+            from email_config import email_service
+            user_name = current_user['email'].split('@')[0]
+            email_sent = email_service.send_subscription_cancellation_email(
+                to_email=current_user['email'],
+                user_name=user_name,
+                cancellation_type="scheduled",
+                effective_date=access_until
+            )
+            
+            if email_sent:
+                logger.info(f"✅ Cancellation confirmation email sent to {current_user['email']}")
+            else:
+                logger.error(f"❌ Failed to send cancellation confirmation email to {current_user['email']}")
+        except Exception as e:
+            logger.error(f"❌ Error sending cancellation email: {str(e)}")
         
         return {
             "success": True,
@@ -9636,6 +9655,23 @@ async def cancel_subscription_immediately(current_user: dict = Depends(get_curre
         canceled_subscription = stripe.Subscription.cancel(subscription.id)
         
         logger.info(f"✅ Immediately canceled subscription {subscription.id} for user {current_user['id']} ({current_user['email']})")
+        
+        # Send immediate cancellation confirmation email
+        try:
+            from email_config import email_service
+            user_name = current_user['email'].split('@')[0]
+            email_sent = email_service.send_subscription_cancellation_email(
+                to_email=current_user['email'],
+                user_name=user_name,
+                cancellation_type="immediate"
+            )
+            
+            if email_sent:
+                logger.info(f"✅ Immediate cancellation email sent to {current_user['email']}")
+            else:
+                logger.error(f"❌ Failed to send immediate cancellation email to {current_user['email']}")
+        except Exception as e:
+            logger.error(f"❌ Error sending immediate cancellation email: {str(e)}")
         
         return {
             "success": True,
@@ -9687,6 +9723,7 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                 current_period_start_ts = getattr(sub, 'current_period_start', None)
                 if current_period_start_ts:
                     current_period_start = datetime.fromtimestamp(current_period_start_ts).isoformat()
+                    logger.info(f"🕒 Current period start from subscription: {current_period_start} (ts: {current_period_start_ts})")
             except (ValueError, TypeError, OSError, AttributeError):
                 pass
                 
@@ -9694,6 +9731,7 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                 current_period_end_ts = getattr(sub, 'current_period_end', None)
                 if current_period_end_ts:
                     current_period_end = datetime.fromtimestamp(current_period_end_ts).isoformat()
+                    logger.info(f"🕒 Current period end from subscription: {current_period_end} (ts: {current_period_end_ts})")
             except (ValueError, TypeError, OSError, AttributeError):
                 pass
             
@@ -9760,6 +9798,19 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                 canceled_at = datetime.fromtimestamp(canceled_at_ts).isoformat() if canceled_at_ts else None
             except (ValueError, TypeError, OSError, AttributeError):
                 canceled_at = None
+            
+            # Check if subscription is scheduled for cancellation and get the actual end date
+            cancel_at_period_end = getattr(sub, 'cancel_at_period_end', False)
+            if cancel_at_period_end and not current_period_end:
+                # For scheduled cancellations, try to get the correct end date
+                try:
+                    # Check cancel_at field which might have the actual cancellation date
+                    cancel_at_ts = getattr(sub, 'cancel_at', None)
+                    if cancel_at_ts:
+                        current_period_end = datetime.fromtimestamp(cancel_at_ts).isoformat()
+                        logger.info(f"🗓️ Using cancel_at for scheduled cancellation: {current_period_end} (ts: {cancel_at_ts})")
+                except (ValueError, TypeError, OSError, AttributeError):
+                    pass
             
             # Safely get price information from multiple possible sources
             amount = 0
@@ -10164,10 +10215,18 @@ async def handle_subscription_cancelled(subscription):
     """Handle subscription cancellation"""
     try:
         user_id = int(subscription['metadata']['user_id'])
+        user_email = subscription['metadata'].get('user_email', '')
         
         with get_db_transaction() as conn:
             cursor = conn.cursor()
             placeholder = get_placeholder()
+            
+            # Get user details if email not in metadata
+            if not user_email:
+                cursor.execute(f"SELECT email FROM users WHERE id = {placeholder}", (user_id,))
+                user_data = cursor.fetchone()
+                if user_data:
+                    user_email = user_data['email']
             
             # Set role back to user and clear expiration
             cursor.execute(f"""
@@ -10180,6 +10239,24 @@ async def handle_subscription_cancelled(subscription):
             
             log_activity(user_id, "stripe_cancellation", f"Premium subscription cancelled via Stripe")
             logger.info(f"✅ Premium cancelled for user {user_id} via Stripe")
+            
+            # Send cancellation email via webhook (for subscriptions cancelled outside our app)
+            if user_email:
+                try:
+                    from email_config import email_service
+                    user_name = user_email.split('@')[0]
+                    email_sent = email_service.send_subscription_cancellation_email(
+                        to_email=user_email,
+                        user_name=user_name,
+                        cancellation_type="immediate"
+                    )
+                    
+                    if email_sent:
+                        logger.info(f"✅ Webhook cancellation email sent to {user_email}")
+                    else:
+                        logger.error(f"❌ Failed to send webhook cancellation email to {user_email}")
+                except Exception as e:
+                    logger.error(f"❌ Error sending webhook cancellation email: {str(e)}")
         
     except Exception as e:
         logger.error(f"Error handling subscription cancellation: {str(e)}")

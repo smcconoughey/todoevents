@@ -836,6 +836,133 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         """
         
         return self.send_email(to_email, subject, html_content, text_content)
+    
+    def send_subscription_cancellation_email(self, to_email: str, user_name: Optional[str] = None, 
+                                           cancellation_type: str = "scheduled", 
+                                           effective_date: Optional[str] = None) -> bool:
+        """Send subscription cancellation confirmation email"""
+        
+        # Determine subject and content based on cancellation type
+        if cancellation_type == "immediate":
+            subject = "Subscription Cancelled - TodoEvents"
+            action_text = "immediately cancelled"
+            access_text = "Your premium access has ended immediately."
+        else:
+            subject = "Subscription Scheduled for Cancellation - TodoEvents" 
+            action_text = "scheduled for cancellation"
+            if effective_date:
+                try:
+                    from datetime import datetime
+                    if isinstance(effective_date, str):
+                        end_date = datetime.fromisoformat(effective_date.replace('Z', '+00:00'))
+                    else:
+                        end_date = effective_date
+                    formatted_date = end_date.strftime('%B %d, %Y')
+                    access_text = f"You'll keep access to all premium features until {formatted_date}."
+                except:
+                    access_text = "You'll keep access to all premium features until your current billing period ends."
+            else:
+                access_text = "You'll keep access to all premium features until your current billing period ends."
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Subscription Cancellation - TodoEvents</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #6c757d, #495057); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .cancellation-notice {{ background: {'#ffe6e6' if cancellation_type == 'immediate' else '#fff3cd'}; border: 1px solid {'#ffcccc' if cancellation_type == 'immediate' else '#ffeaa7'}; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .what-happens {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 TodoEvents</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Subscription Cancellation</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Subscription Cancellation Confirmed{f', {user_name}' if user_name else ''}</h2>
+                    
+                    <p>We've received and processed your cancellation request. Your TodoEvents Premium subscription has been {action_text}.</p>
+                    
+                    <div class="cancellation-notice">
+                        <h3>📋 Cancellation Details</h3>
+                        <p><strong>Status:</strong> {"Cancelled Immediately" if cancellation_type == "immediate" else "Scheduled for Cancellation"}</p>
+                        <p><strong>Access:</strong> {access_text}</p>
+                        {f'<p><strong>Effective Date:</strong> {formatted_date if effective_date else "End of current billing period"}</p>' if cancellation_type == "scheduled" else ''}
+                    </div>
+                    
+                    <div class="what-happens">
+                        <h3>What happens next?</h3>
+                        <ul>
+                            {"<li>Your premium access has ended immediately</li>" if cancellation_type == "immediate" else f"<li>You'll continue to have premium access until {formatted_date if effective_date else 'your billing period ends'}</li>"}
+                            <li>No future charges will be made to your payment method</li>
+                            <li>Your account will remain active with free features</li>
+                            <li>All your events and data will be preserved</li>
+                            {"<li>You can resubscribe anytime to regain premium features</li>" if cancellation_type == "immediate" else "<li>You can reactivate your subscription anytime before it ends</li>"}
+                        </ul>
+                    </div>
+                    
+                    {f'<a href="https://todo-events.com/subscription" class="button">{"Resubscribe to Premium" if cancellation_type == "immediate" else "Reactivate Subscription"}</a>' if cancellation_type != "scheduled" else ''}
+                    
+                    <p><strong>Need help or changed your mind?</strong> Our support team is here to help! Contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a> or visit your <a href="https://todo-events.com/subscription">subscription management page</a>.</p>
+                    
+                    <p>Thank you for being a TodoEvents Premium member. We're sorry to see you go, but you're always welcome back!</p>
+                    
+                    <p>Best regards,<br>The TodoEvents Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 TodoEvents. Premium event hosting made simple.</p>
+                    <p>This confirmation was sent to {to_email}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        TodoEvents - Subscription Cancellation Confirmed
+        
+        Subscription Cancellation Confirmed{f', {user_name}' if user_name else ''}
+        
+        We've received and processed your cancellation request. Your TodoEvents Premium subscription has been {action_text}.
+        
+        Cancellation Details:
+        - Status: {"Cancelled Immediately" if cancellation_type == "immediate" else "Scheduled for Cancellation"}
+        - Access: {access_text}
+        {f'- Effective Date: {formatted_date if effective_date else "End of current billing period"}' if cancellation_type == "scheduled" else ''}
+        
+        What happens next?
+        {"- Your premium access has ended immediately" if cancellation_type == "immediate" else f"- You'll continue to have premium access until {formatted_date if effective_date else 'your billing period ends'}"}
+        - No future charges will be made to your payment method
+        - Your account will remain active with free features  
+        - All your events and data will be preserved
+        {"- You can resubscribe anytime to regain premium features" if cancellation_type == "immediate" else "- You can reactivate your subscription anytime before it ends"}
+        
+        Need help or changed your mind? Contact us at support@todo-events.com or visit:
+        https://todo-events.com/subscription
+        
+        Thank you for being a TodoEvents Premium member. We're sorry to see you go, but you're always welcome back!
+        
+        Best regards,
+        The TodoEvents Team
+        
+        This confirmation was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
 
 # Create global email service instance
 email_service = EmailService() 
