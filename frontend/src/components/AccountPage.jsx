@@ -125,48 +125,56 @@ const AccountPage = () => {
     <div className="min-h-screen bg-themed-background">
       {/* Header */}
       <div className="bg-themed-surface border-b border-themed">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 min-w-0">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/')}
-                className="text-themed-secondary hover:text-themed-primary"
+                className="text-themed-secondary hover:text-themed-primary flex-shrink-0"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Map
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back to Map</span>
               </Button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-pin-blue rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-pin-blue rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-themed-primary">My Account</h1>
-                  <p className="text-sm text-themed-secondary">{user.email}</p>
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-xl font-semibold text-themed-primary">My Account</h1>
+                  <p className="text-sm text-themed-secondary truncate">{user.email}</p>
                 </div>
                 {isPremium && (
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 px-3 py-1 rounded-full border border-amber-500/30">
+                  <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 px-3 py-1 rounded-full border border-amber-500/30 flex-shrink-0">
                     <Crown className="w-4 h-4 text-amber-500" />
                     <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Premium</span>
                   </div>
                 )}
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={logout}
-              className="text-themed-secondary hover:text-themed-primary"
-            >
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2">
+              {isPremium && (
+                <div className="flex sm:hidden items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 px-3 py-1 rounded-full border border-amber-500/30">
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Premium</span>
+                </div>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={logout}
+                className="text-themed-secondary hover:text-themed-primary"
+              >
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 overflow-hidden">
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-themed-surface rounded-lg border border-themed p-4 space-y-2">
@@ -213,7 +221,7 @@ const AccountPage = () => {
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 min-w-0 overflow-hidden">
             {activeTab === 'events' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -239,13 +247,13 @@ const AccountPage = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {userEvents.map((event) => (
                       <div key={event.id} className="bg-themed-surface rounded-lg border border-themed p-6 hover:shadow-lg transition-shadow">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-semibold text-themed-primary truncate">{event.title}</h3>
+                              <h3 className="font-semibold text-themed-primary truncate max-w-[200px] sm:max-w-none">{event.title}</h3>
                               {(isPremium || event.verified) && (
                                 <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" title="Verified Event" />
                               )}
@@ -267,12 +275,12 @@ const AccountPage = () => {
                               </div>
                             </div>
                           </div>
-                          <div className="flex gap-2 ml-4">
+                          <div className="flex gap-1 ml-2 flex-shrink-0">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEditEvent(event)}
-                              className="text-themed-secondary hover:text-themed-primary"
+                              className="text-themed-secondary hover:text-themed-primary h-8 w-8 p-0"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -280,7 +288,7 @@ const AccountPage = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteEvent(event.id)}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -332,7 +340,7 @@ const AccountPage = () => {
                   <p className="text-lg text-themed-secondary">Unlock powerful analytics and verified event badges</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl border-2 border-gradient-to-r from-amber-200 to-orange-200 dark:border-amber-800/50 p-8">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl border-2 border-gradient-to-r from-amber-200 to-orange-200 dark:border-amber-800/50 p-4 sm:p-8">
                   <div className="text-center mb-8">
                     <div className="text-4xl font-bold text-themed-primary mb-2">
                       $20

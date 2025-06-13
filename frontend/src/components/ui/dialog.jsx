@@ -40,7 +40,7 @@ export const DialogContent = ({ children, className = "", "aria-describedby": ar
 
   return (
     <div 
-      className={`bg-neutral-900 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto w-[90vw] max-w-[500px] ${className}`}
+      className={`bg-themed-surface rounded-lg shadow-xl max-h-[90vh] overflow-y-auto w-[90vw] max-w-[500px] mx-auto ${className}`}
       role="dialog"
       aria-modal="true"
       aria-describedby={descriptionId}
@@ -52,13 +52,13 @@ export const DialogContent = ({ children, className = "", "aria-describedby": ar
 };
 
 export const DialogHeader = ({ children }) => (
-  <div className="p-6 border-b border-white/10">
+  <div className="p-6 border-b border-themed">
     {children}
   </div>
 );
 
 export const DialogTitle = ({ children }) => (
-  <h2 className="text-xl font-semibold text-white">
+  <h2 className="text-xl font-semibold text-themed-primary">
     {children}
   </h2>
 );
@@ -67,7 +67,7 @@ export const DialogTitle = ({ children }) => (
 export const DialogDescription = ({ children, id, className = "" }) => (
   <p 
     id={id}
-    className={`mt-2 text-sm text-white/70 ${className}`}
+    className={`mt-2 text-sm text-themed-secondary ${className}`}
   >
     {children}
   </p>

@@ -396,14 +396,14 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       </form>
       
       {showPredictions && predictions.length > 0 && (
-        <div className="absolute z-50 w-full bg-neutral-800 border border-neutral-700 rounded-md shadow-lg mt-1 max-h-[200px] overflow-y-auto">
+        <div className="absolute z-50 w-full bg-themed-surface border border-themed rounded-md shadow-lg mt-1 max-h-[200px] overflow-y-auto">
           {predictions.map((prediction, index) => (
             <div
               key={prediction.place_id}
-              className={`p-3 cursor-pointer border-t border-neutral-700 first:border-t-0 ${
+              className={`p-3 cursor-pointer border-t border-themed first:border-t-0 ${
                 index === selectedIndex 
-                  ? 'bg-neutral-600 text-white' 
-                  : 'hover:bg-neutral-700 text-white'
+                  ? 'bg-themed-hover text-themed-primary' 
+                  : 'hover:bg-themed-hover text-themed-primary'
               }`}
               onClick={() => handlePredictionSelect(prediction)}
               onMouseEnter={() => setSelectedIndex(index)}

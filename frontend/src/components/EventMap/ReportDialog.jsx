@@ -128,7 +128,7 @@ const ReportDialog = ({ isOpen, onClose, event }) => {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
           {/* Issue Selection */}
           <div className="space-y-3">
             <label className="text-sm font-medium text-themed-secondary">
