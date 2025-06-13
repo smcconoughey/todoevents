@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './EventMap/AuthContext';
 import { Button } from './ui/button';
+import { API_URL } from '@/config';
 import { 
   ArrowLeft, 
   CreditCard, 
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 
 const SubscriptionPage = () => {
-  const { user, fetchData } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
   const [subscriptionData, setSubscriptionData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,18 @@ const SubscriptionPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchData('/stripe/subscription-status');
+      
+      const response = await fetch(`${API_URL}/stripe/subscription-status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to load subscription data`);
+      }
+      
+      const data = await response.json();
       setSubscriptionData(data);
     } catch (err) {
       setError('Failed to load subscription data');
@@ -54,7 +66,19 @@ const SubscriptionPage = () => {
         ? '/stripe/cancel-subscription-immediately'
         : '/stripe/cancel-subscription';
       
-      const result = await fetchData(endpoint, 'POST');
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to cancel subscription`);
+      }
+      
+      const result = await response.json();
       
       if (result.success) {
         // Reload subscription data to show updated status
