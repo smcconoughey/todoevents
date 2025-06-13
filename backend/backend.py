@@ -9701,30 +9701,45 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
             
             if not current_period_end:
                 try:
-                    # Try to get billing period from latest invoice
-                    latest_invoice_id = getattr(sub, 'latest_invoice', None)
-                    if latest_invoice_id:
-                        logger.info(f"Fetching latest invoice: {latest_invoice_id}")
-                        invoice = stripe.Invoice.retrieve(latest_invoice_id)
-                        if invoice:
-                            current_period_start = datetime.fromtimestamp(invoice.period_start).isoformat() if hasattr(invoice, 'period_start') else current_period_start
-                            current_period_end = datetime.fromtimestamp(invoice.period_end).isoformat() if hasattr(invoice, 'period_end') else current_period_end
-                            logger.info(f"Got billing period from invoice: {current_period_start} to {current_period_end}")
-                except Exception as invoice_error:
-                    logger.warning(f"Could not fetch invoice data: {invoice_error}")
-                    # Try to get upcoming invoice for next billing date
+                    # Try to get upcoming invoice first for most accurate next billing date
+                    logger.info(f"Attempting to fetch upcoming invoice for customer: {customer.id}")
+                    upcoming = stripe.Invoice.upcoming(customer=customer.id)
+                    if upcoming:
+                        # Use upcoming invoice for the most accurate next billing information
+                        if hasattr(upcoming, 'period_start') and upcoming.period_start:
+                            current_period_start = datetime.fromtimestamp(upcoming.period_start).isoformat()
+                        if hasattr(upcoming, 'period_end') and upcoming.period_end:
+                            current_period_end = datetime.fromtimestamp(upcoming.period_end).isoformat()
+                        logger.info(f"✅ Got accurate billing period from upcoming invoice: {current_period_start} to {current_period_end}")
+                        
+                        # Also log the amount for debugging
+                        if hasattr(upcoming, 'amount_due'):
+                            logger.info(f"Next invoice amount: {upcoming.amount_due}")
+                        
+                except Exception as upcoming_error:
+                    logger.warning(f"Could not fetch upcoming invoice: {upcoming_error}")
+                    
+                    # Fallback to latest invoice
                     try:
-                        upcoming = stripe.Invoice.upcoming(customer=customer.id)
-                        if upcoming:
-                            current_period_end = datetime.fromtimestamp(upcoming.period_end).isoformat() if hasattr(upcoming, 'period_end') else current_period_end
-                            logger.info(f"Got next billing date from upcoming invoice: {current_period_end}")
-                    except Exception as upcoming_error:
-                        logger.warning(f"Could not fetch upcoming invoice: {upcoming_error}")
+                        latest_invoice_id = getattr(sub, 'latest_invoice', None)
+                        if latest_invoice_id:
+                            logger.info(f"Fetching latest invoice as fallback: {latest_invoice_id}")
+                            invoice = stripe.Invoice.retrieve(latest_invoice_id)
+                            if invoice:
+                                if hasattr(invoice, 'period_start') and invoice.period_start and not current_period_start:
+                                    current_period_start = datetime.fromtimestamp(invoice.period_start).isoformat()
+                                if hasattr(invoice, 'period_end') and invoice.period_end and not current_period_end:
+                                    current_period_end = datetime.fromtimestamp(invoice.period_end).isoformat()
+                                logger.info(f"Got billing period from latest invoice: {current_period_start} to {current_period_end}")
+                    except Exception as invoice_error:
+                        logger.warning(f"Could not fetch latest invoice data: {invoice_error}")
+                        
                         # Final fallback to billing_cycle_anchor if available
                         try:
                             billing_anchor_ts = getattr(sub, 'billing_cycle_anchor', None)
-                            if billing_anchor_ts:
+                            if billing_anchor_ts and not current_period_end:
                                 current_period_end = datetime.fromtimestamp(billing_anchor_ts).isoformat()
+                                logger.info(f"Using billing cycle anchor as final fallback: {current_period_end}")
                         except (ValueError, TypeError, OSError, AttributeError):
                             pass
                 
@@ -9961,6 +9976,21 @@ async def stripe_webhook(request: Request):
             logger.info(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
             await handle_subscription_paused(subscription)
+        elif event['type'] == 'customer.subscription.updated':
+            subscription = event['data']['object']
+            logger.info(f"🔔 Processing customer.subscription.updated for subscription: {subscription.get('id')}")
+            print(f"🔔 Processing customer.subscription.updated for subscription: {subscription.get('id')}")
+            await handle_subscription_updated(subscription)
+        elif event['type'] == 'customer.subscription.resumed':
+            subscription = event['data']['object']
+            logger.info(f"🔔 Processing customer.subscription.resumed for subscription: {subscription.get('id')}")
+            print(f"🔔 Processing customer.subscription.resumed for subscription: {subscription.get('id')}")
+            await handle_subscription_resumed(subscription)
+        elif event['type'] == 'invoice.created':
+            invoice = event['data']['object']
+            logger.info(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
+            print(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
+            await handle_invoice_created(invoice)
         else:
             logger.info(f"ℹ️ Unhandled event type: {event['type']}")
             print(f"ℹ️ Unhandled event type: {event['type']}")
@@ -10165,6 +10195,226 @@ async def handle_subscription_paused(subscription):
         
     except Exception as e:
         logger.error(f"Error handling subscription pause: {str(e)}")
+
+async def handle_subscription_updated(subscription):
+    """Handle subscription updates (plan changes, quantity, etc.)"""
+    try:
+        # Extract user info from subscription metadata or customer
+        user_id = None
+        user_email = None
+        
+        if 'metadata' in subscription and subscription['metadata'].get('user_id'):
+            user_id = int(subscription['metadata']['user_id'])
+            user_email = subscription['metadata'].get('user_email')
+        else:
+            # Fallback: find user by customer ID
+            customer_id = subscription.get('customer')
+            if customer_id:
+                with get_db() as conn:
+                    cursor = conn.cursor()
+                    placeholder = get_placeholder()
+                    cursor.execute(f"SELECT id, email FROM users WHERE stripe_customer_id = {placeholder}", (customer_id,))
+                    user_data = cursor.fetchone()
+                    if user_data:
+                        user_id = user_data['id']
+                        user_email = user_data['email']
+        
+        if not user_id:
+            logger.warning(f"Could not find user for subscription update: {subscription.get('id')}")
+            return
+        
+        # Log subscription changes
+        subscription_status = subscription.get('status', 'unknown')
+        subscription_id = subscription.get('id', 'unknown')
+        
+        with get_db_transaction() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Update subscription status if it changed to active and user isn't premium
+            if subscription_status == 'active':
+                cursor.execute(f"SELECT role FROM users WHERE id = {placeholder}", (user_id,))
+                user_data = cursor.fetchone()
+                
+                if user_data and user_data['role'] != 'premium':
+                    # Calculate new expiration (30 days from now)
+                    expires_at = datetime.utcnow() + timedelta(days=30)
+                    
+                    cursor.execute(f"""
+                        UPDATE users 
+                        SET role = 'premium', premium_expires_at = {placeholder}
+                        WHERE id = {placeholder}
+                    """, (expires_at, user_id))
+                    
+                    conn.commit()
+                    
+                    logger.info(f"✅ Updated user {user_id} to premium due to subscription update")
+                    
+                    # Send notification email about subscription change
+                    try:
+                        from email_config import email_service
+                        email_service.send_premium_notification_email(
+                            to_email=user_email,
+                            user_name=user_email.split('@')[0] if user_email else "User",
+                            expires_at=expires_at.isoformat(),
+                            granted_by="Subscription Update"
+                        )
+                        logger.info(f"✅ Sent subscription update email to {user_email}")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to send subscription update email: {str(e)}")
+            
+            # Log the activity regardless
+            log_activity(user_id, "stripe_subscription_updated", f"Subscription {subscription_id} updated - status: {subscription_status}")
+            logger.info(f"📝 Subscription updated for user {user_id}: {subscription_id} - {subscription_status}")
+        
+    except Exception as e:
+        logger.error(f"Error handling subscription update: {str(e)}")
+        logger.error(f"Subscription update error traceback: {traceback.format_exc()}")
+
+async def handle_subscription_resumed(subscription):
+    """Handle subscription resumption after pause"""
+    try:
+        # Extract user info
+        user_id = None
+        user_email = None
+        
+        if 'metadata' in subscription and subscription['metadata'].get('user_id'):
+            user_id = int(subscription['metadata']['user_id'])
+            user_email = subscription['metadata'].get('user_email')
+        else:
+            # Find user by customer ID
+            customer_id = subscription.get('customer')
+            if customer_id:
+                with get_db() as conn:
+                    cursor = conn.cursor()
+                    placeholder = get_placeholder()
+                    cursor.execute(f"SELECT id, email FROM users WHERE stripe_customer_id = {placeholder}", (customer_id,))
+                    user_data = cursor.fetchone()
+                    if user_data:
+                        user_id = user_data['id']
+                        user_email = user_data['email']
+        
+        if not user_id:
+            logger.warning(f"Could not find user for subscription resume: {subscription.get('id')}")
+            return
+        
+        with get_db_transaction() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            
+            # Restore premium access
+            expires_at = datetime.utcnow() + timedelta(days=30)
+            
+            cursor.execute(f"""
+                UPDATE users 
+                SET role = 'premium', premium_expires_at = {placeholder}
+                WHERE id = {placeholder}
+            """, (expires_at, user_id))
+            
+            conn.commit()
+            
+            log_activity(user_id, "stripe_subscription_resumed", f"Premium subscription resumed via Stripe")
+            logger.info(f"▶️ Premium resumed for user {user_id} via Stripe")
+            
+            # Send welcome back email
+            try:
+                from email_config import email_service
+                email_content = f"""
+                <h2>Welcome Back to TodoEvents Premium!</h2>
+                <p>Great news! Your premium subscription has been resumed.</p>
+                <p>You now have access to all premium features including:</p>
+                <ul>
+                    <li>Advanced event analytics</li>
+                    <li>Priority customer support</li>
+                    <li>Enhanced event management tools</li>
+                </ul>
+                <p>Your premium access expires on: {expires_at.strftime('%B %d, %Y')}</p>
+                <p>Thank you for being a TodoEvents premium member!</p>
+                """
+                
+                email_service.send_email(
+                    user_email,
+                    "TodoEvents Premium - Welcome Back!",
+                    email_content
+                )
+                logger.info(f"✅ Sent subscription resumed email to {user_email}")
+            except Exception as e:
+                logger.error(f"❌ Failed to send subscription resumed email: {str(e)}")
+        
+    except Exception as e:
+        logger.error(f"Error handling subscription resume: {str(e)}")
+        logger.error(f"Subscription resume error traceback: {traceback.format_exc()}")
+
+async def handle_invoice_created(invoice):
+    """Handle invoice creation for billing notifications"""
+    try:
+        customer_id = invoice.get('customer')
+        invoice_id = invoice.get('id')
+        amount_due = invoice.get('amount_due', 0)
+        currency = invoice.get('currency', 'usd')
+        
+        if not customer_id:
+            logger.warning(f"No customer ID in invoice: {invoice_id}")
+            return
+        
+        # Find user by customer ID
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            cursor.execute(f"SELECT id, email FROM users WHERE stripe_customer_id = {placeholder}", (customer_id,))
+            user_data = cursor.fetchone()
+            
+            if not user_data:
+                logger.warning(f"Could not find user for customer: {customer_id}")
+                return
+            
+            user_id = user_data['id']
+            user_email = user_data['email']
+        
+        # Log invoice creation
+        log_activity(user_id, "stripe_invoice_created", f"Invoice {invoice_id} created - amount: {amount_due/100:.2f} {currency.upper()}")
+        
+        # Send billing notification email
+        try:
+            formatted_amount = f"${amount_due/100:.2f}" if currency.lower() == 'usd' else f"{amount_due/100:.2f} {currency.upper()}"
+            
+            # Get invoice period for better context
+            period_start = invoice.get('period_start')
+            period_end = invoice.get('period_end')
+            period_text = ""
+            
+            if period_start and period_end:
+                start_date = datetime.fromtimestamp(period_start).strftime('%B %d, %Y')
+                end_date = datetime.fromtimestamp(period_end).strftime('%B %d, %Y')
+                period_text = f"<p>Billing period: {start_date} - {end_date}</p>"
+            
+            from email_config import email_service
+            email_content = f"""
+            <h2>TodoEvents Premium - Upcoming Payment</h2>
+            <p>Hello,</p>
+            <p>Your TodoEvents premium subscription invoice has been created.</p>
+            <p><strong>Amount due: {formatted_amount}</strong></p>
+            {period_text}
+            <p>Payment will be automatically processed according to your billing schedule.</p>
+            <p>If you have any questions about your subscription, please don't hesitate to contact our support team.</p>
+            <p>Thank you for being a TodoEvents premium member!</p>
+            """
+            
+            email_service.send_email(
+                user_email,
+                f"TodoEvents Premium - Invoice for {formatted_amount}",
+                email_content
+            )
+            logger.info(f"✅ Sent invoice notification email to {user_email} for {formatted_amount}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to send invoice notification email: {str(e)}")
+        
+        logger.info(f"📄 Invoice created for user {user_id}: {invoice_id} - {formatted_amount}")
+        
+    except Exception as e:
+        logger.error(f"Error handling invoice creation: {str(e)}")
+        logger.error(f"Invoice creation error traceback: {traceback.format_exc()}")
 
 @app.get("/stripe/subscription-status")
 async def get_subscription_status(current_user: dict = Depends(get_current_user)):
