@@ -9581,12 +9581,24 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
         
         logger.info(f"✅ Marked subscription {subscription.id} for cancellation for user {current_user['id']} ({current_user['email']})")
         
+        # Safely get cancellation date
+        cancels_at_ts = getattr(canceled_subscription, 'current_period_end', None)
+        cancels_at = None
+        access_until = None
+        
+        if cancels_at_ts:
+            try:
+                cancels_at = cancels_at_ts
+                access_until = datetime.fromtimestamp(cancels_at_ts).isoformat()
+            except (ValueError, TypeError, OSError):
+                logger.warning(f"Could not convert cancellation timestamp: {cancels_at_ts}")
+        
         return {
             "success": True,
             "message": "Subscription marked for cancellation",
             "subscription_id": subscription.id,
-            "cancels_at": canceled_subscription.current_period_end,
-            "access_until": datetime.fromtimestamp(canceled_subscription.current_period_end).isoformat()
+            "cancels_at": cancels_at,
+            "access_until": access_until
         }
         
     except stripe.error.StripeError as e:
