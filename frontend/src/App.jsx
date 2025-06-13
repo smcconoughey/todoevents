@@ -10,6 +10,7 @@ import FlyerPage from './components/FlyerPage';
 import LegalPage from './components/LegalPage';
 import WelcomePopup from './components/WelcomePopup';
 import AccountPage from './components/AccountPage';
+import SubscriptionPage from './components/SubscriptionPage';
 import { initGoogleMaps } from './googleMapsLoader';
 import { testApiUrl } from './config';
 import './index.css';
@@ -135,6 +136,7 @@ function App() {
             {/* Main Routes */}
             <Route path="/" element={<EventMap mapsLoaded={mapsLoaded} />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/hosts" element={<HostsPage />} />
             <Route path="/creators" element={<EventCreatorPage />} />
             <Route path="/flyer" element={<FlyerPage />} />

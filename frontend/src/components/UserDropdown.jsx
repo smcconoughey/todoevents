@@ -7,7 +7,8 @@ import {
   Settings, 
   LogOut, 
   Crown, 
-  ChevronDown 
+  ChevronDown,
+  CreditCard
 } from 'lucide-react';
 
 const UserDropdown = () => {
@@ -35,6 +36,11 @@ const UserDropdown = () => {
     navigate('/account');
   };
 
+  const handleSubscriptionClick = () => {
+    setIsOpen(false);
+    navigate('/subscription');
+  };
+
   const handleLogoutClick = () => {
     setIsOpen(false);
     logout();
@@ -57,11 +63,12 @@ const UserDropdown = () => {
         <div className="w-6 h-6 bg-pin-blue rounded-full flex items-center justify-center">
           <User className="w-3 h-3 text-white" />
         </div>
+        <span className="hidden sm:inline text-sm">{user.email?.split('@')[0]}</span>
         <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-themed-surface border border-themed rounded-lg shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-64 sm:w-72 bg-themed-surface border border-themed rounded-lg shadow-xl z-50 overflow-hidden">
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-themed bg-themed-surface-hover">
             <div className="flex items-center gap-3">
@@ -98,7 +105,15 @@ const UserDropdown = () => {
               <span className="text-sm">Account & Events</span>
             </button>
 
-            {!isPremium && (
+            {isPremium ? (
+              <button
+                onClick={handleSubscriptionClick}
+                className="w-full flex items-center gap-3 px-4 py-2 text-left text-themed-primary hover:bg-themed-surface-hover transition-colors"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span className="text-sm">Manage Subscription</span>
+              </button>
+            ) : (
               <button
                 onClick={handleAccountClick}
                 className="w-full flex items-center gap-3 px-4 py-2 text-left text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
