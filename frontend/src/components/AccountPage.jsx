@@ -20,7 +20,9 @@ import {
   Clock,
   CheckCircle,
   Sparkles,
-  CreditCard
+  CreditCard,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { API_URL } from '@/config';
 
@@ -34,6 +36,8 @@ const AccountPage = () => {
   const [activeTab, setActiveTab] = useState('events');
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const [premiumStatus, setPremiumStatus] = useState(null);
+  const [loadingPremiumStatus, setLoadingPremiumStatus] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -41,29 +45,23 @@ const AccountPage = () => {
       return;
     }
     
-    // Handle Stripe success/cancel redirects
+    loadUserData();
+    loadPremiumStatus();
+    
+    // Check for payment success/cancel in URL
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
       setPaymentStatus('success');
-      // Clean up URL
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
-      
-      // Refresh user data after a short delay
-      setTimeout(() => {
-        fetchUserData();
-      }, 1000);
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
     } else if (urlParams.get('cancelled') === 'true') {
       setPaymentStatus('cancelled');
-      // Clean up URL
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
-    fetchUserData();
-  }, [user, navigate]);
+  }, []);
 
-  const fetchUserData = async () => {
+  const loadUserData = async () => {
     try {
       setLoading(true);
       
@@ -103,6 +101,45 @@ const AccountPage = () => {
     }
   };
 
+  const loadPremiumStatus = async () => {
+    if (!token) return;
+    
+    setLoadingPremiumStatus(true);
+    try {
+      const response = await fetch(`${API_URL}/users/premium-status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Add fallback values for event limits if not provided by backend
+        const enhancedData = {
+          ...data,
+          event_limit: data.event_limit || (data.is_premium ? 10 : 0),
+          current_month_events: data.current_month_events || 0,
+          events_remaining: data.events_remaining || (data.is_premium ? 10 : 0),
+          can_create_events: data.can_create_events !== undefined ? data.can_create_events : true,
+          features: data.features || {
+            verified_events: data.is_premium,
+            analytics: data.is_premium,
+            recurring_events: data.is_premium,
+            priority_support: data.is_premium,
+            enhanced_visibility: data.is_premium
+          }
+        };
+        
+        setPremiumStatus(enhancedData);
+      }
+    } catch (error) {
+      console.error('Error loading premium status:', error);
+    } finally {
+      setLoadingPremiumStatus(false);
+    }
+  };
+
   const handleDeleteEvent = async (eventId) => {
     if (!confirm('Are you sure you want to delete this event?')) return;
     
@@ -127,7 +164,7 @@ const AccountPage = () => {
     navigate(`/?edit=${event.id}`);
   };
 
-  const handleUpgradeToPremium = async () => {
+  const handleUpgradeToPremium = async (pricingTier = 'monthly') => {
     setUpgradeLoading(true);
     try {
       // First, test if Stripe config is available
@@ -141,7 +178,10 @@ const AccountPage = () => {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          pricing_tier: pricingTier
+        })
       });
 
       if (!response.ok) {
@@ -155,7 +195,7 @@ const AccountPage = () => {
         throw new Error('No checkout URL received from server');
       }
       
-      console.log('✅ Stripe checkout session created, redirecting...');
+      console.log(`✅ Stripe ${pricingTier} checkout session created, redirecting...`);
       // Redirect to Stripe checkout
       window.location.href = checkout_url;
       
@@ -534,6 +574,59 @@ const AccountPage = () => {
                 </div>
               </div>
             )}
+
+            {/* Premium Event Counter for Premium Users */}
+            {isPremium && premiumStatus && (
+              <div className="bg-themed-surface p-6 rounded-lg border border-themed mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Crown className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-lg font-semibold text-themed-primary">Premium Event Usage</h3>
+                </div>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-themed-background rounded-lg">
+                    <div className="text-2xl font-bold text-themed-primary">
+                      {premiumStatus.current_month_events || 0}
+                    </div>
+                    <div className="text-sm text-themed-secondary">Events This Month</div>
+                  </div>
+                  
+                  <div className="text-center p-4 bg-themed-background rounded-lg">
+                    <div className="text-2xl font-bold text-amber-500">
+                      {premiumStatus.event_limit || 0}
+                    </div>
+                    <div className="text-sm text-themed-secondary">Monthly Limit</div>
+                  </div>
+                  
+                  <div className="text-center p-4 bg-themed-background rounded-lg">
+                    <div className="text-2xl font-bold text-green-500">
+                      {premiumStatus.events_remaining || 0}
+                    </div>
+                    <div className="text-sm text-themed-secondary">Remaining</div>
+                  </div>
+                </div>
+                
+                {premiumStatus.events_remaining <= 2 && premiumStatus.events_remaining > 0 && (
+                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm">You're running low on premium events this month!</span>
+                    </div>
+                  </div>
+                )}
+                
+                {premiumStatus.events_remaining === 0 && (
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm">You've reached your premium event limit for this month.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* User Profile Section */}
           </div>
         </div>
       </div>

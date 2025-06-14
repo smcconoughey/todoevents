@@ -35,6 +35,10 @@ const CreateEventForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
   const [isSameDay, setIsSameDay] = useState(true);
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [premiumFeatures, setPremiumFeatures] = useState({});
+  const [premiumStatus, setPremiumStatus] = useState(null);
+  const [loadingPremiumStatus, setLoadingPremiumStatus] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -47,6 +51,9 @@ const CreateEventForm = ({
     secondary_category: '',
     address: '',
     location: null,
+    recurring: false,
+    frequency: '',
+    is_premium_event: false,
     // New UX enhancement fields
     fee_required: '',
     event_url: '',
@@ -75,7 +82,10 @@ const CreateEventForm = ({
           // New UX enhancement fields
           fee_required: initialEvent.fee_required || '',
           event_url: initialEvent.event_url || '',
-          host_name: initialEvent.host_name || ''
+          host_name: initialEvent.host_name || '',
+          recurring: initialEvent.recurring || false,
+          frequency: initialEvent.frequency || '',
+          is_premium_event: initialEvent.is_premium_event || false
         });
         setError(null);
         setConnectionError(false);
@@ -96,7 +106,10 @@ const CreateEventForm = ({
           // New UX enhancement fields
           fee_required: '',
           event_url: '',
-          host_name: ''
+          host_name: '',
+          recurring: false,
+          frequency: '',
+          is_premium_event: false
         });
         setError(null);
         setConnectionError(false);
@@ -104,6 +117,60 @@ const CreateEventForm = ({
       }
     }
   }, [isOpen, initialEvent]);
+
+  // Check premium status when user changes
+  useEffect(() => {
+    const checkPremiumStatus = async () => {
+      if (!user || !token) {
+        setIsPremiumUser(false);
+        setPremiumFeatures({});
+        setPremiumStatus(null);
+        setLoadingPremiumStatus(false);
+        return;
+      }
+
+      try {
+        setLoadingPremiumStatus(true);
+        const response = await fetchWithTimeout(`${API_URL}/users/premium-status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }, 10000);
+
+        setIsPremiumUser(response.is_premium);
+        setPremiumFeatures(response.features || {});
+        
+        // Add fallback values for event limits if not provided by backend
+        const enhancedData = {
+          ...response,
+          event_limit: response.event_limit || (response.is_premium ? 10 : 0),
+          current_month_events: response.current_month_events || 0,
+          events_remaining: response.events_remaining || (response.is_premium ? 10 : 0),
+          can_create_events: response.can_create_events !== undefined ? response.can_create_events : true,
+          features: response.features || {
+            verified_events: response.is_premium,
+            analytics: response.is_premium,
+            recurring_events: response.is_premium,
+            priority_support: response.is_premium,
+            enhanced_visibility: response.is_premium
+          }
+        };
+        
+        setPremiumStatus(enhancedData);
+      } catch (error) {
+        console.error('Error checking premium status:', error);
+        setIsPremiumUser(false);
+        setPremiumFeatures({});
+        setPremiumStatus(null);
+      } finally {
+        setLoadingPremiumStatus(false);
+      }
+    };
+
+    if (isOpen) {
+      checkPremiumStatus();
+    }
+  }, [user, token, isOpen]);
 
   // Update location when selected
   useEffect(() => {
@@ -296,8 +363,9 @@ const CreateEventForm = ({
         address: formData.address.trim(),
         lat: formData.location.lat,
         lng: formData.location.lng,
-        recurring: false,
-        frequency: null,
+        recurring: formData.recurring,
+        frequency: formData.frequency,
+        is_premium_event: formData.is_premium_event,
         // New UX enhancement fields
         fee_required: formData.fee_required.trim() || null,
         event_url: formData.event_url.trim() || null,

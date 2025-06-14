@@ -1331,4 +1331,9 @@ body {
   }
 }
 
+.bg-themed-overlay {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
  

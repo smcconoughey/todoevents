@@ -38,6 +38,8 @@ const CreateEventForm = ({
   const [isSameDay, setIsSameDay] = useState(true);
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [premiumFeatures, setPremiumFeatures] = useState({});
+  const [premiumStatus, setPremiumStatus] = useState(null);
+  const [loadingPremiumStatus, setLoadingPremiumStatus] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -52,6 +54,7 @@ const CreateEventForm = ({
     location: null,
     recurring: false,
     frequency: '',
+    is_premium_event: false,
     // New UX enhancement fields
     fee_required: '',
     event_url: '',
@@ -82,7 +85,8 @@ const CreateEventForm = ({
           // New UX enhancement fields
           fee_required: initialEvent.fee_required || '',
           event_url: initialEvent.event_url || '',
-          host_name: initialEvent.host_name || ''
+          host_name: initialEvent.host_name || '',
+          is_premium_event: initialEvent.is_premium_event || false
         });
         setError(null);
         setConnectionError(false);
@@ -105,7 +109,8 @@ const CreateEventForm = ({
           // New UX enhancement fields
           fee_required: '',
           event_url: '',
-          host_name: ''
+          host_name: '',
+          is_premium_event: false
         });
         setError(null);
         setConnectionError(false);
@@ -120,10 +125,13 @@ const CreateEventForm = ({
       if (!user || !token) {
         setIsPremiumUser(false);
         setPremiumFeatures({});
+        setPremiumStatus(null);
+        setLoadingPremiumStatus(false);
         return;
       }
 
       try {
+        setLoadingPremiumStatus(true);
         const response = await fetchWithTimeout(`${API_URL}/users/premium-status`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -131,11 +139,32 @@ const CreateEventForm = ({
         }, 10000);
 
         setIsPremiumUser(response.is_premium);
-        setPremiumFeatures(response.features);
+        setPremiumFeatures(response.features || {});
+        
+        // Add fallback values for event limits if not provided by backend
+        const enhancedData = {
+          ...response,
+          event_limit: response.event_limit || (response.is_premium ? 10 : 0),
+          current_month_events: response.current_month_events || 0,
+          events_remaining: response.events_remaining || (response.is_premium ? 10 : 0),
+          can_create_events: response.can_create_events !== undefined ? response.can_create_events : true,
+          features: response.features || {
+            verified_events: response.is_premium,
+            analytics: response.is_premium,
+            recurring_events: response.is_premium,
+            priority_support: response.is_premium,
+            enhanced_visibility: response.is_premium
+          }
+        };
+        
+        setPremiumStatus(enhancedData);
       } catch (error) {
         console.error('Error checking premium status:', error);
         setIsPremiumUser(false);
         setPremiumFeatures({});
+        setPremiumStatus(null);
+      } finally {
+        setLoadingPremiumStatus(false);
       }
     };
 
@@ -352,7 +381,8 @@ const CreateEventForm = ({
         // New UX enhancement fields
         fee_required: formData.fee_required.trim() || null,
         event_url: formData.event_url.trim() || null,
-        host_name: formData.host_name.trim() || null
+        host_name: formData.host_name.trim() || null,
+        is_premium_event: formData.is_premium_event
       };
 
       const url = initialEvent
@@ -644,6 +674,87 @@ const CreateEventForm = ({
               </div>
             </div>
           </div>
+
+          {/* Premium Event Toggle Section */}
+          {isPremiumUser && premiumStatus && (
+            <div className="space-y-3">
+              <h3 className="text-base font-medium text-themed-primary border-b border-themed pb-2 flex items-center gap-2">
+                <Crown className="w-4 h-4" />
+                Premium Event Features
+              </h3>
+              
+              <div className="p-4 bg-gradient-to-r from-amber-50/50 to-yellow-50/50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="checkbox"
+                        id="is_premium_event"
+                        checked={formData.is_premium_event}
+                        onChange={(e) => setFormData(prev => ({ ...prev, is_premium_event: e.target.checked }))}
+                        disabled={!premiumStatus.can_create_events}
+                        className="w-4 h-4 rounded border-themed bg-themed-surface focus:ring-2 text-amber-600 focus:ring-amber-500/50"
+                      />
+                      <label htmlFor="is_premium_event" className="text-sm font-medium text-themed-primary">
+                        Make this a Premium Event
+                      </label>
+                      <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-full">
+                        <Crown className="w-3 h-3 text-amber-600" />
+                        <span className="text-xs font-medium text-amber-700">Verified</span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-sm text-themed-secondary mb-3">
+                      Premium events get verified badges, enhanced visibility, and priority placement in search results.
+                    </p>
+                    
+                    {/* Event Counter */}
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-themed-secondary">This month:</span>
+                        <span className="font-semibold text-themed-primary">
+                          {premiumStatus.current_month_events || 0} / {premiumStatus.event_limit || 0}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-themed-secondary">Remaining:</span>
+                        <span className={`font-semibold ${
+                          (premiumStatus.events_remaining || 0) > 2 ? 'text-green-600' : 
+                          (premiumStatus.events_remaining || 0) > 0 ? 'text-amber-600' : 'text-red-600'
+                        }`}>
+                          {premiumStatus.events_remaining || 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {!premiumStatus.can_create_events && (
+                  <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="text-red-700 font-medium">Premium Event Limit Reached</p>
+                        <p className="text-red-600">You've used all {premiumStatus.event_limit} premium events for this month. Upgrade to Enterprise for 250 events/month.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {premiumStatus.can_create_events && (premiumStatus.events_remaining || 0) <= 2 && (
+                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="text-amber-700 font-medium">Running Low on Premium Events</p>
+                        <p className="text-amber-600">You have {premiumStatus.events_remaining || 0} premium events remaining this month.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Premium Recurring Events Section */}
           <div className={`space-y-3 ${isPremiumUser ? 'relative' : ''}`}>

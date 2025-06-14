@@ -963,8 +963,8 @@ body {
 }
 
 .bg-themed-overlay {
-  background-color: rgba(0, 0, 0, 0.5) !important;
-  backdrop-filter: blur(4px) !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
 }
 
 .border-themed {
