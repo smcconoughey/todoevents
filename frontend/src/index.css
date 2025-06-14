@@ -697,8 +697,8 @@ body {
   
   /* Mobile dialog improvements */
   [data-radix-dialog-overlay] {
-    background: rgba(0, 0, 0, 0.15) !important;
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.02) !important;
+    backdrop-filter: blur(8px);
   }
   
   [data-radix-dialog-content] {
@@ -963,7 +963,7 @@ body {
 }
 
 .bg-themed-overlay {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
   backdrop-filter: blur(12px) !important;
 }
 

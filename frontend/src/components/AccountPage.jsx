@@ -491,7 +491,7 @@ const AccountPage = () => {
                 {/* Pricing Tiers */}
                 <div className="grid md:grid-cols-3 gap-6">
                   {/* Monthly Premium */}
-                  <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-2xl border border-white/5 dark:border-white/5 p-6 relative">
+                  <div className="bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 dark:border-white/20 p-6 relative">
                     <div className="text-center mb-6">
                       <h3 className="text-xl font-bold text-themed-primary mb-2">Monthly Premium</h3>
                       <div className="mb-2">
@@ -544,7 +544,7 @@ const AccountPage = () => {
                   </div>
 
                   {/* Annual Premium */}
-                  <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-2xl border-2 border-amber-500/50 p-6 relative">
+                  <div className="bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-2xl border-2 border-amber-500/50 p-6 relative">
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-medium">
                         BEST VALUE
@@ -607,7 +607,7 @@ const AccountPage = () => {
                   </div>
 
                   {/* Enterprise */}
-                  <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-2xl border-2 border-purple-500/50 p-6 relative">
+                  <div className="bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-2xl border-2 border-purple-500/50 p-6 relative">
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
                         ENTERPRISE
@@ -671,7 +671,7 @@ const AccountPage = () => {
                 </div>
 
                 {/* Early Access Benefits */}
-                <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-lg p-6 border border-white/5 dark:border-white/5">
+                <div className="bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 dark:border-white/20">
                   <h3 className="text-lg font-semibold text-themed-primary mb-4 flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-amber-500" />
                     Why Early Access?
@@ -697,7 +697,7 @@ const AccountPage = () => {
                 </div>
 
                 {/* Upcoming Features */}
-                <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-lg p-6 border border-white/5 dark:border-white/5">
+                <div className="bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 dark:border-white/20">
                   <h3 className="text-lg font-semibold text-themed-primary mb-4">Coming Soon to Premium:</h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-3">
