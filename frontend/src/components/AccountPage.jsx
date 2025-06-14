@@ -481,24 +481,175 @@ const AccountPage = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Crown className="w-8 h-8 text-white" />
                   </div>
-                  <h2 className="text-3xl font-bold text-themed-primary mb-2">Upgrade to Premium</h2>
+                  <h2 className="text-3xl font-bold text-themed-primary mb-2">Choose Your Plan</h2>
                   <p className="text-lg text-themed-secondary">Unlock powerful analytics and verified event badges</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:bg-gray-800 rounded-2xl border-2 border-amber-200 dark:border-gray-600 p-4 sm:p-8">
-                  <div className="text-center mb-8">
-                    <div className="text-4xl font-bold text-themed-primary mb-2">
-                      $20
-                      <span className="text-lg font-normal text-themed-secondary">/month</span>
+                {/* Pricing Tiers */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  {/* Monthly Premium */}
+                  <div className="bg-themed-surface rounded-2xl border-2 border-themed p-6 relative">
+                    <div className="text-center mb-6">
+                      <h3 className="text-xl font-bold text-themed-primary mb-2">Monthly Premium</h3>
+                      <div className="text-3xl font-bold text-themed-primary mb-1">
+                        $20
+                        <span className="text-lg font-normal text-themed-secondary">/month</span>
+                      </div>
+                      <p className="text-themed-secondary">Perfect for regular event creators</p>
                     </div>
-                    <p className="text-themed-secondary">Everything you need to grow your events</p>
+
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">10 premium events/month</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Verified event badges</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Advanced analytics</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Priority support</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => handleUpgradeToPremium('monthly')}
+                      disabled={upgradeLoading}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                    >
+                      {upgradeLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </div>
+                      ) : (
+                        'Get Monthly Premium'
+                      )}
+                    </Button>
                   </div>
 
-                  <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-themed-primary">Verified event badges for credibility</span>
+                  {/* Annual Premium */}
+                  <div className="bg-themed-surface rounded-2xl border-2 border-amber-500 p-6 relative">
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                        2 MONTHS FREE
+                      </span>
                     </div>
+                    
+                    <div className="text-center mb-6">
+                      <h3 className="text-xl font-bold text-themed-primary mb-2">Annual Premium</h3>
+                      <div className="text-3xl font-bold text-themed-primary mb-1">
+                        $200
+                        <span className="text-lg font-normal text-themed-secondary">/year</span>
+                      </div>
+                      <p className="text-themed-secondary">Save $40 with annual billing</p>
+                    </div>
+
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">10 premium events/month</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Verified event badges</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Advanced analytics</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Priority support</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary font-medium">2 months free!</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => handleUpgradeToPremium('annual')}
+                      disabled={upgradeLoading}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                    >
+                      {upgradeLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </div>
+                      ) : (
+                        'Get Annual Premium'
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Enterprise */}
+                  <div className="bg-themed-surface rounded-2xl border-2 border-purple-500 p-6 relative">
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                        ENTERPRISE
+                      </span>
+                    </div>
+                    
+                    <div className="text-center mb-6">
+                      <h3 className="text-xl font-bold text-themed-primary mb-2">Enterprise</h3>
+                      <div className="text-3xl font-bold text-themed-primary mb-1">
+                        $500
+                        <span className="text-lg font-normal text-themed-secondary">/month</span>
+                      </div>
+                      <p className="text-themed-secondary">For high-volume event creators</p>
+                    </div>
+
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary font-medium">250 premium events/month</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Verified event badges</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Advanced analytics</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Priority support</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary font-medium">25x more events</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => handleUpgradeToPremium('enterprise')}
+                      disabled={upgradeLoading}
+                      className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+                    >
+                      {upgradeLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </div>
+                      ) : (
+                        'Get Enterprise'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Feature Comparison */}
+                <div className="bg-themed-surface rounded-lg p-6 border border-themed">
+                  <h3 className="text-lg font-semibold text-themed-primary mb-4">All Plans Include:</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                       <span className="text-themed-primary">Detailed event analytics and insights</span>
@@ -517,59 +668,29 @@ const AccountPage = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-themed-primary">Priority customer support</span>
+                      <span className="text-themed-primary">Recurring events support</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <span className="text-themed-primary">Enhanced event visibility</span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="bg-white/50 dark:bg-gray-700 rounded-lg p-6 backdrop-blur-sm border border-white/20 dark:border-gray-500">
-                    <div className="flex items-center gap-3 mb-4">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="font-semibold text-themed-primary">Analytics Now Available!</span>
-                    </div>
-                    <p className="text-themed-secondary">
-                      Comprehensive marketing analytics with detailed insights, performance charts, and downloadable CSV reports 
-                      are now live for premium users. Get engagement metrics, category analysis, geographic data, and more!
+                {/* Testing Section */}
+                <div className="bg-blue-50 dark:bg-gray-700 rounded-lg p-4 border border-blue-200 dark:border-gray-500">
+                  <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">🧪 Testing Mode</h3>
+                  <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                    <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
+                    <p><strong>Expiry:</strong> Any future date (e.g., 12/34)</p>
+                    <p><strong>CVC:</strong> Any 3 digits (e.g., 123)</p>
+                    <p><strong>ZIP:</strong> Any valid ZIP code</p>
+                  </div>
+                  <div className="mt-4 p-3 bg-white/50 dark:bg-gray-600 rounded border dark:border-gray-400">
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      💡 This is running in Stripe test mode. No real charges will be made. 
+                      Use the test card above to simulate a successful payment.
                     </p>
-                  </div>
-
-                  <div className="text-center">
-                    <Button
-                      onClick={handleUpgradeToPremium}
-                      disabled={upgradeLoading}
-                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {upgradeLoading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Processing...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="w-5 h-5" />
-                          Upgrade to Premium - $20/month
-                        </div>
-                      )}
-                    </Button>
-                    <p className="text-sm text-themed-secondary mt-3">
-                      Secure payment powered by Stripe • Cancel anytime
-                    </p>
-                  </div>
-
-                  {/* Testing Section */}
-                  <div className="mt-8 p-4 bg-blue-50 dark:bg-gray-700 rounded-lg border border-blue-200 dark:border-gray-500">
-                    <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">🧪 Testing Mode</h3>
-                    <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
-                      <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
-                      <p><strong>Expiry:</strong> Any future date (e.g., 12/34)</p>
-                      <p><strong>CVC:</strong> Any 3 digits (e.g., 123)</p>
-                      <p><strong>ZIP:</strong> Any valid ZIP code</p>
-                    </div>
-                                          <div className="mt-4 p-3 bg-white/50 dark:bg-gray-600 rounded border dark:border-gray-400">
-                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                        💡 This is running in Stripe test mode. No real charges will be made. 
-                        Use the test card above to simulate a successful payment.
-                      </p>
-                    </div>
                   </div>
                 </div>
               </div>
