@@ -1259,4 +1259,75 @@ body {
 [data-theme='glass'] .text-white\/70.hover\:text-white:hover,
 [data-theme='glass'] .hover\:text-white\/70:hover {
   color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Dark mode specific overrides for better visibility */
+[data-theme='dark'] .bg-gradient-to-br,
+.dark-mode .bg-gradient-to-br {
+  background: var(--bg-card) !important;
+}
+
+[data-theme='dark'] .border-gradient-to-r,
+.dark-mode .border-gradient-to-r {
+  border-color: var(--border-color) !important;
+}
+
+/* Ensure premium modal is always visible in dark mode */
+[data-theme='dark'] .bg-white\/50,
+.dark-mode .bg-white\/50 {
+  background-color: var(--bg-card-hover) !important;
+}
+
+[data-theme='dark'] .bg-blue-50,
+.dark-mode .bg-blue-50 {
+  background-color: var(--bg-card) !important;
+}
+
+[data-theme='dark'] .text-blue-900,
+.dark-mode .text-blue-900 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .text-blue-800,
+.dark-mode .text-blue-800 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='dark'] .text-blue-700,
+.dark-mode .text-blue-700 {
+  color: var(--text-tertiary) !important;
+}
+
+/* Force visibility for any gradient backgrounds in dark mode */
+[data-theme='dark'] .bg-gradient-to-br.from-amber-50,
+.dark-mode .bg-gradient-to-br.from-amber-50 {
+  background: var(--bg-card) !important;
+  background-image: none !important;
+}
+
+/* Override any transparent backgrounds that might be invisible */
+[data-theme='dark'] .bg-amber-900\/20,
+[data-theme='dark'] .bg-amber-900\/60,
+[data-theme='dark'] .bg-orange-900\/20,
+[data-theme='dark'] .bg-orange-900\/60,
+.dark-mode .bg-amber-900\/20,
+.dark-mode .bg-amber-900\/60,
+.dark-mode .bg-orange-900\/20,
+.dark-mode .bg-orange-900\/60 {
+  background-color: var(--bg-card) !important;
+}
+
+/* Specific premium modal visibility fix */
+[data-theme='dark'] .space-y-6 > div.bg-gradient-to-br,
+.dark-mode .space-y-6 > div.bg-gradient-to-br {
+  background: var(--bg-card) !important;
+  background-image: none !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+/* Ensure all premium modal content is visible */
+[data-theme='dark'] .space-y-6 .rounded-2xl,
+.dark-mode .space-y-6 .rounded-2xl {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
 } 
