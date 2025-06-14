@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { X, Plus, Clock, Calendar, AlertCircle, MapPin } from 'lucide-react';
+import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -427,81 +427,73 @@ const CreateEventForm = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="dialog-themed max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1200px] w-full max-h-[95vh] overflow-y-auto"
+        className="dialog-themed max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1200px] w-full max-h-[95vh] overflow-y-auto bg-gradient-to-br from-themed-surface via-themed-surface to-themed-surface-hover border-2 border-themed shadow-2xl"
         aria-describedby="create-event-dialog-description"
       >
-        <DialogHeader className="relative pb-3">
-          <DialogTitle className="text-lg sm:text-xl font-display font-bold dialog-title-themed">
-            {initialEvent ? 'Edit Event' : 'Create New Event'}
-          </DialogTitle>
-          <DialogDescription id="create-event-dialog-description" className="dialog-description-themed text-sm">
-            {initialEvent ? 'Edit an existing event with details' : 'Create a new event with details'}
-          </DialogDescription>
+        <DialogHeader className="relative pb-6 border-b border-themed/50">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-spark-yellow to-pin-blue rounded-full flex items-center justify-center">
+              <Plus className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl sm:text-2xl font-display font-bold dialog-title-themed">
+                {initialEvent ? 'Edit Event' : 'Create New Event'}
+              </DialogTitle>
+              <DialogDescription id="create-event-dialog-description" className="dialog-description-themed text-sm mt-1">
+                {initialEvent ? 'Edit an existing event with details' : 'Create a new event with details'}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 px-1">
+        <form onSubmit={handleSubmit} className="space-y-8 px-1 py-2">
           {(error || connectionError) && (
-            <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-red-200 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span className="text-sm">{connectionError ? 'Unable to connect to server. Please try again later.' : error}</span>
+            <div className="p-4 bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/50 rounded-xl text-red-200 flex items-start gap-3 shadow-lg">
+              <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-medium mb-1">Error</h4>
+                <span className="text-sm">{connectionError ? 'Unable to connect to server. Please try again later.' : error}</span>
+              </div>
             </div>
           )}
 
-          {/* Event Info - Responsive grid: 1 col mobile, 2 col tablet, 3 col desktop */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {/* First Column - Title */}
-            <div className="sm:col-span-2 lg:col-span-1 space-y-2">
-              <label className="text-sm font-medium text-themed-secondary">Event Title</label>
-              <Input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Enter event title"
-                className="input-themed h-10"
-              />
+          {/* Event Info Section */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
+              <div className="w-8 h-8 bg-gradient-to-br from-pin-blue/20 to-pin-blue/10 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-pin-blue" />
+              </div>
+              <h3 className="text-lg font-semibold text-themed-primary">Event Information</h3>
             </div>
 
-            {/* Second Column - Primary Category */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-themed-secondary">Primary Category</label>
-              <Select 
-                value={formData.category} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-              >
-                <SelectTrigger className="input-themed h-10">
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.filter(cat => cat.id !== 'all').map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        {React.createElement(category.icon, {
-                          className: `w-4 h-4 ${category.color}`
-                        })}
-                        <span>{category.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Event Info - Responsive grid: 1 col mobile, 2 col tablet, 3 col desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {/* First Column - Title */}
+              <div className="sm:col-span-2 lg:col-span-1 space-y-2">
+                <label className="text-sm font-medium text-themed-secondary">Event Title</label>
+                <Input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter event title"
+                  className="input-themed h-10"
+                />
+              </div>
 
-            {/* Third Column - Secondary Category */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-themed-secondary">Secondary Category</label>
-              <div className="relative">
+              {/* Second Column - Primary Category */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-themed-secondary">Primary Category</label>
                 <Select 
-                  value={formData.secondary_category || "none"} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value === "none" ? "" : value }))}
+                  value={formData.category} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                 >
                   <SelectTrigger className="input-themed h-10">
-                    <SelectValue placeholder="None" />
+                    <SelectValue placeholder="Select..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">
-                      <span className="text-themed-muted">None</span>
-                    </SelectItem>
-                    {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
+                    {categories.filter(cat => cat.id !== 'all').map(category => (
                       <SelectItem key={category.id} value={category.id}>
                         <div className="flex items-center gap-2">
                           {React.createElement(category.icon, {
@@ -513,23 +505,53 @@ const CreateEventForm = ({
                     ))}
                   </SelectContent>
                 </Select>
-                <span className="absolute -top-1 right-2 text-xs text-themed-muted bg-themed-surface px-1 rounded">
-                  Optional
-                </span>
+              </div>
+
+              {/* Third Column - Secondary Category */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-themed-secondary">Secondary Category</label>
+                <div className="relative">
+                  <Select 
+                    value={formData.secondary_category || "none"} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value === "none" ? "" : value }))}
+                  >
+                    <SelectTrigger className="input-themed h-10">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-themed-muted">None</span>
+                      </SelectItem>
+                      {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
+                        <SelectItem key={category.id} value={category.id}>
+                          <div className="flex items-center gap-2">
+                            {React.createElement(category.icon, {
+                              className: `w-4 h-4 ${category.color}`
+                            })}
+                            <span>{category.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="absolute -top-1 right-2 text-xs text-themed-muted bg-themed-surface px-1 rounded">
+                    Optional
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Description - Full width row */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-themed-secondary">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Enter event description"
-              className="w-full px-3 py-2 rounded-md input-themed resize-none"
-              rows="3"
-            />
+            {/* Description - Full width row */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-themed-secondary">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter event description"
+                className="w-full px-3 py-2 rounded-md input-themed resize-none"
+                rows="3"
+              />
+            </div>
           </div>
 
           {/* Schedule - Responsive grid: 1-2 cols mobile, 4 cols desktop */}
