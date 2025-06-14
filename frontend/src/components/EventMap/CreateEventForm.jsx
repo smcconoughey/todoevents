@@ -138,22 +138,23 @@ const CreateEventForm = ({
           }
         }, 10000);
 
-        setIsPremiumUser(response.is_premium);
+        setIsPremiumUser(response.is_premium || response.is_enterprise);
         setPremiumFeatures(response.features || {});
         
-        // Add fallback values for event limits if not provided by backend
+        // Use backend values directly, only add fallbacks for missing fields
         const enhancedData = {
           ...response,
-          event_limit: response.event_limit || (response.is_premium ? 10 : 0),
-          current_month_events: response.current_month_events || 0,
-          events_remaining: response.events_remaining || (response.is_premium ? 10 : 0),
+          // Only add fallbacks if the backend didn't provide values
+          event_limit: response.event_limit !== undefined ? response.event_limit : (response.is_premium ? 10 : 0),
+          current_month_events: response.current_month_events !== undefined ? response.current_month_events : 0,
+          events_remaining: response.events_remaining !== undefined ? response.events_remaining : null,
           can_create_events: response.can_create_events !== undefined ? response.can_create_events : true,
           features: response.features || {
-            verified_events: response.is_premium,
-            analytics: response.is_premium,
-            recurring_events: response.is_premium,
-            priority_support: response.is_premium,
-            enhanced_visibility: response.is_premium
+            verified_events: response.is_premium || response.is_enterprise,
+            analytics: response.is_premium || response.is_enterprise,
+            recurring_events: response.is_premium || response.is_enterprise,
+            priority_support: response.is_premium || response.is_enterprise,
+            enhanced_visibility: response.is_premium || response.is_enterprise
           }
         };
         

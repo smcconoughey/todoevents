@@ -46,7 +46,7 @@ const UserDropdown = () => {
     logout();
   };
 
-  const isPremium = user?.role === 'premium' || user?.role === 'admin';
+  const isPremium = user?.role === 'premium' || user?.role === 'admin' || user?.role === 'enterprise';
 
   if (!user) {
     return null;
@@ -81,9 +81,21 @@ const UserDropdown = () => {
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   {isPremium ? (
-                    <div className="flex items-center gap-1 bg-gradient-to-r from-amber-500/20 to-orange-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
-                      <Crown className="w-3 h-3 text-amber-500" />
-                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Premium</span>
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${
+                      user?.role === 'enterprise' 
+                        ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/20 border-purple-500/30' 
+                        : 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/30'
+                    }`}>
+                      <Crown className={`w-3 h-3 ${
+                        user?.role === 'enterprise' ? 'text-purple-500' : 'text-amber-500'
+                      }`} />
+                      <span className={`text-xs font-medium ${
+                        user?.role === 'enterprise' 
+                          ? 'text-purple-600 dark:text-purple-400' 
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {user?.role === 'enterprise' ? 'Enterprise' : 'Premium'}
+                      </span>
                     </div>
                   ) : (
                     <span className="text-xs text-themed-secondary bg-themed-surface px-2 py-0.5 rounded-full border border-themed">

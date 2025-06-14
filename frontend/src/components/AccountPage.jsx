@@ -78,7 +78,7 @@ const AccountPage = () => {
       }
 
       // Fetch analytics for premium users
-      if (user.role === 'premium' || user.role === 'admin') {
+      if (user.role === 'premium' || user.role === 'admin' || user.role === 'enterprise') {
         try {
           const analyticsResponse = await fetch(`${API_URL}/users/analytics`, {
             headers: {
@@ -115,19 +115,20 @@ const AccountPage = () => {
       if (response.ok) {
         const data = await response.json();
         
-        // Add fallback values for event limits if not provided by backend
+        // Use backend values directly, only add fallbacks for missing fields
         const enhancedData = {
           ...data,
-          event_limit: data.event_limit || (data.is_premium ? 10 : 0),
-          current_month_events: data.current_month_events || 0,
-          events_remaining: data.events_remaining || (data.is_premium ? 10 : 0),
+          // Only add fallbacks if the backend didn't provide values
+          event_limit: data.event_limit !== undefined ? data.event_limit : (data.is_premium ? 10 : 0),
+          current_month_events: data.current_month_events !== undefined ? data.current_month_events : 0,
+          events_remaining: data.events_remaining !== undefined ? data.events_remaining : null,
           can_create_events: data.can_create_events !== undefined ? data.can_create_events : true,
           features: data.features || {
-            verified_events: data.is_premium,
-            analytics: data.is_premium,
-            recurring_events: data.is_premium,
-            priority_support: data.is_premium,
-            enhanced_visibility: data.is_premium
+            verified_events: data.is_premium || data.is_enterprise,
+            analytics: data.is_premium || data.is_enterprise,
+            recurring_events: data.is_premium || data.is_enterprise,
+            priority_support: data.is_premium || data.is_enterprise,
+            enhanced_visibility: data.is_premium || data.is_enterprise
           }
         };
         
@@ -216,7 +217,7 @@ const AccountPage = () => {
     }
   };
 
-  const isPremium = user?.role === 'premium' || user?.role === 'admin';
+  const isPremium = user?.role === 'premium' || user?.role === 'admin' || user?.role === 'enterprise';
 
   if (!user) {
     return null;
@@ -751,7 +752,14 @@ const AccountPage = () => {
               <div className="bg-themed-surface p-6 rounded-lg border border-themed mb-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Crown className="w-5 h-5 text-amber-500" />
-                  <h3 className="text-lg font-semibold text-themed-primary">Premium Event Usage</h3>
+                  <h3 className="text-lg font-semibold text-themed-primary">
+                    {user?.role === 'enterprise' ? 'Enterprise' : 'Premium'} Event Usage
+                  </h3>
+                  {user?.role === 'enterprise' && (
+                    <span className="px-2 py-1 bg-purple-500 text-white text-xs font-medium rounded-full">
+                      ENTERPRISE
+                    </span>
+                  )}
                 </div>
                 
                 <div className="grid md:grid-cols-3 gap-4">

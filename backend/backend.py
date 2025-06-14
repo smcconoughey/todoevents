@@ -4022,7 +4022,7 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
         is_premium = current_user['role'] in ['premium', 'admin']
         is_enterprise = current_user['role'] == 'enterprise'
         
-        if not is_premium:
+        if not (is_premium or is_enterprise):
             raise HTTPException(
                 status_code=403, 
                 detail="Premium subscription required to create premium events"
@@ -9616,11 +9616,11 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
         "events_remaining": max(0, event_limit - current_month_events) if event_limit > 0 else None,
         "can_create_events": event_limit == 0 or current_month_events < event_limit,
         "features": {
-            "verified_events": is_premium,
-            "analytics": is_premium,
-            "recurring_events": is_premium,
-            "priority_support": is_premium,
-            "enhanced_visibility": is_premium
+            "verified_events": is_premium or is_enterprise,
+            "analytics": is_premium or is_enterprise,
+            "recurring_events": is_premium or is_enterprise,
+            "priority_support": is_premium or is_enterprise,
+            "enhanced_visibility": is_premium or is_enterprise
         }
     }
 
@@ -10850,7 +10850,7 @@ async def get_user_analytics(
     """
     Get analytics data for premium users
     """
-    if current_user['role'] not in ['premium', 'admin']:
+    if current_user['role'] not in ['premium', 'admin', 'enterprise']:
         raise HTTPException(status_code=403, detail="Premium access required")
     
     placeholder = get_placeholder()
