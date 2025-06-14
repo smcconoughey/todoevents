@@ -481,19 +481,25 @@ const AccountPage = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Crown className="w-8 h-8 text-white" />
                   </div>
-                  <h2 className="text-3xl font-bold text-themed-primary mb-2">Choose Your Plan</h2>
-                  <p className="text-lg text-themed-secondary">Unlock powerful analytics and verified event badges</p>
+                  <h2 className="text-3xl font-bold text-themed-primary mb-2">Early Access Pricing</h2>
+                  <p className="text-lg text-themed-secondary">50% off to support development of upcoming features</p>
+                  <div className="mt-3 px-4 py-2 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg inline-block">
+                    <span className="text-green-700 dark:text-green-300 font-medium">🚀 Early Access - Limited Time</span>
+                  </div>
                 </div>
 
                 {/* Pricing Tiers */}
                 <div className="grid md:grid-cols-3 gap-6">
                   {/* Monthly Premium */}
-                  <div className="bg-themed-surface rounded-2xl border-2 border-themed p-6 relative">
+                  <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-2xl border border-white/5 dark:border-white/5 p-6 relative">
                     <div className="text-center mb-6">
                       <h3 className="text-xl font-bold text-themed-primary mb-2">Monthly Premium</h3>
-                      <div className="text-3xl font-bold text-themed-primary mb-1">
-                        $20
-                        <span className="text-lg font-normal text-themed-secondary">/month</span>
+                      <div className="mb-2">
+                        <span className="text-lg text-themed-secondary line-through">$40/month</span>
+                        <div className="text-3xl font-bold text-themed-primary">
+                          $20
+                          <span className="text-lg font-normal text-themed-secondary">/month</span>
+                        </div>
                       </div>
                       <p className="text-themed-secondary">Perfect for regular event creators</p>
                     </div>
@@ -508,8 +514,12 @@ const AccountPage = () => {
                         <span className="text-sm text-themed-primary">Verified event badges</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-themed-primary">Advanced analytics</span>
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-secondary">Advanced analytics (coming soon)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-secondary">AI-assisted event importing (coming soon)</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -528,26 +538,29 @@ const AccountPage = () => {
                           Processing...
                         </div>
                       ) : (
-                        'Get Monthly Premium'
+                        'Get Early Access'
                       )}
                     </Button>
                   </div>
 
                   {/* Annual Premium */}
-                  <div className="bg-themed-surface rounded-2xl border-2 border-amber-500 p-6 relative">
+                  <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-2xl border-2 border-amber-500/50 p-6 relative">
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                        2 MONTHS FREE
+                        BEST VALUE
                       </span>
                     </div>
                     
                     <div className="text-center mb-6">
                       <h3 className="text-xl font-bold text-themed-primary mb-2">Annual Premium</h3>
-                      <div className="text-3xl font-bold text-themed-primary mb-1">
-                        $200
-                        <span className="text-lg font-normal text-themed-secondary">/year</span>
+                      <div className="mb-2">
+                        <span className="text-lg text-themed-secondary line-through">$400/year</span>
+                        <div className="text-3xl font-bold text-themed-primary">
+                          $200
+                          <span className="text-lg font-normal text-themed-secondary">/year</span>
+                        </div>
                       </div>
-                      <p className="text-themed-secondary">Save $40 with annual billing</p>
+                      <p className="text-themed-secondary">Save $80 with early access annual billing</p>
                     </div>
 
                     <div className="space-y-3 mb-6">
@@ -560,8 +573,12 @@ const AccountPage = () => {
                         <span className="text-sm text-themed-primary">Verified event badges</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-themed-primary">Advanced analytics</span>
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-secondary">Advanced analytics (coming soon)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-secondary">AI-assisted event importing (coming soon)</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -584,13 +601,13 @@ const AccountPage = () => {
                           Processing...
                         </div>
                       ) : (
-                        'Get Annual Premium'
+                        'Get Early Access Annual'
                       )}
                     </Button>
                   </div>
 
                   {/* Enterprise */}
-                  <div className="bg-themed-surface rounded-2xl border-2 border-purple-500 p-6 relative">
+                  <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-2xl border-2 border-purple-500/50 p-6 relative">
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
                         ENTERPRISE
@@ -599,9 +616,12 @@ const AccountPage = () => {
                     
                     <div className="text-center mb-6">
                       <h3 className="text-xl font-bold text-themed-primary mb-2">Enterprise</h3>
-                      <div className="text-3xl font-bold text-themed-primary mb-1">
-                        $500
-                        <span className="text-lg font-normal text-themed-secondary">/month</span>
+                      <div className="mb-2">
+                        <span className="text-lg text-themed-secondary line-through">$1000/month</span>
+                        <div className="text-3xl font-bold text-themed-primary">
+                          $500
+                          <span className="text-lg font-normal text-themed-secondary">/month</span>
+                        </div>
                       </div>
                       <p className="text-themed-secondary">For high-volume event creators</p>
                     </div>
@@ -616,8 +636,12 @@ const AccountPage = () => {
                         <span className="text-sm text-themed-primary">Verified event badges</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-themed-primary">Advanced analytics</span>
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-secondary">Advanced analytics (coming soon)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-secondary">AI-assisted event importing (coming soon)</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -640,45 +664,71 @@ const AccountPage = () => {
                           Processing...
                         </div>
                       ) : (
-                        'Get Enterprise'
+                        'Get Enterprise Early Access'
                       )}
                     </Button>
                   </div>
                 </div>
 
-                {/* Feature Comparison */}
-                <div className="bg-themed-surface rounded-lg p-6 border border-themed">
-                  <h3 className="text-lg font-semibold text-themed-primary mb-4">All Plans Include:</h3>
+                {/* Early Access Benefits */}
+                <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-lg p-6 border border-white/5 dark:border-white/5">
+                  <h3 className="text-lg font-semibold text-themed-primary mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
+                    Why Early Access?
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4 text-sm text-themed-secondary">
+                    <div>
+                      <p className="mb-2">
+                        <strong className="text-themed-primary">Support Development:</strong> Your early access subscription helps us build the advanced features you want.
+                      </p>
+                      <p>
+                        <strong className="text-themed-primary">Lock in Low Prices:</strong> Keep your early access pricing even after we launch full features.
+                      </p>
+                    </div>
+                    <div>
+                      <p className="mb-2">
+                        <strong className="text-themed-primary">Shape the Future:</strong> Get priority input on upcoming features and improvements.
+                      </p>
+                      <p>
+                        <strong className="text-themed-primary">First Access:</strong> Be the first to try new features as they're released.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upcoming Features */}
+                <div className="bg-white/2 dark:bg-white/2 backdrop-blur-sm rounded-lg p-6 border border-white/5 dark:border-white/5">
+                  <h3 className="text-lg font-semibold text-themed-primary mb-4">Coming Soon to Premium:</h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <TrendingUp className="w-5 h-5 text-amber-500 flex-shrink-0" />
                       <span className="text-themed-primary">Detailed event analytics and insights</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <BarChart3 className="w-5 h-5 text-amber-500 flex-shrink-0" />
                       <span className="text-themed-primary">View counts and engagement metrics</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <Users className="w-5 h-5 text-amber-500 flex-shrink-0" />
                       <span className="text-themed-primary">Interest tracking and user demographics</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <BarChart3 className="w-5 h-5 text-amber-500 flex-shrink-0" />
                       <span className="text-themed-primary">Advanced event performance reports</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-themed-primary">Recurring events support</span>
+                      <Sparkles className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                      <span className="text-themed-primary">AI-assisted event importing</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <MapPin className="w-5 h-5 text-amber-500 flex-shrink-0" />
                       <span className="text-themed-primary">Enhanced event visibility</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Testing Section */}
-                <div className="bg-blue-50 dark:bg-gray-700 rounded-lg p-4 border border-blue-200 dark:border-gray-500">
+                <div className="bg-blue-50/10 dark:bg-blue-900/10 backdrop-blur-sm rounded-lg p-4 border border-blue-200/20 dark:border-blue-500/20">
                   <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">🧪 Testing Mode</h3>
                   <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
                     <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
@@ -686,7 +736,7 @@ const AccountPage = () => {
                     <p><strong>CVC:</strong> Any 3 digits (e.g., 123)</p>
                     <p><strong>ZIP:</strong> Any valid ZIP code</p>
                   </div>
-                  <div className="mt-4 p-3 bg-white/50 dark:bg-gray-600 rounded border dark:border-gray-400">
+                  <div className="mt-4 p-3 bg-white/10 dark:bg-gray-600/20 rounded border border-white/20 dark:border-gray-400/20">
                     <p className="text-xs text-blue-700 dark:text-blue-300">
                       💡 This is running in Stripe test mode. No real charges will be made. 
                       Use the test card above to simulate a successful payment.
