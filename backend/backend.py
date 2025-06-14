@@ -9629,11 +9629,18 @@ async def get_stripe_config():
     """Get Stripe publishable key for frontend"""
     return {"publishable_key": STRIPE_PUBLISHABLE_KEY}
 @app.post("/stripe/create-checkout-session")
-async def create_checkout_session(request: dict, current_user: dict = Depends(get_current_user)):
+async def create_checkout_session(request: Request, current_user: dict = Depends(get_current_user)):
     """Create Stripe checkout session for premium subscription"""
     try:
         # Get pricing tier from request (default to monthly)
-        pricing_tier = request.get('pricing_tier', 'monthly')
+        # Parse JSON body
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        
+        # Get pricing tier from request (default to monthly)
+        pricing_tier = body.get('pricing_tier', 'monthly')
         
         # Determine which price ID to use
         if pricing_tier == 'annual':
