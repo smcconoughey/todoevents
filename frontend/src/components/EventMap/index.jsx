@@ -1569,6 +1569,30 @@ const EventMap = ({
         await fetchEvents();
         setIsCreateFormOpen(false);
         setError(null);
+        
+        // If we have the created event data, redirect to its URL
+        if (newEvent && newEvent.slug) {
+          // Small delay to ensure the events list is updated
+          setTimeout(() => {
+            window.location.href = `/e/${newEvent.slug}`;
+          }, 500);
+        } else if (newEvent && newEvent.id) {
+          // Fallback: try to find and select the event
+          setTimeout(async () => {
+            await fetchEvents(); // Refresh again to be sure
+            setEvents(currentEvents => {
+              const createdEvent = currentEvents.find(e => e.id === newEvent.id);
+              if (createdEvent) {
+                setSelectedEvent(createdEvent);
+                // Update URL to reflect the selected event
+                if (createdEvent.slug) {
+                  window.history.pushState({}, '', `/e/${createdEvent.slug}`);
+                }
+              }
+              return currentEvents;
+            });
+          }, 1000);
+        }
       } catch (error) {
         console.error('Error refreshing events:', error);
         setError('Event created but failed to refresh event list');
@@ -1622,27 +1646,69 @@ const EventMap = ({
         throw new Error('Invalid response from server');
       }
 
-      // Update events list and select the newly created event
-      await fetchEvents();
-      
+      console.log('Event created successfully:', createdEvent);
+
+      // Close the form immediately
       setIsCreateFormOpen(false);
       setEditingEvent(null);
       setSelectedLocation(null);
       
-      // Use a timeout to ensure events state has been updated, then select the created event
-      setTimeout(() => {
-        setEvents(currentEvents => {
-          const refreshedEvent = currentEvents.find(e => e.id === createdEvent.id);
-          if (refreshedEvent) {
-            setSelectedEvent(refreshedEvent);
-          } else {
-            setSelectedEvent(createdEvent);
-          }
-          return currentEvents;
-        });
-      }, 100);
+      // Show success message briefly
+      setError(null);
       
-      setError(null); // Clear any existing errors on success
+      // Redirect to the event page if we have a slug
+      if (createdEvent.slug) {
+        // Small delay to show success, then redirect
+        setTimeout(() => {
+          window.location.href = `/e/${createdEvent.slug}`;
+        }, 500);
+      } else {
+        // Fallback: refresh events and select the new one
+        try {
+          await fetchEvents();
+          
+          // Try multiple times to find and select the event
+          let attempts = 0;
+          const maxAttempts = 5;
+          
+          const trySelectEvent = async () => {
+            attempts++;
+            
+            // Refresh events list
+            await fetchEvents();
+            
+            setEvents(currentEvents => {
+              const refreshedEvent = currentEvents.find(e => e.id === createdEvent.id);
+              if (refreshedEvent) {
+                console.log('Found and selecting created event:', refreshedEvent.title);
+                setSelectedEvent(refreshedEvent);
+                
+                // Update URL if we have a slug
+                if (refreshedEvent.slug) {
+                  window.history.pushState({}, '', `/e/${refreshedEvent.slug}`);
+                }
+                return currentEvents;
+              } else if (attempts < maxAttempts) {
+                // Try again after a short delay
+                setTimeout(trySelectEvent, 1000);
+              } else {
+                console.warn('Could not find created event after', maxAttempts, 'attempts');
+                // As a last resort, just set the created event data
+                setSelectedEvent(createdEvent);
+              }
+              return currentEvents;
+            });
+          };
+          
+          // Start the selection process
+          setTimeout(trySelectEvent, 500);
+          
+        } catch (refreshError) {
+          console.error('Error refreshing events after creation:', refreshError);
+          // Still try to select the created event
+          setSelectedEvent(createdEvent);
+        }
+      }
 
     } catch (error) {
       console.error('Error creating event:', error);
