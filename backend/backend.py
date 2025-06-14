@@ -4017,6 +4017,64 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
     # Validate recurring events for premium users only
     event_data = validate_recurring_event(event_data, current_user['role'])
     
+    # Check premium event limits if this is a premium event
+    if event_data.get('is_premium_event', False):
+        is_premium = current_user['role'] in ['premium', 'admin']
+        is_enterprise = current_user['role'] == 'enterprise'
+        
+        if not is_premium:
+            raise HTTPException(
+                status_code=403, 
+                detail="Premium subscription required to create premium events"
+            )
+        
+        # Check monthly premium event limits
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Count premium events created this month
+                from datetime import datetime
+                start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                
+                if IS_PRODUCTION and DB_URL:
+                    cursor.execute("""
+                        SELECT COUNT(*) as count
+                        FROM events 
+                        WHERE created_by = %s 
+                        AND created_at >= %s
+                        AND verified = TRUE
+                    """, (current_user['id'], start_of_month))
+                else:
+                    cursor.execute("""
+                        SELECT COUNT(*) as count
+                        FROM events 
+                        WHERE created_by = ? 
+                        AND created_at >= ?
+                        AND verified = TRUE
+                    """, (current_user['id'], start_of_month))
+                
+                result = cursor.fetchone()
+                current_premium_events = result['count'] if result else 0
+                
+                # Determine event limits based on role
+                if is_enterprise:
+                    event_limit = 250
+                else:  # premium
+                    event_limit = 10
+                
+                if current_premium_events >= event_limit:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail=f"Premium event limit reached ({current_premium_events}/{event_limit}). Upgrade to Enterprise for higher limits."
+                    )
+                    
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error checking premium event limits: {str(e)}")
+            # Continue with event creation if limit check fails
+    
     # Log the original event data for debugging
     logger.info(f"Creating event: {event_data}")
     
@@ -9500,12 +9558,70 @@ async def track_event_view_endpoint(
 @app.get("/users/premium-status")
 async def get_premium_status(current_user: dict = Depends(get_current_user)):
     """
-    Get user's premium status
+    Get user's premium status with event limits and counts
     """
+    is_premium = current_user['role'] in ['premium', 'admin']
+    is_enterprise = current_user['role'] == 'enterprise'
+    
+    # Get current month's event count for this user
+    current_month_events = 0
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Count events created this month
+            from datetime import datetime, timedelta
+            start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL
+                cursor.execute("""
+                    SELECT COUNT(*) as count
+                    FROM events 
+                    WHERE created_by = %s 
+                    AND created_at >= %s
+                """, (current_user['id'], start_of_month))
+            else:
+                # SQLite
+                cursor.execute("""
+                    SELECT COUNT(*) as count
+                    FROM events 
+                    WHERE created_by = ? 
+                    AND created_at >= ?
+                """, (current_user['id'], start_of_month))
+            
+            result = cursor.fetchone()
+            current_month_events = result['count'] if result else 0
+            
+    except Exception as e:
+        logger.error(f"Error counting user events: {str(e)}")
+        current_month_events = 0
+    
+    # Determine event limits based on role
+    if is_enterprise:
+        event_limit = 250
+    elif is_premium:
+        event_limit = 10
+    else:
+        event_limit = 0  # Free users have no limit but no premium features
+    
     return {
-        "is_premium": current_user['role'] in ['premium', 'admin'],
+        "is_premium": is_premium,
+        "is_enterprise": is_enterprise,
         "role": current_user['role'],
-        "user_id": current_user['id']
+        "user_id": current_user['id'],
+        "event_limit": event_limit,
+        "current_month_events": current_month_events,
+        "events_remaining": max(0, event_limit - current_month_events) if event_limit > 0 else None,
+        "can_create_events": event_limit == 0 or current_month_events < event_limit,
+        "features": {
+            "verified_events": is_premium,
+            "analytics": is_premium,
+            "recurring_events": is_premium,
+            "priority_support": is_premium,
+            "enhanced_visibility": is_premium
+        }
     }
 
 @app.get("/stripe/config")
@@ -9513,16 +9629,27 @@ async def get_stripe_config():
     """Get Stripe publishable key for frontend"""
     return {"publishable_key": STRIPE_PUBLISHABLE_KEY}
 @app.post("/stripe/create-checkout-session")
-async def create_checkout_session(current_user: dict = Depends(get_current_user)):
+async def create_checkout_session(request: dict, current_user: dict = Depends(get_current_user)):
     """Create Stripe checkout session for premium subscription"""
     try:
+        # Get pricing tier from request (default to monthly)
+        pricing_tier = request.get('pricing_tier', 'monthly')
+        
+        # Determine which price ID to use
+        if pricing_tier == 'annual':
+            price_id = os.getenv("STRIPE_ANNUAL_PRICE_ID", STRIPE_PRICE_ID)
+        elif pricing_tier == 'enterprise':
+            price_id = os.getenv("STRIPE_ENTERPRISE_PRICE_ID", STRIPE_PRICE_ID)
+        else:  # monthly
+            price_id = STRIPE_PRICE_ID
+        
         # Determine the base URL for success/cancel URLs
         base_url = "https://todo-events.com" if IS_PRODUCTION else "http://localhost:5173"
         
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[{
-                'price': STRIPE_PRICE_ID,  # Your monthly subscription price ID
+                'price': price_id,
                 'quantity': 1,
             }],
             mode='subscription',
@@ -9531,17 +9658,19 @@ async def create_checkout_session(current_user: dict = Depends(get_current_user)
             customer_email=current_user['email'],
             metadata={
                 'user_id': str(current_user['id']),
-                'user_email': current_user['email']
+                'user_email': current_user['email'],
+                'pricing_tier': pricing_tier
             },
             subscription_data={
                 'metadata': {
                     'user_id': str(current_user['id']),
-                    'user_email': current_user['email']
+                    'user_email': current_user['email'],
+                    'pricing_tier': pricing_tier
                 }
             }
         )
         
-        logger.info(f"✅ Created checkout session for user {current_user['id']} ({current_user['email']})")
+        logger.info(f"✅ Created {pricing_tier} checkout session for user {current_user['id']} ({current_user['email']})")
         return {"checkout_url": checkout_session.url}
         
     except Exception as e:
