@@ -445,7 +445,7 @@ const AccountPage = () => {
                   <p className="text-lg text-themed-secondary">Unlock powerful analytics and verified event badges</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl border-2 border-gradient-to-r from-amber-200 to-orange-200 dark:border-amber-800/50 p-4 sm:p-8">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/60 dark:to-orange-900/60 rounded-2xl border-2 border-gradient-to-r from-amber-200 to-orange-200 dark:border-amber-600/70 p-4 sm:p-8">
                   <div className="text-center mb-8">
                     <div className="text-4xl font-bold text-themed-primary mb-2">
                       $20
@@ -481,7 +481,7 @@ const AccountPage = () => {
                     </div>
                   </div>
 
-                  <div className="bg-white/50 dark:bg-white/5 rounded-lg p-6 backdrop-blur-sm border border-white/20">
+                  <div className="bg-white/50 dark:bg-gray-800/80 rounded-lg p-6 backdrop-blur-sm border border-white/20 dark:border-gray-600/50">
                     <div className="flex items-center gap-3 mb-4">
                       <CheckCircle className="w-5 h-5 text-green-500" />
                       <span className="font-semibold text-themed-primary">Analytics Now Available!</span>
@@ -516,7 +516,7 @@ const AccountPage = () => {
                   </div>
 
                   {/* Testing Section */}
-                  <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/60 rounded-lg border border-blue-200 dark:border-blue-600/70">
                     <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">🧪 Testing Mode</h3>
                     <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
                       <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
@@ -524,7 +524,7 @@ const AccountPage = () => {
                       <p><strong>CVC:</strong> Any 3 digits (e.g., 123)</p>
                       <p><strong>ZIP:</strong> Any valid ZIP code</p>
                     </div>
-                    <div className="mt-4 p-3 bg-white/50 dark:bg-white/10 rounded border">
+                                          <div className="mt-4 p-3 bg-white/50 dark:bg-gray-700/60 rounded border dark:border-gray-600/50">
                       <p className="text-xs text-blue-700 dark:text-blue-300">
                         💡 This is running in Stripe test mode. No real charges will be made. 
                         Use the test card above to simulate a successful payment.

@@ -27,7 +27,7 @@
   
   /* Neutrals - Dark Mode */
   --bg-main: #0f0f0f;           /* Dark background */
-  --bg-card: #1a1a1a;
+  --bg-card: rgba(26, 26, 26, 0.95);
   --bg-card-hover: rgba(45, 45, 45, 0.95);
   --bg-card-active: rgba(60, 60, 60, 0.95);
   --text-primary: #FAFBFC;      /* Pure white for maximum contrast */
@@ -956,6 +956,10 @@ body {
 .bg-themed-surface-active {
   background-color: var(--bg-card-active) !important;
   border-radius: 8px !important;
+}
+
+.bg-themed-background {
+  background-color: var(--bg-main) !important;
 }
 
 .bg-themed-overlay {

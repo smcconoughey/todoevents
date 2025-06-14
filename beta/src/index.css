@@ -694,6 +694,10 @@ body {
   border-radius: 8px !important;
 }
 
+.bg-themed-background {
+  background-color: var(--bg-main) !important;
+}
+
 .border-themed {
   border-color: var(--border-color) !important;
   border-radius: 8px !important;
