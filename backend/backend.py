@@ -10941,6 +10941,7 @@ async def get_user_analytics(
                         SELECT table_name 
                         FROM information_schema.tables 
                         WHERE table_name IN ('event_views', 'event_interests')
+                        AND table_schema = 'public'
                     """)
                 else:
                     # SQLite
@@ -10950,40 +10951,65 @@ async def get_user_analytics(
                         WHERE type='table' AND name IN ('event_views', 'event_interests')
                     """)
                 
-                existing_tables = [row[0] for row in cursor.fetchall()]
+                table_results = cursor.fetchall()
+                existing_tables = [row[0] for row in table_results] if table_results else []
                 
                 if 'event_views' in existing_tables:
                     thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
                     
-                    # Get view trends
-                    cursor.execute(f"""
-                        SELECT DATE(ev.created_at) as date, COUNT(*) as views
-                        FROM event_views ev
-                        JOIN events e ON ev.event_id = e.id
-                        WHERE e.created_by = {placeholder} AND ev.created_at >= {placeholder}
-                        GROUP BY DATE(ev.created_at)
-                        ORDER BY date
-                    """, (current_user['id'], thirty_days_ago))
-                    
-                    view_trends = [dict(trend) for trend in cursor.fetchall()]
+                    # Get view trends - handle potential table/column issues
+                    try:
+                        cursor.execute(f"""
+                            SELECT DATE(ev.created_at) as date, COUNT(*) as views
+                            FROM event_views ev
+                            JOIN events e ON ev.event_id = e.id
+                            WHERE e.created_by = {placeholder} AND ev.created_at >= {placeholder}
+                            GROUP BY DATE(ev.created_at)
+                            ORDER BY date
+                        """, (current_user['id'], thirty_days_ago))
+                        view_results = cursor.fetchall()
+                    except Exception as view_error:
+                        logger.warning(f"View trends query failed: {str(view_error)}")
+                        view_results = []
+                    view_trends = []
+                    for row in view_results:
+                        if hasattr(row, '_asdict'):
+                            view_trends.append(row._asdict())
+                        elif isinstance(row, dict):
+                            view_trends.append(row)
+                        else:
+                            # Handle tuple results
+                            view_trends.append({"date": row[0], "views": row[1]})
                 
                 if 'event_interests' in existing_tables:
                     thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
                     
-                    # Get interest trends
-                    cursor.execute(f"""
-                        SELECT DATE(ei.created_at) as date, COUNT(*) as interests
-                        FROM event_interests ei
-                        JOIN events e ON ei.event_id = e.id
-                        WHERE e.created_by = {placeholder} AND ei.created_at >= {placeholder}
-                        GROUP BY DATE(ei.created_at)
-                        ORDER BY date
-                    """, (current_user['id'], thirty_days_ago))
-                    
-                    interest_trends = [dict(trend) for trend in cursor.fetchall()]
+                    # Get interest trends - handle potential table/column issues
+                    try:
+                        cursor.execute(f"""
+                            SELECT DATE(ei.created_at) as date, COUNT(*) as interests
+                            FROM event_interests ei
+                            JOIN events e ON ei.event_id = e.id
+                            WHERE e.created_by = {placeholder} AND ei.created_at >= {placeholder}
+                            GROUP BY DATE(ei.created_at)
+                            ORDER BY date
+                        """, (current_user['id'], thirty_days_ago))
+                        interest_results = cursor.fetchall()
+                    except Exception as interest_error:
+                        logger.warning(f"Interest trends query failed: {str(interest_error)}")
+                        interest_results = []
+                    interest_trends = []
+                    for row in interest_results:
+                        if hasattr(row, '_asdict'):
+                            interest_trends.append(row._asdict())
+                        elif isinstance(row, dict):
+                            interest_trends.append(row)
+                        else:
+                            # Handle tuple results
+                            interest_trends.append({"date": row[0], "interests": row[1]})
                     
             except Exception as trend_error:
-                logger.warning(f"Could not get trend data: {trend_error}")
+                logger.warning(f"Could not get trend data: {str(trend_error)}")
                 # Continue with empty trends
             
             # Calculate engagement rate
