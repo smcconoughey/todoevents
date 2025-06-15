@@ -94,6 +94,10 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
     try:
         placeholder = get_placeholder()
         
+        # Convert empty strings to None for date fields
+        start_date = mission.start_date if mission.start_date and mission.start_date.strip() else None
+        end_date = mission.end_date if mission.end_date and mission.end_date.strip() else None
+        
         with get_db() as conn:
             c = conn.cursor()
             
@@ -104,7 +108,7 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
                     (title, description, start_date, end_date, priority, status, tags, grid_x, grid_y, owner_id)
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                     RETURNING id
-                ''', (mission.title, mission.description, mission.start_date, mission.end_date, 
+                ''', (mission.title, mission.description, start_date, end_date, 
                       mission.priority, mission.status, mission.tags, mission.grid_x, mission.grid_y, current_user["id"]))
                 mission_id = c.fetchone()['id']
             else:
@@ -112,7 +116,7 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
                     INSERT INTO missionops_missions 
                     (title, description, start_date, end_date, priority, status, tags, grid_x, grid_y, owner_id)
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-                ''', (mission.title, mission.description, mission.start_date, mission.end_date, 
+                ''', (mission.title, mission.description, start_date, end_date, 
                       mission.priority, mission.status, mission.tags, mission.grid_x, mission.grid_y, current_user["id"]))
                 mission_id = c.lastrowid
             
@@ -207,6 +211,9 @@ async def update_mission(mission_id: int, mission: MissionUpdate, current_user: 
             
             for field, value in mission.dict(exclude_unset=True).items():
                 if value is not None:
+                    # Convert empty strings to None for date fields
+                    if field in ['start_date', 'end_date'] and isinstance(value, str) and not value.strip():
+                        value = None
                     update_fields.append(f"{field} = {placeholder}")
                     update_values.append(value)
             
@@ -333,6 +340,9 @@ async def create_task(task: TaskCreate, current_user: dict = Depends(get_current
     try:
         placeholder = get_placeholder()
         
+        # Convert empty strings to None for date fields
+        due_date = task.due_date if task.due_date and task.due_date.strip() else None
+        
         with get_db() as conn:
             c = conn.cursor()
             
@@ -343,7 +353,7 @@ async def create_task(task: TaskCreate, current_user: dict = Depends(get_current
                     (mission_id, title, description, due_date, priority, status, parent_task_id, assigned_to, created_by)
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                     RETURNING id
-                ''', (task.mission_id, task.title, task.description, task.due_date, 
+                ''', (task.mission_id, task.title, task.description, due_date, 
                       task.priority, task.status, task.parent_task_id, task.assigned_to, current_user["id"]))
                 task_id = c.fetchone()['id']
             else:
@@ -351,7 +361,7 @@ async def create_task(task: TaskCreate, current_user: dict = Depends(get_current
                     INSERT INTO missionops_tasks 
                     (mission_id, title, description, due_date, priority, status, parent_task_id, assigned_to, created_by)
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-                ''', (task.mission_id, task.title, task.description, task.due_date, 
+                ''', (task.mission_id, task.title, task.description, due_date, 
                       task.priority, task.status, task.parent_task_id, task.assigned_to, current_user["id"]))
                 task_id = c.lastrowid
             
@@ -403,6 +413,9 @@ async def update_task(task_id: int, task: TaskUpdate, current_user: dict = Depen
             
             for field, value in task.dict(exclude_unset=True).items():
                 if value is not None:
+                    # Convert empty strings to None for date fields
+                    if field == 'due_date' and isinstance(value, str) and not value.strip():
+                        value = None
                     update_fields.append(f"{field} = {placeholder}")
                     update_values.append(value)
             
