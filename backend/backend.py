@@ -11629,23 +11629,37 @@ async def get_enterprise_overview(
         with get_db() as conn:
             c = conn.cursor()
             
+            logger.info(f"Enterprise overview request from user {current_user['id']} with role {current_user['role']}")
+            
             # Get stats - for enterprise users, show only their data
             if current_user['role'] == UserRole.ENTERPRISE:
                 # Only show this user's events
-                c.execute(f"SELECT COUNT(*) FROM events WHERE created_by = {placeholder}", (current_user['id'],))
-                total_events = c.fetchone()[0]
+                query = f"SELECT COUNT(*) FROM events WHERE created_by = {placeholder}"
+                logger.info(f"Executing query: {query} with params: {(current_user['id'],)}")
+                c.execute(query, (current_user['id'],))
+                result = c.fetchone()
+                logger.info(f"Query result: {result}")
+                total_events = result[0] if result else 0
                 
                 # For enterprise users, total_users is just 1 (themselves)
                 total_users = 1
                 
-                # Get monthly growth for this user's events
-                c.execute(f"""
+                # Get monthly growth for this user's events  
+                # Use proper PostgreSQL date math
+                growth_query = f"""
                     SELECT 
                         COUNT(*) as this_month,
                         (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
                     FROM events 
                     WHERE created_by = {placeholder} AND created_at >= NOW() - INTERVAL '30 days'
-                """, (current_user['id'], current_user['id']))
+                """
+                logger.info(f"Executing growth query: {growth_query}")
+                try:
+                    c.execute(growth_query, (current_user['id'], current_user['id']))
+                except Exception as e:
+                    logger.error(f"Growth query failed, using fallback: {e}")
+                    # Fallback to simpler query
+                    c.execute(f"SELECT COUNT(*) as this_month, 0 as last_month FROM events WHERE created_by = {placeholder}", (current_user['id'],))
             else:
                 # Admin sees all data
                 c.execute("SELECT COUNT(*) FROM events")
@@ -11655,13 +11669,17 @@ async def get_enterprise_overview(
                 total_users = c.fetchone()[0]
                 
                 # Get monthly growth for all events
-                c.execute("""
-                    SELECT 
-                        COUNT(*) as this_month,
-                        (SELECT COUNT(*) FROM events WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
-                    FROM events 
-                    WHERE created_at >= NOW() - INTERVAL '30 days'
-                """)
+                try:
+                    c.execute("""
+                        SELECT 
+                            COUNT(*) as this_month,
+                            (SELECT COUNT(*) FROM events WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
+                        FROM events 
+                        WHERE created_at >= NOW() - INTERVAL '30 days'
+                    """)
+                except Exception as e:
+                    logger.error(f"Admin growth query failed, using fallback: {e}")
+                    c.execute("SELECT COUNT(*) as this_month, 0 as last_month FROM events")
             growth_data = c.fetchone()
             event_growth = ((growth_data[0] - growth_data[1]) / max(growth_data[1], 1)) * 100 if growth_data[1] > 0 else 0
             
