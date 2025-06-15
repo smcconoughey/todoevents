@@ -579,6 +579,8 @@ const CreateEventForm = ({
             </div>
           </div>
 
+
+
           {/* Schedule Section */}
           <div className="space-y-6">
             <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
@@ -818,105 +820,85 @@ const CreateEventForm = ({
             </div>
           )}
 
-          {/* Recurring Events Section */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
-              <div className="w-8 h-8 bg-gradient-to-br from-vibrant-magenta/20 to-vibrant-magenta/10 rounded-lg flex items-center justify-center">
-                <Repeat className="w-4 h-4 text-vibrant-magenta" />
-              </div>
-              <h3 className="text-lg font-semibold text-themed-primary">Recurring Events</h3>
-              {!isPremiumUser && (
+          {/* Recurring Events Section - Only show when premium event is selected */}
+          {isPremiumUser && formData.is_premium_event && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
+                <div className="w-8 h-8 bg-gradient-to-br from-vibrant-magenta/20 to-vibrant-magenta/10 rounded-lg flex items-center justify-center">
+                  <Repeat className="w-4 h-4 text-vibrant-magenta" />
+                </div>
+                <h3 className="text-lg font-semibold text-themed-primary">Recurring Events</h3>
                 <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-full">
                   <Crown className="w-3 h-3 text-amber-600" />
                   <span className="text-xs font-medium text-amber-700">Premium</span>
                 </div>
-              )}
-            </div>
-            
-            {!isPremiumUser && (
-              <div className="p-4 bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-2 border-yellow-500/30 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-4 h-4 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-yellow-700 dark:text-yellow-300 font-semibold mb-1">Upgrade to Premium</p>
-                    <p className="text-yellow-600 dark:text-yellow-400 text-sm leading-relaxed">Create recurring events that automatically repeat daily, weekly, monthly, or yearly. Perfect for regular meetups, classes, and ongoing events.</p>
-                  </div>
-                </div>
               </div>
-            )}
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
-                  <div className="w-2 h-2 bg-vibrant-magenta rounded-full"></div>
-                  Recurring Event
-                </label>
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-themed-surface to-themed-surface-hover rounded-xl border border-themed/30">
-                  <input
-                    type="checkbox"
-                    id="recurring"
-                    checked={formData.recurring}
-                    onChange={(e) => setFormData(prev => ({ ...prev, recurring: e.target.checked, frequency: e.target.checked ? prev.frequency : '' }))}
-                    disabled={!isPremiumUser}
-                    className={`w-5 h-5 rounded-md border-2 border-themed bg-themed-surface focus:ring-2 transition-all duration-200 ${
-                      isPremiumUser 
-                        ? 'text-vibrant-magenta focus:ring-vibrant-magenta/50' 
-                        : 'text-gray-400 cursor-not-allowed opacity-50'
-                    }`}
-                  />
-                  <label htmlFor="recurring" className={`text-sm font-medium ${isPremiumUser ? 'text-themed-secondary' : 'text-gray-500'}`}>
-                    This event repeats regularly
-                  </label>
-                </div>
-              </div>
-
-              {formData.recurring && (
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
                     <div className="w-2 h-2 bg-vibrant-magenta rounded-full"></div>
-                    Frequency
+                    Recurring Event
                   </label>
-                  <Select 
-                    value={formData.frequency || ""} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}
-                    disabled={!isPremiumUser}
-                  >
-                    <SelectTrigger className={`input-themed h-12 border-2 transition-all duration-200 ${isPremiumUser ? 'border-vibrant-magenta/30 focus:border-vibrant-magenta/50' : 'opacity-50'}`}>
-                      <SelectValue placeholder="Select frequency..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-themed-surface border-themed shadow-xl">
-                      <SelectItem value="daily" className="hover:bg-themed-surface-hover">
-                        <div className="flex items-center gap-3 py-1">
-                          <Calendar className="w-4 h-4 text-blue-500" />
-                          <span className="font-medium">Daily</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="weekly" className="hover:bg-themed-surface-hover">
-                        <div className="flex items-center gap-3 py-1">
-                          <Calendar className="w-4 h-4 text-green-500" />
-                          <span className="font-medium">Weekly</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="monthly" className="hover:bg-themed-surface-hover">
-                        <div className="flex items-center gap-3 py-1">
-                          <Calendar className="w-4 h-4 text-purple-500" />
-                          <span className="font-medium">Monthly</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="yearly" className="hover:bg-themed-surface-hover">
-                        <div className="flex items-center gap-3 py-1">
-                          <Calendar className="w-4 h-4 text-orange-500" />
-                          <span className="font-medium">Yearly</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-themed-surface to-themed-surface-hover rounded-xl border border-themed/30">
+                    <input
+                      type="checkbox"
+                      id="recurring"
+                      checked={formData.recurring}
+                      onChange={(e) => setFormData(prev => ({ ...prev, recurring: e.target.checked, frequency: e.target.checked ? prev.frequency : '' }))}
+                      className="w-5 h-5 rounded-md border-2 border-themed bg-themed-surface focus:ring-2 transition-all duration-200 text-vibrant-magenta focus:ring-vibrant-magenta/50"
+                    />
+                    <label htmlFor="recurring" className="text-sm font-medium text-themed-secondary">
+                      This event repeats regularly
+                    </label>
+                  </div>
                 </div>
-              )}
+
+                {formData.recurring && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
+                      <div className="w-2 h-2 bg-vibrant-magenta rounded-full"></div>
+                      Frequency
+                    </label>
+                    <Select 
+                      value={formData.frequency || ""} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}
+                    >
+                      <SelectTrigger className="input-themed h-12 border-2 border-vibrant-magenta/30 focus:border-vibrant-magenta/50 transition-all duration-200">
+                        <SelectValue placeholder="Select frequency..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-themed-surface border-themed shadow-xl">
+                        <SelectItem value="daily" className="hover:bg-themed-surface-hover">
+                          <div className="flex items-center gap-3 py-1">
+                            <Calendar className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium">Daily</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="weekly" className="hover:bg-themed-surface-hover">
+                          <div className="flex items-center gap-3 py-1">
+                            <Calendar className="w-4 h-4 text-green-500" />
+                            <span className="font-medium">Weekly</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="monthly" className="hover:bg-themed-surface-hover">
+                          <div className="flex items-center gap-3 py-1">
+                            <Calendar className="w-4 h-4 text-purple-500" />
+                            <span className="font-medium">Monthly</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="yearly" className="hover:bg-themed-surface-hover">
+                          <div className="flex items-center gap-3 py-1">
+                            <Calendar className="w-4 h-4 text-orange-500" />
+                            <span className="font-medium">Yearly</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Location Section */}
           <div className="space-y-6">

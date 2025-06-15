@@ -138,7 +138,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
     onChange(newValue);
     setSelectedIndex(-1); // Reset selection when typing
     
-    if (newValue.length >= 2) {
+    if (newValue && newValue.length >= 2) {
       getPlacePredictions(newValue);
     } else {
       setPredictions([]);
@@ -155,7 +155,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
         const predictionToSelect = selectedIndex >= 0 ? predictions[selectedIndex] : predictions[0];
         console.log('Auto-selecting prediction on Enter:', predictionToSelect.description);
         handlePredictionSelect(predictionToSelect);
-      } else if (value.length >= 2) {
+      } else if (value && value.length >= 2) {
         // Show message if user typed something but no predictions available
         alert('No address suggestions found. Please try a different search term or select from the dropdown when available.');
       } else {
@@ -311,7 +311,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
   const handleManualSubmit = (e) => {
     e.preventDefault();
     
-    if (!value.trim()) return;
+    if (!value || !value.trim()) return;
     
     // Only allow manual submission if we have custom coordinates set
     // Otherwise, encourage users to select from predictions
@@ -359,7 +359,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
       setManualLocation({ lat, lng });
       
       // If we already have an address, update the location right away
-      if (value.trim()) {
+      if (value && value.trim()) {
         onSelect({
           address: value,
           lat: lat,
@@ -378,10 +378,10 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
         <input
           ref={inputRef}
           type="text"
-          value={value}
+          value={value || ''}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => value.length >= 2 && predictions.length > 0 && setShowPredictions(true)}
+          onFocus={() => value && value.length >= 2 && predictions.length > 0 && setShowPredictions(true)}
           className="w-full pl-10 pr-4 py-2 rounded-md bg-white/10 border-0 text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/20 transition-all"
           placeholder="Type address and select from dropdown (or press Enter for first option)"
           autoComplete="off"

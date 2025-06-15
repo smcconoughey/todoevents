@@ -11669,9 +11669,9 @@ async def get_enterprise_overview(
             c.execute("""
                 SELECT 
                     COUNT(DISTINCT u.id) as total_clients,
-                    COUNT(DISTINCT CASE WHEN e.user_id IS NOT NULL THEN u.id END) as active_clients
+                    COUNT(DISTINCT CASE WHEN e.created_by IS NOT NULL THEN u.id END) as active_clients
                 FROM users u
-                LEFT JOIN events e ON u.id = e.user_id
+                LEFT JOIN events e ON u.id = e.created_by
                 WHERE u.role IN ('user', 'premium', 'enterprise')
             """)
             client_data = c.fetchone()
@@ -11711,14 +11711,14 @@ async def get_enterprise_clients(
                         u.email,
                         u.role,
                         u.created_at,
-                        u.premium_until,
+                        u.premium_expires_at,
                         COUNT(e.id) as event_count,
                         STRING_AGG(DISTINCT e.category, ', ') as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
                     LEFT JOIN events e ON u.id = e.created_by
                     WHERE u.id = {placeholder}
-                    GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
+                    GROUP BY u.id, u.email, u.role, u.created_at, u.premium_expires_at
                     ORDER BY event_count DESC, u.created_at DESC
                 """, (current_user['id'],))
             else:
@@ -11729,14 +11729,14 @@ async def get_enterprise_clients(
                         u.email,
                         u.role,
                         u.created_at,
-                        u.premium_until,
+                        u.premium_expires_at,
                         COUNT(e.id) as event_count,
                         STRING_AGG(DISTINCT e.category, ', ') as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
                     LEFT JOIN events e ON u.id = e.created_by
                     WHERE u.role IN ('user', 'premium', 'enterprise')
-                    GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
+                    GROUP BY u.id, u.email, u.role, u.created_at, u.premium_expires_at
                     ORDER BY event_count DESC, u.created_at DESC
                 """)
             
@@ -11747,7 +11747,7 @@ async def get_enterprise_clients(
                     "email": row[1],
                     "role": row[2],
                     "created_at": row[3].isoformat() if row[3] else None,
-                    "premium_until": row[4].isoformat() if row[4] else None,
+                    "premium_expires_at": row[4].isoformat() if row[4] else None,
                     "event_count": row[5],
                     "categories": row[6] if row[6] else "None",
                     "last_event_date": row[7].isoformat() if row[7] else None,
