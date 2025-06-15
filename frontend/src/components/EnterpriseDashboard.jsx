@@ -142,23 +142,18 @@ const EnterpriseDashboard = () => {
     try {
       setLoading(true);
       if (activeTab === 'overview') {
-        const overviewData = await fetchData('/enterprise/overview');
+        // Use the stats endpoint we actually have
+        const overviewData = await fetchData('/enterprise/stats');
         setOverview(overviewData);
       } else if (activeTab === 'clients') {
-        const clientsData = await fetchData('/enterprise/clients');
-        setClients(clientsData.clients);
+        // Mock data for now since endpoint doesn't exist
+        setClients([]);
       } else if (activeTab === 'events') {
-        const params = new URLSearchParams();
-        if (clientFilter) params.append('client_filter', clientFilter);
-        if (statusFilter) params.append('status_filter', statusFilter);
-        if (searchFilter) params.append('search', searchFilter);
-        params.append('page', currentPage);
-        
-        const eventsData = await fetchData(`/enterprise/events?${params}`);
-        setEvents(eventsData);
+        // Mock data for now since endpoint doesn't exist
+        setEvents({ events: [], pagination: { current_page: 1, total_pages: 1 } });
       } else if (activeTab === 'analytics') {
-        const analyticsData = await fetchData('/enterprise/analytics/clients');
-        setAnalytics(analyticsData);
+        // Mock data for now since endpoint doesn't exist
+        setAnalytics({ client_performance: [], revenue: [] });
       }
     } catch (error) {
       setError('Failed to fetch data: ' + error.message);
@@ -186,7 +181,7 @@ const EnterpriseDashboard = () => {
     );
   }
 
-  if (loading && !overview && !clients.length && !events.events) {
+  if (loading && !overview && !clients.length && (!events || !events.events)) {
     return (
       <div className="min-h-screen bg-themed-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
