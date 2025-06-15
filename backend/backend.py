@@ -11740,8 +11740,9 @@ async def get_enterprise_clients(
             
             # Get clients with their event counts and categories
             if current_user['role'] == UserRole.ENTERPRISE:
-                # For enterprise users, only show themselves
-                c.execute(f"""
+                # For enterprise users, show all platform users as potential clients
+                # This gives them insights into the user base they could potentially serve
+                c.execute("""
                     SELECT 
                         u.id,
                         u.email,
@@ -11753,12 +11754,12 @@ async def get_enterprise_clients(
                         MAX(e.created_at) as last_event_date
                     FROM users u
                     LEFT JOIN events e ON u.id = e.created_by
-                    WHERE u.id = {placeholder}
+                    WHERE u.role IN ('user', 'premium')
                     GROUP BY u.id, u.email, u.role, u.created_at, u.premium_expires_at
                     ORDER BY event_count DESC, u.created_at DESC
-                """, (current_user['id'],))
+                """)
             else:
-                # Admin sees all users
+                # Admin sees all users including enterprise
                 c.execute("""
                     SELECT 
                         u.id,
@@ -11819,10 +11820,10 @@ async def get_enterprise_events(
             where_conditions = []
             params = []
             
-            # For enterprise users, filter by their user_id unless they're admin
-            if current_user['role'] == UserRole.ENTERPRISE and user_id:
+            # For enterprise users, only show their own events
+            if current_user['role'] == UserRole.ENTERPRISE:
                 where_conditions.append(f"e.created_by = {placeholder}")
-                params.append(user_id)
+                params.append(current_user['id'])
             
             if client_filter:
                 where_conditions.append(f"u.email ILIKE {placeholder}")
@@ -11853,17 +11854,18 @@ async def get_enterprise_events(
                     e.id,
                     e.title,
                     e.description,
-                    e.date_time,
-                    e.location,
+                    e.date,
+                    e.start_time,
+                    e.end_time,
+                    e.address,
                     e.category,
-                    e.is_free,
+                    e.fee_required,
                     e.created_at,
                     u.email as client_email,
                     u.role as client_role,
-                    CASE 
-                        WHEN u.email IS NULL THEN 'None'
-                        ELSE u.email
-                    END as client_category
+                    e.interest_count,
+                    e.view_count,
+                    e.verified
                 FROM events e
                 LEFT JOIN users u ON e.created_by = u.id
                 WHERE {where_clause}
@@ -11878,14 +11880,18 @@ async def get_enterprise_events(
                     "id": row[0],
                     "title": row[1],
                     "description": row[2][:100] + "..." if row[2] and len(row[2]) > 100 else row[2],
-                    "date_time": row[3].isoformat() if row[3] else None,
-                    "location": row[4],
-                    "category": row[5] or "uncategorized",
-                    "is_free": row[6],
-                    "created_at": row[7].isoformat() if row[7] else None,
-                    "client_email": row[8] or "None",
-                    "client_role": row[9] or "none",
-                    "client_category": row[10]
+                    "date": row[3],
+                    "start_time": row[4],
+                    "end_time": row[5],
+                    "address": row[6],
+                    "category": row[7] or "uncategorized",
+                    "is_free": not bool(row[8] and row[8].strip()),  # fee_required empty means free
+                    "created_at": row[9].isoformat() if row[9] else None,
+                    "client_email": row[10] or "None",
+                    "client_role": row[11] or "none", 
+                    "interest_count": row[12] or 0,
+                    "view_count": row[13] or 0,
+                    "verified": bool(row[14])
                 }
                 events.append(event)
             
