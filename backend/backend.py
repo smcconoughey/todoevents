@@ -11865,7 +11865,8 @@ async def get_enterprise_events(
                     u.role as client_role,
                     e.interest_count,
                     e.view_count,
-                    e.verified
+                    e.verified,
+                    e.client_name
                 FROM events e
                 LEFT JOIN users u ON e.created_by = u.id
                 WHERE {where_clause}
@@ -11911,6 +11912,7 @@ async def get_enterprise_events(
                     "interest_count": row[12] or 0,
                     "view_count": row[13] or 0,
                     "verified": bool(row[14]),
+                    "client_name": row[15] or None,
                     "status": status
                 }
                 events.append(event)
