@@ -32,6 +32,17 @@ missionops_router = APIRouter(prefix="/missionops", tags=["MissionOps"])
 # Initialize database on import
 init_missionops_db()
 
+def convert_datetime_to_string(obj):
+    """Convert datetime objects to ISO format strings"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: convert_datetime_to_string(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_datetime_to_string(item) for item in obj]
+    else:
+        return obj
+
 # MISSION ENDPOINTS
 
 @missionops_router.get("/missions", response_model=List[MissionResponse])
@@ -47,6 +58,9 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
                 'priority', 'status', 'tags', 'grid_x', 'grid_y', 
                 'owner_id', 'created_at', 'updated_at', 'access_level'
             ])
+            
+            # Convert datetime objects to strings
+            mission_dict = convert_datetime_to_string(mission_dict)
             
             # Get tasks and risks count
             with get_db() as conn:
@@ -126,6 +140,9 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
             c.execute(f"SELECT * FROM missionops_missions WHERE id = {placeholder}", (mission_id,))
             mission_data = dict(c.fetchone())
             
+            # Convert datetime objects to strings
+            mission_data = convert_datetime_to_string(mission_data)
+            
             mission_data.update({
                 'tasks_count': 0,
                 'risks_count': 0,
@@ -157,6 +174,9 @@ async def get_mission(mission_id: int, current_user: dict = Depends(get_current_
                 raise HTTPException(status_code=404, detail="Mission not found")
             
             mission_dict = dict(mission)
+            
+            # Convert datetime objects to strings
+            mission_dict = convert_datetime_to_string(mission_dict)
             
             # Get tasks and risks count
             c.execute(f"SELECT COUNT(*) FROM missionops_tasks WHERE mission_id = {placeholder}", (mission_id,))
