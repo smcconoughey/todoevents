@@ -47,6 +47,26 @@ const HostsPage = () => {
       status: 'Coming Soon'
     },
     {
+      title: 'Enterprise Dashboard',
+      description: 'Advanced client management, bulk operations, and performance analytics for high-volume event organizers.',
+      status: 'Available'
+    },
+    {
+      title: 'Client Organization',
+      description: 'Organize and track events by client with dedicated analytics, performance metrics, and engagement insights.',
+      status: 'Available'
+    },
+    {
+      title: 'Bulk Import & Export',
+      description: 'Upload hundreds of events at once with CSV/JSON import and export functionality for offline editing.',
+      status: 'Available'
+    },
+    {
+      title: 'Advanced Filtering',
+      description: 'Powerful search and filtering tools to manage large event datasets with client-specific views and status filtering.',
+      status: 'Available'
+    },
+    {
       title: 'Recurring Events',
       description: 'Create and manage recurring events with flexible scheduling options - weekly, monthly, or custom patterns.',
       status: 'Coming Soon'
@@ -190,14 +210,23 @@ const HostsPage = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {premiumFeatures.map((feature, index) => (
-              <div key={index} className="p-6 bg-themed-surface rounded-xl border border-themed relative overflow-hidden group hover:bg-themed-surface-hover transition-all duration-300">
+              <div key={index} className={`p-6 bg-themed-surface rounded-xl border border-themed relative overflow-hidden group hover:bg-themed-surface-hover transition-all duration-300 ${feature.status === 'Available' ? 'border-green-500/30 bg-green-50/10' : ''}`}>
                 <div className="absolute top-4 right-4">
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-spark-yellow/20 text-spark-yellow">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    feature.status === 'Available' 
+                      ? 'bg-green-500/20 text-green-600' 
+                      : 'bg-spark-yellow/20 text-spark-yellow'
+                  }`}>
                     {feature.status}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-themed-primary mb-3 pr-24">{feature.title}</h3>
                 <p className="text-themed-secondary">{feature.description}</p>
+                {feature.status === 'Available' && (
+                  <div className="mt-3 text-sm text-green-600 font-medium">
+                    ✨ Available with Enterprise plan
+                  </div>
+                )}
               </div>
             ))}
           </div>
