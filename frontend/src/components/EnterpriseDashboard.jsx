@@ -1055,13 +1055,20 @@ const EventsManagement = ({ events, filters, currentPage, setCurrentPage }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        event.client_email && event.client_email !== 'None'
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {event.client_email || 'None'}
-                      </span>
+                      <div className="space-y-1">
+                        {event.client_name && (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {event.client_name}
+                          </span>
+                        )}
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          event.client_email && event.client_email !== 'None'
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {event.client_email || 'None'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-themed-secondary">
                       <div>
