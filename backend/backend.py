@@ -11632,7 +11632,7 @@ async def get_enterprise_overview(
             # Get stats - for enterprise users, show only their data
             if current_user['role'] == UserRole.ENTERPRISE:
                 # Only show this user's events
-                c.execute(f"SELECT COUNT(*) FROM events WHERE user_id = {placeholder}", (current_user['id'],))
+                c.execute(f"SELECT COUNT(*) FROM events WHERE created_by = {placeholder}", (current_user['id'],))
                 total_events = c.fetchone()[0]
                 
                 # For enterprise users, total_users is just 1 (themselves)
@@ -11642,9 +11642,9 @@ async def get_enterprise_overview(
                 c.execute(f"""
                     SELECT 
                         COUNT(*) as this_month,
-                        (SELECT COUNT(*) FROM events WHERE user_id = {placeholder} AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
+                        (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
                     FROM events 
-                    WHERE user_id = {placeholder} AND created_at >= NOW() - INTERVAL '30 days'
+                    WHERE created_by = {placeholder} AND created_at >= NOW() - INTERVAL '30 days'
                 """, (current_user['id'], current_user['id']))
             else:
                 # Admin sees all data
@@ -11716,7 +11716,7 @@ async def get_enterprise_clients(
                         STRING_AGG(DISTINCT e.category, ', ') as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
-                    LEFT JOIN events e ON u.id = e.user_id
+                    LEFT JOIN events e ON u.id = e.created_by
                     WHERE u.id = {placeholder}
                     GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
                     ORDER BY event_count DESC, u.created_at DESC
@@ -11734,7 +11734,7 @@ async def get_enterprise_clients(
                         STRING_AGG(DISTINCT e.category, ', ') as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
-                    LEFT JOIN events e ON u.id = e.user_id
+                    LEFT JOIN events e ON u.id = e.created_by
                     WHERE u.role IN ('user', 'premium', 'enterprise')
                     GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
                     ORDER BY event_count DESC, u.created_at DESC
@@ -11785,7 +11785,7 @@ async def get_enterprise_events(
             
             # For enterprise users, filter by their user_id unless they're admin
             if current_user['role'] == UserRole.ENTERPRISE and user_id:
-                where_conditions.append(f"e.user_id = {placeholder}")
+                where_conditions.append(f"e.created_by = {placeholder}")
                 params.append(user_id)
             
             if client_filter:
@@ -11802,7 +11802,7 @@ async def get_enterprise_events(
             count_query = f"""
                 SELECT COUNT(*)
                 FROM events e
-                JOIN users u ON e.user_id = u.id
+                JOIN users u ON e.created_by = u.id
                 WHERE {where_clause}
             """
             c.execute(count_query, params)
@@ -11829,7 +11829,7 @@ async def get_enterprise_events(
                         ELSE u.email
                     END as client_category
                 FROM events e
-                LEFT JOIN users u ON e.user_id = u.id
+                LEFT JOIN users u ON e.created_by = u.id
                 WHERE {where_clause}
                 ORDER BY e.created_at DESC
                 LIMIT {limit} OFFSET {offset}
@@ -11891,9 +11891,9 @@ async def get_enterprise_client_analytics(
                         COUNT(e.id) as event_count,
                         u.role as client_role
                     FROM events e
-                    LEFT JOIN users u ON e.user_id = u.id
+                    LEFT JOIN users u ON e.created_by = u.id
                     WHERE e.created_at >= NOW() - INTERVAL '90 days' 
-                    AND e.user_id = {placeholder}
+                    AND e.created_by = {placeholder}
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
                     LIMIT 20
@@ -11906,7 +11906,7 @@ async def get_enterprise_client_analytics(
                         COUNT(e.id) as event_count,
                         u.role as client_role
                     FROM events e
-                    LEFT JOIN users u ON e.user_id = u.id
+                    LEFT JOIN users u ON e.created_by = u.id
                     WHERE e.created_at >= NOW() - INTERVAL '90 days'
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
@@ -11930,7 +11930,7 @@ async def get_enterprise_client_analytics(
                         COUNT(*) as count
                     FROM events e
                     WHERE e.created_at >= NOW() - INTERVAL '90 days'
-                    AND e.user_id = {placeholder}
+                    AND e.created_by = {placeholder}
                     GROUP BY e.category
                     ORDER BY count DESC
                 """, (current_user['id'],))
