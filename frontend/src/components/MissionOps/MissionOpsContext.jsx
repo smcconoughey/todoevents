@@ -35,11 +35,39 @@ export const MissionOpsProvider = ({ children }) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
-      throw new Error(errorData.detail || `HTTP ${response.status}`);
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } else {
+          // If it's not JSON, get the text response
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          errorMessage = `Server error: ${response.status}`;
+        }
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+        errorMessage = `Network error: ${response.status}`;
+      }
+      throw new Error(errorMessage);
     }
 
-    return response.json();
+    // For successful responses, check content type before parsing
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      } else {
+        const responseText = await response.text();
+        console.error('Non-JSON successful response:', responseText);
+        throw new Error('Expected JSON response from server');
+      }
+    } catch (parseError) {
+      console.error('Error parsing response:', parseError);
+      throw new Error('Invalid response from server');
+    }
   }, [baseUrl, token]);
 
   // Load missions
