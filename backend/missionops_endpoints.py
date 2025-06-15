@@ -51,57 +51,75 @@ def convert_datetime_to_string(obj):
 async def list_missions(current_user: dict = Depends(get_current_user)):
     """Get all missions for the current user (owned or shared)"""
     try:
+        logger.info(f"Listing missions for user {current_user['id']}")
         missions = get_user_missions_access(current_user["id"])
+        logger.info(f"Retrieved {len(missions) if missions else 0} missions from database")
+        
+        if not missions:
+            logger.info("No missions found, returning empty list")
+            return []
         
         result = []
-        for mission in missions:
-            mission_dict = dict_from_row(mission, [
-                'id', 'title', 'description', 'start_date', 'end_date', 
-                'priority', 'status', 'tags', 'grid_x', 'grid_y', 
-                'owner_id', 'created_at', 'updated_at', 'access_level'
-            ])
-            
-            # Convert datetime objects to strings
-            mission_dict = convert_datetime_to_string(mission_dict)
-            
-            # Get tasks and risks count
-            with get_db() as conn:
-                c = conn.cursor()
-                placeholder = get_placeholder()
+        for i, mission in enumerate(missions):
+            try:
+                logger.info(f"Processing mission {i+1}/{len(missions)}: {mission}")
+                mission_dict = dict_from_row(mission, [
+                    'id', 'title', 'description', 'start_date', 'end_date', 
+                    'priority', 'status', 'tags', 'grid_x', 'grid_y', 
+                    'owner_id', 'created_at', 'updated_at', 'access_level'
+                ])
                 
-                # Count tasks
-                c.execute(f"SELECT COUNT(*) FROM missionops_tasks WHERE mission_id = {placeholder}", (mission_dict['id'],))
-                tasks_result = c.fetchone()
-                tasks_count = tasks_result[0] if tasks_result else 0
+                # Convert datetime objects to strings
+                mission_dict = convert_datetime_to_string(mission_dict)
                 
-                # Count risks
-                c.execute(f"SELECT COUNT(*) FROM missionops_risks WHERE mission_id = {placeholder}", (mission_dict['id'],))
-                risks_result = c.fetchone()
-                risks_count = risks_result[0] if risks_result else 0
+                # Get tasks and risks count
+                with get_db() as conn:
+                    c = conn.cursor()
+                    placeholder = get_placeholder()
+                    
+                    # Count tasks
+                    c.execute(f"SELECT COUNT(*) FROM missionops_tasks WHERE mission_id = {placeholder}", (mission_dict['id'],))
+                    tasks_result = c.fetchone()
+                    tasks_count = tasks_result[0] if tasks_result else 0
+                    
+                    # Count risks
+                    c.execute(f"SELECT COUNT(*) FROM missionops_risks WHERE mission_id = {placeholder}", (mission_dict['id'],))
+                    risks_result = c.fetchone()
+                    risks_count = risks_result[0] if risks_result else 0
+                    
+                    # Get shared users
+                    c.execute(f'''
+                        SELECT s.shared_with_id, u.email, s.access_level
+                        FROM missionops_mission_shares s
+                        JOIN users u ON s.shared_with_id = u.id
+                        WHERE s.mission_id = {placeholder}
+                    ''', (mission_dict['id'],))
+                    shared_users = [
+                        {"user_id": row[0], "email": row[1], "access_level": row[2]}
+                        for row in c.fetchall()
+                    ]
                 
-                # Get shared users
-                c.execute(f'''
-                    SELECT s.shared_with_id, u.email, s.access_level
-                    FROM missionops_mission_shares s
-                    JOIN users u ON s.shared_with_id = u.id
-                    WHERE s.mission_id = {placeholder}
-                ''', (mission_dict['id'],))
-                shared_users = [
-                    {"user_id": row[0], "email": row[1], "access_level": row[2]}
-                    for row in c.fetchall()
-                ]
-            
-            mission_dict.update({
-                'tasks_count': tasks_count,
-                'risks_count': risks_count,
-                'shared_with': shared_users
-            })
-            
-            result.append(mission_dict)
+                mission_dict.update({
+                    'tasks_count': tasks_count,
+                    'risks_count': risks_count,
+                    'shared_with': shared_users
+                })
+                
+                result.append(mission_dict)
+                logger.info(f"Successfully processed mission {mission_dict['id']}: {mission_dict['title']}")
+                
+            except Exception as mission_error:
+                logger.error(f"Error processing individual mission {i}: {str(mission_error)}")
+                continue  # Skip this mission but continue with others
         
+        logger.info(f"Returning {len(result)} missions")
         return result
+        
     except Exception as e:
         logger.error(f"Error listing missions: {str(e)}")
+        logger.error(f"Exception type: {type(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to list missions")
 
 @missionops_router.post("/missions", response_model=MissionResponse)

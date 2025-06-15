@@ -382,23 +382,38 @@ def get_user_missions_access(user_id: int):
     """Get all missions the user owns or has access to"""
     placeholder = get_placeholder()
     
-    with get_db() as conn:
-        c = conn.cursor()
-        
-        # Query for missions owned by user or shared with user
-        c.execute(f'''
-            SELECT DISTINCT m.*, 
-                   CASE WHEN m.owner_id = {placeholder} THEN 'owner' 
-                        WHEN s.access_level IS NOT NULL THEN s.access_level 
-                        ELSE 'none' END as access_level
-            FROM missionops_missions m
-            LEFT JOIN missionops_mission_shares s ON m.id = s.mission_id AND s.shared_with_id = {placeholder}
-            WHERE m.owner_id = {placeholder} OR s.shared_with_id = {placeholder}
-            ORDER BY m.updated_at DESC, m.created_at DESC
-        ''', (user_id, user_id, user_id, user_id))
-        
-        missions = c.fetchall()
-        return missions
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            logger.info(f"Querying missions for user_id: {user_id}")
+            
+            # Query for missions owned by user or shared with user
+            c.execute(f'''
+                SELECT DISTINCT m.*, 
+                       CASE WHEN m.owner_id = {placeholder} THEN 'owner' 
+                            WHEN s.access_level IS NOT NULL THEN s.access_level 
+                            ELSE 'none' END as access_level
+                FROM missionops_missions m
+                LEFT JOIN missionops_mission_shares s ON m.id = s.mission_id AND s.shared_with_id = {placeholder}
+                WHERE m.owner_id = {placeholder} OR s.shared_with_id = {placeholder}
+                ORDER BY m.updated_at DESC, m.created_at DESC
+            ''', (user_id, user_id, user_id, user_id))
+            
+            missions = c.fetchall()
+            logger.info(f"Query returned {len(missions) if missions else 0} missions")
+            
+            if missions:
+                for i, mission in enumerate(missions):
+                    logger.info(f"Mission {i}: {dict(mission) if hasattr(mission, 'keys') else mission}")
+            
+            return missions
+            
+    except Exception as e:
+        logger.error(f"Error in get_user_missions_access: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return []
 
 def has_mission_access(mission_id: int, user_id: int, required_access: str = "view"):
     """Check if user has required access to a mission"""
