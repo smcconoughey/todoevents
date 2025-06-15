@@ -9190,17 +9190,44 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
         
         # Get pricing tier from request (default to monthly)
         pricing_tier = body.get('pricing_tier', 'monthly')
+        trial_ends_at = body.get('trial_ends_at')
         
         # Determine which price ID to use
         if pricing_tier == 'annual':
             price_id = os.getenv("STRIPE_ANNUAL_PRICE_ID", STRIPE_PRICE_ID)
         elif pricing_tier == 'enterprise':
             price_id = os.getenv("STRIPE_ENTERPRISE_PRICE_ID", STRIPE_PRICE_ID)
-        else:  # monthly
+        else:  # monthly or premium
             price_id = STRIPE_PRICE_ID
         
         # Determine the base URL for success/cancel URLs
         base_url = "https://todo-events.com" if IS_PRODUCTION else "http://localhost:5173"
+        
+        # Configure subscription data based on trial status
+        subscription_data = {
+            'metadata': {
+                'user_id': str(current_user['id']),
+                'user_email': current_user['email'],
+                'pricing_tier': pricing_tier
+            }
+        }
+        
+        # If trial is provided and not expired, schedule subscription to start after trial
+        if trial_ends_at:
+            try:
+                from datetime import datetime, timezone
+                trial_end_date = datetime.fromisoformat(trial_ends_at.replace('Z', '+00:00'))
+                
+                # Only schedule future billing if trial hasn't expired
+                if trial_end_date > datetime.now(timezone.utc):
+                    # Calculate trial period in days (Stripe requires this for trial_period_days)
+                    trial_days = max(1, (trial_end_date - datetime.now(timezone.utc)).days)
+                    subscription_data['trial_period_days'] = min(trial_days, 30)  # Stripe max is 30 days
+                    logger.info(f"🕒 Setting {trial_days} day trial for user {current_user['id']}")
+                else:
+                    logger.info(f"⏰ Trial already expired for user {current_user['id']}, starting subscription immediately")
+            except Exception as e:
+                logger.warning(f"Could not parse trial date {trial_ends_at}: {e}")
         
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -9209,25 +9236,20 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=f"{base_url}/account?session_id={{CHECKOUT_SESSION_ID}}&success=true",
-            cancel_url=f"{base_url}/account?cancelled=true",
+            success_url=f"{base_url}/subscription?session_id={{CHECKOUT_SESSION_ID}}&success=true",
+            cancel_url=f"{base_url}/subscription?cancelled=true",
             customer_email=current_user['email'],
             metadata={
                 'user_id': str(current_user['id']),
                 'user_email': current_user['email'],
-                'pricing_tier': pricing_tier
+                'pricing_tier': pricing_tier,
+                'trial_ends_at': trial_ends_at or ''
             },
-            subscription_data={
-                'metadata': {
-                    'user_id': str(current_user['id']),
-                    'user_email': current_user['email'],
-                    'pricing_tier': pricing_tier
-                }
-            }
+            subscription_data=subscription_data
         )
         
         logger.info(f"✅ Created {pricing_tier} checkout session for user {current_user['id']} ({current_user['email']})")
-        return {"checkout_url": checkout_session.url}
+        return {"url": checkout_session.url}
         
     except Exception as e:
         logger.error(f"Error creating checkout session: {str(e)}")
@@ -9476,10 +9498,41 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
         customers = stripe.Customer.list(email=current_user['email'], limit=1)
         
         if not customers.data:
+            # Check for trial information from database even if no Stripe customer
+            trial_info = None
+            placeholder = get_placeholder()
+            try:
+                with get_db() as conn:
+                    c = conn.cursor()
+                    c.execute(f"""
+                        SELECT premium_expires_at, premium_granted_by, premium_invited 
+                        FROM users 
+                        WHERE id = {placeholder}
+                    """, (current_user['id'],))
+                    user_data = c.fetchone()
+                    
+                    if user_data and user_data.get('premium_expires_at'):
+                        from datetime import datetime, timezone
+                        expires_at = user_data['premium_expires_at']
+                        if isinstance(expires_at, str):
+                            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                        
+                        trial_info = {
+                            "is_trial": True,
+                            "expires_at": expires_at.isoformat(),
+                            "is_expired": expires_at < datetime.now(timezone.utc),
+                            "days_remaining": max(0, (expires_at - datetime.now(timezone.utc)).days),
+                            "granted_by": user_data.get('premium_granted_by'),
+                            "was_invited": user_data.get('premium_invited', False)
+                        }
+            except Exception as e:
+                logger.warning(f"Could not fetch trial info: {e}")
+            
             return {
                 "has_stripe_customer": False,
                 "user_role": current_user['role'],
-                "is_premium": current_user['role'] in ['premium', 'admin']
+                "is_premium": current_user['role'] in ['premium', 'admin'],
+                "trial": trial_info
             }
         
         customer = customers.data[0]
@@ -9619,12 +9672,47 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                 "currency": currency
             })
         
+        # Check for trial information from database
+        trial_info = None
+        placeholder = get_placeholder()
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                c.execute(f"""
+                    SELECT premium_expires_at, premium_granted_by, premium_invited 
+                    FROM users 
+                    WHERE id = {placeholder}
+                """, (current_user['id'],))
+                user_data = c.fetchone()
+                
+                if user_data and user_data.get('premium_expires_at'):
+                    from datetime import datetime, timezone
+                    expires_at = user_data['premium_expires_at']
+                    if isinstance(expires_at, str):
+                        expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    
+                    # Check if this looks like a trial (no Stripe subscription but has expiration)
+                    is_trial = len(subscription_info) == 0 and expires_at
+                    
+                    if is_trial:
+                        trial_info = {
+                            "is_trial": True,
+                            "expires_at": expires_at.isoformat(),
+                            "is_expired": expires_at < datetime.now(timezone.utc),
+                            "days_remaining": max(0, (expires_at - datetime.now(timezone.utc)).days),
+                            "granted_by": user_data.get('premium_granted_by'),
+                            "was_invited": user_data.get('premium_invited', False)
+                        }
+        except Exception as e:
+            logger.warning(f"Could not fetch trial info: {e}")
+
         return {
             "has_stripe_customer": True,
             "customer_id": customer.id,
             "user_role": current_user['role'],
             "is_premium": current_user['role'] in ['premium', 'admin'],
-            "subscriptions": subscription_info
+            "subscriptions": subscription_info,
+            "trial": trial_info
         }
         
     except Exception as e:

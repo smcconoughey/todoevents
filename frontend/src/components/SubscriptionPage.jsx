@@ -140,6 +140,78 @@ const SubscriptionPage = () => {
     }
   };
 
+  const handleSubscribeToPremium = async () => {
+    try {
+      setCanceling(true);
+      setError(null);
+
+      const response = await fetch(`${API_URL}/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pricing_tier: 'premium',
+          trial_ends_at: subscriptionData?.trial?.expires_at || null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to start subscription process');
+      console.error('Error creating premium subscription:', err);
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  const handleSubscribeToEnterprise = async () => {
+    try {
+      setCanceling(true);
+      setError(null);
+
+      const response = await fetch(`${API_URL}/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pricing_tier: 'enterprise',
+          trial_ends_at: subscriptionData?.trial?.expires_at || null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to start subscription process');
+      console.error('Error creating enterprise subscription:', err);
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Not available';
     
@@ -241,18 +313,133 @@ const SubscriptionPage = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Premium Status Card */}
-            <div className="bg-themed-surface border border-themed rounded-lg p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-3 sm:mb-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            {/* Trial Status Card */}
+            {subscriptionData?.trial && (
+              <div className="bg-themed-surface border border-themed rounded-lg p-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    subscriptionData.trial.is_expired 
+                      ? 'bg-gradient-to-br from-red-500 to-red-600' 
+                      : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                  }`}>
+                    <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base sm:text-lg font-semibold text-themed-primary">
+                      {subscriptionData.trial.is_expired ? 'Trial Expired' : 'Premium Trial Active'}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-themed-secondary">
+                      {subscriptionData.trial.is_expired 
+                        ? 'Your trial has ended. Subscribe to continue using premium features.'
+                        : `${subscriptionData.trial.days_remaining} days remaining in your trial`
+                      }
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base sm:text-lg font-semibold text-themed-primary">Premium Account Active</h2>
-                  <p className="text-xs sm:text-sm text-themed-secondary">You have access to all premium features</p>
+
+                {/* Trial Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-themed-background rounded-lg">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-themed-secondary flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-themed-secondary">Trial Expires</p>
+                      <p className="font-medium text-themed-primary text-sm sm:text-base">
+                        {formatDate(subscriptionData.trial.expires_at)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-themed-background rounded-lg">
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-themed-secondary flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-themed-secondary">Status</p>
+                      <p className="font-medium text-themed-primary text-sm sm:text-base">
+                        {subscriptionData.trial.is_expired ? 'Expired' : 'Active'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subscription Offer */}
+                {(subscriptionData.trial.is_expired || subscriptionData.trial.days_remaining <= 7) && (
+                  <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Crown className="w-5 h-5 text-blue-600" />
+                      <h4 className="font-medium text-blue-900 dark:text-blue-100">
+                        {subscriptionData.trial.is_expired ? 'Continue with Premium' : 'Upgrade to Premium'}
+                      </h4>
+                    </div>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                      {subscriptionData.trial.is_expired 
+                        ? 'Your trial has ended, but you can continue with premium features by subscribing now.'
+                        : 'Your trial is ending soon. Subscribe now to continue enjoying premium features without interruption.'
+                      }
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        onClick={handleSubscribeToPremium}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Subscribe to Premium ($9.99/month)
+                      </Button>
+                      <Button
+                        onClick={handleSubscribeToEnterprise}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Upgrade to Enterprise ($24.99/month)
+                      </Button>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                      {subscriptionData.trial.is_expired 
+                        ? 'Subscription will start immediately'
+                        : `Subscription will start after your trial ends on ${formatDate(subscriptionData.trial.expires_at)}`
+                      }
+                    </p>
+                  </div>
+                                 )}
+
+                 {/* Trial Features Section */}
+                 <div className="mt-4 p-4 bg-themed-background rounded-lg">
+                   <h4 className="font-medium text-themed-primary mb-3">Your Trial Includes:</h4>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4 text-green-500" />
+                       <span className="text-sm text-themed-secondary">Up to 10 events per month</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4 text-green-500" />
+                       <span className="text-sm text-themed-secondary">Verified event badges</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4 text-green-500" />
+                       <span className="text-sm text-themed-secondary">Event analytics</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4 text-green-500" />
+                       <span className="text-sm text-themed-secondary">Priority support</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* Premium Status Card (for non-trial premium users) */}
+            {!subscriptionData?.trial && (
+              <div className="bg-themed-surface border border-themed rounded-lg p-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base sm:text-lg font-semibold text-themed-primary">Premium Account Active</h2>
+                    <p className="text-xs sm:text-sm text-themed-secondary">You have access to all premium features</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Subscription Details */}
             {subscriptionData?.subscriptions?.map((sub, index) => (
