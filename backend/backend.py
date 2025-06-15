@@ -10320,13 +10320,21 @@ async def handle_successful_payment(session):
         
         user_id = int(session['metadata']['user_id'])
         user_email = session['metadata']['user_email']
+        pricing_tier = session['metadata'].get('pricing_tier', 'monthly')
         
-        logger.info(f"🔔 Processing payment for user {user_id} ({user_email})")
+        logger.info(f"🔔 Processing payment for user {user_id} ({user_email}) - pricing tier: {pricing_tier}")
         
-        # Calculate expiration date (1 month from now) using UTC
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        # Determine role based on pricing tier
+        if pricing_tier == 'enterprise':
+            new_role = 'enterprise'
+            # Enterprise gets 1 year access
+            expires_at = datetime.utcnow() + timedelta(days=365)
+        else:
+            new_role = 'premium'
+            # Premium gets 1 month access
+            expires_at = datetime.utcnow() + timedelta(days=30)
         
-        # Update user to premium
+        # Update user to appropriate role
         with get_db_transaction() as conn:
             cursor = conn.cursor()
             placeholder = get_placeholder()
@@ -10339,14 +10347,14 @@ async def handle_successful_payment(session):
                 logger.error(f"❌ User {user_id} not found in database")
                 raise ValueError(f"User {user_id} not found")
             
-            logger.info(f"🔔 Found user: {user['email']}, current role: {user['role']}")
+            logger.info(f"🔔 Found user: {user['email']}, current role: {user['role']}, upgrading to: {new_role}")
             
             # Update user role and expiration
             cursor.execute(f"""
                 UPDATE users 
-                SET role = 'premium', premium_expires_at = {placeholder}
+                SET role = {placeholder}, premium_expires_at = {placeholder}
                 WHERE id = {placeholder}
-            """, (expires_at, user_id))
+            """, (new_role, expires_at, user_id))
             
             rows_affected = cursor.rowcount
             logger.info(f"🔔 Update query affected {rows_affected} rows")
@@ -10354,26 +10362,40 @@ async def handle_successful_payment(session):
             conn.commit()
             
             # Log the activity
-            log_activity(user_id, "stripe_payment_success", f"Premium subscription activated via Stripe for {user_email}")
+            log_activity(user_id, "stripe_payment_success", f"{new_role.title()} subscription activated via Stripe for {user_email}")
             
-            logger.info(f"✅ Premium activated for user {user_id} ({user_email}) via Stripe payment, expires: {expires_at}")
+            logger.info(f"✅ {new_role.title()} activated for user {user_id} ({user_email}) via Stripe payment, expires: {expires_at}")
             
-            # Send premium notification email
+            # Send appropriate notification email based on role
             try:
                 from email_config import email_service
-                email_sent = email_service.send_premium_notification_email(
-                    to_email=user_email,
-                    user_name=user_email.split('@')[0],  # Use email prefix as name
-                    expires_at=expires_at.isoformat(),
-                    granted_by="Stripe Payment"
-                )
                 
-                if email_sent:
-                    logger.info(f"✅ Premium notification email sent to {user_email}")
+                if new_role == 'enterprise':
+                    email_sent = email_service.send_enterprise_notification_email(
+                        to_email=user_email,
+                        user_name=user_email.split('@')[0],  # Use email prefix as name
+                        expires_at=expires_at.isoformat(),
+                        granted_by="Stripe Payment"
+                    )
+                    
+                    if email_sent:
+                        logger.info(f"✅ Enterprise notification email sent to {user_email}")
+                    else:
+                        logger.error(f"❌ Failed to send enterprise notification email to {user_email}")
                 else:
-                    logger.error(f"❌ Failed to send premium notification email to {user_email}")
+                    email_sent = email_service.send_premium_notification_email(
+                        to_email=user_email,
+                        user_name=user_email.split('@')[0],  # Use email prefix as name
+                        expires_at=expires_at.isoformat(),
+                        granted_by="Stripe Payment"
+                    )
+                    
+                    if email_sent:
+                        logger.info(f"✅ Premium notification email sent to {user_email}")
+                    else:
+                        logger.error(f"❌ Failed to send premium notification email to {user_email}")
             except Exception as e:
-                logger.error(f"❌ Error sending premium notification email: {str(e)}")
+                logger.error(f"❌ Error sending {new_role} notification email: {str(e)}")
         
     except Exception as e:
         logger.error(f"❌ Error handling successful payment: {str(e)}")
@@ -10403,24 +10425,31 @@ async def handle_subscription_renewal(invoice):
         # Get subscription details to find user
         subscription = stripe.Subscription.retrieve(subscription_id)
         user_id = int(subscription['metadata']['user_id'])
+        pricing_tier = subscription['metadata'].get('pricing_tier', 'monthly')
+        
+        # Determine renewal period based on pricing tier
+        if pricing_tier == 'enterprise':
+            renewal_days = 365  # Enterprise renews for 1 year
+        else:
+            renewal_days = 30   # Premium renews for 1 month
         
         with get_db_transaction() as conn:
             cursor = conn.cursor()
             placeholder = get_placeholder()
             
             # Get current expiration date to extend it properly
-            cursor.execute(f"SELECT premium_expires_at FROM users WHERE id = {placeholder}", (user_id,))
+            cursor.execute(f"SELECT premium_expires_at, role FROM users WHERE id = {placeholder}", (user_id,))
             user_data = cursor.fetchone()
             
             if user_data and user_data['premium_expires_at']:
-                # Extend existing expiration by 30 days
+                # Extend existing expiration by appropriate period
                 current_expires = datetime.fromisoformat(user_data['premium_expires_at'].replace('Z', '+00:00')) if isinstance(user_data['premium_expires_at'], str) else user_data['premium_expires_at']
                 # If current expiration is in the past, start from now
                 base_date = max(current_expires, datetime.utcnow()) if current_expires else datetime.utcnow()
-                expires_at = base_date + timedelta(days=30)
+                expires_at = base_date + timedelta(days=renewal_days)
             else:
                 # No existing expiration, start from now
-                expires_at = datetime.utcnow() + timedelta(days=30)
+                expires_at = datetime.utcnow() + timedelta(days=renewal_days)
             
             cursor.execute(f"""
                 UPDATE users 
@@ -10430,8 +10459,9 @@ async def handle_subscription_renewal(invoice):
             
             conn.commit()
             
-            log_activity(user_id, "stripe_renewal", f"Premium subscription renewed via Stripe")
-            logger.info(f"✅ Premium renewed for user {user_id} via Stripe")
+            subscription_type = "Enterprise" if pricing_tier == 'enterprise' else "Premium"
+            log_activity(user_id, "stripe_renewal", f"{subscription_type} subscription renewed via Stripe")
+            logger.info(f"✅ {subscription_type} renewed for user {user_id} via Stripe")
         
     except Exception as e:
         logger.error(f"Error handling subscription renewal: {str(e)}")
