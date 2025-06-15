@@ -16564,3 +16564,14 @@ async def test_privacy_requests_direct():
             "error": str(e),
             "message": "Database connection error"
         } 
+
+@app.get("/debug/create-missionops-tables")
+async def create_missionops_tables():
+    """Debug endpoint to create MissionOps database tables"""
+    try:
+        # Import and initialize MissionOps database
+        from missionops_models import init_missionops_db
+        init_missionops_db()
+        return {"status": "success", "message": "MissionOps tables created successfully"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to create MissionOps tables: {str(e)}"}

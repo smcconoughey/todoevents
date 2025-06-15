@@ -19,36 +19,38 @@ const MissionContainer = ({
   isSelected, 
   onSelect, 
   onDragStart, 
-  isDragging 
+  isDragging,
+  theme = 'dark'
 }) => {
   const [isDragStarted, setIsDragStarted] = useState(false);
   const dragRef = useRef(null);
 
   const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'critical': return 'border-red-500 bg-red-500/10';
-      case 'high': return 'border-orange-500 bg-orange-500/10';
-      case 'medium': return 'border-yellow-500 bg-yellow-500/10';
-      case 'low': return 'border-green-500 bg-green-500/10';
-      default: return 'border-neutral-600 bg-neutral-800/50';
-    }
+    const baseColors = {
+      critical: theme === 'light' ? 'border-red-500 bg-red-50' : 'border-red-500 bg-red-500/10',
+      high: theme === 'light' ? 'border-orange-500 bg-orange-50' : 'border-orange-500 bg-orange-500/10',
+      medium: theme === 'light' ? 'border-yellow-500 bg-yellow-50' : 'border-yellow-500 bg-yellow-500/10',
+      low: theme === 'light' ? 'border-green-500 bg-green-50' : 'border-green-500 bg-green-500/10',
+      default: theme === 'light' ? 'border-neutral-300 bg-white' : 'border-neutral-600 bg-neutral-800/50'
+    };
+    return baseColors[priority] || baseColors.default;
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed': return <CheckCircle className="w-4 h-4 text-green-400" />;
-      case 'paused': return <Pause className="w-4 h-4 text-yellow-400" />;
-      case 'cancelled': return <X className="w-4 h-4 text-red-400" />;
-      default: return <Clock className="w-4 h-4 text-blue-400" />;
+      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'paused': return <Pause className="w-4 h-4 text-yellow-500" />;
+      case 'cancelled': return <X className="w-4 h-4 text-red-500" />;
+      default: return <Clock className="w-4 h-4 text-pin-blue" />;
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed': return 'text-green-400';
-      case 'paused': return 'text-yellow-400';
-      case 'cancelled': return 'text-red-400';
-      default: return 'text-blue-400';
+      case 'completed': return 'text-green-500';
+      case 'paused': return 'text-yellow-500';
+      case 'cancelled': return 'text-red-500';
+      default: return 'text-pin-blue';
     }
   };
 
@@ -100,19 +102,19 @@ const MissionContainer = ({
         `}
       >
         {/* Header */}
-        <div className="p-4 border-b border-neutral-700/50">
+        <div className={`p-4 border-b ${theme === 'light' ? 'border-neutral-200/50' : 'border-neutral-700/50'}`}>
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <Target className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                <h3 className="font-semibold text-white truncate">{mission.title}</h3>
+                <Target className="w-5 h-5 text-pin-blue flex-shrink-0" />
+                <h3 className={`font-semibold ${theme === 'light' ? 'text-neutral-900' : 'text-white'} truncate`}>{mission.title}</h3>
                 {hasSharedUsers && (
-                  <Share2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                  <Share2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
                 )}
               </div>
               
               {mission.description && (
-                <p className="text-sm text-neutral-300 line-clamp-2 mb-2">
+                <p className={`text-sm ${theme === 'light' ? 'text-neutral-600' : 'text-neutral-300'} line-clamp-2 mb-2`}>
                   {mission.description}
                 </p>
               )}
@@ -126,13 +128,13 @@ const MissionContainer = ({
                 </div>
                 
                 {mission.start_date && (
-                  <div className="flex items-center gap-1 text-neutral-400">
+                  <div className={`flex items-center gap-1 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
                     <Calendar className="w-3 h-3" />
                     <span>{formatDate(mission.start_date)}</span>
                     {mission.end_date && (
                       <>
                         <span>→</span>
-                        <span className={isOverdue ? 'text-red-400' : ''}>
+                        <span className={isOverdue ? 'text-red-500' : ''}>
                           {formatDate(mission.end_date)}
                         </span>
                       </>
@@ -144,11 +146,11 @@ const MissionContainer = ({
 
             {/* Actions */}
             <div className="flex items-center gap-1 ml-2">
-              <button className="mission-drag-handle p-1 hover:bg-neutral-700/50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                <Grip className="w-4 h-4 text-neutral-400" />
+              <button className={`mission-drag-handle p-1 ${theme === 'light' ? 'hover:bg-neutral-100' : 'hover:bg-neutral-700/50'} rounded opacity-0 group-hover:opacity-100 transition-opacity`}>
+                <Grip className={`w-4 h-4 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`} />
               </button>
-              <button className="p-1 hover:bg-neutral-700/50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal className="w-4 h-4 text-neutral-400" />
+              <button className={`p-1 ${theme === 'light' ? 'hover:bg-neutral-100' : 'hover:bg-neutral-700/50'} rounded opacity-0 group-hover:opacity-100 transition-opacity`}>
+                <MoreHorizontal className={`w-4 h-4 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`} />
               </button>
             </div>
           </div>
@@ -158,17 +160,17 @@ const MissionContainer = ({
         <div className="p-4">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="space-y-1">
-              <div className="text-lg font-semibold text-white">
+              <div className={`text-lg font-semibold ${theme === 'light' ? 'text-neutral-900' : 'text-white'}`}>
                 {mission.tasks_count || 0}
               </div>
-              <div className="text-xs text-neutral-400">Tasks</div>
+              <div className={`text-xs ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>Tasks</div>
             </div>
             
             <div className="space-y-1">
-              <div className="text-lg font-semibold text-orange-400">
+              <div className="text-lg font-semibold text-orange-500">
                 {mission.risks_count || 0}
               </div>
-              <div className="text-xs text-neutral-400">Risks</div>
+              <div className={`text-xs ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>Risks</div>
             </div>
             
             <div className="space-y-1">
@@ -178,25 +180,25 @@ const MissionContainer = ({
                     {mission.shared_with.slice(0, 3).map((user, i) => (
                       <div
                         key={i}
-                        className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 border-2 border-neutral-800 flex items-center justify-center text-xs font-medium text-white"
+                        className={`w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pin-blue ${theme === 'light' ? 'border-2 border-white' : 'border-2 border-neutral-800'} flex items-center justify-center text-xs font-medium text-white`}
                         title={user.email}
                       >
                         {user.email.charAt(0).toUpperCase()}
                       </div>
                     ))}
                     {mission.shared_with.length > 3 && (
-                      <div className="w-6 h-6 rounded-full bg-neutral-600 border-2 border-neutral-800 flex items-center justify-center text-xs text-neutral-300">
+                      <div className={`w-6 h-6 rounded-full ${theme === 'light' ? 'bg-neutral-300 border-2 border-white text-neutral-700' : 'bg-neutral-600 border-2 border-neutral-800 text-neutral-300'} flex items-center justify-center text-xs`}>
                         +{mission.shared_with.length - 3}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-neutral-700 border border-neutral-600 flex items-center justify-center">
-                    <Eye className="w-3 h-3 text-neutral-400" />
+                  <div className={`w-6 h-6 rounded-full ${theme === 'light' ? 'bg-neutral-200 border border-neutral-300' : 'bg-neutral-700 border border-neutral-600'} flex items-center justify-center`}>
+                    <Eye className={`w-3 h-3 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`} />
                   </div>
                 )}
               </div>
-              <div className="text-xs text-neutral-400">
+              <div className={`text-xs ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
                 {hasSharedUsers ? 'Shared' : 'Private'}
               </div>
             </div>
