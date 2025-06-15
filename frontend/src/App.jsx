@@ -12,6 +12,7 @@ import WelcomePopup from './components/WelcomePopup';
 import AccountPage from './components/AccountPage';
 import SubscriptionPage from './components/SubscriptionPage';
 import EnterpriseDashboard from './components/EnterpriseDashboard';
+import MissionOps from './components/MissionOps';
 import { initGoogleMaps } from './googleMapsLoader';
 import { testApiUrl } from './config';
 import './index.css';
@@ -139,6 +140,7 @@ function App() {
             <Route path="/account" element={<AccountPage />} />
             <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/enterprise-dashboard" element={<EnterpriseDashboard />} />
+            <Route path="/missionops" element={<MissionOps />} />
             <Route path="/hosts" element={<HostsPage />} />
             <Route path="/creators" element={<EventCreatorPage />} />
             <Route path="/flyer" element={<FlyerPage />} />
