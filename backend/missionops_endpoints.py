@@ -5,7 +5,7 @@ All endpoints are prefixed with /missionops to avoid conflicts with existing tod
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -33,8 +33,10 @@ missionops_router = APIRouter(prefix="/missionops", tags=["MissionOps"])
 init_missionops_db()
 
 def convert_datetime_to_string(obj):
-    """Convert datetime objects to ISO format strings"""
+    """Convert datetime and date objects to ISO format strings"""
     if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, date):
         return obj.isoformat()
     elif isinstance(obj, dict):
         return {k: convert_datetime_to_string(v) for k, v in obj.items()}
