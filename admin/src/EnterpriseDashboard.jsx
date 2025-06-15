@@ -750,6 +750,73 @@ const EnterpriseDashboard = () => {
             </div>
           )}
 
+          {/* Persistent Search & Filter Bar */}
+          {activeTab !== 'overview' && (
+            <div className="bg-themed-surface rounded-lg shadow-md border border-themed p-4 mb-6">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Global Search */}
+                <div className="relative flex-1 min-w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-themed-secondary w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search events, clients, descriptions..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="input-themed w-full pl-10"
+                  />
+                </div>
+                
+                {/* Client Filter */}
+                {clients.length > 0 && (
+                  <div className="min-w-48">
+                    <select
+                      value={clientFilter}
+                      onChange={(e) => setClientFilter(e.target.value)}
+                      className="input-themed w-full"
+                    >
+                      <option value="">All Clients</option>
+                      {clients.map(client => (
+                        <option key={client.client_name} value={client.client_name}>
+                          {client.client_name} ({client.total_events})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                {/* Status Filter */}
+                {activeTab === 'events' && (
+                  <div className="min-w-32">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="input-themed w-full"
+                    >
+                      <option value="">All Events</option>
+                      <option value="active">Active Events</option>
+                      <option value="past">Past Events</option>
+                    </select>
+                  </div>
+                )}
+                
+                {/* Clear Filters */}
+                {(searchFilter || clientFilter || statusFilter) && (
+                  <button
+                    onClick={() => {
+                      setSearchFilter('');
+                      setClientFilter('');
+                      setStatusFilter('');
+                    }}
+                    className="px-3 py-2 text-sm text-themed-secondary hover:text-themed-primary border border-themed rounded-lg hover:bg-themed-surface-hover transition-all duration-200"
+                  >
+                    <Filter className="w-4 h-4 inline mr-1" />
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Content Sections */}
           {activeTab === 'overview' && <Overview overview={overview} />}
           {activeTab === 'clients' && <ClientsManagement clients={clients} />}
@@ -773,6 +840,8 @@ const Overview = ({ overview }) => {
     );
   }
 
+  const metrics = overview.overview || overview; // Handle both nested and flat structure
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -787,12 +856,13 @@ const Overview = ({ overview }) => {
       </div>
       
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold opacity-90">Total Events</h3>
-              <p className="text-3xl font-bold">{overview.total_events}</p>
+              <p className="text-3xl font-bold">{metrics.total_events || 0}</p>
+              <p className="text-sm opacity-75 mt-1">This month: {metrics.events_this_month || 0}</p>
             </div>
             <Calendar className="w-8 h-8 opacity-80" />
           </div>
@@ -802,7 +872,8 @@ const Overview = ({ overview }) => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold opacity-90">Clients</h3>
-              <p className="text-3xl font-bold">{overview.total_clients}</p>
+              <p className="text-3xl font-bold">{metrics.total_clients || 0}</p>
+              <p className="text-sm opacity-75 mt-1">Active clients</p>
             </div>
             <Building2 className="w-8 h-8 opacity-80" />
           </div>
@@ -811,20 +882,22 @@ const Overview = ({ overview }) => {
         <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-md p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold opacity-90">Active Events</h3>
-              <p className="text-3xl font-bold">{overview.active_events}</p>
+              <h3 className="text-lg font-semibold opacity-90">Total Views</h3>
+              <p className="text-3xl font-bold">{(metrics.total_views || 0).toLocaleString()}</p>
+              <p className="text-sm opacity-75 mt-1">All events</p>
             </div>
-            <Activity className="w-8 h-8 opacity-80" />
+            <Eye className="w-8 h-8 opacity-80" />
           </div>
         </div>
 
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow-md p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold opacity-90">Total Views</h3>
-              <p className="text-3xl font-bold">{overview.total_views}</p>
+              <h3 className="text-lg font-semibold opacity-90">Engagement</h3>
+              <p className="text-3xl font-bold">{metrics.engagement_rate || 0}%</p>
+              <p className="text-sm opacity-75 mt-1">{metrics.total_interests || 0} interests</p>
             </div>
-            <Eye className="w-8 h-8 opacity-80" />
+            <TrendingUp className="w-8 h-8 opacity-80" />
           </div>
         </div>
       </div>
@@ -846,12 +919,12 @@ const Overview = ({ overview }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-themed">
-              {overview.recent_events.map((event) => (
+              {(overview.recent_events || []).map((event) => (
                 <tr key={event.id} className="hover:bg-themed-surface-hover transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-themed-primary">{event.title}</div>
-                      <div className="text-sm text-themed-secondary">{event.category}</div>
+                      <div className="text-sm text-themed-secondary">{event.category || 'Uncategorized'}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -867,16 +940,23 @@ const Overview = ({ overview }) => {
                     {event.date} {event.start_time}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-themed-primary">
-                    {event.view_count}
+                    {event.view_count || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-themed-primary">
-                    {event.interest_count}
+                    {event.interest_count || 0}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {(!overview.recent_events || overview.recent_events.length === 0) && (
+          <div className="p-12 text-center">
+            <Calendar className="w-12 h-12 text-themed-muted mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-themed-primary mb-2">No recent events</h3>
+            <p className="text-themed-secondary">Start creating events to see them here.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1068,33 +1148,22 @@ const EventsManagement = ({ events, filters, onFiltersChange }) => {
       });
       
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          window.location.reload();
-          return;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Export failed: ${response.statusText}`);
       }
       
-      if (format === 'csv') {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'enterprise_events.csv';
-        a.click();
-      } else {
-        const data = await response.json();
-        const jsonStr = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'enterprise_events.json';
-        a.click();
-      }
+      // Handle file download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `enterprise-events.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
       setShowExportModal(false);
+      alert(`Events exported successfully as ${format.toUpperCase()}`);
     } catch (error) {
       alert('Export failed: ' + error.message);
     }
@@ -1334,15 +1403,30 @@ const EventsManagement = ({ events, filters, onFiltersChange }) => {
         )}
 
         {/* Pagination */}
-        {events.total_pages > 1 && (
-          <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+        {events.pagination && events.pagination.total_pages > 1 && (
+          <div className="px-6 py-3 border-t border-themed bg-themed-surface">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing {((events.page - 1) * events.limit) + 1} to {Math.min(events.page * events.limit, events.total_count)} of {events.total_count} events
+              <div className="text-sm text-themed-secondary">
+                Showing {((events.pagination.current_page - 1) * events.pagination.per_page) + 1} to {Math.min(events.pagination.current_page * events.pagination.per_page, events.pagination.total_events)} of {events.pagination.total_events} events
               </div>
-              <div className="flex space-x-2">
-                {/* Pagination buttons would go here */}
-                <span className="text-sm text-gray-500">Page {events.page} of {events.total_pages}</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(events.pagination.current_page - 1)}
+                  disabled={!events.pagination.has_prev}
+                  className="px-3 py-1 border border-themed rounded-md text-sm text-themed-secondary hover:text-themed-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-themed-secondary">
+                  Page {events.pagination.current_page} of {events.pagination.total_pages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(events.pagination.current_page + 1)}
+                  disabled={!events.pagination.has_next}
+                  className="px-3 py-1 border border-themed rounded-md text-sm text-themed-secondary hover:text-themed-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
             </div>
           </div>
@@ -1401,9 +1485,9 @@ const Analytics = ({ analytics }) => {
   };
 
   const createClientPerformanceChart = () => {
-    if (!analytics?.client_analytics) return null;
+    if (!analytics?.client_metrics) return null;
 
-    const sortedClients = analytics.client_analytics
+    const sortedClients = analytics.client_metrics
       .sort((a, b) => b.total_events - a.total_events)
       .slice(0, 10); // Top 10 clients
 
@@ -1472,9 +1556,9 @@ const Analytics = ({ analytics }) => {
   };
 
   const createEngagementRateChart = () => {
-    if (!analytics?.client_analytics) return null;
+    if (!analytics?.client_metrics) return null;
 
-    const clientsWithEngagement = analytics.client_analytics
+    const clientsWithEngagement = analytics.client_metrics
       .filter(client => client.total_views > 0)
       .sort((a, b) => b.engagement_rate - a.engagement_rate);
 
@@ -1580,11 +1664,11 @@ const Analytics = ({ analytics }) => {
   };
 
   const createCategoryDistributionChart = () => {
-    if (!analytics?.client_analytics) return null;
+    if (!analytics?.client_metrics) return null;
 
     // Aggregate category usage across all clients
     const categoryUsage = {};
-    analytics.client_analytics.forEach(client => {
+    analytics.client_metrics.forEach(client => {
       // This would need category breakdown data from the API
       // For now, we'll use a placeholder
       categoryUsage['Business'] = (categoryUsage['Business'] || 0) + Math.floor(client.total_events * 0.3);
@@ -1659,7 +1743,7 @@ const Analytics = ({ analytics }) => {
             className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">All Clients</option>
-            {analytics.client_analytics?.map(client => (
+            {analytics.client_metrics?.map(client => (
               <option key={client.client_name} value={client.client_name}>
                 {client.client_name}
               </option>
@@ -1669,13 +1753,13 @@ const Analytics = ({ analytics }) => {
       </div>
 
       {/* Key Metrics Cards */}
-      {analytics.client_analytics && (
+      {analytics.client_metrics && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold opacity-90">Total Clients</h3>
-                <p className="text-3xl font-bold">{analytics.client_analytics.length}</p>
+                <p className="text-3xl font-bold">{analytics.client_metrics.length}</p>
               </div>
               <Building2 className="w-8 h-8 opacity-80" />
             </div>
@@ -1686,7 +1770,7 @@ const Analytics = ({ analytics }) => {
               <div>
                 <h3 className="text-lg font-semibold opacity-90">Avg Events/Client</h3>
                 <p className="text-3xl font-bold">
-                  {Math.round(analytics.client_analytics.reduce((sum, client) => sum + client.total_events, 0) / analytics.client_analytics.length || 0)}
+                  {Math.round(analytics.client_metrics.reduce((sum, client) => sum + client.total_events, 0) / analytics.client_metrics.length || 0)}
                 </p>
               </div>
               <Calendar className="w-8 h-8 opacity-80" />
@@ -1698,7 +1782,7 @@ const Analytics = ({ analytics }) => {
               <div>
                 <h3 className="text-lg font-semibold opacity-90">Avg Engagement</h3>
                 <p className="text-3xl font-bold">
-                  {Math.round(analytics.client_analytics.reduce((sum, client) => sum + client.engagement_rate, 0) / analytics.client_analytics.length || 0)}%
+                  {Math.round(analytics.client_metrics.reduce((sum, client) => sum + client.engagement_rate, 0) / analytics.client_metrics.length || 0)}%
                 </p>
               </div>
               <TrendingUp className="w-8 h-8 opacity-80" />
@@ -1710,7 +1794,7 @@ const Analytics = ({ analytics }) => {
               <div>
                 <h3 className="text-lg font-semibold opacity-90">Total Views</h3>
                 <p className="text-3xl font-bold">
-                  {analytics.client_analytics.reduce((sum, client) => sum + client.total_views, 0).toLocaleString()}
+                  {analytics.client_metrics.reduce((sum, client) => sum + client.total_views, 0).toLocaleString()}
                 </p>
               </div>
               <Eye className="w-8 h-8 opacity-80" />
@@ -1764,7 +1848,7 @@ const Analytics = ({ analytics }) => {
           <h3 className="text-lg font-semibold text-gray-800">Client Performance Details</h3>
         </div>
         
-        {analytics.client_analytics && analytics.client_analytics.length > 0 ? (
+        {analytics.client_metrics && analytics.client_metrics.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -1779,7 +1863,7 @@ const Analytics = ({ analytics }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {analytics.client_analytics.map((client, index) => (
+                {analytics.client_metrics.map((client, index) => (
                   <tr key={client.client_name} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -1835,7 +1919,7 @@ const Analytics = ({ analytics }) => {
           <button
             onClick={() => {
               // Export analytics as CSV
-              const csvData = analytics.client_analytics?.map(client => ({
+              const csvData = analytics.client_metrics?.map(client => ({
                 'Client Name': client.client_name,
                 'Total Events': client.total_events,
                 'Total Views': client.total_views,

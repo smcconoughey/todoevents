@@ -28,6 +28,9 @@ EVENT_FIELDS = [
     ('recurring', 'BOOLEAN DEFAULT FALSE'),
     ('frequency', 'TEXT'),
     
+    # Enterprise organization field
+    ('client_name', 'TEXT'),
+    
     # Pricing/UX fields
     ('fee_required', 'TEXT'),
     ('price', 'REAL DEFAULT 0.0'),
