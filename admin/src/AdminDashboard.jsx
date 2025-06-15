@@ -293,6 +293,7 @@ const UserEditModal = ({ user, isOpen, onClose, onSave }) => {
           >
             <option value="user">User</option>
             <option value="premium">Premium User</option>
+            <option value="enterprise">Enterprise User</option>
             <option value="admin">Admin</option>
           </select>
         </div>
@@ -3229,6 +3230,7 @@ const AdminDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           user.role === 'premium' ? 'bg-purple-100 text-purple-800' : 
+                          user.role === 'enterprise' ? 'bg-indigo-100 text-indigo-800' : 
                           user.role === 'admin' ? 'bg-red-100 text-red-800' : 
                           'bg-gray-100 text-gray-800'
                         }`}>

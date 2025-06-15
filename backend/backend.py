@@ -198,6 +198,7 @@ class UserRole(str, Enum):
     ADMIN = "admin"
     USER = "user"
     PREMIUM = "premium"
+    ENTERPRISE = "enterprise"
 
 # Database context manager with retry logic
 @contextmanager
@@ -1222,184 +1223,6 @@ async def cors_handler(request, call_next):
 
 # Database file for SQLite (development only)
 DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
-
-# Enums
-class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
-    PREMIUM = "premium"
-
-# Database context manager with retry logic
-@contextmanager
-def get_db_transaction():
-    """
-    Get database connection with transaction control - properly handles autocommit for PostgreSQL
-    
-    CRITICAL FIX: PostgreSQL connections default to autocommit=True which prevents manual 
-    transaction control (BEGIN/COMMIT/ROLLBACK). This function temporarily disables autocommit
-    to allow explicit transaction management, then restores the original setting.
-    
-    This fixes the "set_session cannot be used inside a transaction" error.
-    """
-    if IS_PRODUCTION and DB_URL:
-        # In production with PostgreSQL
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        
-        conn = None
-        original_autocommit = None
-        
-        try:
-            conn = psycopg2.connect(
-                DB_URL,
-                cursor_factory=RealDictCursor,
-                connect_timeout=8,
-                keepalives=1,
-                keepalives_idle=30,
-                keepalives_interval=5,
-                keepalives_count=3,
-                application_name='todoevents'
-            )
-            
-            # Store original autocommit setting and disable it for transaction control
-            original_autocommit = conn.autocommit
-            conn.autocommit = False  # CRITICAL: Disable autocommit for manual transactions
-            
-            yield conn
-            
-        finally:
-            if conn:
-                # Restore original autocommit setting
-                if original_autocommit is not None:
-                    try:
-                        conn.autocommit = original_autocommit
-                    except:
-                        pass
-                conn.close()
-    else:
-        # Local development with SQLite
-        conn = sqlite3.connect(DB_FILE, timeout=10)
-        conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA synchronous=NORMAL')
-        conn.execute('PRAGMA cache_size=10000')
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-@contextmanager
-def get_db():
-    if IS_PRODUCTION and DB_URL:
-        # In production with PostgreSQL
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        
-        # Reduced retry count for faster failover
-        retry_count = 2  # Reduced from 3
-        conn = None
-        
-        for attempt in range(retry_count):
-            try:
-                # Optimized connection parameters for faster connections
-                conn = psycopg2.connect(
-                    DB_URL,
-                    cursor_factory=RealDictCursor,
-                    connect_timeout=8,  # Reduced from 10
-                    keepalives=1,
-                    keepalives_idle=30,
-                    keepalives_interval=5,
-                    keepalives_count=3,
-                    # Add connection pooling parameters
-                    application_name='todoevents'
-                )
-                
-                # Set autocommit for read operations to reduce lock time
-                conn.autocommit = True
-                break  # Connection successful, exit retry loop
-                
-            except Exception as e:
-                if conn:
-                    try:
-                        conn.close()
-                        conn = None
-                    except:
-                        pass
-                
-                error_msg = str(e)
-                
-                if attempt < retry_count - 1:
-                    # Faster backoff for production
-                    wait_time = 1  # Reduced wait time
-                    time.sleep(wait_time)
-                else:
-                    logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
-                    # Instead of falling back to SQLite, raise a proper HTTP exception
-                    raise HTTPException(
-                        status_code=503,
-                        detail="Database connection failed. Please try again later."
-                    )
-        
-        # If we made it here, conn should be valid
-        try:
-            yield conn
-        finally:
-            if conn:
-                conn.close()
-    else:
-        # Local development with SQLite - optimized
-        conn = sqlite3.connect(DB_FILE, timeout=10)  # Add timeout
-        conn.row_factory = sqlite3.Row
-        # Enable WAL mode for better concurrent access
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA synchronous=NORMAL')  # Faster than FULL
-        conn.execute('PRAGMA cache_size=10000')    # Increase cache
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-# Helper function to get placeholder style based on environment
-def get_placeholder():
-    if IS_PRODUCTION and DB_URL:
-        return "%s"  # PostgreSQL uses %s
-    else:
-        return "?"   # SQLite uses ?
-
-# Helper function to get count from cursor result (handles both SQLite and PostgreSQL)
-def get_count_from_result(cursor_result):
-    """Extract count value from cursor result, handling both SQLite tuples and PostgreSQL RealDictRow"""
-    if cursor_result is None:
-        return 0
-    
-    # Check if this is a dict-like object (PostgreSQL RealDictRow)
-    if isinstance(cursor_result, dict) or hasattr(cursor_result, 'get'):
-        # PostgreSQL RealDictCursor returns dict-like objects
-        # Try various count column names
-        for key in ['count', 'COUNT(*)', 'count(*)', 'cnt']:
-            if hasattr(cursor_result, 'get'):
-                value = cursor_result.get(key)
-            else:
-                value = cursor_result.get(key, None)
-            if value is not None:
-                return value
-        # If no count key found, return the first value
-        if hasattr(cursor_result, 'values'):
-            values = list(cursor_result.values())
-            return values[0] if values else 0
-        return 0
-    else:
-        # SQLite returns tuples
-        return cursor_result[0] if cursor_result and len(cursor_result) > 0 else 0
-
-def format_cursor_row(row, column_names):
-    """Format a single cursor row for both SQLite and PostgreSQL compatibility"""
-    if isinstance(row, dict) or hasattr(row, 'get'):
-        # PostgreSQL RealDictCursor returns dict-like objects
-        return {col: row.get(col) for col in column_names}
-    else:
-        # SQLite returns tuples
-        return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
 
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
@@ -5341,186 +5164,6 @@ async def cors_handler(request, call_next):
 #     max_age=86400,  # Cache preflight requests for 24 hours
 # )
 
-# Database file for SQLite (development only)
-DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
-
-# Enums
-class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
-    PREMIUM = "premium"
-
-# Database context manager with retry logic
-@contextmanager
-def get_db_transaction():
-    """
-    Get database connection with transaction control - properly handles autocommit for PostgreSQL
-    
-    CRITICAL FIX: PostgreSQL connections default to autocommit=True which prevents manual 
-    transaction control (BEGIN/COMMIT/ROLLBACK). This function temporarily disables autocommit
-    to allow explicit transaction management, then restores the original setting.
-    
-    This fixes the "set_session cannot be used inside a transaction" error.
-    """
-    if IS_PRODUCTION and DB_URL:
-        # In production with PostgreSQL
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        
-        conn = None
-        original_autocommit = None
-        
-        try:
-            conn = psycopg2.connect(
-                DB_URL,
-                cursor_factory=RealDictCursor,
-                connect_timeout=8,
-                keepalives=1,
-                keepalives_idle=30,
-                keepalives_interval=5,
-                keepalives_count=3,
-                application_name='todoevents'
-            )
-            
-            # Store original autocommit setting and disable it for transaction control
-            original_autocommit = conn.autocommit
-            conn.autocommit = False  # CRITICAL: Disable autocommit for manual transactions
-            
-            yield conn
-            
-        finally:
-            if conn:
-                # Restore original autocommit setting
-                if original_autocommit is not None:
-                    try:
-                        conn.autocommit = original_autocommit
-                    except:
-                        pass
-                conn.close()
-    else:
-        # Local development with SQLite
-        conn = sqlite3.connect(DB_FILE, timeout=10)
-        conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA synchronous=NORMAL')
-        conn.execute('PRAGMA cache_size=10000')
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-@contextmanager
-def get_db():
-    if IS_PRODUCTION and DB_URL:
-        # In production with PostgreSQL
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        
-        # Reduced retry count for faster failover
-        retry_count = 2  # Reduced from 3
-        conn = None
-        
-        for attempt in range(retry_count):
-            try:
-                # Optimized connection parameters for faster connections
-                conn = psycopg2.connect(
-                    DB_URL,
-                    cursor_factory=RealDictCursor,
-                    connect_timeout=8,  # Reduced from 10
-                    keepalives=1,
-                    keepalives_idle=30,
-                    keepalives_interval=5,
-                    keepalives_count=3,
-                    # Add connection pooling parameters
-                    application_name='todoevents'
-                )
-                
-                # Set autocommit for read operations to reduce lock time
-                conn.autocommit = True
-                break  # Connection successful, exit retry loop
-                
-            except Exception as e:
-                if conn:
-                    try:
-                        conn.close()
-                        conn = None
-                    except:
-                        pass
-                
-                error_msg = str(e)
-                
-                if attempt < retry_count - 1:
-                    # Faster backoff for production
-                    wait_time = 1  # Reduced wait time
-                    time.sleep(wait_time)
-                else:
-                    logger.critical(f"Failed to connect to database after {retry_count} attempts: {error_msg}")
-                    # Instead of falling back to SQLite, raise a proper HTTP exception
-                    raise HTTPException(
-                        status_code=503,
-                        detail="Database connection failed. Please try again later."
-                    )
-        
-        # If we made it here, conn should be valid
-        try:
-            yield conn
-        finally:
-            if conn:
-                conn.close()
-    else:
-        # Local development with SQLite - optimized
-        conn = sqlite3.connect(DB_FILE, timeout=10)  # Add timeout
-        conn.row_factory = sqlite3.Row
-        # Enable WAL mode for better concurrent access
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA synchronous=NORMAL')  # Faster than FULL
-        conn.execute('PRAGMA cache_size=10000')    # Increase cache
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-# Helper function to get placeholder style based on environment
-def get_placeholder():
-    if IS_PRODUCTION and DB_URL:
-        return "%s"  # PostgreSQL uses %s
-    else:
-        return "?"   # SQLite uses ?
-
-# Helper function to get count from cursor result (handles both SQLite and PostgreSQL)
-def get_count_from_result(cursor_result):
-    """Extract count value from cursor result, handling both SQLite tuples and PostgreSQL RealDictRow"""
-    if cursor_result is None:
-        return 0
-    
-    # Check if this is a dict-like object (PostgreSQL RealDictRow)
-    if isinstance(cursor_result, dict) or hasattr(cursor_result, 'get'):
-        # PostgreSQL RealDictCursor returns dict-like objects
-        # Try various count column names
-        for key in ['count', 'COUNT(*)', 'count(*)', 'cnt']:
-            if hasattr(cursor_result, 'get'):
-                value = cursor_result.get(key)
-            else:
-                value = cursor_result.get(key, None)
-            if value is not None:
-                return value
-        # If no count key found, return the first value
-        if hasattr(cursor_result, 'values'):
-            values = list(cursor_result.values())
-            return values[0] if values else 0
-        return 0
-    else:
-        # SQLite returns tuples
-        return cursor_result[0] if cursor_result and len(cursor_result) > 0 else 0
-
-def format_cursor_row(row, column_names):
-    """Format a single cursor row for both SQLite and PostgreSQL compatibility"""
-    if isinstance(row, dict) or hasattr(row, 'get'):
-        # PostgreSQL RealDictCursor returns dict-like objects
-        return {col: row.get(col) for col in column_names}
-    else:
-        # SQLite returns tuples
-        return {col: row[i] if i < len(row) else None for i, col in enumerate(column_names)}
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -10233,8 +9876,8 @@ async def handle_successful_payment(session):
         # Determine role based on pricing tier
         if pricing_tier == 'enterprise':
             new_role = 'enterprise'
-            # Enterprise gets 1 year access
-            expires_at = datetime.utcnow() + timedelta(days=365)
+            # Enterprise gets 1 month access (monthly subscription)
+            expires_at = datetime.utcnow() + timedelta(days=30)
         else:
             new_role = 'premium'
             # Premium gets 1 month access
@@ -10335,7 +9978,7 @@ async def handle_subscription_renewal(invoice):
         
         # Determine renewal period based on pricing tier
         if pricing_tier == 'enterprise':
-            renewal_days = 365  # Enterprise renews for 1 year
+            renewal_days = 30   # Enterprise renews for 1 month (monthly subscription)
         else:
             renewal_days = 30   # Premium renews for 1 month
         
@@ -11915,9 +11558,9 @@ async def debug_fix_enterprise_role(current_user: dict = Depends(get_current_use
             with get_db_transaction() as conn:
                 cursor = conn.cursor()
                 
-                # Set appropriate expiration
+                # Set appropriate expiration (both enterprise and premium are monthly)
                 if is_enterprise:
-                    expires_at = datetime.utcnow() + timedelta(days=365)
+                    expires_at = datetime.utcnow() + timedelta(days=30)  # Enterprise is monthly subscription
                 else:
                     expires_at = datetime.utcnow() + timedelta(days=30)
                 
