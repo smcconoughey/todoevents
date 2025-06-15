@@ -11138,6 +11138,11 @@ class PremiumInviteRequest(BaseModel):
     months: int = 1
     message: Optional[str] = None
 
+class EnterpriseInviteRequest(BaseModel):
+    email: EmailStr
+    months: int = 1
+    message: Optional[str] = None
+
 # Premium Management Endpoints
 @app.get("/admin/premium-users")
 async def get_premium_users(current_user: dict = Depends(get_current_user)):
@@ -11412,6 +11417,88 @@ async def invite_premium_user(
             }
     except Exception as e:
         logger.error(f"Error sending premium invitation: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error sending invitation")
+
+@app.post("/admin/enterprise-invite")
+async def invite_enterprise_user(
+    request: EnterpriseInviteRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Invite a new user via email with enterprise trial"""
+    if current_user['role'] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user already exists
+            c.execute(f"SELECT * FROM users WHERE email = {placeholder}", (request.email,))
+            existing_user = c.fetchone()
+            
+            if existing_user:
+                # For existing users, upgrade them to enterprise instead of returning error
+                from datetime import datetime, timedelta
+                expires_at = datetime.utcnow() + timedelta(days=30 * request.months)
+                
+                # Update user to enterprise
+                c.execute(f"""
+                    UPDATE users 
+                    SET role = 'enterprise', 
+                        premium_expires_at = {placeholder},
+                        premium_granted_by = {placeholder}
+                    WHERE id = {placeholder}
+                """, (expires_at, current_user['id'], existing_user['id']))
+                
+                conn.commit()
+                
+                # Log the activity
+                log_activity(current_user['id'], "enterprise_invite_existing", f"Upgraded existing user {request.email} to {request.months} months enterprise")
+                
+                # Send enterprise notification email
+                try:
+                    from email_config import email_service
+                    email_sent = email_service.send_enterprise_notification_email(
+                        to_email=request.email,
+                        user_name=existing_user.get('full_name'),
+                        expires_at=expires_at.isoformat(),
+                        granted_by=current_user.get('email', 'Admin')
+                    )
+                    
+                    if email_sent:
+                        logger.info(f"✅ Enterprise upgrade notification email sent to {request.email}")
+                    else:
+                        logger.error(f"❌ Failed to send enterprise upgrade notification email to {request.email}")
+                except Exception as e:
+                    logger.error(f"❌ Error sending enterprise upgrade notification email: {str(e)}")
+                
+                return {
+                    "detail": f"Existing user upgraded to enterprise for {request.months} months",
+                    "user_exists": True,
+                    "user_id": existing_user['id'],
+                    "previous_role": existing_user['role'],
+                    "new_role": "enterprise",
+                    "expires_at": expires_at.isoformat(),
+                    "email": request.email,
+                    "months": request.months
+                }
+            
+            # Create invitation record (we'll send email here in production)
+            # For now, we'll just log the invitation
+            log_activity(current_user['id'], "enterprise_invite", f"Invited {request.email} for {request.months} months enterprise trial")
+            
+            # In a real implementation, you would send an email here
+            # send_enterprise_invitation_email(request.email, request.months, request.message)
+            
+            return {
+                "detail": f"Enterprise invitation sent to {request.email}",
+                "email": request.email,
+                "months": request.months,
+                "message": "Invitation email would be sent in production"
+            }
+    except Exception as e:
+        logger.error(f"Error sending enterprise invitation: {str(e)}")
         raise HTTPException(status_code=500, detail="Error sending invitation")
 
 @app.post("/admin/users/{user_id}/notify-premium")

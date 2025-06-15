@@ -3077,6 +3077,7 @@ const AdminDashboard = () => {
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteMonths, setInviteMonths] = useState(1);
     const [inviteMessage, setInviteMessage] = useState('');
+    const [inviteType, setInviteType] = useState('premium');
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [grantingPremium, setGrantingPremium] = useState(null);
     const [grantMonths, setGrantMonths] = useState(1);
@@ -3125,7 +3126,8 @@ const AdminDashboard = () => {
 
     const handleInviteUser = async () => {
       try {
-        const response = await fetchData('/admin/premium-invite', 'POST', {
+        const endpoint = inviteType === 'enterprise' ? '/admin/enterprise-invite' : '/admin/premium-invite';
+        const response = await fetchData(endpoint, 'POST', {
           email: inviteEmail,
           months: inviteMonths,
           message: inviteMessage
@@ -3135,12 +3137,13 @@ const AdminDashboard = () => {
         setInviteEmail('');
         setInviteMonths(1);
         setInviteMessage('');
+        setInviteType('premium');
         
         if (response.user_exists) {
           setError(`User ${inviteEmail} already exists with role: ${response.current_role}`);
         } else {
           setError(null);
-          alert(`Premium invitation sent to ${inviteEmail}`);
+          alert(`${inviteType.charAt(0).toUpperCase() + inviteType.slice(1)} invitation sent to ${inviteEmail}`);
         }
       } catch (error) {
         setError(`Failed to send invitation: ${error.message}`);
@@ -3177,7 +3180,7 @@ const AdminDashboard = () => {
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center"
             >
               <UserPlus className="w-4 h-4 mr-2" />
-              Invite Premium User
+              Invite User
             </button>
             <button
               onClick={fetchPremiumUsers}
@@ -3285,7 +3288,7 @@ const AdminDashboard = () => {
         <Modal
           isOpen={showInviteModal}
           onClose={() => setShowInviteModal(false)}
-          title="Invite Premium User"
+          title="Invite User"
           size="md"
         >
           <div className="space-y-4">
@@ -3305,7 +3308,21 @@ const AdminDashboard = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Premium Duration (Months)
+                Invitation Type
+              </label>
+              <select
+                value={inviteType}
+                onChange={(e) => setInviteType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="premium">Premium Trial (50 events/month)</option>
+                <option value="enterprise">Enterprise Trial (250 events/month)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {inviteType.charAt(0).toUpperCase() + inviteType.slice(1)} Duration (Months)
               </label>
               <select
                 value={inviteMonths}

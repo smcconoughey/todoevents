@@ -596,6 +596,126 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         return self.send_email(to_email, subject, html_content, text_content)
     
+    def send_enterprise_invitation_email(self, to_email: str, months: int, message: Optional[str] = None, invited_by: Optional[str] = None) -> bool:
+        """Send enterprise invitation email to new users"""
+        subject = "You're Invited to Todo Events Enterprise!"
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Enterprise Invitation - Todo Events</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .enterprise-badge {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 15px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .enterprise-badge h2 {{ margin: 0; font-size: 20px; }}
+                .features {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+                .custom-message {{ background: #e8f5e8; border-left: 4px solid #27ae60; padding: 15px; margin: 20px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🏢 Todo Events Enterprise</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">You're Invited!</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Congratulations!</h2>
+                    
+                    <p>You've been invited to join Todo Events Enterprise{f' by {invited_by}' if invited_by else ''}! We're excited to offer you exclusive access to our enterprise-grade event management platform.</p>
+                    
+                    <div class="enterprise-badge">
+                        <h2>🌟 {months} Month{'s' if months != 1 else ''} Enterprise Access</h2>
+                        <p style="margin: 5px 0 0 0;">Complimentary invitation</p>
+                    </div>
+                    
+                    {f'<div class="custom-message"><strong>Personal Message:</strong><br>{message}</div>' if message else ''}
+                    
+                    <div class="features">
+                        <h3>🚀 Enterprise Features Include:</h3>
+                        <ul>
+                            <li><strong>🏢 Enterprise Dashboard:</strong> Advanced client management and analytics</li>
+                            <li><strong>📊 Client Organization:</strong> Organize events by client with dedicated analytics</li>
+                            <li><strong>📤 Bulk Import/Export:</strong> Upload hundreds of events with CSV/JSON support</li>
+                            <li><strong>�� Advanced Filtering:</strong> Powerful search and filtering for large datasets</li>
+                            <li><strong>✅ Auto-Verified Events:</strong> All events get instant verification badges</li>
+                            <li><strong>📈 Real-time Analytics:</strong> Performance insights and engagement metrics</li>
+                            <li><strong>🎯 250 Events/Month:</strong> High-volume event management capacity</li>
+                            <li><strong>⚡ Priority Support:</strong> Dedicated enterprise support channel</li>
+                        </ul>
+                    </div>
+                    
+                    <a href="https://todo-events.com/register?enterprise_invite=true" class="button">Accept Invitation & Sign Up</a>
+                    
+                    <p><strong>How to get started:</strong></p>
+                    <ol>
+                        <li>Click the button above to create your account</li>
+                        <li>Use this email address ({to_email}) when signing up</li>
+                        <li>Your enterprise access will be automatically activated</li>
+                        <li>Access the Enterprise Dashboard for advanced features</li>
+                    </ol>
+                    
+                    <p>This invitation is valid for 30 days. If you have any questions, please contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
+                    
+                    <p>Welcome to the enterprise experience!<br>The Todo Events Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 Todo Events. Enterprise event management made simple.</p>
+                    <p>This invitation was sent to {to_email}. If you didn't expect this email, you can safely ignore it.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        Todo Events Enterprise Invitation
+        
+        Congratulations! You've been invited to join Todo Events Enterprise{f' by {invited_by}' if invited_by else ''}!
+        
+        Enterprise Access: {months} month{'s' if months != 1 else ''} (complimentary)
+        
+        {f'Personal Message: {message}' if message else ''}
+        
+        Enterprise Features Include:
+        - Enterprise Dashboard: Advanced client management and analytics
+        - Client Organization: Organize events by client with dedicated analytics
+        - Bulk Import/Export: Upload hundreds of events with CSV/JSON support
+        - Advanced Filtering: Powerful search and filtering for large datasets
+        - Auto-Verified Events: All events get instant verification badges
+        - Real-time Analytics: Performance insights and engagement metrics
+        - 250 Events/Month: High-volume event management capacity
+        - Priority Support: Dedicated enterprise support channel
+        
+        How to get started:
+        1. Visit: https://todo-events.com/register?enterprise_invite=true
+        2. Use this email address ({to_email}) when signing up
+        3. Your enterprise access will be automatically activated
+        4. Access the Enterprise Dashboard for advanced features
+        
+        This invitation is valid for 30 days.
+        
+        Questions? Contact us at support@todo-events.com
+        
+        Welcome to the enterprise experience!
+        The Todo Events Team
+        
+        This invitation was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+    
     def send_premium_notification_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, granted_by: Optional[str] = None) -> bool:
         """Send notification email when premium access is granted to existing user"""
         subject = "🌟 You've Been Upgraded to Premium!"
