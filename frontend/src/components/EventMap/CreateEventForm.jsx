@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Star, Crown, Repeat, Sparkles, AlertTriangle } from 'lucide-react';
+import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Star, Crown, Repeat, Sparkles, AlertTriangle, Building2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -58,7 +58,9 @@ const CreateEventForm = ({
     // New UX enhancement fields
     fee_required: '',
     event_url: '',
-    host_name: ''
+    host_name: '',
+    // Enterprise fields
+    client_name: ''
   });
 
   // Reset form when initialEvent changes
@@ -86,7 +88,9 @@ const CreateEventForm = ({
           fee_required: initialEvent.fee_required || '',
           event_url: initialEvent.event_url || '',
           host_name: initialEvent.host_name || '',
-          is_premium_event: initialEvent.is_premium_event || false
+          is_premium_event: initialEvent.is_premium_event || false,
+          // Enterprise fields
+          client_name: initialEvent.client_name || ''
         });
         setError(null);
         setConnectionError(false);
@@ -110,7 +114,9 @@ const CreateEventForm = ({
           fee_required: '',
           event_url: '',
           host_name: '',
-          is_premium_event: false
+          is_premium_event: false,
+          // Enterprise fields
+          client_name: ''
         });
         setError(null);
         setConnectionError(false);
@@ -391,7 +397,9 @@ const CreateEventForm = ({
         fee_required: formData.fee_required.trim() || null,
         event_url: formData.event_url.trim() || null,
         host_name: formData.host_name.trim() || null,
-        is_premium_event: formData.is_premium_event
+        is_premium_event: formData.is_premium_event,
+        // Enterprise fields
+        client_name: formData.client_name.trim() || null
       };
 
       const url = initialEvent
@@ -702,6 +710,35 @@ const CreateEventForm = ({
                   </span>
                 </div>
               </div>
+
+              {/* Client Name field for Enterprise users */}
+              {user && (user.role === 'enterprise' || user.role === 'admin') && (
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    Client/Brand Name
+                    {user.role === 'enterprise' && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-full">
+                        <Building2 className="w-3 h-3 text-blue-600" />
+                        <span className="text-xs font-medium text-blue-700">Enterprise</span>
+                      </div>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={formData.client_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, client_name: e.target.value }))}
+                      placeholder="e.g., Acme Corporation, TechStart Inc"
+                      className="input-themed h-12 border-2 focus:border-blue-500/50 transition-all duration-200"
+                    />
+                    <span className="absolute -top-2 right-3 text-xs font-medium text-themed-muted bg-themed-surface px-2 py-0.5 rounded-full border border-themed/30">
+                      Optional
+                    </span>
+                  </div>
+                  <p className="text-xs text-themed-muted">Associate this event with a specific client or brand for enterprise tracking.</p>
+                </div>
+              )}
 
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">

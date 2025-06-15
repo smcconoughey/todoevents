@@ -11876,6 +11876,25 @@ async def get_enterprise_events(
             
             events = []
             for row in c.fetchall():
+                # Determine event status based on date
+                event_date = row[3]  # date field
+                from datetime import datetime, date
+                try:
+                    if isinstance(event_date, str):
+                        event_date_obj = datetime.strptime(event_date, '%Y-%m-%d').date()
+                    else:
+                        event_date_obj = event_date
+                    
+                    today = date.today()
+                    if event_date_obj < today:
+                        status = "past"
+                    elif event_date_obj == today:
+                        status = "today"
+                    else:
+                        status = "upcoming"
+                except:
+                    status = "unknown"
+
                 event = {
                     "id": row[0],
                     "title": row[1],
@@ -11891,7 +11910,8 @@ async def get_enterprise_events(
                     "client_role": row[11] or "none", 
                     "interest_count": row[12] or 0,
                     "view_count": row[13] or 0,
-                    "verified": bool(row[14])
+                    "verified": bool(row[14]),
+                    "status": status
                 }
                 events.append(event)
             
