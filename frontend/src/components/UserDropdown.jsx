@@ -8,7 +8,8 @@ import {
   LogOut, 
   Crown, 
   ChevronDown,
-  CreditCard
+  CreditCard,
+  Building2
 } from 'lucide-react';
 
 const UserDropdown = () => {
@@ -39,6 +40,12 @@ const UserDropdown = () => {
   const handleSubscriptionClick = () => {
     setIsOpen(false);
     navigate('/subscription');
+  };
+
+  const handleEnterpriseDashboardClick = () => {
+    setIsOpen(false);
+    // Open enterprise dashboard in new tab to preserve main app session
+    window.open('/enterprise-dashboard', '_blank');
   };
 
   const handleLogoutClick = () => {
@@ -132,6 +139,16 @@ const UserDropdown = () => {
               >
                 <Crown className="w-4 h-4" />
                 <span className="text-sm">Upgrade to Premium</span>
+              </button>
+            )}
+
+            {user?.role === 'enterprise' && (
+              <button
+                onClick={handleEnterpriseDashboardClick}
+                className="w-full flex items-center gap-3 px-4 py-2 text-left text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+              >
+                <Building2 className="w-4 h-4" />
+                <span className="text-sm">Enterprise Dashboard</span>
               </button>
             )}
 

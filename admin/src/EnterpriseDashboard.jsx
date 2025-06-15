@@ -1058,9 +1058,23 @@ const EventsManagement = ({ events, filters, onFiltersChange }) => {
       if (filters.clientFilter) params.append('client_filter', filters.clientFilter);
       params.append('format', format);
       
-      const response = await fetch(`/enterprise/events/export?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      // Use fetchData utility for proper API_BASE handling and error management
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/enterprise/events/export?${params}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          window.location.reload();
+          return;
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       
       if (format === 'csv') {
         const blob = await response.blob();

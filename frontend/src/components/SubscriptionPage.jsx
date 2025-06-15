@@ -175,7 +175,7 @@ const SubscriptionPage = () => {
     }
   };
 
-  if (!user || (user.role !== 'premium' && user.role !== 'admin')) {
+  if (!user || (user.role !== 'premium' && user.role !== 'admin' && user.role !== 'enterprise')) {
     return (
       <div className="min-h-screen bg-themed-background flex items-center justify-center p-4">
         <div className="text-center">

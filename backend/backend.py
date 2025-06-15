@@ -9761,9 +9761,9 @@ async def stripe_webhook(request: Request):
         pass
     
     try:
-    payload = await request.body()
-    sig_header = request.headers.get('stripe-signature')
-    
+        payload = await request.body()
+        sig_header = request.headers.get('stripe-signature')
+        
         logger.info(f"🔔 Webhook payload size: {len(payload)}, signature present: {bool(sig_header)}")
         print(f"🔔 Webhook payload size: {len(payload)}, signature present: {bool(sig_header)}")
         
@@ -9781,32 +9781,32 @@ async def stripe_webhook(request: Request):
         
         logger.info(f"🔔 SUCCESS! Received Stripe webhook: {event['type']} (ID: {event.get('id', 'unknown')})")
         print(f"🔔 SUCCESS! Received Stripe webhook: {event['type']} (ID: {event.get('id', 'unknown')})")
-    
-    # Handle the event
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
+        
+        # Handle the event
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
             logger.info(f"🔔 Processing checkout.session.completed for session: {session.get('id')}")
             print(f"🔔 Processing checkout.session.completed for session: {session.get('id')}")
-        await handle_successful_payment(session)
-    elif event['type'] == 'customer.subscription.created':
-        subscription = event['data']['object']
+            await handle_successful_payment(session)
+            subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.created for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.created for subscription: {subscription.get('id')}")
+            await handle_subscription_created(subscription)
         await handle_subscription_created(subscription)
-    elif event['type'] == 'invoice.payment_succeeded':
-        invoice = event['data']['object']
+            invoice = event['data']['object']
             logger.info(f"🔔 Processing invoice.payment_succeeded for invoice: {invoice.get('id')}")
             print(f"🔔 Processing invoice.payment_succeeded for invoice: {invoice.get('id')}")
+            await handle_subscription_renewal(invoice)
         await handle_subscription_renewal(invoice)
-    elif event['type'] == 'customer.subscription.deleted':
-        subscription = event['data']['object']
+            subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.deleted for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.deleted for subscription: {subscription.get('id')}")
+            await handle_subscription_cancelled(subscription)
         await handle_subscription_cancelled(subscription)
-    elif event['type'] == 'customer.subscription.paused':
-        subscription = event['data']['object']
+            subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
+            await handle_subscription_paused(subscription)
         await handle_subscription_paused(subscription)
         elif event['type'] == 'customer.subscription.updated':
             subscription = event['data']['object']
@@ -9817,13 +9817,13 @@ async def stripe_webhook(request: Request):
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.resumed for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.resumed for subscription: {subscription.get('id')}")
-            await handle_subscription_resumed(subscription)
-        elif event['type'] == 'invoice.created':
-            invoice = event['data']['object']
+        else:
+            logger.info(f"ℹ️ Unhandled event type: {event['type']}")
+            print(f"ℹ️ Unhandled event type: {event['type']}")
             logger.info(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
-            print(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
-            await handle_invoice_created(invoice)
-        elif event['type'] == 'invoice.upcoming':
+        logger.info(f"✅ Successfully processed webhook {event['type']}")
+        print(f"✅ Successfully processed webhook {event['type']}")
+        return {"status": "success"}
             invoice = event['data']['object']
             logger.info(f"🔔 Processing invoice.upcoming for invoice: {invoice.get('id')}")
             print(f"🔔 Processing invoice.upcoming for invoice: {invoice.get('id')}")
@@ -9932,7 +9932,7 @@ async def handle_successful_payment(session):
                     else:
                         logger.error(f"❌ Failed to send enterprise notification email to {user_email}")
                 else:
-                email_sent = email_service.send_premium_notification_email(
+                    email_sent = email_service.send_premium_notification_email(
                     to_email=user_email,
                     user_name=user_email.split('@')[0],  # Use email prefix as name
                     expires_at=expires_at.isoformat(),
