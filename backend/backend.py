@@ -11918,6 +11918,126 @@ async def notify_premium_granted(
         logger.error(f"Error sending premium notification: {str(e)}")
         raise HTTPException(status_code=500, detail="Error sending notification")
 
+@app.post("/debug/fix-enterprise-role")
+async def debug_fix_enterprise_role(current_user: dict = Depends(get_current_user)):
+    """Debug endpoint to manually fix enterprise role based on Stripe subscription"""
+    try:
+        # Find the user's Stripe customer and subscription
+        customers = stripe.Customer.list(email=current_user['email'], limit=1)
+        
+        if not customers.data:
+            return {"error": "No Stripe customer found", "user_email": current_user['email']}
+        
+        customer = customers.data[0]
+        
+        # Get active subscriptions
+        subscriptions = stripe.Subscription.list(
+            customer=customer.id,
+            status='active',
+            limit=10
+        )
+        
+        if not subscriptions.data:
+            return {"error": "No active subscription found", "customer_id": customer.id}
+        
+        subscription = subscriptions.data[0]
+        
+        # Get subscription details
+        subscription_details = {
+            "subscription_id": subscription.id,
+            "status": subscription.status,
+            "metadata": subscription.metadata,
+            "items": []
+        }
+        
+        # Check subscription items and pricing
+        for item in subscription.items.data:
+            price = item.price
+            subscription_details["items"].append({
+                "price_id": price.id,
+                "amount": price.unit_amount,
+                "currency": price.currency,
+                "interval": price.recurring.interval if price.recurring else None
+            })
+        
+        # Determine if this should be enterprise based on amount
+        is_enterprise = False
+        for item in subscription_details["items"]:
+            if item["amount"] >= 50000:  # $500 or more = enterprise
+                is_enterprise = True
+                break
+        
+        # Get current user role
+        with get_db() as conn:
+            cursor = conn.cursor()
+            placeholder = get_placeholder()
+            cursor.execute(f"SELECT role, premium_expires_at FROM users WHERE id = {placeholder}", (current_user['id'],))
+            user_data = cursor.fetchone()
+        
+        current_role = user_data['role'] if user_data else 'unknown'
+        expected_role = 'enterprise' if is_enterprise else 'premium'
+        
+        # Update role if needed
+        role_updated = False
+        if current_role != expected_role:
+            with get_db_transaction() as conn:
+                cursor = conn.cursor()
+                
+                # Set appropriate expiration
+                if is_enterprise:
+                    expires_at = datetime.utcnow() + timedelta(days=365)
+                else:
+                    expires_at = datetime.utcnow() + timedelta(days=30)
+                
+                cursor.execute(f"""
+                    UPDATE users 
+                    SET role = {placeholder}, premium_expires_at = {placeholder}
+                    WHERE id = {placeholder}
+                """, (expected_role, expires_at, current_user['id']))
+                
+                conn.commit()
+                role_updated = True
+                
+                # Log the activity
+                log_activity(current_user['id'], "debug_role_fix", f"Manually fixed role from {current_role} to {expected_role}")
+                
+                # Send appropriate email
+                try:
+                    from email_config import email_service
+                    
+                    if expected_role == 'enterprise':
+                        email_sent = email_service.send_enterprise_notification_email(
+                            to_email=current_user['email'],
+                            user_name=current_user['email'].split('@')[0],
+                            expires_at=expires_at.isoformat(),
+                            granted_by="Manual Role Fix"
+                        )
+                    else:
+                        email_sent = email_service.send_premium_notification_email(
+                            to_email=current_user['email'],
+                            user_name=current_user['email'].split('@')[0],
+                            expires_at=expires_at.isoformat(),
+                            granted_by="Manual Role Fix"
+                        )
+                    
+                    logger.info(f"✅ {expected_role.title()} notification email sent to {current_user['email']}")
+                except Exception as e:
+                    logger.error(f"❌ Error sending notification email: {str(e)}")
+        
+        return {
+            "user_id": current_user['id'],
+            "user_email": current_user['email'],
+            "current_role": current_role,
+            "expected_role": expected_role,
+            "is_enterprise": is_enterprise,
+            "role_updated": role_updated,
+            "subscription_details": subscription_details
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in debug fix enterprise role: {str(e)}")
+        return {"error": str(e), "traceback": traceback.format_exc()}
+
 # Main execution block
 if __name__ == "__main__":
     # Ensure environment variables are loaded
