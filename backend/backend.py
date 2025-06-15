@@ -3756,7 +3756,7 @@ def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
                 else:
                     logger.warning("⚠️ information_schema query returned no results")
             except Exception as e:
-                logger.error(f"❌ information_schema query failed: {e}")
+                logger.debug(f"❌ information_schema query failed (fallback available): {type(e).__name__}")
             
             try:
                 # Method 2: Use PostgreSQL system catalogs with error handling
@@ -3782,7 +3782,7 @@ def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
                 else:
                     logger.warning("⚠️ pg_class query returned no results")
             except Exception as e:
-                logger.error(f"❌ pg_class query failed: {e}")
+                logger.debug(f"❌ pg_class query failed (fallback available): {type(e).__name__}")
                 
             try:
                 # Method 3: Simple table existence and structure check
@@ -7862,100 +7862,6 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
         fallback_slug = f"{base_slug}-{timestamp_suffix}" if base_slug else f"event-{timestamp_suffix}"
         logger.info(f"Using fallback slug: {fallback_slug}")
         return fallback_slug
-
-def get_actual_table_columns(cursor, table_name: str = 'events') -> List[str]:
-    """Get actual columns that exist in the database table with enhanced error handling for production"""
-    try:
-        if IS_PRODUCTION and DB_URL:
-            # PostgreSQL: Enhanced approach with better error handling
-            try:
-                # Method 1: Direct column query with table existence check
-                cursor.execute("""
-                    SELECT column_name, data_type, is_nullable 
-                    FROM information_schema.columns 
-                    WHERE table_name = %s 
-                    AND table_schema = 'public'
-                    ORDER BY ordinal_position
-                """, (table_name,))
-                
-                columns_info = cursor.fetchall()
-                if columns_info:
-                    columns = [row[0] for row in columns_info]
-                    logger.info(f"✅ PostgreSQL schema detection: Found {len(columns)} columns via information_schema")
-                    logger.debug(f"Column details: {[(row[0], row[1], row[2]) for row in columns_info]}")
-                    return columns
-                else:
-                    logger.warning("⚠️ information_schema query returned no results")
-            except Exception as e:
-                logger.error(f"❌ information_schema query failed: {e}")
-            
-            try:
-                # Method 2: Use PostgreSQL system catalogs with error handling
-                cursor.execute("""
-                    SELECT a.attname, t.typname, NOT a.attnotnull as is_nullable
-                    FROM pg_class c
-                    JOIN pg_attribute a ON a.attrelid = c.oid
-                    JOIN pg_type t ON t.oid = a.atttypid
-                    JOIN pg_namespace n ON n.oid = c.relnamespace
-                    WHERE c.relname = %s 
-                    AND n.nspname = 'public'
-                    AND a.attnum > 0 
-                    AND NOT a.attisdropped
-                    ORDER BY a.attnum
-                """, (table_name,))
-                
-                columns_info = cursor.fetchall()
-                if columns_info:
-                    columns = [row[0] for row in columns_info]
-                    logger.info(f"✅ PostgreSQL schema detection: Found {len(columns)} columns via pg_class")
-                    logger.debug(f"System catalog columns: {[(row[0], row[1], row[2]) for row in columns_info]}")
-                    return columns
-                else:
-                    logger.warning("⚠️ pg_class query returned no results")
-            except Exception as e:
-                logger.error(f"❌ pg_class query failed: {e}")
-                
-            try:
-                # Method 3: Simple table existence and structure check
-                cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
-                if cursor.description:
-                    columns = [desc[0] for desc in cursor.description]
-                    logger.info(f"✅ PostgreSQL schema detection: Found {len(columns)} columns via SELECT LIMIT 0")
-                    return columns
-                else:
-                    logger.error("❌ No column description available from SELECT query")
-            except Exception as e:
-                logger.error(f"❌ SELECT LIMIT 0 query failed: {e}")
-        else:
-            # SQLite: Use PRAGMA table_info with enhanced error handling
-            try:
-                cursor.execute(f"PRAGMA table_info({table_name})")
-                columns_info = cursor.fetchall()
-                if columns_info:
-                    columns = [row[1] for row in columns_info]  # row[1] is column name
-                    logger.info(f"✅ SQLite schema detection: Found {len(columns)} columns")
-                    return columns
-                else:
-                    logger.warning(f"⚠️ PRAGMA table_info returned no results for {table_name}")
-            except Exception as e:
-                logger.error(f"❌ SQLite PRAGMA query failed: {e}")
-                
-    except Exception as e:
-        logger.error(f"❌ Critical error in get_actual_table_columns for {table_name}: {e}")
-    
-    # Enhanced fallback with all known columns
-    fallback_columns = [
-        'id', 'title', 'description', 'date', 'start_time', 'end_time', 
-        'category', 'address', 'lat', 'lng', 'recurring', 'frequency',
-        'created_by', 'created_at', 'updated_at', 'end_date',
-        'short_description', 'city', 'state', 'country', 
-        'interest_count', 'view_count', 'fee_required', 'event_url', 
-        'host_name', 'organizer_url', 'slug', 'price', 'currency',
-        'start_datetime', 'end_datetime', 'geo_hash', 'is_published',
-        'verified'
-    ]
-    logger.warning(f"🔄 Using enhanced fallback columns ({len(fallback_columns)}) for {table_name}")
-    return fallback_columns
 
 def auto_populate_seo_fields(event_data: dict) -> dict:
     """Auto-populate SEO fields for new events using enhanced logic"""
