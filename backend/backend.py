@@ -11616,6 +11616,277 @@ async def export_enterprise_data(
         logger.error(f"Error exporting enterprise data: {str(e)}")
         raise HTTPException(status_code=500, detail="Error exporting data")
 
+@app.get("/enterprise/overview")
+async def get_enterprise_overview(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get enterprise overview data"""
+    if current_user['role'] not in [UserRole.ENTERPRISE, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get total stats
+            c.execute("SELECT COUNT(*) FROM events")
+            total_events = c.fetchone()[0]
+            
+            c.execute("SELECT COUNT(*) FROM users")
+            total_users = c.fetchone()[0]
+            
+            # Get monthly growth
+            c.execute("""
+                SELECT 
+                    COUNT(*) as this_month,
+                    (SELECT COUNT(*) FROM events WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
+                FROM events 
+                WHERE created_at >= NOW() - INTERVAL '30 days'
+            """)
+            growth_data = c.fetchone()
+            event_growth = ((growth_data[0] - growth_data[1]) / max(growth_data[1], 1)) * 100 if growth_data[1] > 0 else 0
+            
+            # Get client breakdown (users with events vs without)
+            c.execute("""
+                SELECT 
+                    COUNT(DISTINCT u.id) as total_clients,
+                    COUNT(DISTINCT CASE WHEN e.user_id IS NOT NULL THEN u.id END) as active_clients
+                FROM users u
+                LEFT JOIN events e ON u.id = e.user_id
+                WHERE u.role IN ('user', 'premium', 'enterprise')
+            """)
+            client_data = c.fetchone()
+            
+            return {
+                "total_events": total_events,
+                "total_users": total_users,
+                "total_clients": client_data[0],
+                "active_clients": client_data[1],
+                "event_growth_rate": round(event_growth, 1),
+                "client_engagement_rate": round((client_data[1] / max(client_data[0], 1)) * 100, 1)
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching enterprise overview: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching overview")
+
+@app.get("/enterprise/clients")
+async def get_enterprise_clients(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get enterprise clients data"""
+    if current_user['role'] not in [UserRole.ENTERPRISE, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get clients with their event counts and categories
+            c.execute("""
+                SELECT 
+                    u.id,
+                    u.email,
+                    u.role,
+                    u.created_at,
+                    u.premium_until,
+                    COUNT(e.id) as event_count,
+                    STRING_AGG(DISTINCT e.category, ', ') as categories,
+                    MAX(e.created_at) as last_event_date
+                FROM users u
+                LEFT JOIN events e ON u.id = e.user_id
+                WHERE u.role IN ('user', 'premium', 'enterprise')
+                GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
+                ORDER BY event_count DESC, u.created_at DESC
+            """)
+            
+            clients = []
+            for row in c.fetchall():
+                client = {
+                    "id": row[0],
+                    "email": row[1],
+                    "role": row[2],
+                    "created_at": row[3].isoformat() if row[3] else None,
+                    "premium_until": row[4].isoformat() if row[4] else None,
+                    "event_count": row[5],
+                    "categories": row[6] if row[6] else "None",
+                    "last_event_date": row[7].isoformat() if row[7] else None,
+                    "status": "active" if row[5] > 0 else "inactive"
+                }
+                clients.append(client)
+            
+            return {"clients": clients}
+            
+    except Exception as e:
+        logger.error(f"Error fetching enterprise clients: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching clients")
+
+@app.get("/enterprise/events")
+async def get_enterprise_events(
+    page: int = 1,
+    client_filter: str = "",
+    status_filter: str = "",
+    search: str = "",
+    current_user: dict = Depends(get_current_user)
+):
+    """Get enterprise events data with pagination and filtering"""
+    if current_user['role'] not in [UserRole.ENTERPRISE, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Build query with filters
+            where_conditions = []
+            params = []
+            
+            if client_filter:
+                where_conditions.append(f"u.email ILIKE {placeholder}")
+                params.append(f"%{client_filter}%")
+            
+            if search:
+                where_conditions.append(f"(e.title ILIKE {placeholder} OR e.description ILIKE {placeholder})")
+                params.extend([f"%{search}%", f"%{search}%"])
+            
+            where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+            
+            # Get total count
+            count_query = f"""
+                SELECT COUNT(*)
+                FROM events e
+                JOIN users u ON e.user_id = u.id
+                WHERE {where_clause}
+            """
+            c.execute(count_query, params)
+            total_events = c.fetchone()[0]
+            
+            # Get paginated events
+            limit = 20
+            offset = (page - 1) * limit
+            
+            events_query = f"""
+                SELECT 
+                    e.id,
+                    e.title,
+                    e.description,
+                    e.date_time,
+                    e.location,
+                    e.category,
+                    e.is_free,
+                    e.created_at,
+                    u.email as client_email,
+                    u.role as client_role,
+                    CASE 
+                        WHEN u.email IS NULL THEN 'None'
+                        ELSE u.email
+                    END as client_category
+                FROM events e
+                LEFT JOIN users u ON e.user_id = u.id
+                WHERE {where_clause}
+                ORDER BY e.created_at DESC
+                LIMIT {limit} OFFSET {offset}
+            """
+            c.execute(events_query, params)
+            
+            events = []
+            for row in c.fetchall():
+                event = {
+                    "id": row[0],
+                    "title": row[1],
+                    "description": row[2][:100] + "..." if row[2] and len(row[2]) > 100 else row[2],
+                    "date_time": row[3].isoformat() if row[3] else None,
+                    "location": row[4],
+                    "category": row[5] or "uncategorized",
+                    "is_free": row[6],
+                    "created_at": row[7].isoformat() if row[7] else None,
+                    "client_email": row[8] or "None",
+                    "client_role": row[9] or "none",
+                    "client_category": row[10]
+                }
+                events.append(event)
+            
+            total_pages = (total_events + limit - 1) // limit
+            
+            return {
+                "events": events,
+                "pagination": {
+                    "current_page": page,
+                    "total_pages": total_pages,
+                    "total_events": total_events,
+                    "events_per_page": limit
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching enterprise events: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching events")
+
+@app.get("/enterprise/analytics/clients")
+async def get_enterprise_client_analytics(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get enterprise client analytics data"""
+    if current_user['role'] not in [UserRole.ENTERPRISE, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Client performance data
+            c.execute("""
+                SELECT 
+                    COALESCE(u.email, 'None') as client,
+                    COUNT(e.id) as event_count,
+                    u.role as client_role
+                FROM events e
+                LEFT JOIN users u ON e.user_id = u.id
+                WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                GROUP BY u.email, u.role
+                ORDER BY event_count DESC
+                LIMIT 20
+            """)
+            
+            client_performance = []
+            for row in c.fetchall():
+                client_performance.append({
+                    "client": row[0],
+                    "event_count": row[1],
+                    "client_role": row[2] or "none"
+                })
+            
+            # Category distribution
+            c.execute("""
+                SELECT 
+                    COALESCE(e.category, 'uncategorized') as category,
+                    COUNT(*) as count
+                FROM events e
+                WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                GROUP BY e.category
+                ORDER BY count DESC
+            """)
+            
+            category_distribution = []
+            for row in c.fetchall():
+                category_distribution.append({
+                    "category": row[0],
+                    "count": row[1]
+                })
+            
+            return {
+                "client_performance": client_performance,
+                "category_distribution": category_distribution
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching enterprise analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching analytics")
+
 @app.post("/admin/users/{user_id}/notify-premium")
 async def notify_premium_granted(
     user_id: int,

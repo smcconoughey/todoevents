@@ -142,18 +142,23 @@ const EnterpriseDashboard = () => {
     try {
       setLoading(true);
       if (activeTab === 'overview') {
-        // Use the stats endpoint we actually have
-        const overviewData = await fetchData('/enterprise/stats');
+        const overviewData = await fetchData('/enterprise/overview');
         setOverview(overviewData);
       } else if (activeTab === 'clients') {
-        // Mock data for now since endpoint doesn't exist
-        setClients([]);
+        const clientsData = await fetchData('/enterprise/clients');
+        setClients(clientsData.clients || []);
       } else if (activeTab === 'events') {
-        // Mock data for now since endpoint doesn't exist
-        setEvents({ events: [], pagination: { current_page: 1, total_pages: 1 } });
+        const params = new URLSearchParams();
+        if (clientFilter) params.append('client_filter', clientFilter);
+        if (statusFilter) params.append('status_filter', statusFilter);
+        if (searchFilter) params.append('search', searchFilter);
+        params.append('page', currentPage);
+        
+        const eventsData = await fetchData(`/enterprise/events?${params}`);
+        setEvents(eventsData);
       } else if (activeTab === 'analytics') {
-        // Mock data for now since endpoint doesn't exist
-        setAnalytics({ client_performance: [], revenue: [] });
+        const analyticsData = await fetchData('/enterprise/analytics/clients');
+        setAnalytics(analyticsData);
       }
     } catch (error) {
       setError('Failed to fetch data: ' + error.message);
@@ -928,12 +933,22 @@ const EventsManagement = ({ events, filters, currentPage, setCurrentPage }) => {
       params.append('format', format);
       
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/enterprise/events/export?${params}`, {
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/enterprise/export?${params}`, {
         headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${token}`
         }
       });
+      
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.reload();
+        return;
+      }
       
       if (!response.ok) {
         throw new Error(`Export failed: ${response.statusText}`);
@@ -1039,11 +1054,11 @@ const EventsManagement = ({ events, filters, currentPage, setCurrentPage }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        event.client_name 
+                        event.client_email && event.client_email !== 'None'
                           ? 'bg-blue-100 text-blue-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {event.client_name || 'No Client'}
+                        {event.client_email || 'None'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-themed-secondary">
