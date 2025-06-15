@@ -134,11 +134,11 @@ const EnterpriseDashboard = () => {
 
   useEffect(() => {
     if (user) {
-      fetchData();
+      fetchDataForTab();
     }
   }, [user, activeTab, clientFilter, statusFilter, searchFilter, currentPage]);
 
-  const fetchData = async () => {
+  const fetchDataForTab = async () => {
     try {
       setLoading(true);
       if (activeTab === 'overview') {
@@ -153,6 +153,8 @@ const EnterpriseDashboard = () => {
         if (statusFilter) params.append('status_filter', statusFilter);
         if (searchFilter) params.append('search', searchFilter);
         params.append('page', currentPage);
+        // Only fetch events for this specific enterprise user
+        params.append('user_id', user.id);
         
         const eventsData = await fetchData(`/enterprise/events?${params}`);
         setEvents(eventsData);

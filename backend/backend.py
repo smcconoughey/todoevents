@@ -11629,21 +11629,39 @@ async def get_enterprise_overview(
         with get_db() as conn:
             c = conn.cursor()
             
-            # Get total stats
-            c.execute("SELECT COUNT(*) FROM events")
-            total_events = c.fetchone()[0]
-            
-            c.execute("SELECT COUNT(*) FROM users")
-            total_users = c.fetchone()[0]
-            
-            # Get monthly growth
-            c.execute("""
-                SELECT 
-                    COUNT(*) as this_month,
-                    (SELECT COUNT(*) FROM events WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
-                FROM events 
-                WHERE created_at >= NOW() - INTERVAL '30 days'
-            """)
+            # Get stats - for enterprise users, show only their data
+            if current_user['role'] == UserRole.ENTERPRISE:
+                # Only show this user's events
+                c.execute(f"SELECT COUNT(*) FROM events WHERE user_id = {placeholder}", (current_user['id'],))
+                total_events = c.fetchone()[0]
+                
+                # For enterprise users, total_users is just 1 (themselves)
+                total_users = 1
+                
+                # Get monthly growth for this user's events
+                c.execute(f"""
+                    SELECT 
+                        COUNT(*) as this_month,
+                        (SELECT COUNT(*) FROM events WHERE user_id = {placeholder} AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
+                    FROM events 
+                    WHERE user_id = {placeholder} AND created_at >= NOW() - INTERVAL '30 days'
+                """, (current_user['id'], current_user['id']))
+            else:
+                # Admin sees all data
+                c.execute("SELECT COUNT(*) FROM events")
+                total_events = c.fetchone()[0]
+                
+                c.execute("SELECT COUNT(*) FROM users")
+                total_users = c.fetchone()[0]
+                
+                # Get monthly growth for all events
+                c.execute("""
+                    SELECT 
+                        COUNT(*) as this_month,
+                        (SELECT COUNT(*) FROM events WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
+                    FROM events 
+                    WHERE created_at >= NOW() - INTERVAL '30 days'
+                """)
             growth_data = c.fetchone()
             event_growth = ((growth_data[0] - growth_data[1]) / max(growth_data[1], 1)) * 100 if growth_data[1] > 0 else 0
             
@@ -11685,22 +11703,42 @@ async def get_enterprise_clients(
             c = conn.cursor()
             
             # Get clients with their event counts and categories
-            c.execute("""
-                SELECT 
-                    u.id,
-                    u.email,
-                    u.role,
-                    u.created_at,
-                    u.premium_until,
-                    COUNT(e.id) as event_count,
-                    STRING_AGG(DISTINCT e.category, ', ') as categories,
-                    MAX(e.created_at) as last_event_date
-                FROM users u
-                LEFT JOIN events e ON u.id = e.user_id
-                WHERE u.role IN ('user', 'premium', 'enterprise')
-                GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
-                ORDER BY event_count DESC, u.created_at DESC
-            """)
+            if current_user['role'] == UserRole.ENTERPRISE:
+                # For enterprise users, only show themselves
+                c.execute(f"""
+                    SELECT 
+                        u.id,
+                        u.email,
+                        u.role,
+                        u.created_at,
+                        u.premium_until,
+                        COUNT(e.id) as event_count,
+                        STRING_AGG(DISTINCT e.category, ', ') as categories,
+                        MAX(e.created_at) as last_event_date
+                    FROM users u
+                    LEFT JOIN events e ON u.id = e.user_id
+                    WHERE u.id = {placeholder}
+                    GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
+                    ORDER BY event_count DESC, u.created_at DESC
+                """, (current_user['id'],))
+            else:
+                # Admin sees all users
+                c.execute("""
+                    SELECT 
+                        u.id,
+                        u.email,
+                        u.role,
+                        u.created_at,
+                        u.premium_until,
+                        COUNT(e.id) as event_count,
+                        STRING_AGG(DISTINCT e.category, ', ') as categories,
+                        MAX(e.created_at) as last_event_date
+                    FROM users u
+                    LEFT JOIN events e ON u.id = e.user_id
+                    WHERE u.role IN ('user', 'premium', 'enterprise')
+                    GROUP BY u.id, u.email, u.role, u.created_at, u.premium_until
+                    ORDER BY event_count DESC, u.created_at DESC
+                """)
             
             clients = []
             for row in c.fetchall():
@@ -11729,6 +11767,7 @@ async def get_enterprise_events(
     client_filter: str = "",
     status_filter: str = "",
     search: str = "",
+    user_id: int = None,
     current_user: dict = Depends(get_current_user)
 ):
     """Get enterprise events data with pagination and filtering"""
@@ -11743,6 +11782,11 @@ async def get_enterprise_events(
             # Build query with filters
             where_conditions = []
             params = []
+            
+            # For enterprise users, filter by their user_id unless they're admin
+            if current_user['role'] == UserRole.ENTERPRISE and user_id:
+                where_conditions.append(f"e.user_id = {placeholder}")
+                params.append(user_id)
             
             if client_filter:
                 where_conditions.append(f"u.email ILIKE {placeholder}")
@@ -11839,18 +11883,35 @@ async def get_enterprise_client_analytics(
             c = conn.cursor()
             
             # Client performance data
-            c.execute("""
-                SELECT 
-                    COALESCE(u.email, 'None') as client,
-                    COUNT(e.id) as event_count,
-                    u.role as client_role
-                FROM events e
-                LEFT JOIN users u ON e.user_id = u.id
-                WHERE e.created_at >= NOW() - INTERVAL '90 days'
-                GROUP BY u.email, u.role
-                ORDER BY event_count DESC
-                LIMIT 20
-            """)
+            if current_user['role'] == UserRole.ENTERPRISE:
+                # For enterprise users, only show their own events
+                c.execute(f"""
+                    SELECT 
+                        COALESCE(u.email, 'None') as client,
+                        COUNT(e.id) as event_count,
+                        u.role as client_role
+                    FROM events e
+                    LEFT JOIN users u ON e.user_id = u.id
+                    WHERE e.created_at >= NOW() - INTERVAL '90 days' 
+                    AND e.user_id = {placeholder}
+                    GROUP BY u.email, u.role
+                    ORDER BY event_count DESC
+                    LIMIT 20
+                """, (current_user['id'],))
+            else:
+                # Admin sees all events
+                c.execute("""
+                    SELECT 
+                        COALESCE(u.email, 'None') as client,
+                        COUNT(e.id) as event_count,
+                        u.role as client_role
+                    FROM events e
+                    LEFT JOIN users u ON e.user_id = u.id
+                    WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                    GROUP BY u.email, u.role
+                    ORDER BY event_count DESC
+                    LIMIT 20
+                """)
             
             client_performance = []
             for row in c.fetchall():
@@ -11861,15 +11922,29 @@ async def get_enterprise_client_analytics(
                 })
             
             # Category distribution
-            c.execute("""
-                SELECT 
-                    COALESCE(e.category, 'uncategorized') as category,
-                    COUNT(*) as count
-                FROM events e
-                WHERE e.created_at >= NOW() - INTERVAL '90 days'
-                GROUP BY e.category
-                ORDER BY count DESC
-            """)
+            if current_user['role'] == UserRole.ENTERPRISE:
+                # For enterprise users, only show their own events
+                c.execute(f"""
+                    SELECT 
+                        COALESCE(e.category, 'uncategorized') as category,
+                        COUNT(*) as count
+                    FROM events e
+                    WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                    AND e.user_id = {placeholder}
+                    GROUP BY e.category
+                    ORDER BY count DESC
+                """, (current_user['id'],))
+            else:
+                # Admin sees all events
+                c.execute("""
+                    SELECT 
+                        COALESCE(e.category, 'uncategorized') as category,
+                        COUNT(*) as count
+                    FROM events e
+                    WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                    GROUP BY e.category
+                    ORDER BY count DESC
+                """)
             
             category_distribution = []
             for row in c.fetchall():
