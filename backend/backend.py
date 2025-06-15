@@ -11639,7 +11639,8 @@ async def get_enterprise_overview(
                 c.execute(query, (current_user['id'],))
                 result = c.fetchone()
                 logger.info(f"Query result: {result}")
-                total_events = result[0] if result else 0
+                
+                total_events = get_count_from_result(result)
                 
                 # For enterprise users, total_users is just 1 (themselves)
                 total_users = 1
@@ -11663,10 +11664,10 @@ async def get_enterprise_overview(
             else:
                 # Admin sees all data
                 c.execute("SELECT COUNT(*) FROM events")
-                total_events = c.fetchone()[0]
+                total_events = get_count_from_result(c.fetchone())
                 
                 c.execute("SELECT COUNT(*) FROM users")
-                total_users = c.fetchone()[0]
+                total_users = get_count_from_result(c.fetchone())
                 
                 # Get monthly growth for all events
                 try:
@@ -11681,7 +11682,16 @@ async def get_enterprise_overview(
                     logger.error(f"Admin growth query failed, using fallback: {e}")
                     c.execute("SELECT COUNT(*) as this_month, 0 as last_month FROM events")
             growth_data = c.fetchone()
-            event_growth = ((growth_data[0] - growth_data[1]) / max(growth_data[1], 1)) * 100 if growth_data[1] > 0 else 0
+            
+            # Handle PostgreSQL RealDictRow vs SQLite tuple
+            if isinstance(growth_data, dict) or hasattr(growth_data, 'get'):
+                this_month = growth_data.get('this_month', 0) or 0
+                last_month = growth_data.get('last_month', 0) or 0
+            else:
+                this_month = growth_data[0] if growth_data and len(growth_data) > 0 else 0
+                last_month = growth_data[1] if growth_data and len(growth_data) > 1 else 0
+            
+            event_growth = ((this_month - last_month) / max(last_month, 1)) * 100 if last_month > 0 else 0
             
             # Get client breakdown (users with events vs without)
             c.execute("""
@@ -11694,13 +11704,21 @@ async def get_enterprise_overview(
             """)
             client_data = c.fetchone()
             
+            # Handle PostgreSQL RealDictRow vs SQLite tuple for client data
+            if isinstance(client_data, dict) or hasattr(client_data, 'get'):
+                total_clients = client_data.get('total_clients', 0) or 0
+                active_clients = client_data.get('active_clients', 0) or 0
+            else:
+                total_clients = client_data[0] if client_data and len(client_data) > 0 else 0
+                active_clients = client_data[1] if client_data and len(client_data) > 1 else 0
+            
             return {
                 "total_events": total_events,
                 "total_users": total_users,
-                "total_clients": client_data[0],
-                "active_clients": client_data[1],
+                "total_clients": total_clients,
+                "active_clients": active_clients,
                 "event_growth_rate": round(event_growth, 1),
-                "client_engagement_rate": round((client_data[1] / max(client_data[0], 1)) * 100, 1)
+                "client_engagement_rate": round((active_clients / max(total_clients, 1)) * 100, 1)
             }
             
     except Exception as e:
@@ -11824,7 +11842,7 @@ async def get_enterprise_events(
                 WHERE {where_clause}
             """
             c.execute(count_query, params)
-            total_events = c.fetchone()[0]
+            total_events = get_count_from_result(c.fetchone())
             
             # Get paginated events
             limit = 20
