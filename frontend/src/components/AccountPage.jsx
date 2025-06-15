@@ -744,22 +744,7 @@ const AccountPage = () => {
                   </div>
                 </div>
 
-                {/* Testing Section */}
-                <div className="bg-blue-50/10 dark:bg-blue-900/10 backdrop-blur-sm rounded-lg p-4 border border-blue-200/20 dark:border-blue-500/20">
-                  <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">🧪 Testing Mode</h3>
-                  <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
-                    <p><strong>Test Card:</strong> 4242 4242 4242 4242</p>
-                    <p><strong>Expiry:</strong> Any future date (e.g., 12/34)</p>
-                    <p><strong>CVC:</strong> Any 3 digits (e.g., 123)</p>
-                    <p><strong>ZIP:</strong> Any valid ZIP code</p>
-                  </div>
-                  <div className="mt-4 p-3 bg-white/10 dark:bg-gray-600/20 rounded border border-white/20 dark:border-gray-400/20">
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      💡 This is running in Stripe test mode. No real charges will be made. 
-                      Use the test card above to simulate a successful payment.
-                    </p>
-                  </div>
-                </div>
+
               </div>
             )}
 

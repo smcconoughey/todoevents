@@ -3315,7 +3315,7 @@ const AdminDashboard = () => {
                 onChange={(e) => setInviteType(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="premium">Premium Trial (50 events/month)</option>
+                <option value="premium">Premium Trial (10 events/month)</option>
                 <option value="enterprise">Enterprise Trial (250 events/month)</option>
               </select>
             </div>

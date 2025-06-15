@@ -11360,14 +11360,43 @@ async def invite_premium_user(
                 from datetime import datetime, timedelta
                 expires_at = datetime.utcnow() + timedelta(days=30 * request.months)
                 
-                # Update user to premium
-                c.execute(f"""
-                    UPDATE users 
-                    SET role = 'premium', 
-                        premium_expires_at = {placeholder},
-                        premium_granted_by = {placeholder}
-                    WHERE id = {placeholder}
-                """, (expires_at, current_user['id'], existing_user['id']))
+                # Check if premium columns exist before updating
+                try:
+                    if IS_PRODUCTION and DB_URL:
+                        # PostgreSQL - check if columns exist
+                        c.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'users' 
+                            AND column_name IN ('premium_expires_at', 'premium_granted_by')
+                        """)
+                        existing_columns = [row[0] for row in c.fetchall()]
+                    else:
+                        # SQLite - check if columns exist
+                        c.execute('PRAGMA table_info(users)')
+                        columns_info = c.fetchall()
+                        existing_columns = [col[1] for col in columns_info if col[1] in ['premium_expires_at', 'premium_granted_by']]
+                    
+                    has_premium_columns = len(existing_columns) >= 2
+                except Exception:
+                    has_premium_columns = False
+                
+                # Update user to premium with appropriate columns
+                if has_premium_columns:
+                    c.execute(f"""
+                        UPDATE users 
+                        SET role = 'premium', 
+                            premium_expires_at = {placeholder},
+                            premium_granted_by = {placeholder}
+                        WHERE id = {placeholder}
+                    """, (expires_at, current_user['id'], existing_user['id']))
+                else:
+                    # Fallback: just update role
+                    c.execute(f"""
+                        UPDATE users 
+                        SET role = 'premium'
+                        WHERE id = {placeholder}
+                    """, (existing_user['id'],))
                 
                 conn.commit()
                 
@@ -11442,14 +11471,43 @@ async def invite_enterprise_user(
                 from datetime import datetime, timedelta
                 expires_at = datetime.utcnow() + timedelta(days=30 * request.months)
                 
-                # Update user to enterprise
-                c.execute(f"""
-                    UPDATE users 
-                    SET role = 'enterprise', 
-                        premium_expires_at = {placeholder},
-                        premium_granted_by = {placeholder}
-                    WHERE id = {placeholder}
-                """, (expires_at, current_user['id'], existing_user['id']))
+                # Check if premium columns exist before updating
+                try:
+                    if IS_PRODUCTION and DB_URL:
+                        # PostgreSQL - check if columns exist
+                        c.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'users' 
+                            AND column_name IN ('premium_expires_at', 'premium_granted_by')
+                        """)
+                        existing_columns = [row[0] for row in c.fetchall()]
+                    else:
+                        # SQLite - check if columns exist
+                        c.execute('PRAGMA table_info(users)')
+                        columns_info = c.fetchall()
+                        existing_columns = [col[1] for col in columns_info if col[1] in ['premium_expires_at', 'premium_granted_by']]
+                    
+                    has_premium_columns = len(existing_columns) >= 2
+                except Exception:
+                    has_premium_columns = False
+                
+                # Update user to enterprise with appropriate columns
+                if has_premium_columns:
+                    c.execute(f"""
+                        UPDATE users 
+                        SET role = 'enterprise', 
+                            premium_expires_at = {placeholder},
+                            premium_granted_by = {placeholder}
+                        WHERE id = {placeholder}
+                    """, (expires_at, current_user['id'], existing_user['id']))
+                else:
+                    # Fallback: just update role
+                    c.execute(f"""
+                        UPDATE users 
+                        SET role = 'enterprise'
+                        WHERE id = {placeholder}
+                    """, (existing_user['id'],))
                 
                 conn.commit()
                 
