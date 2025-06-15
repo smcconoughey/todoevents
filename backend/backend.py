@@ -25,6 +25,12 @@ import uvicorn
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Request, Header
+
+# MissionOps import
+try:
+    from missionops_endpoints import missionops_router
+except ImportError:
+    missionops_router = None
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -67,6 +73,11 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title="EventFinder API")
+
+# Register MissionOps router
+if missionops_router:
+    app.include_router(missionops_router)
+    print("✅ MissionOps endpoints registered")
 
 # Dynamic CORS origins based on environment
 def get_cors_origins():
@@ -1057,6 +1068,12 @@ import uvicorn
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Request, Header
+
+# MissionOps import
+try:
+    from missionops_endpoints import missionops_router
+except ImportError:
+    missionops_router = None
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -1099,6 +1116,11 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title="EventFinder API")
+
+# Register MissionOps router
+if missionops_router:
+    app.include_router(missionops_router)
+    print("✅ MissionOps endpoints registered")
 
 # Dynamic CORS origins based on environment
 def get_cors_origins():
@@ -4999,6 +5021,12 @@ import uvicorn
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Request, Header
+
+# MissionOps import
+try:
+    from missionops_endpoints import missionops_router
+except ImportError:
+    missionops_router = None
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -5041,6 +5069,11 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title="EventFinder API")
+
+# Register MissionOps router
+if missionops_router:
+    app.include_router(missionops_router)
+    print("✅ MissionOps endpoints registered")
 
 # Dynamic CORS origins based on environment
 def get_cors_origins():
