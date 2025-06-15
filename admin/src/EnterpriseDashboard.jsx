@@ -24,7 +24,10 @@ import {
   AlertTriangle,
   X,
   LogOut,
-  Lightbulb
+  Lightbulb,
+  Sun,
+  Moon,
+  Snowflake
 } from 'lucide-react';
 import { Line, Bar, Pie, Bubble } from 'react-chartjs-2';
 import {
@@ -57,6 +60,60 @@ ChartJS.register(
 
 // API base URL
 const API_BASE = '';
+
+// Theme hooks (simplified version for admin dashboard)
+const useTheme = () => {
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('admin-theme');
+    return savedTheme || 'light';
+  });
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => {
+      let newTheme;
+      switch (prevTheme) {
+        case 'light':
+          newTheme = 'dark';
+          break;
+        case 'dark':
+          newTheme = 'glass';
+          break;
+        case 'glass':
+          newTheme = 'light';
+          break;
+        default:
+          newTheme = 'light';
+      }
+      localStorage.setItem('admin-theme', newTheme);
+      document.documentElement.setAttribute('data-theme', newTheme);
+      document.body.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+      document.body.classList.add(`${newTheme}-mode`);
+      return newTheme;
+    });
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+    document.body.classList.add(`${theme}-mode`);
+  }, [theme]);
+
+  return { theme, toggleTheme };
+};
+
+// Theme icon component
+const ThemeIcon = ({ theme, size = 20 }) => {
+  switch (theme) {
+    case 'light':
+      return <Sun size={size} />;
+    case 'dark':
+      return <Moon size={size} />;
+    case 'glass':
+      return <Snowflake size={size} />;
+    default:
+      return <Sun size={size} />;
+  }
+};
 
 // Fetch utility
 const fetchData = async (endpoint, method = 'GET', body = null) => {
@@ -93,7 +150,7 @@ const fetchData = async (endpoint, method = 'GET', body = null) => {
   }
 };
 
-// Modal Component
+// Modal Component with theming
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
 
@@ -106,10 +163,10 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 max-h-screen overflow-y-auto`}>
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className={`bg-themed-surface rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 max-h-screen overflow-y-auto border border-themed`}>
+        <div className="flex items-center justify-between p-6 border-b border-themed">
+          <h2 className="text-xl font-semibold text-themed-primary">{title}</h2>
+          <button onClick={onClose} className="text-themed-secondary hover:text-themed-primary transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -121,7 +178,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   );
 };
 
-// Login Component
+// Login Component with theming
 const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -174,58 +231,60 @@ const LoginForm = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Enterprise Dashboard
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to your enterprise account
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+    <div className="min-h-screen bg-themed-background flex items-center justify-center">
+      <div className="max-w-md w-full space-y-8 p-8">
+        <div className="bg-themed-surface rounded-lg shadow-xl p-8 border border-themed">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-extrabold text-themed-primary">
+              Enterprise Dashboard
+            </h2>
+            <p className="mt-2 text-sm text-themed-secondary">
+              Sign in to your enterprise account
+            </p>
+          </div>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+            <div>
+              <label htmlFor="email" className="sr-only">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-themed w-full"
+                placeholder="Email address"
+              />
             </div>
-          )}
-          <div>
-            <label htmlFor="email" className="sr-only">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Email address"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="sr-only">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Password"
-            />
-          </div>
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
-        </form>
+            <div>
+              <label htmlFor="password" className="sr-only">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-themed w-full"
+                placeholder="Password"
+              />
+            </div>
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full py-2 px-4 font-medium disabled:opacity-50"
+              >
+                {loading ? 'Signing in...' : 'Sign in'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -514,6 +573,7 @@ const EnterpriseDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { theme, toggleTheme } = useTheme();
 
   // Data states
   const [overview, setOverview] = useState(null);
@@ -593,8 +653,8 @@ const EnterpriseDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-themed-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pin-blue"></div>
       </div>
     );
   }
@@ -604,11 +664,15 @@ const EnterpriseDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-themed-background">
       <div className="flex">
-        {/* Sidebar */}
-        <div className="w-64 bg-white border-r shadow-md p-4">
-          <h1 className="text-2xl font-bold mb-8 text-blue-600">Enterprise Portal</h1>
+        {/* Themed Sidebar */}
+        <div className="w-64 bg-themed-surface border-r border-themed shadow-md p-4">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-pin-blue">Enterprise Portal</h1>
+            <p className="text-sm text-themed-secondary mt-1">TodoEvents for Business</p>
+          </div>
+          
           <nav className="space-y-2">
             {[
               { name: 'Overview', icon: <Server className="mr-2" />, tab: 'overview' },
@@ -621,10 +685,10 @@ const EnterpriseDashboard = () => {
                 key={item.tab}
                 onClick={() => setActiveTab(item.tab)}
                 className={`
-                  w-full flex items-center p-2 rounded 
+                  w-full flex items-center p-3 rounded-lg transition-all duration-200
                   ${activeTab === item.tab
-                    ? 'bg-blue-600/10 text-blue-600'
-                    : 'hover:bg-gray-100 text-gray-600'}
+                    ? 'bg-pin-blue text-white shadow-md'
+                    : 'text-themed-secondary hover:bg-themed-surface-hover hover:text-themed-primary'}
                 `}
               >
                 {item.icon}
@@ -633,20 +697,37 @@ const EnterpriseDashboard = () => {
             ))}
           </nav>
 
+          {/* Theme Toggle */}
+          <div className="mt-8 pt-4 border-t border-themed">
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center p-3 rounded-lg text-themed-secondary hover:bg-themed-surface-hover hover:text-themed-primary transition-all duration-200"
+              title={`Switch to ${theme === 'light' ? 'dark' : theme === 'dark' ? 'glass' : 'light'} theme`}
+            >
+              <ThemeIcon theme={theme} size={18} />
+              <span className="ml-2 capitalize">{theme} Theme</span>
+            </button>
+          </div>
+
           {/* User Info */}
           {user && (
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-themed bg-themed-surface">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold">{user.email}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-themed-primary truncate">{user.email}</p>
+                  <p className="text-xs text-themed-secondary capitalize flex items-center">
+                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                      user.role === 'enterprise' ? 'bg-purple-500' : 'bg-amber-500'
+                    }`}></span>
+                    {user.role}
+                  </p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 transition-colors p-1 rounded"
                   title="Logout"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -657,12 +738,12 @@ const EnterpriseDashboard = () => {
         <div className="flex-1 p-8">
           {/* Error Banner */}
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 flex items-center">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6 flex items-center">
               <AlertTriangle className="w-6 h-6 mr-3" />
               <span className="flex-1">{error}</span>
               <button
                 onClick={() => setError(null)}
-                className="ml-4 hover:bg-red-200 rounded-full p-1"
+                className="ml-4 hover:bg-red-200 rounded-full p-1 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -681,22 +762,31 @@ const EnterpriseDashboard = () => {
   );
 };
 
-// Overview Component
+// Overview Component with theming
 const Overview = ({ overview }) => {
   if (!overview) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-lg">Loading overview...</span>
+        <RefreshCw className="w-8 h-8 animate-spin text-pin-blue" />
+        <span className="ml-2 text-lg text-themed-secondary">Loading overview...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Enterprise Overview</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-themed-primary">Enterprise Overview</h2>
+        <button
+          onClick={() => window.location.reload()}
+          className="flex items-center px-4 py-2 bg-pin-blue text-white rounded-lg hover:bg-pin-blue-600 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </button>
+      </div>
       
-      {/* Key Metrics */}
+      {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
           <div className="flex items-center justify-between">
@@ -739,39 +829,47 @@ const Overview = ({ overview }) => {
         </div>
       </div>
 
-      {/* Recent Events */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Recent Events</h3>
+      {/* Recent Events Table */}
+      <div className="bg-themed-surface rounded-lg shadow-md border border-themed overflow-hidden">
+        <div className="px-6 py-4 border-b border-themed">
+          <h3 className="text-xl font-semibold text-themed-primary">Recent Events</h3>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-themed-surface-hover">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Views</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Interests</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-themed-secondary uppercase">Event</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-themed-secondary uppercase">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-themed-secondary uppercase">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-themed-secondary uppercase">Views</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-themed-secondary uppercase">Interests</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-themed">
               {overview.recent_events.map((event) => (
-                <tr key={event.id} className="hover:bg-gray-50">
+                <tr key={event.id} className="hover:bg-themed-surface-hover transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                      <div className="text-sm text-gray-500">{event.category}</div>
+                      <div className="text-sm font-medium text-themed-primary">{event.title}</div>
+                      <div className="text-sm text-themed-secondary">{event.category}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {event.client_name || 'No Client'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      event.client_name 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {event.client_name || 'No Client'}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-themed-secondary">
                     {event.date} {event.start_time}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-themed-primary">
                     {event.view_count}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-themed-primary">
                     {event.interest_count}
                   </td>
                 </tr>
@@ -784,50 +882,67 @@ const Overview = ({ overview }) => {
   );
 };
 
-// Clients Management Component
+// Clients Management Component with theming
 const ClientsManagement = ({ clients }) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Client Management</h2>
-        <div className="text-sm text-gray-600">
+        <div>
+          <h2 className="text-2xl font-bold text-themed-primary">Client Management</h2>
+          <p className="text-themed-secondary mt-1">Organize and track performance by client</p>
+        </div>
+        <div className="text-sm text-themed-secondary bg-themed-surface px-3 py-1 rounded-full border border-themed">
           {clients.length} total clients
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {clients.map((client) => (
-          <div key={client.client_name} className="bg-white rounded-lg shadow-md p-6">
+        {clients.map((client, index) => (
+          <div key={client.client_name} className="bg-themed-surface rounded-lg shadow-md border border-themed p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">{client.client_name}</h3>
-              <Building2 className="w-6 h-6 text-blue-500" />
+              <h3 className="text-lg font-semibold text-themed-primary truncate">{client.client_name}</h3>
+              <div className="flex items-center">
+                <div 
+                  className="w-3 h-3 rounded-full mr-2"
+                  style={{backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'][index % 6]}}
+                ></div>
+                <Building2 className="w-5 h-5 text-pin-blue" />
+              </div>
             </div>
             
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Events:</span>
-                <span className="font-medium">{client.total_events}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-themed-secondary">Total Events:</span>
+                <span className="font-medium text-themed-primary">{client.total_events}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Active:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-themed-secondary">Active:</span>
                 <span className="font-medium text-green-600">{client.active_events}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Past:</span>
-                <span className="font-medium text-gray-600">{client.past_events}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-themed-secondary">Past:</span>
+                <span className="font-medium text-themed-secondary">{client.past_events}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Views:</span>
-                <span className="font-medium">{client.total_views}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-themed-secondary">Total Views:</span>
+                <span className="font-medium text-themed-primary">{client.total_views.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Engagement:</span>
-                <span className="font-medium text-blue-600">{client.engagement_rate}%</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-themed-secondary">Engagement:</span>
+                <div className="flex items-center">
+                  <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                    <div 
+                      className="bg-pin-blue h-2 rounded-full" 
+                      style={{width: `${Math.min(client.engagement_rate, 100)}%`}}
+                    ></div>
+                  </div>
+                  <span className="font-medium text-pin-blue text-sm">{client.engagement_rate}%</span>
+                </div>
               </div>
             </div>
             
-            <div className="mt-4 pt-4 border-t">
-              <div className="text-xs text-gray-500">
+            <div className="mt-4 pt-4 border-t border-themed">
+              <div className="text-xs text-themed-muted">
                 Last event: {new Date(client.last_event_created).toLocaleDateString()}
               </div>
             </div>
@@ -836,10 +951,13 @@ const ClientsManagement = ({ clients }) => {
       </div>
       
       {clients.length === 0 && (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No clients found</h3>
-          <p className="text-gray-500">Start creating events with client names to see client analytics here.</p>
+        <div className="bg-themed-surface rounded-lg shadow-md border border-themed p-12 text-center">
+          <Building2 className="w-12 h-12 text-themed-muted mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-themed-primary mb-2">No clients found</h3>
+          <p className="text-themed-secondary">Start creating events with client names to see client analytics here.</p>
+          <button className="mt-4 btn-primary px-6 py-2">
+            Create Your First Event
+          </button>
         </div>
       )}
     </div>
@@ -1672,7 +1790,7 @@ const Analytics = ({ analytics }) => {
                       <div className="flex items-center">
                         <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
                           <div 
-                            className="bg-blue-600 h-2 rounded-full" 
+                            className="bg-pin-blue h-2 rounded-full" 
                             style={{width: `${Math.min(client.engagement_rate, 100)}%`}}
                           ></div>
                         </div>
@@ -1727,7 +1845,7 @@ const Analytics = ({ analytics }) => {
                 a.click();
               }
             }}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center justify-center"
           >
             <Download className="w-4 h-4 mr-2" />
             Export as CSV
@@ -1743,7 +1861,7 @@ const Analytics = ({ analytics }) => {
               a.download = 'client_analytics.json';
               a.click();
             }}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center justify-center"
           >
             <Download className="w-4 h-4 mr-2" />
             Export as JSON

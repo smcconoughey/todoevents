@@ -637,8 +637,24 @@ const AccountPage = () => {
                         <span className="text-sm text-themed-primary">Verified event badges</span>
                       </div>
                       <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary font-medium">Enterprise Dashboard</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Client organization & analytics</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Bulk event import/export</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-themed-primary">Advanced filtering & search</span>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                        <span className="text-sm text-themed-secondary">Advanced analytics (coming soon)</span>
+                        <span className="text-sm text-themed-secondary">Real-time performance insights</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
