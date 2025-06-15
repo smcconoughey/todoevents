@@ -11501,6 +11501,121 @@ async def invite_enterprise_user(
         logger.error(f"Error sending enterprise invitation: {str(e)}")
         raise HTTPException(status_code=500, detail="Error sending invitation")
 
+@app.get("/enterprise/stats")
+async def get_enterprise_stats(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get enterprise dashboard stats"""
+    if current_user['role'] not in [UserRole.ENTERPRISE, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get total events
+            c.execute("SELECT COUNT(*) FROM events")
+            total_events = c.fetchone()[0]
+            
+            # Get total users
+            c.execute("SELECT COUNT(*) FROM users")
+            total_users = c.fetchone()[0]
+            
+            # Get active users (users with events in last 30 days)
+            c.execute("""
+                SELECT COUNT(DISTINCT user_id) 
+                FROM events 
+                WHERE created_at >= NOW() - INTERVAL '30 days'
+            """)
+            active_users = c.fetchone()[0]
+            
+            # Calculate completion rate (events with descriptions vs without)
+            c.execute("""
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN description IS NOT NULL AND description != '' THEN 1 END) as with_description
+                FROM events
+            """)
+            result = c.fetchone()
+            completion_rate = round((result[1] / result[0] * 100) if result[0] > 0 else 0, 1)
+            
+            return {
+                "totalEvents": total_events,
+                "totalUsers": total_users,
+                "activeUsers": active_users,
+                "completionRate": completion_rate
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching enterprise stats: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching stats")
+
+@app.get("/enterprise/export")
+async def export_enterprise_data(
+    current_user: dict = Depends(get_current_user)
+):
+    """Export enterprise data as CSV"""
+    if current_user['role'] not in [UserRole.ENTERPRISE, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get events data
+            c.execute("""
+                SELECT 
+                    e.id,
+                    e.title,
+                    e.description,
+                    e.date_time,
+                    e.location,
+                    e.category,
+                    e.is_free,
+                    u.email as creator_email,
+                    e.created_at
+                FROM events e
+                JOIN users u ON e.user_id = u.id
+                ORDER BY e.created_at DESC
+            """)
+            
+            events = c.fetchall()
+            
+            # Create CSV content
+            import io
+            import csv
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            # Write header
+            writer.writerow([
+                'Event ID', 'Title', 'Description', 'Date Time', 'Location', 
+                'Category', 'Is Free', 'Creator Email', 'Created At'
+            ])
+            
+            # Write data
+            for event in events:
+                writer.writerow(event)
+            
+            # Create response
+            from fastapi.responses import Response
+            csv_content = output.getvalue()
+            output.close()
+            
+            return Response(
+                content=csv_content,
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=enterprise-data.csv"
+                }
+            )
+            
+    except Exception as e:
+        logger.error(f"Error exporting enterprise data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error exporting data")
+
 @app.post("/admin/users/{user_id}/notify-premium")
 async def notify_premium_granted(
     user_id: int,
