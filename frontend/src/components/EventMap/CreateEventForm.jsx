@@ -186,6 +186,14 @@ const CreateEventForm = ({
     }
   }, [selectedLocation]);
 
+  // Handle address input changes
+  const handleAddressChange = (newAddress) => {
+    setFormData(prev => ({
+      ...prev,
+      address: newAddress
+    }));
+  };
+
   // Health check with reduced frequency
   useEffect(() => {
     const checkConnection = async () => {
@@ -916,8 +924,9 @@ const CreateEventForm = ({
                   Search for a location
                 </label>
                 <AddressAutocomplete
-                  onLocationSelect={onLocationSelect}
-                  selectedLocation={selectedLocation}
+                  onSelect={onLocationSelect}
+                  value={formData.address}
+                  onChange={handleAddressChange}
                   className="input-themed h-12 border-2 focus:border-pin-blue/50 focus:ring-2 focus:ring-pin-blue/20 transition-all duration-200"
                 />
               </div>
