@@ -9788,26 +9788,26 @@ async def stripe_webhook(request: Request):
             logger.info(f"🔔 Processing checkout.session.completed for session: {session.get('id')}")
             print(f"🔔 Processing checkout.session.completed for session: {session.get('id')}")
             await handle_successful_payment(session)
+        elif event['type'] == 'customer.subscription.created':
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.created for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.created for subscription: {subscription.get('id')}")
             await handle_subscription_created(subscription)
-        await handle_subscription_created(subscription)
+        elif event['type'] == 'invoice.payment_succeeded':
             invoice = event['data']['object']
             logger.info(f"🔔 Processing invoice.payment_succeeded for invoice: {invoice.get('id')}")
             print(f"🔔 Processing invoice.payment_succeeded for invoice: {invoice.get('id')}")
             await handle_subscription_renewal(invoice)
-        await handle_subscription_renewal(invoice)
+        elif event['type'] == 'customer.subscription.deleted':
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.deleted for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.deleted for subscription: {subscription.get('id')}")
             await handle_subscription_cancelled(subscription)
-        await handle_subscription_cancelled(subscription)
+        elif event['type'] == 'customer.subscription.paused':
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.paused for subscription: {subscription.get('id')}")
             await handle_subscription_paused(subscription)
-        await handle_subscription_paused(subscription)
         elif event['type'] == 'customer.subscription.updated':
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.updated for subscription: {subscription.get('id')}")
@@ -9817,24 +9817,24 @@ async def stripe_webhook(request: Request):
             subscription = event['data']['object']
             logger.info(f"🔔 Processing customer.subscription.resumed for subscription: {subscription.get('id')}")
             print(f"🔔 Processing customer.subscription.resumed for subscription: {subscription.get('id')}")
-        else:
-            logger.info(f"ℹ️ Unhandled event type: {event['type']}")
-            print(f"ℹ️ Unhandled event type: {event['type']}")
+            await handle_subscription_resumed(subscription)
+        elif event['type'] == 'invoice.created':
+            invoice = event['data']['object']
             logger.info(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
-        logger.info(f"✅ Successfully processed webhook {event['type']}")
-        print(f"✅ Successfully processed webhook {event['type']}")
-        return {"status": "success"}
+            print(f"🔔 Processing invoice.created for invoice: {invoice.get('id')}")
+            await handle_invoice_created(invoice)
+        elif event['type'] == 'invoice.upcoming':
             invoice = event['data']['object']
             logger.info(f"🔔 Processing invoice.upcoming for invoice: {invoice.get('id')}")
             print(f"🔔 Processing invoice.upcoming for invoice: {invoice.get('id')}")
             await handle_invoice_upcoming(invoice)
-    else:
+        else:
             logger.info(f"ℹ️ Unhandled event type: {event['type']}")
             print(f"ℹ️ Unhandled event type: {event['type']}")
-    
+        
         logger.info(f"✅ Successfully processed webhook {event['type']}")
         print(f"✅ Successfully processed webhook {event['type']}")
-    return {"status": "success"}
+        return {"status": "success"}
         
     except ValueError as e:
         logger.error(f"❌ Invalid webhook payload: {e}")
@@ -10508,14 +10508,14 @@ async def get_user_analytics(
                     
                     # Get view trends - handle potential table/column issues
                     try:
-                    cursor.execute(f"""
-                        SELECT DATE(ev.created_at) as date, COUNT(*) as views
-                        FROM event_views ev
-                        JOIN events e ON ev.event_id = e.id
-                        WHERE e.created_by = {placeholder} AND ev.created_at >= {placeholder}
-                        GROUP BY DATE(ev.created_at)
-                        ORDER BY date
-                    """, (current_user['id'], thirty_days_ago))
+                        cursor.execute(f"""
+                            SELECT DATE(ev.created_at) as date, COUNT(*) as views
+                            FROM event_views ev
+                            JOIN events e ON ev.event_id = e.id
+                            WHERE e.created_by = {placeholder} AND ev.created_at >= {placeholder}
+                            GROUP BY DATE(ev.created_at)
+                            ORDER BY date
+                        """, (current_user['id'], thirty_days_ago))
                         view_results = cursor.fetchall()
                     except Exception as view_error:
                         logger.warning(f"View trends query failed: {str(view_error)}")
@@ -10535,14 +10535,14 @@ async def get_user_analytics(
                     
                     # Get interest trends - handle potential table/column issues
                     try:
-                    cursor.execute(f"""
-                        SELECT DATE(ei.created_at) as date, COUNT(*) as interests
-                        FROM event_interests ei
-                        JOIN events e ON ei.event_id = e.id
-                        WHERE e.created_by = {placeholder} AND ei.created_at >= {placeholder}
-                        GROUP BY DATE(ei.created_at)
-                        ORDER BY date
-                    """, (current_user['id'], thirty_days_ago))
+                        cursor.execute(f"""
+                            SELECT DATE(ei.created_at) as date, COUNT(*) as interests
+                            FROM event_interests ei
+                            JOIN events e ON ei.event_id = e.id
+                            WHERE e.created_by = {placeholder} AND ei.created_at >= {placeholder}
+                            GROUP BY DATE(ei.created_at)
+                            ORDER BY date
+                        """, (current_user['id'], thirty_days_ago))
                         interest_results = cursor.fetchall()
                     except Exception as interest_error:
                         logger.warning(f"Interest trends query failed: {str(interest_error)}")
@@ -11468,12 +11468,12 @@ async def notify_premium_granted(
                         logger.error(f"❌ Failed to send enterprise notification email to {user['email']}")
                 else:
                     # Send premium notification email
-                email_sent = email_service.send_premium_notification_email(
-                    to_email=user['email'],
-                    user_name=user.get('full_name'),
-                    expires_at=user.get('premium_expires_at'),
-                    granted_by=granted_by_email
-                )
+                    email_sent = email_service.send_premium_notification_email(
+                        to_email=user['email'],
+                        user_name=user.get('full_name'),
+                        expires_at=user.get('premium_expires_at'),
+                        granted_by=granted_by_email
+                    )
                 
                 if email_sent:
                     logger.info(f"✅ Premium notification email sent to {user['email']}")
