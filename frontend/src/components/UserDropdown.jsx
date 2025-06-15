@@ -45,7 +45,8 @@ const UserDropdown = () => {
   const handleEnterpriseDashboardClick = () => {
     setIsOpen(false);
     // Open enterprise dashboard in new tab to preserve main app session
-    window.open('/enterprise-dashboard', '_blank');
+    // The admin dashboard is deployed separately and includes enterprise dashboard
+    window.open('https://todoevents-admin.onrender.com/enterprise-dashboard', '_blank');
   };
 
   const handleLogoutClick = () => {

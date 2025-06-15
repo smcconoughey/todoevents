@@ -59,7 +59,7 @@ ChartJS.register(
 );
 
 // API base URL
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://todoevents-backend.onrender.com';
 
 // Theme hooks (simplified version for admin dashboard)
 const useTheme = () => {
