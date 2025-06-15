@@ -217,8 +217,8 @@ const CreateEventForm = ({
   const handleAddressSelect = (data) => {
     console.log('Address selected:', data);
     
-    // Handle the updated data structure from AddressAutocomplete
-    const location = data.location ? data.location : { lat: data.lat, lng: data.lng };
+    // AddressAutocomplete returns { address, lat, lng } directly
+    const location = { lat: data.lat, lng: data.lng };
     
     setFormData(prev => ({
       ...prev,
@@ -924,7 +924,7 @@ const CreateEventForm = ({
                   Search for a location
                 </label>
                 <AddressAutocomplete
-                  onSelect={onLocationSelect}
+                  onSelect={handleAddressSelect}
                   value={formData.address}
                   onChange={handleAddressChange}
                   className="input-themed h-12 border-2 focus:border-pin-blue/50 focus:ring-2 focus:ring-pin-blue/20 transition-all duration-200"
