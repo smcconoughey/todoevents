@@ -1,0 +1,300 @@
+/* MissionOps Isolated Styles */
+/* All styles are scoped to avoid conflicts with todo-events */
+
+.missionops-container {
+  /* Grid dot pattern */
+  --missionops-grid-size: 50px;
+  --missionops-dot-color: rgba(255, 255, 255, 0.1);
+  --missionops-timeline-now: #facc15; /* yellow-400 */
+  --missionops-timeline-month: rgba(96, 165, 250, 0.4); /* blue-400/40 */
+  --missionops-timeline-week: rgba(115, 115, 115, 0.6); /* neutral-600/60 */
+  
+  /* Dark theme colors */
+  --missionops-bg-primary: #0a0a0a; /* neutral-950 */
+  --missionops-bg-secondary: #171717; /* neutral-900 */
+  --missionops-border: #404040; /* neutral-600 */
+  --missionops-text-primary: #ffffff;
+  --missionops-text-secondary: #a3a3a3; /* neutral-400 */
+  --missionops-text-muted: #737373; /* neutral-500 */
+  
+  /* Accent colors */
+  --missionops-blue: #3b82f6; /* blue-500 */
+  --missionops-blue-dark: #1d4ed8; /* blue-700 */
+  --missionops-purple: #8b5cf6; /* purple-500 */
+  
+  /* Priority colors */
+  --missionops-priority-critical: #ef4444; /* red-500 */
+  --missionops-priority-high: #f97316; /* orange-500 */
+  --missionops-priority-medium: #eab308; /* yellow-500 */
+  --missionops-priority-low: #22c55e; /* green-500 */
+  
+  /* Status colors */
+  --missionops-status-active: #3b82f6; /* blue-500 */
+  --missionops-status-completed: #22c55e; /* green-500 */
+  --missionops-status-paused: #eab308; /* yellow-500 */
+  --missionops-status-cancelled: #ef4444; /* red-500 */
+}
+
+/* Grid pattern background */
+.missionops-grid-pattern {
+  background-image: radial-gradient(
+    circle at 1px 1px, 
+    var(--missionops-dot-color) 1px, 
+    transparent 0
+  );
+  background-size: var(--missionops-grid-size) var(--missionops-grid-size);
+  background-position: 0 0;
+}
+
+/* Mission container animations */
+.missionops-mission-container {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.missionops-mission-container:hover {
+  transform: scale(1.05);
+}
+
+.missionops-mission-container.dragging {
+  transform: scale(1.05) rotate(1deg);
+  z-index: 50;
+  opacity: 0.8;
+}
+
+.missionops-mission-container.selected {
+  box-shadow: 0 0 0 2px var(--missionops-blue);
+}
+
+/* Timeline styles */
+.missionops-timeline-now {
+  background-color: var(--missionops-timeline-now);
+  box-shadow: 0 0 4px rgba(250, 204, 21, 0.5);
+}
+
+.missionops-timeline-month {
+  background-color: var(--missionops-timeline-month);
+}
+
+.missionops-timeline-week {
+  background-color: var(--missionops-timeline-week);
+}
+
+/* Priority indicators */
+.missionops-priority-critical {
+  border-color: var(--missionops-priority-critical);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.missionops-priority-high {
+  border-color: var(--missionops-priority-high);
+  background-color: rgba(249, 115, 22, 0.1);
+}
+
+.missionops-priority-medium {
+  border-color: var(--missionops-priority-medium);
+  background-color: rgba(234, 179, 8, 0.1);
+}
+
+.missionops-priority-low {
+  border-color: var(--missionops-priority-low);
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+/* Glass effect for containers */
+.missionops-glass {
+  backdrop-filter: blur(12px);
+  background-color: rgba(23, 23, 23, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth scrolling for grid */
+.missionops-grid {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbars for webkit browsers */
+.missionops-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.missionops-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.missionops-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.missionops-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Modal animations */
+.missionops-modal-enter {
+  animation: missionopsModalEnter 0.2s ease-out;
+}
+
+.missionops-modal-exit {
+  animation: missionopsModalExit 0.2s ease-in;
+}
+
+@keyframes missionopsModalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translate(-50%, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate(-50%, -50%);
+  }
+}
+
+@keyframes missionopsModalExit {
+  from {
+    opacity: 1;
+    transform: scale(1) translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translate(-50%, -50%);
+  }
+}
+
+/* Loading spinner */
+.missionops-spinner {
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-top: 2px solid var(--missionops-blue);
+  border-radius: 50%;
+  animation: missionopsSpinner 1s linear infinite;
+}
+
+@keyframes missionopsSpinner {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Hover effects */
+.missionops-hover-blue:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--missionops-blue);
+}
+
+.missionops-hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Focus styles for accessibility */
+.missionops-focus:focus {
+  outline: 2px solid var(--missionops-blue);
+  outline-offset: 2px;
+}
+
+/* Drag and drop styles */
+.missionops-drag-handle {
+  cursor: grab;
+}
+
+.missionops-drag-handle:active {
+  cursor: grabbing;
+}
+
+.missionops-drop-zone {
+  border: 2px dashed var(--missionops-blue);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Position indicator */
+.missionops-position-indicator {
+  animation: missionopsPulse 1s ease-in-out infinite;
+}
+
+@keyframes missionopsPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Tag styles */
+.missionops-tag {
+  background-color: rgba(23, 23, 23, 0.6);
+  border: 1px solid rgba(64, 64, 64, 0.5);
+  color: var(--missionops-text-secondary);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* Overdue indicator */
+.missionops-overdue {
+  background-color: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5; /* red-300 */
+}
+
+/* Shared indicator */
+.missionops-shared {
+  background: linear-gradient(135deg, var(--missionops-purple), var(--missionops-blue));
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .missionops-container {
+    --missionops-grid-size: 40px;
+  }
+  
+  .missionops-mission-container {
+    min-width: 280px;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 480px) {
+  .missionops-container {
+    --missionops-grid-size: 30px;
+  }
+  
+  .missionops-mission-container {
+    min-width: 240px;
+    max-width: 280px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .missionops-container {
+    --missionops-dot-color: rgba(255, 255, 255, 0.3);
+    --missionops-border: #ffffff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .missionops-mission-container,
+  .missionops-hover-scale,
+  .missionops-position-indicator {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .missionops-container {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .missionops-mission-container {
+    border: 1px solid black !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+}
