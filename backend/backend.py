@@ -11830,13 +11830,13 @@ async def notify_premium_granted(
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
             
-            if user['role'] != 'premium':
-                raise HTTPException(status_code=400, detail="User does not have premium access")
+            if user['role'] not in ['premium', 'enterprise']:
+                raise HTTPException(status_code=400, detail="User does not have premium or enterprise access")
             
             # Log the notification
-            log_activity(current_user['id'], "premium_notification", f"Sent premium notification to {user['email']}")
+            log_activity(current_user['id'], "premium_notification", f"Sent {user['role']} notification to {user['email']}")
             
-            # Send premium notification email
+            # Send appropriate notification email based on role
             try:
                 from email_config import email_service
                 
@@ -11848,24 +11848,39 @@ async def notify_premium_granted(
                     if granted_by_user:
                         granted_by_email = granted_by_user['email']
                 
-                email_sent = email_service.send_premium_notification_email(
-                    to_email=user['email'],
-                    user_name=user.get('full_name'),
-                    expires_at=user.get('premium_expires_at'),
-                    granted_by=granted_by_email
-                )
-                
-                if email_sent:
-                    logger.info(f"✅ Premium notification email sent to {user['email']}")
+                if user['role'] == 'enterprise':
+                    # Send enterprise notification email
+                    email_sent = email_service.send_enterprise_notification_email(
+                        to_email=user['email'],
+                        user_name=user.get('full_name'),
+                        expires_at=user.get('premium_expires_at'),
+                        granted_by=granted_by_email
+                    )
+                    
+                    if email_sent:
+                        logger.info(f"✅ Enterprise notification email sent to {user['email']}")
+                    else:
+                        logger.error(f"❌ Failed to send enterprise notification email to {user['email']}")
                 else:
-                    logger.error(f"❌ Failed to send premium notification email to {user['email']}")
+                    # Send premium notification email
+                    email_sent = email_service.send_premium_notification_email(
+                        to_email=user['email'],
+                        user_name=user.get('full_name'),
+                        expires_at=user.get('premium_expires_at'),
+                        granted_by=granted_by_email
+                    )
+                    
+                    if email_sent:
+                        logger.info(f"✅ Premium notification email sent to {user['email']}")
+                    else:
+                        logger.error(f"❌ Failed to send premium notification email to {user['email']}")
             except Exception as e:
-                logger.error(f"❌ Error sending premium notification email: {str(e)}")
+                logger.error(f"❌ Error sending {user['role']} notification email: {str(e)}")
             
             return {
-                "detail": f"Premium notification sent to {user['email']}",
+                "detail": f"{user['role'].title()} notification sent to {user['email']}",
                 "user_email": user['email'],
-                "message": "Premium notification email sent successfully"
+                "message": f"{user['role'].title()} notification email sent successfully"
             }
     except HTTPException:
         raise

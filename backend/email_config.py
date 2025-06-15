@@ -725,6 +725,149 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         return self.send_email(to_email, subject, html_content, text_content)
     
+    def send_enterprise_notification_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, granted_by: Optional[str] = None) -> bool:
+        """Send notification email when enterprise access is granted to existing user"""
+        subject = "🏢 Welcome to Todo Events Enterprise!"
+        
+        # Format expiration date
+        expiry_text = ""
+        if expires_at:
+            try:
+                from datetime import datetime
+                if isinstance(expires_at, str):
+                    expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expiry_date = expires_at
+                expiry_text = f"Your enterprise access expires on {expiry_date.strftime('%B %d, %Y')}."
+            except:
+                expiry_text = "Check your account for enterprise access details."
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Enterprise Access Granted - Todo Events</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .enterprise-badge {{ background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .enterprise-badge h2 {{ margin: 0; font-size: 24px; }}
+                .features {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+                .expiry-info {{ background: #f3e8ff; border: 1px solid #c4b5fd; padding: 15px; border-radius: 6px; margin: 20px 0; }}
+                .enterprise-highlight {{ background: linear-gradient(135deg, #f3e8ff, #e0e7ff); padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🏢 Todo Events Enterprise</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Account Upgraded!</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Welcome to Enterprise{f', {user_name}' if user_name else ''}!</h2>
+                    
+                    <p>Your Todo Events account has been upgraded to Enterprise{f' by {granted_by}' if granted_by else ''}! You now have access to our most powerful features designed for organizations and high-volume event creators.</p>
+                    
+                    <div class="enterprise-badge">
+                        <h2>🏢 Enterprise Access Activated</h2>
+                        <p style="margin: 5px 0 0 0;">All enterprise features are now available</p>
+                    </div>
+                    
+                    {f'<div class="expiry-info"><strong>📅 Access Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
+                    
+                    <div class="enterprise-highlight">
+                        <h3>🚀 Enterprise Event Capacity:</h3>
+                        <p><strong>250 Events</strong> - Create up to 250 events with full enterprise features</p>
+                    </div>
+                    
+                    <div class="features">
+                        <h3>🏢 Your Enterprise Features:</h3>
+                        <ul>
+                            <li><strong>✅ Auto-Verified Events:</strong> Your events get instant verification badges</li>
+                            <li><strong>📊 Advanced Analytics:</strong> Access detailed insights into your event performance</li>
+                            <li><strong>🔄 Recurring Events:</strong> Create series and repeating events with ease</li>
+                            <li><strong>🎯 Priority Support:</strong> Get faster help with premium support</li>
+                            <li><strong>📈 Enhanced Visibility:</strong> Your events get better placement in search results</li>
+                            <li><strong>🎨 Custom Branding:</strong> Add your personal touch to events</li>
+                        </ul>
+                        <p><strong>🚀 Coming Soon:</strong> Enterprise dashboard with advanced team management and reporting features</p>
+                    </div>
+                    
+                    <a href="https://todo-events.com/dashboard" class="button">Explore Enterprise Features</a>
+                    
+                    <p><strong>What's next?</strong></p>
+                    <ul>
+                        <li>Log in to your account to see the new enterprise features</li>
+                        <li>Create your first enterprise event with auto-verification</li>
+                        <li>Check out the advanced analytics for your existing events</li>
+                        <li>Explore recurring event options for regular gatherings</li>
+                        <li>Contact our support team for onboarding assistance</li>
+                    </ul>
+                    
+                    <p>If you have any questions about your enterprise features or need assistance with setup, please contact our support team at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
+                    
+                    <p>Welcome to Todo Events Enterprise!<br>The Todo Events Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 Todo Events. Enterprise event hosting made simple.</p>
+                    <p>This notification was sent to {to_email}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        Todo Events Enterprise - Account Upgraded!
+        
+        Welcome to Enterprise{f', {user_name}' if user_name else ''}!
+        
+        Your Todo Events account has been upgraded to Enterprise{f' by {granted_by}' if granted_by else ''}!
+        
+        {expiry_text if expiry_text else ''}
+        
+        Enterprise Event Capacity: 250 Events
+        Create up to 250 events with full enterprise features
+        
+                 Your Enterprise Features:
+         - Auto-Verified Events: Your events get instant verification badges
+         - Advanced Analytics: Access detailed insights into your event performance
+         - Recurring Events: Create series and repeating events with ease
+         - Priority Support: Get faster help with premium support
+         - Enhanced Visibility: Your events get better placement in search results
+         - Custom Branding: Add your personal touch to events
+         
+         Coming Soon: Enterprise dashboard with advanced team management and reporting features
+        
+                 What's next?
+         - Log in to your account to see the new enterprise features
+         - Create your first enterprise event with auto-verification
+         - Check out the advanced analytics for your existing events
+         - Explore recurring event options for regular gatherings
+         - Contact our support team for onboarding assistance
+        
+        Visit your dashboard: https://todo-events.com/dashboard
+        
+                 Questions? Contact our support team at support@todo-events.com
+        
+        Welcome to Todo Events Enterprise!
+        The Todo Events Team
+        
+        This notification was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+    
     def send_premium_expiration_reminder_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, days_remaining: int = 7) -> bool:
         """Send reminder email when premium access is about to expire"""
         subject = f"⏰ Premium Access Expires in {days_remaining} Days"

@@ -58,6 +58,22 @@ def test_premium_expiration_reminder_email():
     print(f"✅ Expiration reminder email test result: {result}")
     return result
 
+def test_enterprise_notification_email():
+    """Test enterprise notification email"""
+    print("🧪 Testing Enterprise Notification Email...")
+    
+    expires_at = (datetime.now() + timedelta(days=365)).isoformat()
+    
+    result = email_service.send_enterprise_notification_email(
+        to_email="test@example.com",
+        user_name="Jane Smith",
+        expires_at=expires_at,
+        granted_by="admin@todo-events.com"
+    )
+    
+    print(f"✅ Enterprise notification email test result: {result}")
+    return result
+
 def main():
     """Run all email tests"""
     print("🚀 Starting Premium Email Tests...")
@@ -70,7 +86,8 @@ def main():
     tests = [
         test_premium_invitation_email,
         test_premium_notification_email,
-        test_premium_expiration_reminder_email
+        test_premium_expiration_reminder_email,
+        test_enterprise_notification_email
     ]
     
     results = []
