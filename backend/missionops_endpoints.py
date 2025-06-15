@@ -55,11 +55,13 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
                 
                 # Count tasks
                 c.execute(f"SELECT COUNT(*) FROM missionops_tasks WHERE mission_id = {placeholder}", (mission_dict['id'],))
-                tasks_count = c.fetchone()[0] if c.fetchone() else 0
+                tasks_result = c.fetchone()
+                tasks_count = tasks_result[0] if tasks_result else 0
                 
                 # Count risks
                 c.execute(f"SELECT COUNT(*) FROM missionops_risks WHERE mission_id = {placeholder}", (mission_dict['id'],))
-                risks_count = c.fetchone()[0] if c.fetchone() else 0
+                risks_result = c.fetchone()
+                risks_count = risks_result[0] if risks_result else 0
                 
                 # Get shared users
                 c.execute(f'''
@@ -154,10 +156,12 @@ async def get_mission(mission_id: int, current_user: dict = Depends(get_current_
             
             # Get tasks and risks count
             c.execute(f"SELECT COUNT(*) FROM missionops_tasks WHERE mission_id = {placeholder}", (mission_id,))
-            tasks_count = c.fetchone()[0] if c.fetchone() else 0
+            tasks_result = c.fetchone()
+            tasks_count = tasks_result[0] if tasks_result else 0
             
             c.execute(f"SELECT COUNT(*) FROM missionops_risks WHERE mission_id = {placeholder}", (mission_id,))
-            risks_count = c.fetchone()[0] if c.fetchone() else 0
+            risks_result = c.fetchone()
+            risks_count = risks_result[0] if risks_result else 0
             
             # Get shared users
             c.execute(f'''
