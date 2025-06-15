@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Target, Calendar, Users, AlertTriangle, FileText, Clock, Grip, Settings } from 'lucide-react';
+import { Plus, Target, Calendar, Users, AlertTriangle, FileText, Clock, Grip, Settings, Home } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 import MissionContainer from './MissionContainer';
 import CreateMissionModal from './CreateMissionModal';
@@ -157,19 +157,68 @@ const MissionOpsGrid = () => {
     setDraggedMission(mission);
   }, []);
 
-  const handleCreateMission = useCallback(async (missionData) => {
-    const gridPos = hoveredPosition || { x: 0, y: 0 };
-    const startDate = yToDate(gridPos.y);
+  const centerOnMissions = useCallback(() => {
+    if (missions.length === 0) return;
     
-    await createMission({
-      ...missionData,
-      grid_x: gridPos.x,
-      grid_y: gridPos.y,
-      start_date: startDate
+    // Calculate the bounding box of all missions
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    
+    missions.forEach(mission => {
+      const x = mission.grid_x || 0;
+      const y = mission.grid_y || dateToY(mission.start_date);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
     });
     
-    setIsCreating(false);
-  }, [hoveredPosition, yToDate, createMission]);
+    // Calculate center point
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    
+    // Pan to center all missions
+    const targetX = -centerX * zoom + window.innerWidth / 2;
+    const targetY = -centerY * zoom + window.innerHeight / 2;
+    setViewportCenter({ x: targetX, y: targetY });
+  }, [missions, zoom, setViewportCenter, dateToY]);
+
+  const handleCreateMission = useCallback(async (missionData) => {
+    // Calculate a good default position if no hover position is available
+    let gridPos;
+    if (hoveredPosition) {
+      gridPos = hoveredPosition;
+    } else {
+      // Place new mission in the center of the current viewport
+      const centerX = -viewportCenter.x / zoom + (window.innerWidth / 2) / zoom;
+      const centerY = -viewportCenter.y / zoom + (window.innerHeight / 2) / zoom;
+      gridPos = { x: centerX, y: centerY };
+    }
+    
+    const startDate = yToDate(gridPos.y);
+    
+    try {
+      const newMission = await createMission({
+        ...missionData,
+        grid_x: gridPos.x,
+        grid_y: gridPos.y,
+        start_date: startDate
+      });
+      
+      // Pan to the newly created mission
+      if (newMission) {
+        const targetX = -(newMission.grid_x || gridPos.x) * zoom + window.innerWidth / 2;
+        const targetY = -(newMission.grid_y || gridPos.y) * zoom + window.innerHeight / 2;
+        setViewportCenter({ x: targetX, y: targetY });
+        setSelectedMissionId(newMission.id);
+      }
+      
+      setIsCreating(false);
+    } catch (error) {
+      console.error('Failed to create mission:', error);
+      // Keep the modal open on error so user can retry
+    }
+  }, [hoveredPosition, yToDate, createMission, viewportCenter, zoom, setViewportCenter, setSelectedMissionId]);
 
   if (isLoading) {
     return (
@@ -203,6 +252,15 @@ const MissionOpsGrid = () => {
             <div className={`text-xs ${theme === 'light' ? 'text-neutral-600' : 'text-neutral-400'}`}>
               Zoom: {Math.round(zoom * 100)}%
             </div>
+            {missions.length > 0 && (
+              <button
+                onClick={centerOnMissions}
+                className={`p-2 ${theme === 'light' ? 'hover:bg-neutral-100' : theme === 'frost' ? 'hover:bg-white/10' : 'hover:bg-neutral-700'} rounded-lg transition-colors`}
+                title="Center on missions"
+              >
+                <Home className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => setIsCreating(true)}
               className="flex items-center gap-2 px-4 py-2 bg-pin-blue hover:bg-pin-blue-600 text-white rounded-lg transition-colors"
