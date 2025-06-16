@@ -179,128 +179,78 @@ export const MissionOpsProvider = ({ children }) => {
     }
   }, [apiCall]);
 
-  // Task operations
+  // Task management functions
   const getTasks = useCallback(async (missionId) => {
     try {
-      return await apiCall(`/missions/${missionId}/tasks`);
+      const response = await apiCall(`/missions/${missionId}/tasks`);
+      return response;
     } catch (error) {
       console.error('Failed to get tasks:', error);
-      setError(error.message);
-      throw error;
+      throw new Error('Failed to get tasks');
     }
   }, [apiCall]);
 
   const createTask = useCallback(async (taskData) => {
     try {
-      return await apiCall('/tasks', {
+      const response = await apiCall('/tasks', {
         method: 'POST',
         body: JSON.stringify(taskData),
       });
+      
+      // Refresh missions to update task counts
+      await loadMissions();
+      
+      return response;
     } catch (error) {
       console.error('Failed to create task:', error);
-      setError(error.message);
-      throw error;
+      throw new Error('Failed to create task');
     }
-  }, [apiCall]);
+  }, [apiCall, loadMissions]);
 
   const updateTask = useCallback(async (taskId, updates) => {
     try {
-      return await apiCall(`/tasks/${taskId}`, {
+      const response = await apiCall(`/tasks/${taskId}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
+      
+      // Refresh missions to update task counts
+      await loadMissions();
+      
+      return response;
     } catch (error) {
       console.error('Failed to update task:', error);
-      setError(error.message);
-      throw error;
+      throw new Error('Failed to update task');
     }
-  }, [apiCall]);
+  }, [apiCall, loadMissions]);
 
   const deleteTask = useCallback(async (taskId) => {
     try {
-      await apiCall(`/tasks/${taskId}`, {
+      const response = await apiCall(`/tasks/${taskId}`, {
         method: 'DELETE',
       });
+      
+      // Refresh missions to update task counts
+      await loadMissions();
+      
+      return response;
     } catch (error) {
       console.error('Failed to delete task:', error);
-      setError(error.message);
-      throw error;
+      throw new Error('Failed to delete task');
     }
-  }, [apiCall]);
+  }, [apiCall, loadMissions]);
 
-  // Risk operations
+  // Risk management functions (placeholder for future implementation)
   const getRisks = useCallback(async (missionId) => {
-    try {
-      return await apiCall(`/missions/${missionId}/risks`);
-    } catch (error) {
-      console.error('Failed to get risks:', error);
-      setError(error.message);
-      throw error;
-    }
-  }, [apiCall]);
+    // TODO: Implement risk management
+    return [];
+  }, []);
 
-  const createRisk = useCallback(async (riskData) => {
-    try {
-      return await apiCall('/risks', {
-        method: 'POST',
-        body: JSON.stringify(riskData),
-      });
-    } catch (error) {
-      console.error('Failed to create risk:', error);
-      setError(error.message);
-      throw error;
-    }
-  }, [apiCall]);
-
-  // Decision log operations
+  // Decision log functions (placeholder for future implementation)
   const getDecisions = useCallback(async (missionId) => {
-    try {
-      return await apiCall(`/missions/${missionId}/decisions`);
-    } catch (error) {
-      console.error('Failed to get decisions:', error);
-      setError(error.message);
-      throw error;
-    }
-  }, [apiCall]);
-
-  const createDecision = useCallback(async (decisionData) => {
-    try {
-      return await apiCall('/decisions', {
-        method: 'POST',
-        body: JSON.stringify(decisionData),
-      });
-    } catch (error) {
-      console.error('Failed to create decision:', error);
-      setError(error.message);
-      throw error;
-    }
-  }, [apiCall]);
-
-  // Sharing operations
-  const shareMission = useCallback(async (missionId, shareData) => {
-    try {
-      return await apiCall(`/missions/${missionId}/share`, {
-        method: 'POST',
-        body: JSON.stringify(shareData),
-      });
-    } catch (error) {
-      console.error('Failed to share mission:', error);
-      setError(error.message);
-      throw error;
-    }
-  }, [apiCall]);
-
-  const unshareMission = useCallback(async (missionId, sharedWithId) => {
-    try {
-      await apiCall(`/missions/${missionId}/share/${sharedWithId}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error('Failed to unshare mission:', error);
-      setError(error.message);
-      throw error;
-    }
-  }, [apiCall]);
+    // TODO: Implement decision logs
+    return [];
+  }, []);
 
   // Load missions when user changes
   useEffect(() => {
@@ -344,15 +294,9 @@ export const MissionOpsProvider = ({ children }) => {
 
     // Risk operations
     getRisks,
-    createRisk,
 
     // Decision operations
     getDecisions,
-    createDecision,
-
-    // Sharing operations
-    shareMission,
-    unshareMission,
 
     // UI state
     setSelectedMissionId,

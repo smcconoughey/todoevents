@@ -334,77 +334,41 @@ async def delete_mission(mission_id: int, current_user: dict = Depends(get_curre
 
 # TASK ENDPOINTS
 
-@missionops_router.get("/missions/{mission_id}/tasks", response_model=List[TaskResponse])
-async def list_tasks(mission_id: int, current_user: dict = Depends(get_current_user)):
+@missionops_router.get("/missions/{mission_id}/tasks", response_model=List[dict])
+async def get_mission_tasks(mission_id: int, current_user: dict = Depends(get_current_user)):
     """Get all tasks for a mission"""
-    if not has_mission_access(mission_id, current_user["id"], "view"):
-        raise HTTPException(status_code=403, detail="Access denied")
-    
     try:
-        placeholder = get_placeholder()
+        logger.info(f"Getting tasks for mission {mission_id} for user {current_user['id']}")
         
-        with get_db() as conn:
-            c = conn.cursor()
-            
-            # Get all tasks for the mission with user info
-            c.execute(f'''
-                SELECT t.*, u.email as assigned_email, creator.email as creator_email
-                FROM missionops_tasks t
-                LEFT JOIN users u ON t.assigned_to = u.id
-                LEFT JOIN users creator ON t.created_by = creator.id
-                WHERE t.mission_id = {placeholder}
-                ORDER BY t.created_at DESC
-            ''', (mission_id,))
-            
-            tasks = c.fetchall()
-            
-            # Build task tree (with subtasks)
-            task_dict = {}
-            root_tasks = []
-            
-            for task in tasks:
-                task_data = dict_from_row(task, [
-                    'id', 'mission_id', 'title', 'description', 'due_date',
-                    'priority', 'status', 'parent_task_id', 'assigned_to',
-                    'created_by', 'created_at', 'updated_at', 'assigned_email', 'creator_email'
-                ])
-                task_data['subtasks'] = []
-                task_dict[task_data['id']] = task_data
-                
-                if task_data['parent_task_id'] is None:
-                    root_tasks.append(task_data)
-            
-            # Build subtask relationships
-            for task in tasks:
-                task_data = dict_from_row(task, [
-                    'id', 'mission_id', 'title', 'description', 'due_date',
-                    'priority', 'status', 'parent_task_id', 'assigned_to',
-                    'created_by', 'created_at', 'updated_at', 'assigned_email', 'creator_email'
-                ])
-                
-                if task_data['parent_task_id'] and task_data['parent_task_id'] in task_dict:
-                    parent_task = task_dict[task_data['parent_task_id']]
-                    parent_task['subtasks'].append(task_data)
-            
-            return root_tasks
-            
-    except HTTPException:
-        raise
+        # Verify user has access to the mission
+        mission = get_mission_by_id(mission_id, current_user["id"])
+        if not mission:
+            raise HTTPException(status_code=404, detail="Mission not found or access denied")
+        
+        tasks = get_mission_tasks_with_subtasks(mission_id)
+        logger.info(f"Retrieved {len(tasks) if tasks else 0} tasks for mission {mission_id}")
+        
+        return tasks or []
+        
     except Exception as e:
-        logger.error(f"Error listing tasks: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to list tasks")
+        logger.error(f"Error getting tasks for mission {mission_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get tasks: {str(e)}")
 
-@missionops_router.post("/tasks", response_model=TaskResponse)
-async def create_task(task: TaskCreate, current_user: dict = Depends(get_current_user)):
+@missionops_router.post("/tasks", response_model=dict)
+async def create_task(task: dict, current_user: dict = Depends(get_current_user)):
     """Create a new task"""
-    if not has_mission_access(task.mission_id, current_user["id"], "edit"):
-        raise HTTPException(status_code=403, detail="Access denied")
-    
     try:
-        placeholder = get_placeholder()
+        logger.info(f"Creating task for user {current_user['id']}: {task}")
+        
+        # Verify user has access to the mission
+        mission = get_mission_by_id(task["mission_id"], current_user["id"])
+        if not mission:
+            raise HTTPException(status_code=404, detail="Mission not found or access denied")
         
         # Convert empty strings to None for date fields
-        due_date = task.due_date if task.due_date and task.due_date.strip() else None
+        due_date = task.get("due_date") if task.get("due_date") and str(task.get("due_date")).strip() else None
+        
+        placeholder = get_placeholder()
         
         with get_db() as conn:
             c = conn.cursor()
@@ -413,69 +377,73 @@ async def create_task(task: TaskCreate, current_user: dict = Depends(get_current
             if IS_PRODUCTION and DB_URL:
                 c.execute(f'''
                     INSERT INTO missionops_tasks 
-                    (mission_id, title, description, due_date, priority, status, parent_task_id, assigned_to, created_by)
-                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-                    RETURNING id
-                ''', (task.mission_id, task.title, task.description, due_date, 
-                      task.priority, task.status, task.parent_task_id, task.assigned_to, current_user["id"]))
-                task_id = c.fetchone()['id']
+                    (mission_id, parent_task_id, title, description, priority, status, due_date, assigned_to, created_by, created_at)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, NOW())
+                    RETURNING *
+                ''', (
+                    task["mission_id"],
+                    task.get("parent_task_id"),
+                    task["title"],
+                    task.get("description", ""),
+                    task.get("priority", "medium"),
+                    task.get("status", "todo"),
+                    due_date,
+                    task.get("assigned_to"),
+                    current_user["id"]
+                ))
             else:
-                c.execute(f'''
+                c.execute('''
                     INSERT INTO missionops_tasks 
-                    (mission_id, title, description, due_date, priority, status, parent_task_id, assigned_to, created_by)
-                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-                ''', (task.mission_id, task.title, task.description, due_date, 
-                      task.priority, task.status, task.parent_task_id, task.assigned_to, current_user["id"]))
-                task_id = c.lastrowid
+                    (mission_id, parent_task_id, title, description, priority, status, due_date, assigned_to, created_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                    RETURNING *
+                ''', (
+                    task["mission_id"],
+                    task.get("parent_task_id"),
+                    task["title"],
+                    task.get("description", ""),
+                    task.get("priority", "medium"),
+                    task.get("status", "todo"),
+                    due_date,
+                    task.get("assigned_to"),
+                    current_user["id"]
+                ))
             
-            conn.commit()
-            
-            # Get the created task
-            c.execute(f'''
-                SELECT t.*, u.email as assigned_email, creator.email as creator_email
-                FROM missionops_tasks t
-                LEFT JOIN users u ON t.assigned_to = u.id
-                LEFT JOIN users creator ON t.created_by = creator.id
-                WHERE t.id = {placeholder}
-            ''', (task_id,))
-            task_data = dict(c.fetchone())
-            task_data['subtasks'] = []
-            
-            return task_data
-            
-    except HTTPException:
-        raise
+            new_task = c.fetchone()
+            if new_task:
+                task_dict = dict(zip([col[0] for col in c.description], new_task))
+                task_dict = convert_datetime_to_string(task_dict)
+                logger.info(f"Created task: {task_dict}")
+                return task_dict
+            else:
+                raise HTTPException(status_code=500, detail="Failed to create task")
+                
     except Exception as e:
         logger.error(f"Error creating task: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to create task")
+        raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
 
-@missionops_router.put("/tasks/{task_id}", response_model=TaskResponse)
-async def update_task(task_id: int, task: TaskUpdate, current_user: dict = Depends(get_current_user)):
+@missionops_router.put("/tasks/{task_id}", response_model=dict)
+async def update_task(task_id: int, task_updates: dict, current_user: dict = Depends(get_current_user)):
     """Update a task"""
     try:
+        logger.info(f"Updating task {task_id} for user {current_user['id']}: {task_updates}")
+        
+        # Verify user has access to the task
+        existing_task = get_task_by_id(task_id, current_user["id"])
+        if not existing_task:
+            raise HTTPException(status_code=404, detail="Task not found or access denied")
+        
         placeholder = get_placeholder()
         
-        # Check if user has access to the mission containing this task
         with get_db() as conn:
             c = conn.cursor()
-            
-            c.execute(f"SELECT mission_id FROM missionops_tasks WHERE id = {placeholder}", (task_id,))
-            result = c.fetchone()
-            
-            if not result:
-                raise HTTPException(status_code=404, detail="Task not found")
-            
-            mission_id = result[0] if isinstance(result, (tuple, list)) else result['mission_id']
-            
-            if not has_mission_access(mission_id, current_user["id"], "edit"):
-                raise HTTPException(status_code=403, detail="Access denied")
             
             # Build update query
             update_fields = []
             update_values = []
             
-            for field, value in task.dict(exclude_unset=True).items():
-                if value is not None:
+            for field, value in task_updates.items():
+                if field in ['title', 'description', 'priority', 'status', 'due_date', 'assigned_to']:
                     # Convert empty strings to None for date fields
                     if field == 'due_date' and isinstance(value, str) and not value.strip():
                         value = None
@@ -483,71 +451,89 @@ async def update_task(task_id: int, task: TaskUpdate, current_user: dict = Depen
                     update_values.append(value)
             
             if not update_fields:
-                raise HTTPException(status_code=400, detail="No fields to update")
+                return existing_task
             
-            update_fields.append(f"updated_at = {placeholder}")
-            update_values.append(datetime.utcnow())
             update_values.append(task_id)
             
-            update_query = f'''
-                UPDATE missionops_tasks 
-                SET {', '.join(update_fields)}
-                WHERE id = {placeholder}
-            '''
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    UPDATE missionops_tasks 
+                    SET {", ".join(update_fields)}, updated_at = NOW()
+                    WHERE id = {placeholder}
+                    RETURNING *
+                ''', update_values)
+            else:
+                c.execute(f'''
+                    UPDATE missionops_tasks 
+                    SET {", ".join(update_fields)}, updated_at = datetime('now')
+                    WHERE id = {placeholder}
+                    RETURNING *
+                ''', update_values)
             
-            c.execute(update_query, update_values)
-            conn.commit()
-            
-            # Return updated task
-            c.execute(f'''
-                SELECT t.*, u.email as assigned_email, creator.email as creator_email
-                FROM missionops_tasks t
-                LEFT JOIN users u ON t.assigned_to = u.id
-                LEFT JOIN users creator ON t.created_by = creator.id
-                WHERE t.id = {placeholder}
-            ''', (task_id,))
-            task_data = dict(c.fetchone())
-            task_data['subtasks'] = []
-            
-            return task_data
-            
-    except HTTPException:
-        raise
+            updated_task = c.fetchone()
+            if updated_task:
+                task_dict = dict(zip([col[0] for col in c.description], updated_task))
+                task_dict = convert_datetime_to_string(task_dict)
+                logger.info(f"Updated task: {task_dict}")
+                return task_dict
+            else:
+                raise HTTPException(status_code=404, detail="Task not found")
+                
     except Exception as e:
-        logger.error(f"Error updating task: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to update task")
+        logger.error(f"Error updating task {task_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update task: {str(e)}")
 
 @missionops_router.delete("/tasks/{task_id}")
 async def delete_task(task_id: int, current_user: dict = Depends(get_current_user)):
-    """Delete a task"""
+    """Delete a task and all its subtasks"""
     try:
+        logger.info(f"Deleting task {task_id} for user {current_user['id']}")
+        
+        # Verify user has access to the task
+        existing_task = get_task_by_id(task_id, current_user["id"])
+        if not existing_task:
+            raise HTTPException(status_code=404, detail="Task not found or access denied")
+        
         placeholder = get_placeholder()
         
         with get_db() as conn:
             c = conn.cursor()
             
-            # Check access
-            c.execute(f"SELECT mission_id FROM missionops_tasks WHERE id = {placeholder}", (task_id,))
-            result = c.fetchone()
+            # Delete task and all subtasks (cascade)
+            if IS_PRODUCTION and DB_URL:
+                # First delete all subtasks recursively
+                c.execute(f'''
+                    WITH RECURSIVE task_tree AS (
+                        SELECT id FROM missionops_tasks WHERE id = {placeholder}
+                        UNION ALL
+                        SELECT t.id FROM missionops_tasks t
+                        INNER JOIN task_tree tt ON t.parent_task_id = tt.id
+                    )
+                    DELETE FROM missionops_tasks WHERE id IN (SELECT id FROM task_tree)
+                ''', (task_id,))
+            else:
+                # For SQLite, we need to handle this differently
+                # First get all subtask IDs recursively
+                def get_all_subtask_ids(parent_id):
+                    c.execute('SELECT id FROM missionops_tasks WHERE parent_task_id = ?', (parent_id,))
+                    subtasks = c.fetchall()
+                    all_ids = [parent_id]
+                    for subtask in subtasks:
+                        all_ids.extend(get_all_subtask_ids(subtask[0]))
+                    return all_ids
+                
+                all_task_ids = get_all_subtask_ids(task_id)
+                placeholders = ','.join(['?' for _ in all_task_ids])
+                c.execute(f'DELETE FROM missionops_tasks WHERE id IN ({placeholders})', all_task_ids)
             
-            if not result:
-                raise HTTPException(status_code=404, detail="Task not found")
+            deleted_count = c.rowcount
+            logger.info(f"Deleted {deleted_count} tasks (including subtasks)")
             
-            mission_id = result[0] if isinstance(result, (tuple, list)) else result['mission_id']
-            
-            if not has_mission_access(mission_id, current_user["id"], "edit"):
-                raise HTTPException(status_code=403, detail="Access denied")
-            
-            c.execute(f"DELETE FROM missionops_tasks WHERE id = {placeholder}", (task_id,))
-            conn.commit()
-            
-            return {"detail": "Task deleted successfully"}
-            
-    except HTTPException:
-        raise
+            return {"message": f"Deleted task and {deleted_count - 1} subtasks"}
+                
     except Exception as e:
-        logger.error(f"Error deleting task: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to delete task")
+        logger.error(f"Error deleting task {task_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
 
 # RISK ENDPOINTS
 

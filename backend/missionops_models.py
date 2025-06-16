@@ -452,3 +452,140 @@ def has_mission_access(mission_id: int, user_id: int, required_access: str = "vi
         user_level = access_hierarchy.get(access_level, -1)
         
         return user_level >= required_level
+
+def get_mission_tasks_with_subtasks(mission_id: int):
+    """Get all tasks for a mission organized with subtasks"""
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            logger.info(f"Querying tasks for mission_id: {mission_id}")
+            
+            # Get all tasks for the mission
+            c.execute(f'''
+                SELECT t.*, u.email as assigned_email, creator.email as creator_email
+                FROM missionops_tasks t
+                LEFT JOIN users u ON t.assigned_to = u.id
+                LEFT JOIN users creator ON t.created_by = creator.id
+                WHERE t.mission_id = {placeholder}
+                ORDER BY t.created_at ASC
+            ''', (mission_id,))
+            
+            tasks = c.fetchall()
+            logger.info(f"Found {len(tasks) if tasks else 0} tasks for mission {mission_id}")
+            
+            if not tasks:
+                return []
+            
+            # Convert to dictionaries and organize into tree structure
+            task_dict = {}
+            root_tasks = []
+            
+            for task in tasks:
+                task_data = dict(zip([col[0] for col in c.description], task))
+                task_data = convert_datetime_to_string(task_data)
+                task_data['subtasks'] = []
+                task_dict[task_data['id']] = task_data
+                
+                if task_data['parent_task_id'] is None:
+                    root_tasks.append(task_data)
+            
+            # Build subtask relationships
+            for task in tasks:
+                task_data = dict(zip([col[0] for col in c.description], task))
+                task_data = convert_datetime_to_string(task_data)
+                
+                if task_data['parent_task_id'] and task_data['parent_task_id'] in task_dict:
+                    parent_task = task_dict[task_data['parent_task_id']]
+                    parent_task['subtasks'].append(task_data)
+            
+            return root_tasks
+            
+    except Exception as e:
+        logger.error(f"Error getting tasks for mission {mission_id}: {str(e)}")
+        return []
+
+def get_task_by_id(task_id: int, user_id: int):
+    """Get a task by ID if user has access"""
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get task with mission access check
+            c.execute(f'''
+                SELECT t.*, m.owner_id, m.title as mission_title
+                FROM missionops_tasks t
+                JOIN missionops_missions m ON t.mission_id = m.id
+                WHERE t.id = {placeholder}
+            ''', (task_id,))
+            
+            task = c.fetchone()
+            
+            if not task:
+                return None
+            
+            task_dict = dict(zip([col[0] for col in c.description], task))
+            
+            # Check if user has access to the mission
+            mission_id = task_dict['mission_id']
+            owner_id = task_dict['owner_id']
+            
+            # User has access if they own the mission or have shared access
+            if owner_id == user_id:
+                return convert_datetime_to_string(task_dict)
+            
+            # Check shared access
+            c.execute(f'''
+                SELECT access_level FROM missionops_mission_shares 
+                WHERE mission_id = {placeholder} AND shared_with_id = {placeholder}
+            ''', (mission_id, user_id))
+            
+            shared_access = c.fetchone()
+            if shared_access and shared_access[0] in ['edit', 'view']:
+                return convert_datetime_to_string(task_dict)
+            
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error getting task {task_id}: {str(e)}")
+        return None
+
+def get_mission_by_id(mission_id: int, user_id: int):
+    """Get a mission by ID if user has access"""
+    placeholder = get_placeholder()
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get mission with access check
+            c.execute(f'''
+                SELECT m.*, 
+                       CASE WHEN m.owner_id = {placeholder} THEN 'owner' 
+                            WHEN s.access_level IS NOT NULL THEN s.access_level 
+                            ELSE 'none' END as access_level
+                FROM missionops_missions m
+                LEFT JOIN missionops_mission_shares s ON m.id = s.mission_id AND s.shared_with_id = {placeholder}
+                WHERE m.id = {placeholder}
+            ''', (user_id, user_id, mission_id))
+            
+            mission = c.fetchone()
+            
+            if not mission:
+                return None
+            
+            mission_dict = dict(zip([col[0] for col in c.description], mission))
+            
+            # Check if user has access
+            if mission_dict['access_level'] in ['owner', 'edit', 'view']:
+                return convert_datetime_to_string(mission_dict)
+            
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error getting mission {mission_id}: {str(e)}")
+        return None

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 import { useMissionOps } from './MissionOpsContext';
+import TaskList from './TaskList';
 
 const MissionContainer = ({ 
   mission, 
@@ -34,8 +35,6 @@ const MissionContainer = ({
   const [isDragStarted, setIsDragStarted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('tasks'); // tasks, risks, decisions
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
   
   const { createTask, getTasks, getRisks, getDecisions } = useMissionOps();
 
@@ -90,25 +89,6 @@ const MissionContainer = ({
       onDragStart(mission);
     } else {
       onSelect();
-    }
-  };
-
-  const handleAddTask = async () => {
-    if (!newTaskTitle.trim()) return;
-    
-    try {
-      await createTask({
-        mission_id: mission.id,
-        title: newTaskTitle,
-        description: '',
-        priority: 'medium',
-        status: 'todo'
-      });
-      setNewTaskTitle('');
-      setShowAddTask(false);
-      // Refresh mission data would happen via context
-    } catch (error) {
-      console.error('Failed to create task:', error);
     }
   };
 
@@ -258,72 +238,7 @@ const MissionContainer = ({
             {/* Tab Content */}
             <div className="min-h-32">
               {activeTab === 'tasks' && (
-                <div className="space-y-2">
-                  {/* Add Task Button */}
-                  {!showAddTask ? (
-                    <button
-                      onClick={() => setShowAddTask(true)}
-                      className={`
-                        w-full p-3 border-2 border-dashed rounded-lg text-sm
-                        ${theme === 'light' 
-                          ? 'border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50' 
-                          : 'border-neutral-600 text-neutral-400 hover:border-neutral-500 hover:bg-neutral-800/50'
-                        }
-                        transition-colors flex items-center justify-center gap-2
-                      `}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Task
-                    </button>
-                  ) : (
-                    <div className={`p-3 border rounded-lg ${theme === 'light' ? 'border-neutral-200 bg-neutral-50' : 'border-neutral-700 bg-neutral-800/50'}`}>
-                      <input
-                        type="text"
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
-                        placeholder="Task title..."
-                        className={`
-                          w-full p-2 rounded border text-sm
-                          ${theme === 'light' 
-                            ? 'border-neutral-300 bg-white text-neutral-900' 
-                            : 'border-neutral-600 bg-neutral-700 text-white'
-                          }
-                        `}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleAddTask();
-                          if (e.key === 'Escape') {
-                            setShowAddTask(false);
-                            setNewTaskTitle('');
-                          }
-                        }}
-                        autoFocus
-                      />
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={handleAddTask}
-                          className="px-3 py-1 bg-pin-blue text-white rounded text-sm hover:bg-pin-blue-600 transition-colors"
-                        >
-                          Add
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowAddTask(false);
-                            setNewTaskTitle('');
-                          }}
-                          className={`px-3 py-1 rounded text-sm transition-colors ${theme === 'light' ? 'text-neutral-600 hover:bg-neutral-200' : 'text-neutral-400 hover:bg-neutral-600'}`}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Task List Placeholder */}
-                  <div className={`text-center py-8 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No tasks yet. Add one to get started!</p>
-                  </div>
-                </div>
+                <TaskList missionId={mission.id} theme={theme} />
               )}
 
               {activeTab === 'risks' && (
