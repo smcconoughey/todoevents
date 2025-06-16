@@ -156,6 +156,98 @@ const LegalPage = () => {
           </div>
         </section>
 
+        {/* Premium Features Acceptable Use */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary flex items-center gap-2">
+            <UserCheck className="w-6 h-6 text-spark-yellow" />
+            Premium Features Acceptable Use
+          </h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-4">
+            <p className="text-themed-primary leading-relaxed">
+              Premium and Enterprise subscriptions are subject to additional terms to ensure fair usage and prevent abuse of our service limits and billing system.
+            </p>
+            
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-themed-primary mb-3">Prohibited Premium Feature Abuse:</h3>
+              <ul className="space-y-2 text-themed-primary">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">•</span>
+                  <strong>One subscription per individual:</strong> Each person may only maintain one active Premium or Enterprise subscription at a time
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">•</span>
+                  <strong>No multiple accounts:</strong> Creating multiple accounts to circumvent the 10-event monthly Premium limit or avoid Enterprise subscription requirements is strictly prohibited
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">•</span>
+                  <strong>No limit circumvention:</strong> Using technical means, shared accounts, or coordinated accounts to exceed subscription limits
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">•</span>
+                  <strong>No subscription fraud:</strong> Manipulating billing cycles, payment methods, or subscription tiers to gain unauthorized access to premium features
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-1">•</span>
+                  <strong>No sharing credentials:</strong> Premium accounts are for individual use only and may not be shared with others
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-themed-primary mb-3">Fair Usage Guidelines:</h3>
+              <ul className="space-y-2 text-themed-primary">
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500 mt-1">•</span>
+                  Premium subscriptions include up to 10 events per month with premium features
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500 mt-1">•</span>
+                  Users requiring more than 10 events per month should upgrade to Enterprise subscription
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500 mt-1">•</span>
+                  Business users, organizations, and commercial event organizers should use Enterprise subscriptions
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500 mt-1">•</span>
+                  Event limits reset monthly and unused events do not carry over to subsequent months
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-themed-primary mb-3">Enforcement & Consequences:</h3>
+              <ul className="space-y-2 text-themed-primary">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  We actively monitor for subscription abuse and limit circumvention attempts
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  Violations may result in immediate account suspension, subscription cancellation, or billing adjustments
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  Repeated violations may result in permanent platform ban and legal action for subscription fraud
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  Users found in violation may be required to upgrade to appropriate subscription tier or pay usage fees
+                </li>
+              </ul>
+            </div>
+
+            <p className="text-themed-primary leading-relaxed">
+              If you have questions about appropriate subscription tier for your usage needs, contact us at{' '}
+              <a href="mailto:support@todo-events.com" className="text-pin-blue hover:underline">
+                support@todo-events.com
+              </a>{' '}
+              before creating multiple accounts or attempting to circumvent subscription limits.
+            </p>
+          </div>
+        </section>
+
         {/* Commercial Use & Licensing */}
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-themed-primary flex items-center gap-2">

@@ -1353,5 +1353,293 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         return self.send_email(to_email, subject, html_content, text_content)
 
+    def send_account_deletion_email(self, to_email: str, user_name: Optional[str] = None,
+                                    deletion_date: Optional[str] = None, 
+                                    final_deletion_date: Optional[str] = None,
+                                    deleted_items: Optional[dict] = None,
+                                    stripe_info: Optional[dict] = None) -> bool:
+        """Send account deletion confirmation email"""
+        
+        subject = "Account Deletion Completed - TodoEvents"
+        
+        # Format deletion dates
+        deletion_text = "today"
+        if deletion_date:
+            try:
+                from datetime import datetime
+                if isinstance(deletion_date, str):
+                    del_date = datetime.fromisoformat(deletion_date.replace('Z', '+00:00'))
+                else:
+                    del_date = deletion_date
+                deletion_text = del_date.strftime('%B %d, %Y')
+            except:
+                deletion_text = "today"
+        
+        final_deletion_text = "in 30 days"
+        if final_deletion_date:
+            try:
+                from datetime import datetime
+                if isinstance(final_deletion_date, str):
+                    final_date = datetime.fromisoformat(final_deletion_date.replace('Z', '+00:00'))
+                else:
+                    final_date = final_deletion_date
+                final_deletion_text = final_date.strftime('%B %d, %Y')
+            except:
+                final_deletion_text = "in 30 days"
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Account Deletion - TodoEvents</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #dc3545, #b02a37); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .deletion-notice {{ background: #ffe6e6; border: 1px solid #ffcccc; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .data-summary {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .recovery-info {{ background: #e7f3ff; border: 1px solid #b3d9ff; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .recovery-button {{ background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 10px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 TodoEvents</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Account Deletion</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Account Deletion Completed{f', {user_name}' if user_name else ''}</h2>
+                    
+                    <p>We've processed your account deletion request. Your TodoEvents account and all associated data have been removed as requested.</p>
+                    
+                    <div class="deletion-notice">
+                        <h3>📋 Deletion Summary</h3>
+                        <p><strong>Deletion Date:</strong> {deletion_text}</p>
+                        <p><strong>Final Deletion:</strong> {final_deletion_text}</p>
+                        <p><strong>Recovery Period:</strong> 30 days (until final deletion)</p>
+                        {f'<p><strong>Subscriptions Cancelled:</strong> {stripe_info["subscriptions_cancelled"]} active subscription(s)</p>' if stripe_info and stripe_info.get("subscriptions_cancelled", 0) > 0 else ''}
+                    </div>
+                    
+                    {f'''<div class="data-summary">
+                        <h3>📊 Data Removed</h3>
+                        <ul>
+                            <li><strong>Events Created:</strong> {deleted_items.get("events", 0)}</li>
+                            <li><strong>Event Interests:</strong> {deleted_items.get("interests", 0)}</li>
+                            <li><strong>Event Views:</strong> {deleted_items.get("views", 0)}</li>
+                            <li><strong>Page Visits:</strong> {deleted_items.get("page_visits", 0)}</li>
+                        </ul>
+                    </div>''' if deleted_items else ''}
+                    
+                    <div class="recovery-info">
+                        <h3>🔄 Account Recovery</h3>
+                        <p>You have <strong>30 days</strong> to recover your account if you change your mind:</p>
+                        <ul>
+                            <li>Recovery is possible until {final_deletion_text}</li>
+                            <li>Your account data is securely stored during this period</li>
+                            <li>Contact support to recover your account</li>
+                            <li>After 30 days, deletion becomes permanent</li>
+                        </ul>
+                        <a href="mailto:support@todo-events.com?subject=Account Recovery Request" class="recovery-button">Request Account Recovery</a>
+                    </div>
+                    
+                    <h3>What happens next?</h3>
+                    <ul>
+                        <li>Your account is now marked for deletion</li>
+                        <li>All subscriptions and billing have been cancelled</li>
+                        <li>Your data is securely stored for 30 days</li>
+                        <li>You can create a new account anytime with the same email</li>
+                        <li>After 30 days, all data will be permanently deleted</li>
+                    </ul>
+                    
+                    <p><strong>Need to recover your account?</strong> Contact our support team within 30 days at <a href="mailto:support@todo-events.com">support@todo-events.com</a> with the subject "Account Recovery Request".</p>
+                    
+                    <p>Thank you for using TodoEvents. We're sorry to see you go, but you're always welcome to create a new account in the future!</p>
+                    
+                    <p>Best regards,<br>The TodoEvents Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 TodoEvents. Your data deletion request was completed on {deletion_text}.</p>
+                    <p>This confirmation was sent to {to_email}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        TodoEvents - Account Deletion Completed
+        
+        Account Deletion Completed{f', {user_name}' if user_name else ''}
+        
+        We've processed your account deletion request. Your TodoEvents account and all associated data have been removed as requested.
+        
+        Deletion Summary:
+        - Deletion Date: {deletion_text}
+        - Final Deletion: {final_deletion_text}
+        - Recovery Period: 30 days (until final deletion)
+        {f'- Subscriptions Cancelled: {stripe_info["subscriptions_cancelled"]} active subscription(s)' if stripe_info and stripe_info.get("subscriptions_cancelled", 0) > 0 else ''}
+        
+        {f'''Data Removed:
+        - Events Created: {deleted_items.get("events", 0)}
+        - Event Interests: {deleted_items.get("interests", 0)}
+        - Event Views: {deleted_items.get("views", 0)}
+        - Page Visits: {deleted_items.get("page_visits", 0)}''' if deleted_items else ''}
+        
+        Account Recovery:
+        You have 30 days to recover your account if you change your mind:
+        - Recovery is possible until {final_deletion_text}
+        - Your account data is securely stored during this period
+        - Contact support to recover your account
+        - After 30 days, deletion becomes permanent
+        
+        What happens next?
+        - Your account is now marked for deletion
+        - All subscriptions and billing have been cancelled
+        - Your data is securely stored for 30 days
+        - You can create a new account anytime with the same email
+        - After 30 days, all data will be permanently deleted
+        
+        Need to recover your account? Contact our support team within 30 days at support@todo-events.com with the subject "Account Recovery Request".
+        
+        Thank you for using TodoEvents. We're sorry to see you go, but you're always welcome to create a new account in the future!
+        
+        Best regards,
+        The TodoEvents Team
+        
+        This confirmation was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+
+    def send_account_recovery_email(self, to_email: str, user_name: Optional[str] = None) -> bool:
+        """Send account recovery confirmation email"""
+        
+        subject = "Account Recovery Successful - TodoEvents"
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Account Recovery - TodoEvents</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #28a745, #20c997); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .recovery-notice {{ background: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .what-next {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 TodoEvents</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Account Recovery</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Welcome Back{f', {user_name}' if user_name else ''}! 🎉</h2>
+                    
+                    <p>Great news! Your account deletion has been successfully cancelled and your TodoEvents account has been fully restored.</p>
+                    
+                    <div class="recovery-notice">
+                        <h3>✅ Recovery Complete</h3>
+                        <p><strong>Status:</strong> Account fully restored</p>
+                        <p><strong>Access:</strong> You can now log in and use all features</p>
+                        <p><strong>Data:</strong> All your events and data are preserved</p>
+                    </div>
+                    
+                    <div class="what-next">
+                        <h3>What's restored?</h3>
+                        <ul>
+                            <li>✅ Your account is now active</li>
+                            <li>✅ All your events are preserved</li>
+                            <li>✅ Your preferences and settings remain intact</li>
+                            <li>✅ You can create and manage events as before</li>
+                            <li>✅ Access to all TodoEvents features</li>
+                        </ul>
+                    </div>
+                    
+                    <a href="https://todo-events.com/dashboard" class="button">Go to Your Dashboard</a>
+                    
+                    <h3>Next Steps:</h3>
+                    <ul>
+                        <li>Log in to your account using your existing credentials</li>
+                        <li>Review your events and settings</li>
+                        <li>Resume creating and managing events</li>
+                        <li>Contact support if you need any assistance</li>
+                    </ul>
+                    
+                    <p><strong>Need help getting started again?</strong> Our support team is here to help! Contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
+                    
+                    <p>We're glad to have you back!</p>
+                    
+                    <p>Best regards,<br>The TodoEvents Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 TodoEvents. Welcome back to premium event hosting.</p>
+                    <p>This confirmation was sent to {to_email}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        TodoEvents - Account Recovery Successful
+        
+        Welcome Back{f', {user_name}' if user_name else ''}!
+        
+        Great news! Your account deletion has been successfully cancelled and your TodoEvents account has been fully restored.
+        
+        Recovery Complete:
+        - Status: Account fully restored
+        - Access: You can now log in and use all features  
+        - Data: All your events and data are preserved
+        
+        What's restored?
+        - Your account is now active
+        - All your events are preserved
+        - Your preferences and settings remain intact
+        - You can create and manage events as before
+        - Access to all TodoEvents features
+        
+        Next Steps:
+        - Log in to your account using your existing credentials
+        - Review your events and settings
+        - Resume creating and managing events
+        - Contact support if you need any assistance
+        
+        Dashboard: https://todo-events.com/dashboard
+        
+        Need help getting started again? Contact us at support@todo-events.com
+        
+        We're glad to have you back!
+        
+        Best regards,
+        The TodoEvents Team
+        
+        This confirmation was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
+
 # Create global email service instance
 email_service = EmailService() 

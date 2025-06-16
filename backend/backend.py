@@ -9475,6 +9475,225 @@ async def get_premium_trial_status(current_user: dict = Depends(get_current_user
         logger.error(f"Error getting trial status: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get trial status")
 
+# User account management endpoints
+@app.post("/user/delete-account")
+async def delete_user_account(current_user: dict = Depends(get_current_user)):
+    """
+    Allow users to delete their own account and all associated data
+    This will:
+    1. Cancel any active Stripe subscriptions
+    2. Delete all user data (events, interests, views, etc.)
+    3. Mark the account for deletion (30-day retention period)
+    4. Send confirmation email
+    """
+    try:
+        user_id = current_user['id']
+        user_email = current_user['email']
+        
+        # Step 1: Cancel Stripe subscriptions if any exist
+        stripe_cancellation_info = None
+        try:
+            customers = stripe.Customer.list(email=user_email, limit=1)
+            if customers.data:
+                customer = customers.data[0]
+                
+                # Get all active subscriptions
+                subscriptions = stripe.Subscription.list(
+                    customer=customer.id,
+                    status='active',
+                    limit=10
+                )
+                
+                # Cancel all active subscriptions immediately
+                for subscription in subscriptions.data:
+                    canceled_sub = stripe.Subscription.modify(
+                        subscription.id,
+                        cancel_at_period_end=False  # Cancel immediately
+                    )
+                    logger.info(f"✅ Cancelled Stripe subscription {subscription.id} for account deletion")
+                
+                stripe_cancellation_info = {
+                    "subscriptions_cancelled": len(subscriptions.data),
+                    "customer_id": customer.id
+                }
+        except stripe.error.StripeError as e:
+            logger.warning(f"Stripe cancellation failed during account deletion: {str(e)}")
+            # Continue with deletion even if Stripe fails
+        
+        # Step 2: Mark account for deletion and collect data to be deleted
+        placeholder = get_placeholder()
+        deletion_date = datetime.utcnow()
+        deletion_scheduled = deletion_date + timedelta(days=30)
+        
+        deleted_items = {}
+        
+        with get_db_transaction() as conn:
+            cursor = conn.cursor()
+            
+            # Count items before deletion for confirmation
+            cursor.execute(f"SELECT COUNT(*) as count FROM events WHERE created_by = {placeholder}", (user_id,))
+            deleted_items["events"] = cursor.fetchone()['count']
+            
+            cursor.execute(f"SELECT COUNT(*) as count FROM event_interests WHERE user_id = {placeholder}", (user_id,))
+            deleted_items["interests"] = cursor.fetchone()['count']
+            
+            cursor.execute(f"SELECT COUNT(*) as count FROM event_views WHERE user_id = {placeholder}", (user_id,))
+            deleted_items["views"] = cursor.fetchone()['count']
+            
+            cursor.execute(f"SELECT COUNT(*) as count FROM page_visits WHERE user_id = {placeholder}", (user_id,))
+            deleted_items["page_visits"] = cursor.fetchone()['count']
+            
+            # Delete user's event-related data
+            cursor.execute(f"DELETE FROM event_interests WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
+            cursor.execute(f"DELETE FROM event_views WHERE event_id IN (SELECT id FROM events WHERE created_by = {placeholder})", (user_id,))
+            cursor.execute(f"DELETE FROM events WHERE created_by = {placeholder}", (user_id,))
+            
+            # Delete user's interaction data
+            cursor.execute(f"DELETE FROM event_interests WHERE user_id = {placeholder}", (user_id,))
+            cursor.execute(f"DELETE FROM event_views WHERE user_id = {placeholder}", (user_id,))
+            cursor.execute(f"DELETE FROM page_visits WHERE user_id = {placeholder}", (user_id,))
+            
+            # Delete any event reports made by this user
+            cursor.execute(f"DELETE FROM event_reports WHERE reporter_email = {placeholder}", (user_email,))
+            
+            # Update user account to mark for deletion (instead of immediate deletion)
+            # This allows for account recovery within 30 days
+            cursor.execute(f"""
+                UPDATE users 
+                SET 
+                    deleted_at = {placeholder},
+                    deletion_scheduled_at = {placeholder},
+                    role = 'deleted',
+                    premium_expires_at = NULL,
+                    premium_granted_by = NULL,
+                    premium_invited = FALSE
+                WHERE id = {placeholder}
+            """, (deletion_date.isoformat(), deletion_scheduled.isoformat(), user_id))
+            
+            conn.commit()
+        
+        # Step 3: Log the deletion activity
+        log_activity(user_id, "account_deletion_request", f"User requested account deletion")
+        
+        # Step 4: Send account deletion confirmation email
+        try:
+            from email_config import email_service
+            user_name = user_email.split('@')[0]
+            email_sent = email_service.send_account_deletion_email(
+                to_email=user_email,
+                user_name=user_name,
+                deletion_date=deletion_date.isoformat(),
+                final_deletion_date=deletion_scheduled.isoformat(),
+                deleted_items=deleted_items,
+                stripe_info=stripe_cancellation_info
+            )
+            
+            if email_sent:
+                logger.info(f"✅ Account deletion confirmation email sent to {user_email}")
+            else:
+                logger.error(f"❌ Failed to send account deletion confirmation email to {user_email}")
+        except Exception as e:
+            logger.error(f"❌ Error sending account deletion email: {str(e)}")
+        
+        # Clear any cached data for this user
+        try:
+            event_cache.clear()  # Clear all cache since user events are deleted
+        except:
+            pass
+        
+        logger.info(f"✅ Account deletion completed for user {user_id} ({user_email})")
+        
+        return {
+            "success": True,
+            "message": "Account deletion completed successfully",
+            "deletion_date": deletion_date.isoformat(),
+            "final_deletion_date": deletion_scheduled.isoformat(),
+            "deleted_items": deleted_items,
+            "stripe_cancellations": stripe_cancellation_info,
+            "recovery_period_days": 30
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user account {current_user['id']}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete account")
+
+@app.post("/user/cancel-account-deletion")
+async def cancel_account_deletion(current_user: dict = Depends(get_current_user)):
+    """
+    Allow users to cancel their account deletion within the 30-day period
+    """
+    try:
+        user_id = current_user['id']
+        user_email = current_user['email']
+        
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if account is marked for deletion
+            cursor.execute(f"""
+                SELECT deleted_at, deletion_scheduled_at, role 
+                FROM users 
+                WHERE id = {placeholder}
+            """, (user_id,))
+            
+            user_data = cursor.fetchone()
+            
+            if not user_data or user_data['role'] != 'deleted':
+                raise HTTPException(status_code=400, detail="Account is not scheduled for deletion")
+            
+            # Check if we're still within the recovery period
+            if user_data['deletion_scheduled_at']:
+                scheduled_deletion = datetime.fromisoformat(user_data['deletion_scheduled_at'].replace('Z', '+00:00'))
+                if datetime.utcnow() >= scheduled_deletion:
+                    raise HTTPException(status_code=400, detail="Recovery period has expired")
+            
+            # Restore the account
+            cursor.execute(f"""
+                UPDATE users 
+                SET 
+                    deleted_at = NULL,
+                    deletion_scheduled_at = NULL,
+                    role = 'user'
+                WHERE id = {placeholder}
+            """, (user_id,))
+            
+            conn.commit()
+        
+        # Log the recovery
+        log_activity(user_id, "account_deletion_cancelled", f"User cancelled account deletion")
+        
+        # Send recovery confirmation email
+        try:
+            from email_config import email_service
+            user_name = user_email.split('@')[0]
+            email_sent = email_service.send_account_recovery_email(
+                to_email=user_email,
+                user_name=user_name
+            )
+            
+            if email_sent:
+                logger.info(f"✅ Account recovery confirmation email sent to {user_email}")
+        except Exception as e:
+            logger.error(f"❌ Error sending account recovery email: {str(e)}")
+        
+        logger.info(f"✅ Account deletion cancelled for user {user_id} ({user_email})")
+        
+        return {
+            "success": True,
+            "message": "Account deletion cancelled successfully",
+            "restored_at": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling account deletion for user {current_user['id']}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to cancel account deletion")
+
 @app.get("/stripe/config")
 async def get_stripe_config():
     """Get Stripe publishable key for frontend"""
@@ -16181,11 +16400,13 @@ async def create_premium_columns():
         with get_db() as conn:
             cursor = conn.cursor()
             
-            # Add premium columns to users table
+            # Add premium and deletion columns to users table
             columns_to_add = [
                 ("premium_expires_at", "TIMESTAMP"),
                 ("premium_granted_by", "INTEGER"),
-                ("premium_invited", "BOOLEAN DEFAULT FALSE")
+                ("premium_invited", "BOOLEAN DEFAULT FALSE"),
+                ("deleted_at", "TIMESTAMP"),
+                ("deletion_scheduled_at", "TIMESTAMP")
             ]
             
             results = []
@@ -16217,20 +16438,20 @@ async def create_premium_columns():
                     SELECT column_name 
                     FROM information_schema.columns 
                     WHERE table_name = 'users' 
-                    AND column_name IN ('premium_expires_at', 'premium_granted_by', 'premium_invited')
+                    AND column_name IN ('premium_expires_at', 'premium_granted_by', 'premium_invited', 'deleted_at', 'deletion_scheduled_at')
                 """)
                 created_columns = [row['column_name'] if hasattr(row, 'keys') else row[0] for row in cursor.fetchall()]
             else:
                 cursor.execute('PRAGMA table_info(users)')
                 columns_info = cursor.fetchall()
-                created_columns = [col[1] for col in columns_info if col[1] in ['premium_expires_at', 'premium_granted_by', 'premium_invited']]
+                created_columns = [col[1] for col in columns_info if col[1] in ['premium_expires_at', 'premium_granted_by', 'premium_invited', 'deleted_at', 'deletion_scheduled_at']]
             
             return {
                 "success": True,
-                "message": "Premium columns creation completed",
+                "message": "Premium and deletion columns creation completed",
                 "results": results,
                 "created_columns": created_columns,
-                "all_columns_present": len(created_columns) == 3
+                "all_columns_present": len(created_columns) == 5
             }
             
     except Exception as e:
@@ -16240,6 +16461,66 @@ async def create_premium_columns():
             "error": str(e),
             "message": "Failed to create premium columns"
         }
+
+@app.post("/debug/add-deletion-columns")
+async def add_deletion_columns():
+    """Add deletion tracking columns to users table"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Add deleted_at column if it doesn't exist
+            try:
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL
+                    cursor.execute("""
+                        ALTER TABLE users 
+                        ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP
+                    """)
+                else:
+                    # SQLite
+                    cursor.execute("""
+                        ALTER TABLE users 
+                        ADD COLUMN deleted_at TEXT
+                    """)
+                logger.info("✅ Added deleted_at column to users table")
+            except Exception as e:
+                if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+                    logger.info("ℹ️ deleted_at column already exists")
+                else:
+                    logger.error(f"Error adding deleted_at column: {e}")
+            
+            # Add deletion_scheduled_at column if it doesn't exist
+            try:
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL
+                    cursor.execute("""
+                        ALTER TABLE users 
+                        ADD COLUMN IF NOT EXISTS deletion_scheduled_at TIMESTAMP
+                    """)
+                else:
+                    # SQLite
+                    cursor.execute("""
+                        ALTER TABLE users 
+                        ADD COLUMN deletion_scheduled_at TEXT
+                    """)
+                logger.info("✅ Added deletion_scheduled_at column to users table")
+            except Exception as e:
+                if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+                    logger.info("ℹ️ deletion_scheduled_at column already exists")
+                else:
+                    logger.error(f"Error adding deletion_scheduled_at column: {e}")
+            
+            conn.commit()
+            
+            return {
+                "success": True,
+                "message": "Deletion columns added/verified successfully"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error adding deletion columns: {str(e)}")
+        return {"error": str(e)}
 
 @app.get("/debug/privacy-requests-table")
 async def debug_privacy_requests_table():

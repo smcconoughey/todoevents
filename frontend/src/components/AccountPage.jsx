@@ -38,6 +38,9 @@ const AccountPage = () => {
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [premiumStatus, setPremiumStatus] = useState(null);
   const [loadingPremiumStatus, setLoadingPremiumStatus] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -163,6 +166,46 @@ const AccountPage = () => {
   const handleEditEvent = (event) => {
     // Navigate to edit mode - you'll need to implement this in your EventMap component
     navigate(`/?edit=${event.id}`);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      alert('Please type "DELETE" to confirm account deletion');
+      return;
+    }
+
+    setDeleteAccountLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/user/delete-account`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: Failed to delete account`);
+      }
+
+      const result = await response.json();
+      
+      // Show success message
+      alert(`Account deletion completed successfully. You will receive a confirmation email with recovery instructions. Final deletion will occur on ${new Date(result.final_deletion_date).toLocaleDateString()}.`);
+      
+      // Log the user out
+      logout();
+      navigate('/');
+      
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert(`Failed to delete account: ${error.message}`);
+    } finally {
+      setDeleteAccountLoading(false);
+      setShowDeleteAccountModal(false);
+      setDeleteConfirmText('');
+    }
   };
 
   const handleUpgradeToPremium = async (pricingTier = 'monthly') => {
@@ -815,6 +858,30 @@ const AccountPage = () => {
               </div>
             )}
 
+            {/* Account Deletion Section */}
+            <div className="bg-themed-surface p-6 rounded-lg border border-red-200 dark:border-red-800 mb-6">
+              <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Danger Zone
+              </h3>
+              <div className="text-themed-secondary text-sm mb-4">
+                <p className="mb-2">
+                  You may close your account at any time from the account dashboard or by contacting support. Upon termination your data will be deleted within 30 days, except where retention is required by law.
+                </p>
+                <p>
+                  <strong>Warning:</strong> This action will permanently delete your account and all associated data including events, analytics, and preferences. You will have 30 days to recover your account before final deletion.
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowDeleteAccountModal(true)}
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete My Account
+              </Button>
+            </div>
+
             {/* User Profile Section */}
           </div>
         </div>
@@ -864,6 +931,88 @@ const AccountPage = () => {
                     <p className="text-sm">Visit the Analytics tab for comprehensive dashboard</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 bg-themed-overlay flex items-center justify-center p-4 z-50">
+          <div className="bg-themed-surface rounded-lg border border-themed max-w-md w-full">
+            <div className="p-6 border-b border-themed">
+              <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Delete Account
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="mb-6">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-red-700 dark:text-red-300">
+                      <p className="font-semibold mb-2">This action cannot be undone!</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>All your events will be permanently deleted</li>
+                        <li>Your subscription will be cancelled immediately</li>
+                        <li>All analytics and data will be removed</li>
+                        <li>You have 30 days to recover your account</li>
+                        <li>After 30 days, deletion becomes permanent</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-themed-secondary text-sm mb-4">
+                  You will receive a confirmation email with recovery instructions. To continue creating events, you can sign up for a new account using the same email address.
+                </p>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-themed-primary mb-2">
+                    Type "DELETE" to confirm:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    className="w-full px-3 py-2 border border-themed-tertiary rounded-lg bg-themed-background text-themed-primary placeholder-themed-secondary focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Type DELETE"
+                    disabled={deleteAccountLoading}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    setShowDeleteAccountModal(false);
+                    setDeleteConfirmText('');
+                  }}
+                  variant="ghost"
+                  disabled={deleteAccountLoading}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteAccountLoading || deleteConfirmText !== 'DELETE'}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {deleteAccountLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Deleting...
+                    </div>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Account
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
