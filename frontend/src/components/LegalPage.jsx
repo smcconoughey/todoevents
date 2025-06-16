@@ -30,8 +30,8 @@ const LegalPage = () => {
             <AlertCircle className="w-6 h-6 text-yellow-500 mt-1 flex-shrink-0" />
             <div>
               <p className="text-themed-primary leading-relaxed">
-                Welcome to Todo-Events ("we", "our", or "us"), a service operated by <strong>Watchtower AB, Inc</strong>. 
-                By accessing or using our website at <strong>https://todo-events.com</strong> or any services offered through it, 
+                Welcome to Todo-Events ("we", "our", or "us"), a service operated by <strong>Watchtower AB, Inc</strong>.
+                By accessing or using our website at <strong>https://todo-events.com</strong> or any services offered through it,
                 you agree to the terms outlined in this Legal Notice. This page includes our policies on licensing, privacy, and content ownership.
               </p>
               <p className="text-themed-primary leading-relaxed mt-4 font-medium">
@@ -40,6 +40,121 @@ const LegalPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Early Access Platform Notice */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Early Access Platform Notice</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <p className="text-themed-primary leading-relaxed">
+              Todo-Events is currently in active development and provided as an early access service. Features may be incomplete,
+              experimental, or subject to change without notice. We may modify or remove functionality at any time.
+            </p>
+            <ul className="space-y-2 text-themed-primary">
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                No guarantee of ongoing availability or feature stability
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Risk of data loss or service interruptions during this period
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                We reserve the right to discontinue features without notice
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* Account Terms */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Account Terms</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <ul className="space-y-2 text-themed-primary">
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Accounts require a valid email address and accurate information
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                We may suspend or terminate accounts for violations, abuse, or non-payment
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Account data may be retained for up to 30 days after closure for legal or compliance purposes
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Accounts are non-transferable
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* Subscription & Billing Terms */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Subscription & Billing Terms</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <p className="text-themed-primary leading-relaxed">
+              We may offer trials at our discretion. Trials do not automatically convert to paid subscriptions and may be terminated at any time.
+            </p>
+            <ul className="space-y-2 text-themed-primary">
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Subscriptions renew automatically on a monthly or annual basis until cancelled
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Cancel anytime from your account dashboard; cancellations take effect at the end of the current billing period
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Pro‑rated refunds are provided for unused portions of annual plans
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                We may change prices with advance notice; current subscriptions remain at their existing rate for that term
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Applicable sales tax will be added where required by law
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Failed or overdue payments may result in suspension or termination of your account
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* Acceptable Use Policy */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Acceptable Use Policy</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <ul className="space-y-2 text-themed-primary">
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Do not post illegal events, harmful content, or spam
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Automated scraping or excessive API usage is prohibited
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                No harassment, impersonation, or malicious activity toward other users
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Events must contain accurate information and appropriate content
+              </li>
+            </ul>
+          </div>
+        </section>
 
         {/* Commercial Use & Licensing */}
         <section className="space-y-4">
@@ -99,7 +214,10 @@ const LegalPage = () => {
           
           <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-4">
             <p className="text-themed-primary leading-relaxed">
-              We collect only the data necessary to operate, improve, and support the services we provide.
+              We collect only the data necessary to operate, improve, and support the services we provide. Data may be processed for service delivery, analytics, and billing purposes.
+            </p>
+            <p className="text-themed-primary leading-relaxed">
+              We retain event and account information while your account is active and for up to 30 days after closure, unless a longer period is required by law. Data may be processed on servers located in the United States and other jurisdictions.
             </p>
             
             <div>
@@ -329,6 +447,77 @@ const LegalPage = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Service Availability & Limitations */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Service Availability & Limitations</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <ul className="space-y-2 text-themed-primary">
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Service is provided on an "as-is" basis during early access with no uptime guarantees
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                Some advertised features may not be fully implemented or may change
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                You are responsible for backing up important event data
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* Limitation of Liability */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Limitation of Liability</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <p className="text-themed-primary leading-relaxed">
+              To the maximum extent permitted by law, our liability is limited to the subscription fees you paid in the twelve months preceding the claim.
+            </p>
+            <ul className="space-y-2 text-themed-primary">
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                We are not liable for data loss, missed events, or business interruption
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-spark-yellow mt-1">•</span>
+                We are not responsible for failures caused by circumstances beyond our control or by third‑party services
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/* Termination */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Termination</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <p className="text-themed-primary leading-relaxed">
+              You may close your account at any time from the account dashboard or by contacting support. Upon termination your data will be deleted within 30 days, except where retention is required by law.
+            </p>
+            <p className="text-themed-primary leading-relaxed">
+              Provisions relating to content ownership, limitation of liability, and dispute resolution survive account termination.
+            </p>
+          </div>
+        </section>
+
+        {/* Dispute Resolution */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-themed-primary">Dispute Resolution</h2>
+
+          <div className="bg-themed-surface border border-themed rounded-lg p-6 space-y-3">
+            <p className="text-themed-primary leading-relaxed">
+              Any disputes will be resolved through binding arbitration in California under the laws of the State of California.
+            </p>
+            <p className="text-themed-primary leading-relaxed">
+              Legal notices may be sent to Watchtower AB, Inc at the address provided below.
+            </p>
           </div>
         </section>
 
