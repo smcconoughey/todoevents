@@ -338,16 +338,36 @@ const LegalPage = () => {
               </ul>
             </div>
             
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <p className="text-themed-primary">
-                <strong>We do not sell personal data to third parties.</strong> All data is stored securely and handled 
-                in compliance with applicable laws.
+                <strong>Data Sharing & Third Parties:</strong> We currently do not sell personal data to third parties. 
+                However, we reserve the right to share or monetize aggregated, anonymized data and may update our data 
+                practices in the future. Users will be notified of any material changes to our data sharing policies.
+              </p>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-themed-primary mb-2">Future Data Monetization</h3>
+              <p className="text-themed-primary text-sm leading-relaxed">
+                We may develop partnerships with research institutions, analytics companies, or marketing platforms 
+                that could involve data sharing or monetization. This may include:
+              </p>
+              <ul className="mt-2 space-y-1 text-themed-primary text-sm">
+                <li>• Aggregated usage statistics and trends (anonymized)</li>
+                <li>• Event popularity and demographic insights (non-personally identifiable)</li>
+                <li>• Location-based analytics for urban planning or commercial purposes</li>
+                <li>• Marketing partnerships with event organizers or venue operators</li>
+              </ul>
+              <p className="text-themed-primary text-sm leading-relaxed mt-2">
+                Any such arrangements will comply with applicable privacy laws and users will be notified 
+                with at least 30 days advance notice before implementation.
               </p>
             </div>
             
             <p className="text-themed-primary leading-relaxed">
               If you submit personally identifiable information or data through the platform, you consent to its 
-              collection and use for the intended purpose of delivering the service.
+              collection and use for the intended purpose of delivering the service and any future data practices 
+              as outlined in this policy.
             </p>
           </div>
         </section>
@@ -449,8 +469,9 @@ const LegalPage = () => {
                   <li className="flex items-start gap-2">
                     <span className="text-spark-yellow mt-1">•</span>
                     <div>
-                      <strong>Right to Opt-Out:</strong> Todo-Events does not sell personal data. However, you may contact us 
-                      at support@todo-events.com to restrict data sharing with service providers.
+                      <strong>Right to Opt-Out:</strong> Todo-Events currently does not sell personal data, but reserves the 
+                      right to do so in the future. You may contact us at support@todo-events.com to opt-out of data sales 
+                      or restrict data sharing with third parties.
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
