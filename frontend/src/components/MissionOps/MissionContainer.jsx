@@ -25,6 +25,20 @@ const MissionContainer = ({
   const [isDragStarted, setIsDragStarted] = useState(false);
   const dragRef = useRef(null);
 
+  // Helper function to safely parse tags
+  const parseTags = (tagsString) => {
+    if (!tagsString || tagsString.trim() === '') return [];
+    
+    try {
+      // Try to parse as JSON first
+      const parsed = JSON.parse(tagsString);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      // If JSON parsing fails, treat as comma-separated plain text
+      return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    }
+  };
+
   const getPriorityColor = (priority) => {
     const baseColors = {
       critical: theme === 'light' ? 'border-red-500 bg-red-50' : 'border-red-500 bg-red-500/10',
@@ -237,7 +251,7 @@ const MissionContainer = ({
         {mission.tags && (
           <div className="absolute bottom-2 left-2 right-2">
             <div className="flex flex-wrap gap-1">
-              {JSON.parse(mission.tags || '[]').slice(0, 3).map((tag, i) => (
+              {parseTags(mission.tags).slice(0, 3).map((tag, i) => (
                 <span
                   key={i}
                   className="px-2 py-1 bg-neutral-800/60 border border-neutral-700/50 rounded text-xs text-neutral-300"

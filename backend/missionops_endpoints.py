@@ -45,6 +45,23 @@ def convert_datetime_to_string(obj):
     else:
         return obj
 
+def normalize_tags(tags_input):
+    """Normalize tags input to JSON array format"""
+    if not tags_input or tags_input.strip() == '':
+        return '[]'
+    
+    try:
+        # Try to parse as JSON first
+        parsed = json.loads(tags_input)
+        if isinstance(parsed, list):
+            return json.dumps(parsed)
+        else:
+            return json.dumps([parsed])
+    except (json.JSONDecodeError, TypeError):
+        # If JSON parsing fails, treat as comma-separated plain text
+        tags_list = [tag.strip() for tag in tags_input.split(',') if tag.strip()]
+        return json.dumps(tags_list)
+
 # MISSION ENDPOINTS
 
 @missionops_router.get("/missions", response_model=List[MissionResponse])
@@ -132,6 +149,9 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
         start_date = mission.start_date if mission.start_date and mission.start_date.strip() else None
         end_date = mission.end_date if mission.end_date and mission.end_date.strip() else None
         
+        # Normalize tags to JSON format
+        normalized_tags = normalize_tags(mission.tags)
+        
         with get_db() as conn:
             c = conn.cursor()
             
@@ -143,7 +163,7 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                     RETURNING id
                 ''', (mission.title, mission.description, start_date, end_date, 
-                      mission.priority, mission.status, mission.tags, mission.grid_x, mission.grid_y, current_user["id"]))
+                      mission.priority, mission.status, normalized_tags, mission.grid_x, mission.grid_y, current_user["id"]))
                 mission_id = c.fetchone()['id']
             else:
                 c.execute(f'''
@@ -151,7 +171,7 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
                     (title, description, start_date, end_date, priority, status, tags, grid_x, grid_y, owner_id)
                     VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                 ''', (mission.title, mission.description, start_date, end_date, 
-                      mission.priority, mission.status, mission.tags, mission.grid_x, mission.grid_y, current_user["id"]))
+                      mission.priority, mission.status, normalized_tags, mission.grid_x, mission.grid_y, current_user["id"]))
                 mission_id = c.lastrowid
             
             conn.commit()
@@ -254,6 +274,9 @@ async def update_mission(mission_id: int, mission: MissionUpdate, current_user: 
                     # Convert empty strings to None for date fields
                     if field in ['start_date', 'end_date'] and isinstance(value, str) and not value.strip():
                         value = None
+                    # Normalize tags to JSON format
+                    elif field == 'tags':
+                        value = normalize_tags(value)
                     update_fields.append(f"{field} = {placeholder}")
                     update_values.append(value)
             
