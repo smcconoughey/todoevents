@@ -303,37 +303,46 @@ const MissionOpsGrid = () => {
           >
             {/* Timeline line */}
             <div 
-              className={`w-full h-px ${
+              className={`w-full ${
                 marker.isNow 
-                  ? 'bg-yellow-400 shadow-yellow-400/50 shadow-sm' 
+                  ? 'h-0.5 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 shadow-lg shadow-yellow-400/50' 
                   : marker.isMonth
-                  ? 'bg-pin-blue/40'
+                  ? 'h-px bg-pin-blue/60 shadow-sm shadow-pin-blue/30'
                   : marker.isWeek
-                  ? theme === 'light' ? 'bg-neutral-400/60' : 'bg-neutral-600/60'
-                  : theme === 'light' ? 'bg-neutral-300/40' : 'bg-neutral-700/40'
+                  ? theme === 'light' ? 'h-px bg-neutral-400/40' : 'h-px bg-neutral-600/40'
+                  : theme === 'light' ? 'h-px bg-neutral-300/30' : 'h-px bg-neutral-700/30'
               }`}
             />
             
             {/* Time label */}
             {marker.label && (
               <div 
-                className={`absolute left-4 px-2 py-1 rounded text-xs whitespace-nowrap ${
+                className={`absolute left-4 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${
                   marker.isNow 
-                    ? 'bg-yellow-400 text-black font-bold'
+                    ? 'bg-yellow-400 text-black font-bold shadow-lg shadow-yellow-400/25 border border-yellow-300'
                     : marker.isPast
-                    ? theme === 'light' ? 'bg-neutral-200 text-neutral-600' : 'bg-neutral-800 text-neutral-400'
-                    : theme === 'light' ? 'bg-neutral-100 text-neutral-700' : 'bg-neutral-700 text-neutral-300'
+                    ? theme === 'light' ? 'bg-neutral-200/90 text-neutral-600 border border-neutral-300/50' : 'bg-neutral-800/90 text-neutral-400 border border-neutral-700/50'
+                    : theme === 'light' ? 'bg-white/90 text-neutral-700 border border-neutral-200/50 shadow-sm' : 'bg-neutral-700/90 text-neutral-300 border border-neutral-600/50 shadow-sm'
                 }`}
                 style={{ 
-                  opacity: marker.isPast ? 0.6 : 1,
-                  transform: 'translateY(-50%)'
+                  opacity: marker.isPast ? 0.7 : 1,
+                  transform: 'translateY(-50%)',
+                  backdropFilter: 'blur(8px)'
                 }}
               >
                 {marker.label}
                 {marker.isNow && (
-                  <div className="absolute -right-1 top-1/2 w-2 h-2 bg-yellow-400 rotate-45 transform -translate-y-1/2" />
+                  <>
+                    <div className="absolute -right-1 top-1/2 w-2 h-2 bg-yellow-400 rotate-45 transform -translate-y-1/2 border-r border-b border-yellow-300" />
+                    <div className="absolute -left-1 top-1/2 w-2 h-2 bg-yellow-400 rotate-45 transform -translate-y-1/2 border-l border-t border-yellow-300" />
+                  </>
                 )}
               </div>
+            )}
+            
+            {/* NOW line pulse effect */}
+            {marker.isNow && (
+              <div className="absolute left-0 right-0 h-0.5 bg-yellow-400/30 animate-pulse" />
             )}
           </div>
         ))}
