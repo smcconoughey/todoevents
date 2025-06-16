@@ -53,8 +53,10 @@ const MissionOpsGrid = () => {
     const rect = gridRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
 
-    const x = (screenX - rect.left - rect.width / 2) / zoom + viewportCenter.x;
-    const y = (screenY - rect.top - rect.height / 2) / zoom + viewportCenter.y;
+    // Convert screen coordinates to grid coordinates
+    // Account for the grid transform: translate(viewportCenter.x, viewportCenter.y) scale(zoom)
+    const x = (screenX - rect.left - viewportCenter.x) / zoom;
+    const y = (screenY - rect.top - viewportCenter.y) / zoom;
 
     return { x, y };
   }, [viewportCenter, zoom]);
@@ -282,7 +284,7 @@ const MissionOpsGrid = () => {
         onPointerDown={handlePointerDown}
         style={{
           transform: `translate(${viewportCenter.x}px, ${viewportCenter.y}px) scale(${zoom})`,
-          transformOrigin: '50% 50%'
+          transformOrigin: '0 0'
         }}
       >
         {/* Grid Pattern */}
