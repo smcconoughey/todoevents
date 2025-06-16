@@ -118,12 +118,28 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
                     # Count tasks
                     c.execute(f"SELECT COUNT(*) FROM missionops_tasks WHERE mission_id = {placeholder}", (mission_dict['id'],))
                     tasks_result = c.fetchone()
-                    tasks_count = tasks_result[0] if tasks_result else 0
+                    if tasks_result:
+                        if hasattr(tasks_result, 'keys'):
+                            # Dict-like object (RealDictRow)
+                            tasks_count = list(tasks_result.values())[0]
+                        else:
+                            # Tuple-like object
+                            tasks_count = tasks_result[0]
+                    else:
+                        tasks_count = 0
                     
                     # Count risks
                     c.execute(f"SELECT COUNT(*) FROM missionops_risks WHERE mission_id = {placeholder}", (mission_dict['id'],))
                     risks_result = c.fetchone()
-                    risks_count = risks_result[0] if risks_result else 0
+                    if risks_result:
+                        if hasattr(risks_result, 'keys'):
+                            # Dict-like object (RealDictRow)
+                            risks_count = list(risks_result.values())[0]
+                        else:
+                            # Tuple-like object
+                            risks_count = risks_result[0]
+                    else:
+                        risks_count = 0
                     
                     # Get shared users
                     c.execute(f'''
