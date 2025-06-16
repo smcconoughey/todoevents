@@ -80,11 +80,32 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
         for i, mission in enumerate(missions):
             try:
                 logger.info(f"Processing mission {i+1}/{len(missions)}: {mission}")
-                mission_dict = dict_from_row(mission, [
-                    'id', 'title', 'description', 'start_date', 'end_date', 
-                    'priority', 'status', 'tags', 'grid_x', 'grid_y', 
-                    'owner_id', 'created_at', 'updated_at', 'access_level'
-                ])
+                
+                # Convert mission row to dictionary more reliably
+                if hasattr(mission, '_asdict'):
+                    # Named tuple
+                    mission_dict = mission._asdict()
+                elif hasattr(mission, 'keys'):
+                    # Dict-like object
+                    mission_dict = dict(mission)
+                else:
+                    # Fallback: assume it's a sequence and we know the column order
+                    mission_dict = {
+                        'id': mission[0],
+                        'title': mission[1], 
+                        'description': mission[2],
+                        'start_date': mission[3],
+                        'end_date': mission[4],
+                        'priority': mission[5],
+                        'status': mission[6],
+                        'tags': mission[7],
+                        'grid_x': mission[8],
+                        'grid_y': mission[9],
+                        'owner_id': mission[10],
+                        'created_at': mission[11],
+                        'updated_at': mission[12],
+                        'access_level': mission[13] if len(mission) > 13 else 'owner'
+                    }
                 
                 # Convert datetime objects to strings
                 mission_dict = convert_datetime_to_string(mission_dict)
@@ -127,6 +148,8 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
                 
             except Exception as mission_error:
                 logger.error(f"Error processing individual mission {i}: {str(mission_error)}")
+                import traceback
+                logger.error(f"Mission processing traceback: {traceback.format_exc()}")
                 continue  # Skip this mission but continue with others
         
         logger.info(f"Returning {len(result)} missions")
