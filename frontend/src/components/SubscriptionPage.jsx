@@ -524,6 +524,9 @@ const SubscriptionPage = () => {
                         : `Subscription will start after your trial ends on ${formatDate(subscriptionData.trial.expires_at)}`
                       }
                     </p>
+                    <p className="text-xs text-themed-secondary text-center mt-2">
+                      Sales tax included where applicable. Pricing guaranteed for the duration of your subscription.
+                    </p>
                   </div>
                                  )}
 

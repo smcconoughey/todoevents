@@ -542,6 +542,9 @@ const AccountPage = () => {
                         'Get Early Access'
                       )}
                     </Button>
+                    <p className="text-xs text-themed-secondary text-center mt-2">
+                      Sales tax included where applicable. Pricing guaranteed for the duration of your subscription.
+                    </p>
                   </div>
 
                   {/* Annual Premium */}
@@ -605,6 +608,9 @@ const AccountPage = () => {
                         'Get Early Access Annual'
                       )}
                     </Button>
+                    <p className="text-xs text-themed-secondary text-center mt-2">
+                      Sales tax included where applicable. Pricing guaranteed for the duration of your subscription.
+                    </p>
                   </div>
 
                   {/* Enterprise */}
@@ -684,6 +690,9 @@ const AccountPage = () => {
                         'Get Enterprise Early Access'
                       )}
                     </Button>
+                    <p className="text-xs text-themed-secondary text-center mt-2">
+                      Sales tax included where applicable. Pricing guaranteed for the duration of your subscription.
+                    </p>
                   </div>
                 </div>
 
@@ -699,7 +708,7 @@ const AccountPage = () => {
                         <strong className="text-themed-primary">Support Development:</strong> Your early access subscription helps us build the advanced features you want.
                       </p>
                       <p>
-                        <strong className="text-themed-primary">Lock in Low Prices:</strong> Keep your early access pricing even after we launch full features.
+                        <strong className="text-themed-primary">Early Access Benefits:</strong> First access to new features as they're released and priority support.
                       </p>
                     </div>
                     <div>
