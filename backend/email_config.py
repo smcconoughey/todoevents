@@ -1226,6 +1226,132 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         """
         
         return self.send_email(to_email, subject, html_content, text_content)
+    
+    def send_trial_cancellation_email(self, to_email: str, user_name: Optional[str] = None) -> bool:
+        """Send trial cancellation confirmation email"""
+        
+        subject = "Premium Trial Cancelled - TodoEvents"
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Trial Cancellation - TodoEvents</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #6c757d, #495057); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
+                .cancellation-notice {{ background: #ffe6e6; border: 1px solid #ffcccc; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .what-happens {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .comeback {{ background: #e7f3ff; border: 1px solid #b3d9ff; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .button {{ background: #3C92FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 TodoEvents</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">Trial Cancellation</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Premium Trial Cancelled{f', {user_name}' if user_name else ''}</h2>
+                    
+                    <p>We've received and processed your trial cancellation request. Your TodoEvents Premium trial has been cancelled immediately.</p>
+                    
+                    <div class="cancellation-notice">
+                        <h3>📋 Cancellation Details</h3>
+                        <p><strong>Status:</strong> Trial Cancelled</p>
+                        <p><strong>Access:</strong> Your premium access has ended immediately</p>
+                        <p><strong>Account Status:</strong> Reverted to free account</p>
+                    </div>
+                    
+                    <div class="what-happens">
+                        <h3>What happens next?</h3>
+                        <ul>
+                            <li>Your premium trial access has ended immediately</li>
+                            <li>Your account remains active with free features</li>
+                            <li>All your events and data are preserved</li>
+                            <li>You can create events without premium features</li>
+                            <li>You can subscribe to premium anytime to get full access</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="comeback">
+                        <h3>💡 Want to try premium again?</h3>
+                        <p>You can subscribe to TodoEvents Premium at any time to regain access to:</p>
+                        <ul>
+                            <li>✅ Auto-verified events</li>
+                            <li>📊 Advanced analytics</li>
+                            <li>🔄 Recurring events</li>
+                            <li>🎯 Priority support</li>
+                            <li>📈 Enhanced visibility</li>
+                        </ul>
+                        <a href="https://todo-events.com/premium" class="button">Subscribe to Premium</a>
+                    </div>
+                    
+                    <p><strong>Need help or have questions?</strong> Our support team is here to help! Contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
+                    
+                    <p>Thank you for trying TodoEvents Premium. We hope to see you again soon!</p>
+                    
+                    <p>Best regards,<br>The TodoEvents Team</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 TodoEvents. Premium event hosting made simple.</p>
+                    <p>This confirmation was sent to {to_email}.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        TodoEvents - Premium Trial Cancelled
+        
+        Premium Trial Cancelled{f', {user_name}' if user_name else ''}
+        
+        We've received and processed your trial cancellation request. Your TodoEvents Premium trial has been cancelled immediately.
+        
+        Cancellation Details:
+        - Status: Trial Cancelled
+        - Access: Your premium access has ended immediately
+        - Account Status: Reverted to free account
+        
+        What happens next?
+        - Your premium trial access has ended immediately
+        - Your account remains active with free features
+        - All your events and data are preserved
+        - You can create events without premium features
+        - You can subscribe to premium anytime to get full access
+        
+        Want to try premium again?
+        You can subscribe to TodoEvents Premium at any time to regain access to:
+        - Auto-verified events
+        - Advanced analytics
+        - Recurring events
+        - Priority support
+        - Enhanced visibility
+        
+        Subscribe at: https://todo-events.com/premium
+        
+        Need help or have questions? Contact us at support@todo-events.com
+        
+        Thank you for trying TodoEvents Premium. We hope to see you again soon!
+        
+        Best regards,
+        The TodoEvents Team
+        
+        This confirmation was sent to {to_email}.
+        """
+        
+        return self.send_email(to_email, subject, html_content, text_content)
 
 # Create global email service instance
 email_service = EmailService() 

@@ -18,11 +18,12 @@ const MissionOpsGrid = () => {
 
   const [viewportCenter, setViewportCenter] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingGrid, setIsDraggingGrid] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isCreating, setIsCreating] = useState(false);
   const [draggedMission, setDraggedMission] = useState(null);
   const [hoveredPosition, setHoveredPosition] = useState(null);
+  const [missionDragStart, setMissionDragStart] = useState({ x: 0, y: 0 });
 
   const gridRef = useRef(null);
   const timelineNowY = 0; // Y=0 represents "now"
@@ -54,9 +55,9 @@ const MissionOpsGrid = () => {
     if (!rect) return { x: 0, y: 0 };
 
     // Convert screen coordinates to grid coordinates
-    // Account for the grid transform: translate(viewportCenter.x, viewportCenter.y) scale(zoom)
-    const x = (screenX - rect.left - viewportCenter.x) / zoom;
-    const y = (screenY - rect.top - viewportCenter.y) / zoom;
+    // Account for the grid transform and viewport offset
+    const x = (screenX - rect.left - rect.width / 2 - viewportCenter.x) / zoom;
+    const y = (screenY - rect.top - rect.height / 2 - viewportCenter.y) / zoom;
 
     return { x, y };
   }, [viewportCenter, zoom]);
@@ -69,37 +70,44 @@ const MissionOpsGrid = () => {
     };
   }, [gridSize]);
 
-  // Handle mouse/touch events
-  const handlePointerDown = useCallback((e) => {
-    if (e.target === gridRef.current) {
-      setIsDragging(true);
+  // Handle grid panning
+  const handleGridPointerDown = useCallback((e) => {
+    // Only start grid dragging if clicking on the grid background, not on missions
+    if (e.target === gridRef.current || e.target.closest('.grid-background')) {
+      e.preventDefault();
+      setIsDraggingGrid(true);
       setDragStart({ x: e.clientX - viewportCenter.x, y: e.clientY - viewportCenter.y });
     }
   }, [viewportCenter]);
 
   const handlePointerMove = useCallback((e) => {
-    if (isDragging) {
+    if (isDraggingGrid) {
+      // Grid panning
       setViewportCenter({
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y
       });
     } else if (draggedMission) {
+      // Mission dragging
       const gridPos = screenToGrid(e.clientX, e.clientY);
       const snappedPos = snapToGrid(gridPos.x, gridPos.y);
       setHoveredPosition(snappedPos);
     }
-  }, [isDragging, dragStart, draggedMission, screenToGrid, snapToGrid]);
+  }, [isDraggingGrid, dragStart, draggedMission, screenToGrid, snapToGrid]);
 
   const handlePointerUp = useCallback((e) => {
-    if (isDragging) {
-      setIsDragging(false);
+    if (isDraggingGrid) {
+      setIsDraggingGrid(false);
     } else if (draggedMission && hoveredPosition) {
       // Update mission position
-      updateMissionPosition(draggedMission.id, hoveredPosition);
+      updateMissionPosition(draggedMission.id, {
+        grid_x: hoveredPosition.x,
+        grid_y: hoveredPosition.y
+      });
       setDraggedMission(null);
       setHoveredPosition(null);
     }
-  }, [isDragging, draggedMission, hoveredPosition, updateMissionPosition]);
+  }, [isDraggingGrid, draggedMission, hoveredPosition, updateMissionPosition]);
 
   // Handle zoom
   const handleWheel = useCallback((e) => {
@@ -155,8 +163,9 @@ const MissionOpsGrid = () => {
   const timeMarkers = generateTimeMarkers();
 
   // Handle mission drag start
-  const handleMissionDragStart = useCallback((mission) => {
+  const handleMissionDragStart = useCallback((mission, startPos) => {
     setDraggedMission(mission);
+    setMissionDragStart(startPos);
   }, []);
 
   const centerOnMissions = useCallback(() => {
@@ -180,8 +189,8 @@ const MissionOpsGrid = () => {
     const centerY = (minY + maxY) / 2;
     
     // Pan to center all missions
-    const targetX = -centerX * zoom + window.innerWidth / 2;
-    const targetY = -centerY * zoom + window.innerHeight / 2;
+    const targetX = -centerX * zoom;
+    const targetY = -centerY * zoom;
     setViewportCenter({ x: targetX, y: targetY });
   }, [missions, zoom, setViewportCenter, dateToY]);
 
@@ -192,9 +201,7 @@ const MissionOpsGrid = () => {
       gridPos = hoveredPosition;
     } else {
       // Place new mission in the center of the current viewport
-      const centerX = -viewportCenter.x / zoom + (window.innerWidth / 2) / zoom;
-      const centerY = -viewportCenter.y / zoom + (window.innerHeight / 2) / zoom;
-      gridPos = { x: centerX, y: centerY };
+      gridPos = { x: 0, y: 0 };
     }
     
     const startDate = yToDate(gridPos.y);
@@ -209,8 +216,8 @@ const MissionOpsGrid = () => {
       
       // Pan to the newly created mission
       if (newMission) {
-        const targetX = -(newMission.grid_x || gridPos.x) * zoom + window.innerWidth / 2;
-        const targetY = -(newMission.grid_y || gridPos.y) * zoom + window.innerHeight / 2;
+        const targetX = -(newMission.grid_x || gridPos.x) * zoom;
+        const targetY = -(newMission.grid_y || gridPos.y) * zoom;
         setViewportCenter({ x: targetX, y: targetY });
         setSelectedMissionId(newMission.id);
       }
@@ -220,7 +227,7 @@ const MissionOpsGrid = () => {
       console.error('Failed to create mission:', error);
       // Keep the modal open on error so user can retry
     }
-  }, [hoveredPosition, yToDate, createMission, viewportCenter, zoom, setViewportCenter, setSelectedMissionId]);
+  }, [hoveredPosition, yToDate, createMission, zoom, setViewportCenter, setSelectedMissionId]);
 
   if (isLoading) {
     return (
@@ -280,27 +287,30 @@ const MissionOpsGrid = () => {
       {/* Grid Container */}
       <div
         ref={gridRef}
-        className="absolute inset-0 pt-16 cursor-grab active:cursor-grabbing"
-        onPointerDown={handlePointerDown}
+        className={`absolute inset-0 pt-16 ${isDraggingGrid ? 'cursor-grabbing' : 'cursor-grab'}`}
+        onPointerDown={handleGridPointerDown}
         style={{
           transform: `translate(${viewportCenter.x}px, ${viewportCenter.y}px) scale(${zoom})`,
-          transformOrigin: '0 0'
+          transformOrigin: 'center center'
         }}
       >
-        {/* Grid Pattern */}
-        <div className="absolute inset-0" style={{ 
-          backgroundImage: `
-            radial-gradient(circle at 1px 1px, ${theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'} 1px, transparent 0)
-          `,
-          backgroundSize: `${gridSize}px ${gridSize}px`,
-          backgroundPosition: '0 0'
-        }} />
+        {/* Grid Pattern Background */}
+        <div 
+          className="grid-background absolute inset-0 pointer-events-none" 
+          style={{ 
+            backgroundImage: `
+              radial-gradient(circle at 1px 1px, ${theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'} 1px, transparent 0)
+            `,
+            backgroundSize: `${gridSize}px ${gridSize}px`,
+            backgroundPosition: '0 0'
+          }} 
+        />
 
         {/* Time Markers */}
         {timeMarkers.map((marker, i) => (
           <div
             key={i}
-            className="absolute left-0 right-0 flex items-center"
+            className="absolute left-0 right-0 flex items-center pointer-events-none"
             style={{ top: marker.y - 1 }}
           >
             {/* Timeline line */}
@@ -357,7 +367,7 @@ const MissionOpsGrid = () => {
           return (
             <div
               key={mission.id}
-              className="absolute"
+              className="absolute pointer-events-auto"
               style={{
                 left: x,
                 top: y,
@@ -392,7 +402,7 @@ const MissionOpsGrid = () => {
       </div>
 
       {/* Legend */}
-      <div className={`absolute bottom-4 left-4 ${theme === 'light' ? 'bg-white/90 border border-neutral-200' : theme === 'frost' ? 'bg-white/20 border border-white/20' : 'bg-neutral-900/90'} backdrop-blur-sm rounded-lg p-4 text-sm`}>
+      <div className={`absolute bottom-4 left-4 ${theme === 'light' ? 'bg-white/90 border border-neutral-200' : theme === 'frost' ? 'bg-white/20 border border-white/20' : 'bg-neutral-900/90'} backdrop-blur-sm rounded-lg p-4 text-sm pointer-events-auto`}>
         <h3 className="font-semibold mb-2">Timeline Legend</h3>
         <div className="space-y-1 text-xs">
           <div className="flex items-center gap-2">

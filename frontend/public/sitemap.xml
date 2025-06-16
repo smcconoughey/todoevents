@@ -542,24 +542,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/fly-geyser-exploration-214178</loc>
-    <lastmod>2025-06-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/fly-geyser-exploration-214178</loc>
-    <lastmod>2025-06-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/06/fly-geyser-exploration-214178</loc>
-    <lastmod>2025-06-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/adrenaline-junkie-jamboree</loc>
     <lastmod>2025-06-05</lastmod>
     <changefreq>monthly</changefreq>
@@ -574,6 +556,24 @@
   <url>
     <loc>https://todo-events.com/events/2025/06/06/adrenaline-junkie-jamboree</loc>
     <lastmod>2025-06-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/fly-geyser-exploration-214178</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/fly-geyser-exploration-214178</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/06/fly-geyser-exploration-214178</loc>
+    <lastmod>2025-06-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>

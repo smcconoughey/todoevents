@@ -17,7 +17,9 @@ import {
   Circle,
   AlertCircle,
   MessageSquare,
-  Settings
+  Settings,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 import { useMissionOps } from './MissionOpsContext';
@@ -35,8 +37,9 @@ const MissionContainer = ({
   const [isDragStarted, setIsDragStarted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('tasks'); // tasks, risks, decisions
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   
-  const { createTask, getTasks, getRisks, getDecisions } = useMissionOps();
+  const { createTask, getTasks, getRisks, getDecisions, deleteMission } = useMissionOps();
 
   // Helper function to safely parse tags
   const parseTags = (tagsString) => {
@@ -82,13 +85,45 @@ const MissionContainer = ({
     }
   };
 
-  const handleMouseDown = (e) => {
-    // Only start drag if clicking on the drag handle or header area
-    if (e.target.closest('.mission-drag-handle') || e.target.closest('.mission-header')) {
+  const handleDragStart = (e) => {
+    // Only start drag if clicking on the drag handle
+    if (e.target.closest('.mission-drag-handle')) {
+      e.preventDefault();
+      e.stopPropagation();
       setIsDragStarted(true);
-      onDragStart(mission);
-    } else {
-      onSelect();
+      onDragStart(mission, { x: e.clientX, y: e.clientY });
+    }
+  };
+
+  const handleContainerClick = (e) => {
+    // Don't select if clicking on interactive elements
+    if (e.target.closest('.mission-drag-handle') || 
+        e.target.closest('.mission-options-menu') ||
+        e.target.closest('button') ||
+        e.target.closest('input') ||
+        e.target.closest('textarea')) {
+      return;
+    }
+    
+    onSelect();
+  };
+
+  const handleOptionsClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowOptionsMenu(!showOptionsMenu);
+  };
+
+  const handleDeleteMission = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this mission?')) {
+      try {
+        await deleteMission(mission.id);
+        setShowOptionsMenu(false);
+      } catch (error) {
+        console.error('Failed to delete mission:', error);
+      }
     }
   };
 
@@ -115,7 +150,8 @@ const MissionContainer = ({
         ${isSelected ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}
         ${isExpanded ? 'z-40' : ''}
       `}
-      onMouseDown={handleMouseDown}
+      onClick={handleContainerClick}
+      onMouseDown={handleDragStart}
       style={{
         opacity: isDragging ? 0.8 : 1,
       }}
@@ -188,46 +224,118 @@ const MissionContainer = ({
 
             {/* Actions */}
             <div className="flex items-center gap-1 ml-2">
-              <button className={`mission-drag-handle p-1 ${theme === 'light' ? 'hover:bg-neutral-100' : 'hover:bg-neutral-700/50'} rounded opacity-0 group-hover:opacity-100 transition-opacity`}>
+              <button 
+                className={`mission-drag-handle p-1 ${theme === 'light' ? 'hover:bg-neutral-100' : 'hover:bg-neutral-700/50'} rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing`}
+                title="Drag to move mission"
+              >
                 <Grip className={`w-4 h-4 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`} />
               </button>
-              <button className={`p-1 ${theme === 'light' ? 'hover:bg-neutral-100' : 'hover:bg-neutral-700/50'} rounded opacity-0 group-hover:opacity-100 transition-opacity`}>
-                <MoreHorizontal className={`w-4 h-4 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`} />
-              </button>
+              
+              <div className="relative">
+                <button 
+                  className={`mission-options-menu p-1 ${theme === 'light' ? 'hover:bg-neutral-100' : 'hover:bg-neutral-700/50'} rounded opacity-0 group-hover:opacity-100 transition-opacity`}
+                  onClick={handleOptionsClick}
+                  title="Mission options"
+                >
+                  <MoreHorizontal className={`w-4 h-4 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`} />
+                </button>
+                
+                {/* Options Menu */}
+                {showOptionsMenu && (
+                  <div className={`absolute right-0 top-8 z-50 ${theme === 'light' ? 'bg-white border-neutral-200' : 'bg-neutral-800 border-neutral-700'} border rounded-lg shadow-lg py-1 min-w-32`}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowOptionsMenu(false);
+                        // TODO: Implement edit functionality
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm ${theme === 'light' ? 'hover:bg-neutral-100 text-neutral-700' : 'hover:bg-neutral-700 text-neutral-300'} flex items-center gap-2`}
+                    >
+                      <Edit className="w-3 h-3" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowOptionsMenu(false);
+                        // TODO: Implement share functionality
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm ${theme === 'light' ? 'hover:bg-neutral-100 text-neutral-700' : 'hover:bg-neutral-700 text-neutral-300'} flex items-center gap-2`}
+                    >
+                      <Share2 className="w-3 h-3" />
+                      Share
+                    </button>
+                    <hr className={`my-1 ${theme === 'light' ? 'border-neutral-200' : 'border-neutral-700'}`} />
+                    <button
+                      onClick={handleDeleteMission}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-red-500/10 text-red-500 flex items-center gap-2`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="px-4 py-2 border-b border-neutral-700/50">
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className={`px-2 py-1 text-xs rounded-full ${
+                    theme === 'light' 
+                      ? 'bg-neutral-100 text-neutral-700' 
+                      : 'bg-neutral-700/50 text-neutral-300'
+                  }`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Expanded Content */}
         {isExpanded && (
-          <div className="p-4">
+          <div className="border-t border-neutral-700/50">
             {/* Tab Navigation */}
-            <div className="flex gap-1 mb-4">
+            <div className={`flex border-b ${theme === 'light' ? 'border-neutral-200/50' : 'border-neutral-700/50'}`}>
               {[
-                { id: 'tasks', label: 'Tasks', icon: CheckCircle2, count: mission.tasks_count },
-                { id: 'risks', label: 'Risks', icon: AlertTriangle, count: mission.risks_count },
-                { id: 'decisions', label: 'Decisions', icon: MessageSquare, count: 0 }
+                { id: 'tasks', label: 'Tasks', icon: CheckCircle2, count: mission.task_count || 0 },
+                { id: 'risks', label: 'Risks', icon: AlertTriangle, count: mission.risk_count || 0 },
+                { id: 'decisions', label: 'Decisions', icon: MessageSquare, count: mission.decision_count || 0 }
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${activeTab === tab.id 
-                      ? 'bg-pin-blue text-white' 
-                      : theme === 'light' 
-                        ? 'text-neutral-600 hover:bg-neutral-100' 
-                        : 'text-neutral-400 hover:bg-neutral-700/50'
-                    }
-                  `}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab(tab.id);
+                  }}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                    activeTab === tab.id
+                      ? theme === 'light' 
+                        ? 'text-pin-blue border-b-2 border-pin-blue bg-pin-blue/5' 
+                        : 'text-pin-blue border-b-2 border-pin-blue bg-pin-blue/10'
+                      : theme === 'light'
+                        ? 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                        : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/30'
+                  }`}
                 >
                   <tab.icon className="w-4 h-4" />
                   {tab.label}
                   {tab.count > 0 && (
-                    <span className={`
-                      px-1.5 py-0.5 rounded-full text-xs
-                      ${activeTab === tab.id ? 'bg-white/20' : 'bg-neutral-500/20'}
-                    `}>
+                    <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+                      activeTab === tab.id
+                        ? 'bg-pin-blue text-white'
+                        : theme === 'light'
+                          ? 'bg-neutral-200 text-neutral-600'
+                          : 'bg-neutral-700 text-neutral-300'
+                    }`}>
                       {tab.count}
                     </span>
                   )}
@@ -236,132 +344,33 @@ const MissionContainer = ({
             </div>
 
             {/* Tab Content */}
-            <div className="min-h-32">
+            <div className="p-4 max-h-96 overflow-y-auto">
               {activeTab === 'tasks' && (
                 <TaskList missionId={mission.id} theme={theme} />
               )}
-
               {activeTab === 'risks' && (
                 <div className={`text-center py-8 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Risk management coming soon</p>
+                  <p>Risk management coming soon</p>
                 </div>
               )}
-
               {activeTab === 'decisions' && (
                 <div className={`text-center py-8 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
                   <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Decision logs coming soon</p>
+                  <p>Decision tracking coming soon</p>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Collapsed Stats */}
-        {!isExpanded && (
-          <div className="p-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="space-y-1">
-                <div className={`text-lg font-semibold ${theme === 'light' ? 'text-neutral-900' : 'text-white'}`}>
-                  {mission.tasks_count || 0}
-                </div>
-                <div className={`text-xs ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>Tasks</div>
-              </div>
-              
-              <div className="space-y-1">
-                <div className="text-lg font-semibold text-orange-500">
-                  {mission.risks_count || 0}
-                </div>
-                <div className={`text-xs ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>Risks</div>
-              </div>
-              
-              <div className="space-y-1">
-                <div className="flex items-center justify-center">
-                  {hasSharedUsers ? (
-                    <div className="flex -space-x-1">
-                      {mission.shared_with.slice(0, 3).map((user, i) => (
-                        <div
-                          key={i}
-                          className={`w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pin-blue ${theme === 'light' ? 'border-2 border-white' : 'border-2 border-neutral-800'} flex items-center justify-center text-xs font-medium text-white`}
-                          title={user.email}
-                        >
-                          {user.email.charAt(0).toUpperCase()}
-                        </div>
-                      ))}
-                      {mission.shared_with.length > 3 && (
-                        <div className={`w-6 h-6 rounded-full ${theme === 'light' ? 'bg-neutral-300 border-2 border-white text-neutral-700' : 'bg-neutral-600 border-2 border-neutral-800 text-neutral-300'} flex items-center justify-center text-xs`}>
-                          +{mission.shared_with.length - 3}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className={`w-6 h-6 rounded-full ${theme === 'light' ? 'bg-neutral-200 border border-neutral-300' : 'bg-neutral-700 border border-neutral-600'} flex items-center justify-center`}>
-                      <Eye className={`w-3 h-3 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`} />
-                    </div>
-                  )}
-                </div>
-                <div className={`text-xs ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                  {hasSharedUsers ? 'Shared' : 'Private'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Priority Indicator */}
-        <div className="absolute top-2 right-2">
-          <div 
-            className={`w-3 h-3 rounded-full ${
-              mission.priority === 'critical' ? 'bg-red-500' :
-              mission.priority === 'high' ? 'bg-orange-500' :
-              mission.priority === 'medium' ? 'bg-yellow-500' :
-              'bg-green-500'
-            }`}
-            title={`${mission.priority} priority`}
-          />
-        </div>
-
-        {/* Overdue Indicator */}
-        {isOverdue && (
-          <div className="absolute top-2 left-2">
-            <div className="flex items-center gap-1 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded-full">
-              <AlertTriangle className="w-3 h-3 text-red-400" />
-              <span className="text-xs text-red-400 font-medium">Overdue</span>
-            </div>
-          </div>
-        )}
-
-        {/* Selection Indicator */}
-        {isSelected && (
-          <div className="absolute inset-0 border-2 border-blue-400 rounded-xl pointer-events-none animate-pulse" />
-        )}
-
-        {/* Tags */}
-        {tags.length > 0 && !isExpanded && (
-          <div className="absolute bottom-2 left-2 right-2">
-            <div className="flex flex-wrap gap-1">
-              {tags.slice(0, 3).map((tag, i) => (
-                <span
-                  key={i}
-                  className={`px-2 py-1 rounded text-xs ${theme === 'light' ? 'bg-neutral-200 text-neutral-700' : 'bg-neutral-800/60 border border-neutral-700/50 text-neutral-300'}`}
-                >
-                  {tag}
-                </span>
-              ))}
-              {tags.length > 3 && (
-                <span className={`px-2 py-1 rounded text-xs ${theme === 'light' ? 'bg-neutral-200 text-neutral-600' : 'bg-neutral-800/60 border border-neutral-700/50 text-neutral-400'}`}>
-                  +{tags.length - 3}
-                </span>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Shadow for dragging */}
-      {isDragging && (
-        <div className="absolute inset-0 bg-neutral-800/20 rounded-xl border-2 border-dashed border-neutral-600 -z-10 transform translate-x-1 translate-y-1" />
+      {/* Click outside to close options menu */}
+      {showOptionsMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowOptionsMenu(false)}
+        />
       )}
     </div>
   );

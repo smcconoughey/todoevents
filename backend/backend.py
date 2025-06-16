@@ -9206,6 +9206,275 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
         }
     }
 
+# Premium trial management endpoints
+@app.post("/premium/cancel-trial")
+async def cancel_premium_trial(current_user: dict = Depends(get_current_user)):
+    """Cancel a user's premium trial immediately"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user has an active trial
+            c.execute(f"""
+                SELECT premium_expires_at, role 
+                FROM users 
+                WHERE id = {placeholder}
+            """, (current_user['id'],))
+            
+            user_data = c.fetchone()
+            
+            if not user_data or user_data['role'] not in ['premium', 'admin']:
+                raise HTTPException(status_code=404, detail="No active premium trial found")
+            
+            # Check if they have a Stripe subscription (if so, this isn't a trial)
+            try:
+                customers = stripe.Customer.list(email=current_user['email'], limit=1)
+                if customers.data:
+                    customer = customers.data[0]
+                    subscriptions = stripe.Subscription.list(
+                        customer=customer.id,
+                        status='active',
+                        limit=10
+                    )
+                    if subscriptions.data:
+                        raise HTTPException(status_code=400, detail="Cannot cancel trial - active subscription found. Use subscription cancellation instead.")
+            except stripe.error.StripeError:
+                # If Stripe lookup fails, assume it's a trial
+                pass
+            
+            # Cancel the trial by setting role back to user and clearing expiration
+            c.execute(f"""
+                UPDATE users 
+                SET role = 'user', premium_expires_at = NULL
+                WHERE id = {placeholder}
+            """, (current_user['id'],))
+            
+            conn.commit()
+            
+            log_activity(current_user['id'], "trial_cancelled", "Premium trial cancelled by user")
+            logger.info(f"✅ Premium trial cancelled for user {current_user['id']} ({current_user['email']})")
+            
+            # Send trial cancellation email
+            try:
+                from email_config import email_service
+                user_name = current_user['email'].split('@')[0]
+                email_sent = email_service.send_trial_cancellation_email(
+                    to_email=current_user['email'],
+                    user_name=user_name
+                )
+                
+                if email_sent:
+                    logger.info(f"✅ Trial cancellation email sent to {current_user['email']}")
+                else:
+                    logger.error(f"❌ Failed to send trial cancellation email to {current_user['email']}")
+            except Exception as e:
+                logger.error(f"❌ Error sending trial cancellation email: {str(e)}")
+            
+            return {
+                "success": True,
+                "message": "Premium trial cancelled successfully",
+                "new_role": "user"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling premium trial: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to cancel trial")
+
+@app.post("/premium/convert-trial-to-subscription")
+async def convert_trial_to_subscription(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Convert an active trial to a paid subscription, keeping trial benefits until expiration"""
+    try:
+        # Parse request body
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+            
+        pricing_tier = body.get('pricing_tier', 'premium')
+        
+        if pricing_tier not in ['premium', 'enterprise']:
+            raise HTTPException(status_code=400, detail="Invalid pricing tier")
+        
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user has an active trial
+            c.execute(f"""
+                SELECT premium_expires_at, role 
+                FROM users 
+                WHERE id = {placeholder}
+            """, (current_user['id'],))
+            
+            user_data = c.fetchone()
+            
+            if not user_data or user_data['role'] not in ['premium', 'admin']:
+                raise HTTPException(status_code=404, detail="No active premium trial found")
+            
+            trial_expires_at = user_data['premium_expires_at']
+            
+            # Check if they already have a Stripe subscription
+            try:
+                customers = stripe.Customer.list(email=current_user['email'], limit=1)
+                if customers.data:
+                    customer = customers.data[0]
+                    subscriptions = stripe.Subscription.list(
+                        customer=customer.id,
+                        status='active',
+                        limit=10
+                    )
+                    if subscriptions.data:
+                        raise HTTPException(status_code=400, detail="Active subscription already exists")
+            except stripe.error.StripeError:
+                # If Stripe lookup fails, continue with conversion
+                pass
+            
+            # Create Stripe checkout session with trial period
+            if pricing_tier == 'enterprise':
+                price_id = os.getenv("STRIPE_ENTERPRISE_PRICE_ID", STRIPE_PRICE_ID)
+            else:
+                price_id = STRIPE_PRICE_ID
+            
+            base_url = "https://todo-events.com" if IS_PRODUCTION else "http://localhost:3000"
+            
+            # Calculate trial period if trial hasn't expired
+            trial_period_days = None
+            if trial_expires_at:
+                from datetime import datetime, timezone
+                if isinstance(trial_expires_at, str):
+                    expires_at = datetime.fromisoformat(trial_expires_at.replace('Z', '+00:00'))
+                else:
+                    expires_at = trial_expires_at
+                
+                # Only add trial period if trial hasn't expired
+                if expires_at > datetime.now(timezone.utc):
+                    trial_days = max(1, (expires_at - datetime.now(timezone.utc)).days)
+                    trial_period_days = min(trial_days, 30)  # Stripe max is 30 days
+            
+            subscription_data = {
+                'metadata': {
+                    'user_id': str(current_user['id']),
+                    'user_email': current_user['email'],
+                    'pricing_tier': pricing_tier,
+                    'trial_conversion': 'true',
+                    'trial_expires_at': trial_expires_at.isoformat() if trial_expires_at else ''
+                }
+            }
+            
+            if trial_period_days:
+                subscription_data['trial_period_days'] = trial_period_days
+            
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url=f"{base_url}/subscription?session_id={{CHECKOUT_SESSION_ID}}&success=true",
+                cancel_url=f"{base_url}/subscription?cancelled=true",
+                customer_email=current_user['email'],
+                metadata={
+                    'user_id': str(current_user['id']),
+                    'user_email': current_user['email'],
+                    'pricing_tier': pricing_tier,
+                    'trial_conversion': 'true',
+                    'trial_expires_at': trial_expires_at.isoformat() if trial_expires_at else ''
+                },
+                subscription_data=subscription_data
+            )
+            
+            logger.info(f"✅ Created {pricing_tier} trial conversion checkout session for user {current_user['id']} ({current_user['email']})")
+            
+            return {
+                "url": checkout_session.url,
+                "session_id": checkout_session.id,
+                "pricing_tier": pricing_tier,
+                "trial_period_days": trial_period_days
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error converting trial to subscription: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to convert trial to subscription")
+
+@app.get("/premium/trial-status")
+async def get_premium_trial_status(current_user: dict = Depends(get_current_user)):
+    """Get detailed trial status for current user"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get user trial information
+            c.execute(f"""
+                SELECT premium_expires_at, premium_granted_by, premium_invited, role
+                FROM users 
+                WHERE id = {placeholder}
+            """, (current_user['id'],))
+            
+            user_data = c.fetchone()
+            
+            if not user_data:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Check if they have any active Stripe subscriptions
+            has_stripe_subscription = False
+            try:
+                customers = stripe.Customer.list(email=current_user['email'], limit=1)
+                if customers.data:
+                    customer = customers.data[0]
+                    subscriptions = stripe.Subscription.list(
+                        customer=customer.id,
+                        status='active',
+                        limit=10
+                    )
+                    has_stripe_subscription = len(subscriptions.data) > 0
+            except stripe.error.StripeError:
+                # If Stripe lookup fails, assume no subscription
+                pass
+            
+            trial_info = None
+            if user_data['premium_expires_at'] and not has_stripe_subscription:
+                from datetime import datetime, timezone
+                expires_at = user_data['premium_expires_at']
+                if isinstance(expires_at, str):
+                    expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                
+                trial_info = {
+                    "is_trial": True,
+                    "expires_at": expires_at.isoformat(),
+                    "is_expired": expires_at < datetime.now(timezone.utc),
+                    "days_remaining": max(0, (expires_at - datetime.now(timezone.utc)).days),
+                    "granted_by": user_data.get('premium_granted_by'),
+                    "was_invited": user_data.get('premium_invited', False),
+                    "can_cancel": True,
+                    "can_convert": True
+                }
+            
+            return {
+                "user_role": user_data['role'],
+                "is_premium": user_data['role'] in ['premium', 'admin'],
+                "has_stripe_subscription": has_stripe_subscription,
+                "trial": trial_info
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting trial status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get trial status")
+
 @app.get("/stripe/config")
 async def get_stripe_config():
     """Get Stripe publishable key for frontend"""

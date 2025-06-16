@@ -212,6 +212,122 @@ const SubscriptionPage = () => {
     }
   };
 
+  const handleCancelTrial = async () => {
+    if (!confirm('Are you sure you want to cancel your premium trial? You will lose access to premium features immediately and this cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setCanceling(true);
+      setError(null);
+      
+      const response = await fetch(`${API_URL}/premium/cancel-trial`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Reload subscription data to show updated status
+        await loadSubscriptionData();
+        
+        // Show success message
+        alert('Premium trial cancelled successfully. You now have a free account.');
+        
+        // Redirect to main page
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to cancel trial');
+      console.error('Error canceling trial:', err);
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  const handleConvertTrialToPremium = async () => {
+    try {
+      setCanceling(true);
+      setError(null);
+
+      const response = await fetch(`${API_URL}/premium/convert-trial-to-subscription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pricing_tier: 'premium'
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to convert trial to subscription');
+      console.error('Error converting trial:', err);
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  const handleConvertTrialToEnterprise = async () => {
+    try {
+      setCanceling(true);
+      setError(null);
+
+      const response = await fetch(`${API_URL}/premium/convert-trial-to-subscription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pricing_tier: 'enterprise'
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to convert trial to subscription');
+      console.error('Error converting trial:', err);
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Not available';
     
@@ -377,18 +493,28 @@ const SubscriptionPage = () => {
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button
-                        onClick={handleSubscribeToPremium}
+                        onClick={handleConvertTrialToPremium}
+                        disabled={canceling}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        <CreditCard className="w-4 h-4 mr-2" />
+                        {canceling ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CreditCard className="w-4 h-4 mr-2" />
+                        )}
                         Subscribe to Premium ($9.99/month)
                       </Button>
                       <Button
-                        onClick={handleSubscribeToEnterprise}
+                        onClick={handleConvertTrialToEnterprise}
+                        disabled={canceling}
                         variant="outline"
                         className="flex-1"
                       >
-                        <Crown className="w-4 h-4 mr-2" />
+                        {canceling ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Crown className="w-4 h-4 mr-2" />
+                        )}
                         Upgrade to Enterprise ($24.99/month)
                       </Button>
                     </div>
@@ -423,6 +549,32 @@ const SubscriptionPage = () => {
                      </div>
                    </div>
                  </div>
+
+                 {/* Trial Management Section */}
+                 {!subscriptionData.trial.is_expired && (
+                   <div className="mt-4 p-4 bg-themed-background rounded-lg border border-themed">
+                     <h4 className="font-medium text-themed-primary mb-3">Trial Management</h4>
+                     <p className="text-sm text-themed-secondary mb-4">
+                       Don't want to continue with your trial? You can cancel it at any time.
+                     </p>
+                     <Button
+                       onClick={handleCancelTrial}
+                       disabled={canceling}
+                       variant="outline"
+                       className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                     >
+                       {canceling ? (
+                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                       ) : (
+                         <AlertTriangle className="w-4 h-4 mr-2" />
+                       )}
+                       Cancel Trial
+                     </Button>
+                     <p className="text-xs text-themed-secondary mt-2">
+                       <strong>Warning:</strong> Cancelling your trial will immediately remove access to premium features and cannot be undone.
+                     </p>
+                   </div>
+                 )}
                </div>
              )}
 
