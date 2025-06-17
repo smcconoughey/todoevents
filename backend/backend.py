@@ -17139,6 +17139,7 @@ async def create_missionops_tables():
 class RouteEventRequest(BaseModel):
     coordinates: List[Dict[str, float]]  # List of {lat: float, lng: float}
     radius: Optional[float] = 10.0  # Search radius in miles
+    dateRange: Optional[Dict[str, str]] = None  # {startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD"}
 
 @app.post("/events/route-batch")
 async def get_route_events_batch(request: RouteEventRequest):
@@ -17187,11 +17188,32 @@ async def get_route_events_batch(request: RouteEventRequest):
             if not distance_conditions:
                 return []
             
-            # Database-specific date comparison
-            if IS_PRODUCTION and DB_URL:
-                date_comparison = "date::date >= CURRENT_DATE"
+            # Build date filter conditions
+            date_conditions = []
+            if request.dateRange and request.dateRange.get('startDate') and request.dateRange.get('endDate'):
+                # Use custom date range
+                start_date = request.dateRange['startDate']
+                end_date = request.dateRange['endDate']
+                
+                if IS_PRODUCTION and DB_URL:
+                    date_conditions.append(f"date::date BETWEEN '{start_date}' AND '{end_date}'")
+                else:
+                    date_conditions.append(f"date BETWEEN '{start_date}' AND '{end_date}'")
+                    
+                params.extend([])  # No additional params needed for string literals
             else:
-                date_comparison = "date >= date('now')"
+                # Default: future events only
+                if IS_PRODUCTION and DB_URL:
+                    date_conditions.append("date::date >= CURRENT_DATE")
+                else:
+                    date_conditions.append("date >= date('now')")
+            
+            # Combine all conditions
+            all_conditions = [f"({' OR '.join(distance_conditions)})"]
+            if date_conditions:
+                all_conditions.extend(date_conditions)
+            
+            where_clause = " AND ".join(all_conditions)
             
             # Single optimized query that finds events near ANY of the coordinates
             query = f"""
@@ -17202,12 +17224,8 @@ async def get_route_events_batch(request: RouteEventRequest):
                        fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
                        start_datetime, end_datetime, updated_at, verified
                 FROM events 
-                WHERE ({" OR ".join(distance_conditions)})
+                WHERE {where_clause}
                 ORDER BY 
-                    CASE 
-                        WHEN {date_comparison} THEN 0
-                        ELSE 1                           
-                    END,
                     interest_count DESC, date ASC
                 LIMIT 100
             """

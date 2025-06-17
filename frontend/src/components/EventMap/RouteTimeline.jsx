@@ -163,6 +163,9 @@ const RouteTimeline = ({
               <div className="text-xs mt-1 text-blue-600 dark:text-blue-400">
                 Events are sorted by popularity and grouped by proximity to your stops
               </div>
+              <div className="text-xs mt-1 text-blue-600 dark:text-blue-400">
+                💡 Tip: Enable "Expand event search window" to find events around your travel dates
+              </div>
             </div>
           </div>
         )}
@@ -305,7 +308,17 @@ const RouteTimeline = ({
                                     <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-2">
                                       <span className="flex items-center gap-1">
                                         <Calendar className="w-3 h-3" />
-                                        {formatDate(event.date)}
+                                        {new Date(event.date).toLocaleDateString([], { 
+                                          month: 'short', 
+                                          day: 'numeric',
+                                          year: event.date.includes(new Date().getFullYear().toString()) ? undefined : 'numeric'
+                                        })}
+                                        {event.start_time && (
+                                          <>
+                                            <Clock className="w-3 h-3 ml-1" />
+                                            {event.start_time}
+                                          </>
+                                        )}
                                       </span>
                                       <span className="flex items-center gap-1">
                                         <MapPin className="w-3 h-3" />

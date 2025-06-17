@@ -32,6 +32,14 @@ const RoutePlanner = ({
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
+  const [arrivalDate, setArrivalDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
+  const [arrivalTime, setArrivalTime] = useState('18:00');
+  const [eventTimeFlexibility, setEventTimeFlexibility] = useState(1); // Days before/after
+  const [enableEventTimeFilter, setEnableEventTimeFilter] = useState(false);
   
   const directionsServiceRef = useRef(null);
   const routeData = useRef(null);
@@ -180,7 +188,7 @@ const RoutePlanner = ({
   };
 
   // Fetch events along the route using efficient batch endpoint
-  const fetchEventsAlongRoute = async (samplePoints) => {
+  const fetchEventsAlongRoute = async (samplePoints, timingContext = null) => {
     try {
       // Convert sample points to coordinate format for batch API
       const coordinates = samplePoints.map(point => ({
@@ -189,13 +197,29 @@ const RoutePlanner = ({
       }));
 
       // Use the new batch endpoint for efficient event retrieval
+      const requestBody = {
+        coordinates: coordinates,
+        radius: searchRadius
+      };
+
+      // Add timing parameters if provided
+      if (timingContext && timingContext.eventTimeFlexibility > 0) {
+        const startDate = new Date(timingContext.departureDateTime);
+        startDate.setDate(startDate.getDate() - timingContext.eventTimeFlexibility);
+        
+        const endDate = new Date(timingContext.arrivalDateTime);
+        endDate.setDate(endDate.getDate() + timingContext.eventTimeFlexibility);
+        
+        requestBody.dateRange = {
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0]
+        };
+      }
+
       const response = await fetchWithTimeout(`${API_URL}/events/route-batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          coordinates: coordinates,
-          radius: searchRadius
-        })
+        body: JSON.stringify(requestBody)
       }, 15000); // Increased timeout for batch request
 
       if (!response.ok) {
@@ -220,12 +244,12 @@ const RoutePlanner = ({
       
       // Fallback to original method if batch API fails
       console.log('🔄 Falling back to individual requests...');
-      return await fetchEventsAlongRouteFallback(samplePoints);
+      return await fetchEventsAlongRouteFallback(samplePoints, timingContext);
     }
   };
 
   // Fallback method using individual requests (kept for reliability)
-  const fetchEventsAlongRouteFallback = async (samplePoints) => {
+  const fetchEventsAlongRouteFallback = async (samplePoints, timingContext = null) => {
     const allEvents = [];
     const seenEventIds = new Set();
     
@@ -320,8 +344,14 @@ const RoutePlanner = ({
           const route = result.routes[0];
           let cumulativeTime = 0;
           
-          // Calculate departure datetime from user input
+          // Calculate departure and arrival datetime from user input
           const departureDateTime = new Date(`${departureDate}T${departureTime}`);
+          const arrivalDateTime = new Date(`${arrivalDate}T${arrivalTime}`);
+          
+          // Calculate total route duration and available time
+          const totalRouteDuration = route.legs.reduce((total, leg) => total + leg.duration.value, 0);
+          const tripDuration = (arrivalDateTime - departureDateTime) / 1000; // seconds
+          const timeBuffer = Math.max(0, tripDuration - totalRouteDuration); // Extra time available
           
           // Process route steps and extract major cities
           route.legs.forEach((leg, legIndex) => {
@@ -390,8 +420,16 @@ const RoutePlanner = ({
           // Sample points along the route for event discovery
           const samplePoints = sampleRoutePoints(route);
           
-          // Fetch events along the route
-          const eventsAlongRoute = await fetchEventsAlongRoute(samplePoints);
+          // Fetch events along the route with timing context
+          const routeTimingContext = {
+            departureDateTime,
+            arrivalDateTime,
+            totalRouteDuration,
+            timeBuffer,
+            eventTimeFlexibility: enableEventTimeFilter ? eventTimeFlexibility : 0
+          };
+          
+          const eventsAlongRoute = await fetchEventsAlongRoute(samplePoints, routeTimingContext);
           setRouteEvents(eventsAlongRoute);
 
           // Pass data back to parent components
@@ -518,6 +556,72 @@ const RoutePlanner = ({
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              <Calendar className="w-4 h-4 inline mr-1" />
+              Arrival Date
+            </label>
+            <input
+              type="date"
+              value={arrivalDate}
+              onChange={(e) => setArrivalDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              <Clock className="w-4 h-4 inline mr-1" />
+              Arrival Time
+            </label>
+            <input
+              type="time"
+              value={arrivalTime}
+              onChange={(e) => setArrivalTime(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <input
+              type="checkbox"
+              id="enableEventTimeFilter"
+              checked={enableEventTimeFilter}
+              onChange={(e) => setEnableEventTimeFilter(e.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="enableEventTimeFilter" className="text-sm font-medium flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              Expand event search window
+            </label>
+          </div>
+          
+          {enableEventTimeFilter && (
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Event Time Flexibility: ±{eventTimeFlexibility} day{eventTimeFlexibility !== 1 ? 's' : ''}
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="7"
+                value={eventTimeFlexibility}
+                onChange={(e) => setEventTimeFlexibility(parseInt(e.target.value))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <span>±1 day</span>
+                <span>±7 days</span>
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                Find events {eventTimeFlexibility} day{eventTimeFlexibility !== 1 ? 's' : ''} before/after your trip dates
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
