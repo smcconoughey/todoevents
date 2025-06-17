@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, CheckCircle2, Loader2, Clock, Eye, EyeOff } from 'lucide-react';
 import PasswordResetForm from './PasswordResetForm';
+import { AccountCreationLoader, SuccessAnimation, SparkleLoader } from '../ui/loading-animations';
 
 const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => {} }) => {
   const { login, registerUser, loading: authLoading, error: authError, statusMessage, clearError } = useContext(AuthContext);
@@ -25,6 +26,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
   const [showFallbackOption, setShowFallbackOption] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [accountCreationStep, setAccountCreationStep] = useState(null);
 
   // This will help ensure that loading state doesn't get stuck
   useEffect(() => {
@@ -113,17 +115,27 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           throw new Error('Password does not meet all requirements');
         }
         
-        // Update UI to show registration step
+        // Update UI to show registration step with enhanced animations
         setRegistrationStep('creating');
+        setAccountCreationStep('creating');
+        
+        // Add progressive animation steps
+        setTimeout(() => setAccountCreationStep('verifying'), 1500);
+        setTimeout(() => setAccountCreationStep('finalizing'), 3000);
         
         // Call register function - fetchWithTimeout is now implemented in AuthContext
         const success = await registerUser(form.email, form.password);
         
         if (success) {
+          setAccountCreationStep('success');
           setRegistrationStep('success');
-          onSuccess();
+          setTimeout(() => {
+            onSuccess();
+            setAccountCreationStep(null);
+          }, 2000);
         } else {
           setRegistrationStep('error');
+          setAccountCreationStep(null);
           setError('Registration failed. Please try again.');
         }
       } else {
@@ -141,6 +153,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       setError(err.message || 'Authentication failed');
       if (mode === 'register') {
         setRegistrationStep('error');
+        setAccountCreationStep(null);
       }
       
       // If this is a timeout error on registration, show fallback option
@@ -228,10 +241,20 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     return <PasswordResetForm onBack={handleBackFromReset} onSuccess={handleBackFromReset} />;
   }
 
+  // Show beautiful account creation animation
+  if (mode === 'register' && accountCreationStep) {
+    return <AccountCreationLoader step={accountCreationStep} />;
+  }
+
+  // Show login loading animation
+  if (mode === 'login' && isProcessing) {
+    return <SparkleLoader message="Signing you in..." />;
+  }
+
   return (
     <div className="space-y-4">
-      {/* Registration Steps Indicator */}
-      {mode === 'register' && registrationStep && (
+      {/* Registration Steps Indicator - Fallback for non-animated states */}
+      {mode === 'register' && registrationStep && !accountCreationStep && (
         <div className="mb-4">
           <div className={`rounded-md p-3 flex items-center gap-2
             ${registrationStep === 'creating' ? 'bg-blue-500/20 text-blue-200' : 

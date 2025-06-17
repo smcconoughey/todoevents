@@ -78,6 +78,9 @@ import EmailContactPopup from './EmailContactPopup';
 import { batchedSync } from '@/utils/batchedSync';
 import { WebIcon } from './WebIcons';
 import UserDropdown from "../UserDropdown";
+import { useAuth } from './AuthContext';
+import { useTheme } from '../ThemeContext';
+import { AnimatedModalWrapper, SparkleLoader } from '../ui/loading-animations';
 
 // Simple page visit tracking (privacy-friendly)
 const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
@@ -400,7 +403,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
   }, [event]);
 
   return (
-    <div className="absolute right-4 top-4 w-96 dialog-themed backdrop-blur-sm rounded-xl overflow-hidden z-20 shadow-2xl">
+    <AnimatedModalWrapper isOpen={true} className="absolute right-4 top-4 w-96 dialog-themed backdrop-blur-sm rounded-xl overflow-hidden z-20 shadow-2xl">
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -596,7 +599,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
           </div>
         )}
       </div>
-    </div>
+    </AnimatedModalWrapper>
   );
 };
 
@@ -681,10 +684,10 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
       return (
         <div
           key={event.id}
-          className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
+          className={`p-3 rounded-lg border transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:shadow-lg animate-slide-in-up ${
             selectedEvent?.id === event.id
-              ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg'
-              : 'border-white/10 bg-white/5 hover:bg-white/10'
+              ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg animate-pulse-glow'
+              : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
           }`}
           onClick={() => handleEventClick(event)}
         >
@@ -774,6 +777,7 @@ const EventMap = ({
   const [showFirstTimeSignInPopup, setShowFirstTimeSignInPopup] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showEmailContactPopup, setShowEmailContactPopup] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   // Add new state for misc filters
   const [miscFilters, setMiscFilters] = useState({
     feeFilter: 'all' // 'all', 'free', 'paid'
@@ -918,11 +922,13 @@ const EventMap = ({
       console.log('📦 Cache sample:', Array.from(batchedSync.localCache.entries()).slice(0, 2));
       
       setEvents(validEvents);
+      setIsInitialLoading(false);
 
     } catch (error) {
       console.error('Error fetching events:', error);
       setError('Failed to load events. Please try again.');
       setEvents([]); // Set empty array as fallback
+      setIsInitialLoading(false);
     }
   };
 
@@ -2276,6 +2282,15 @@ const EventMap = ({
   ];
 
 
+
+  // Show initial loading animation
+  if (isInitialLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center" style={{backgroundColor: 'var(--bg-main)'}}>
+        <SparkleLoader message="Loading your events..." />
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-full relative" style={{backgroundColor: 'var(--bg-main)'}}>
@@ -3758,15 +3773,15 @@ const EventMap = ({
             }}
           />
           
-        <div className={`
-          fixed bottom-0 left-0 right-0 
-          dialog-themed backdrop-blur-sm
-          border-t border-themed
+                  <div className={`
+            fixed bottom-0 left-0 right-0 
+            dialog-themed backdrop-blur-sm
+            border-t border-themed
             rounded-t-lg z-50
-          sm:hidden
-          transform transition-transform duration-300
-          max-h-[80vh] overflow-y-auto shadow-2xl
-          ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}
+            sm:hidden
+            transform transition-all duration-500 ease-out
+            max-h-[80vh] overflow-y-auto shadow-2xl
+            ${selectedEvent ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-full opacity-0 scale-95'}
           `}
           onClick={(e) => e.stopPropagation()}
           >

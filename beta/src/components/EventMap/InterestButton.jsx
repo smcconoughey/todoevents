@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Heart, Loader2 } from 'lucide-react';
+import { InterestHeartLoader } from '../ui/loading-animations';
 
 const InterestButton = ({ 
   interested, 
@@ -10,6 +11,15 @@ const InterestButton = ({
   showCount = true,
   className = '' 
 }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  const handleClick = () => {
+    if (loading) return;
+    setIsAnimating(true);
+    onToggle();
+    // Reset animation after completion
+    setTimeout(() => setIsAnimating(false), 600);
+  };
   const sizeClasses = {
     sm: 'h-7 px-2 text-xs',
     md: 'h-8 px-3 text-sm',

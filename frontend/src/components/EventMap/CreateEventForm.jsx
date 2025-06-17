@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Star, Crown, Repeat, Sparkles, AlertTriangle, Building2 } from 'lucide-react';
+import { EventLoadingAnimation, SuccessAnimation, AnimatedModalWrapper } from '../ui/loading-animations';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ const CreateEventForm = ({
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [isSameDay, setIsSameDay] = useState(true);
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [premiumFeatures, setPremiumFeatures] = useState({});
@@ -429,14 +431,21 @@ const CreateEventForm = ({
 
       console.log('Event saved successfully:', savedEvent);
 
-      // Pass the saved event back to parent for any additional processing
-      // BUT DON'T make another API call - this was causing the duplication
-      if (onSubmit) {
-        onSubmit(savedEvent, true); // true = skip API call, form already made it
-      }
+      // Show success animation before closing
+      setShowSuccessAnimation(true);
       
-      // Close the form only after successful submission
-      onClose();
+      // Wait for animation, then handle completion
+      setTimeout(() => {
+        // Pass the saved event back to parent for any additional processing
+        // BUT DON'T make another API call - this was causing the duplication
+        if (onSubmit) {
+          onSubmit(savedEvent, true); // true = skip API call, form already made it
+        }
+        
+        // Close the form only after successful submission
+        onClose();
+        setShowSuccessAnimation(false);
+      }, 2000); // 2 second success animation
     } catch (error) {
       console.error('Error saving event:', error);
       
@@ -454,13 +463,41 @@ const CreateEventForm = ({
     }
   };
 
+  // Show loading animation during submission
+  if (isSubmitting) {
+    return (
+      <Dialog open={isOpen} onOpenChange={() => {}}>
+        <DialogContent className="dialog-themed max-w-md w-full border-0 bg-transparent shadow-none">
+          <EventLoadingAnimation 
+            type={initialEvent ? 'saving' : 'creating'} 
+            title={formData.title}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show success animation
+  if (showSuccessAnimation) {
+    return (
+      <Dialog open={isOpen} onOpenChange={() => {}}>
+        <DialogContent className="dialog-themed max-w-md w-full border-0 bg-transparent shadow-none">
+          <SuccessAnimation 
+            message={initialEvent ? 'Event updated successfully!' : 'Event created successfully!'}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
         className="dialog-themed max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1200px] w-full max-h-[95vh] overflow-y-auto bg-gradient-to-br from-themed-surface via-themed-surface to-themed-surface-hover border-2 border-themed shadow-2xl"
         aria-describedby="create-event-dialog-description"
       >
-        <DialogHeader className="relative pb-6 border-b border-themed/50">
+        <AnimatedModalWrapper isOpen={isOpen}>
+          <DialogHeader className="relative pb-6 border-b border-themed/50">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-gradient-to-br from-spark-yellow to-pin-blue rounded-full flex items-center justify-center">
               <Plus className="w-5 h-5 text-white" />
@@ -1023,6 +1060,7 @@ const CreateEventForm = ({
             </button>
           </div>
         </form>
+        </AnimatedModalWrapper>
       </DialogContent>
     </Dialog>
   );
