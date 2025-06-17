@@ -160,6 +160,9 @@ const RouteTimeline = ({
             <div className="text-sm text-blue-700 dark:text-blue-300">
               <Star className="w-4 h-4 inline mr-1" />
               Found {routeEvents.length} events along your route
+              <div className="text-xs mt-1 text-blue-600 dark:text-blue-400">
+                Events are sorted by popularity and grouped by proximity to your stops
+              </div>
             </div>
           </div>
         )}

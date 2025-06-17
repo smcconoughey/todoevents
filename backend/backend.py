@@ -17135,3 +17135,135 @@ async def create_missionops_tables():
         return {"status": "success", "message": "MissionOps tables created successfully"}
     except Exception as e:
         return {"status": "error", "message": f"Failed to create MissionOps tables: {str(e)}"}
+
+class RouteEventRequest(BaseModel):
+    coordinates: List[Dict[str, float]]  # List of {lat: float, lng: float}
+    radius: Optional[float] = 10.0  # Search radius in miles
+
+@app.post("/events/route-batch")
+async def get_route_events_batch(request: RouteEventRequest):
+    """
+    Efficiently retrieve events along a route using batch processing.
+    Takes multiple coordinate points and returns deduplicated events within radius.
+    Optimized for route planning with minimal API calls.
+    """
+    placeholder = get_placeholder()
+    
+    if not request.coordinates or len(request.coordinates) == 0:
+        return []
+    
+    # Limit coordinates to prevent abuse
+    max_coords = 50
+    if len(request.coordinates) > max_coords:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Too many coordinates. Maximum {max_coords} allowed."
+        )
+    
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Build a single query with multiple distance calculations
+            # This is much more efficient than multiple separate queries
+            distance_conditions = []
+            params = []
+            
+            for i, coord in enumerate(request.coordinates):
+                lat = coord.get('lat')
+                lng = coord.get('lng')
+                
+                if lat is None or lng is None:
+                    continue
+                    
+                # Add distance condition for this coordinate
+                distance_condition = f"""
+                    (6371 * acos(cos(radians({lat})) * cos(radians(lat)) * 
+                     cos(radians(lng) - radians({lng})) + sin(radians({lat})) * 
+                     sin(radians(lat)))) * 0.621371 <= {request.radius}
+                """
+                distance_conditions.append(distance_condition)
+            
+            if not distance_conditions:
+                return []
+            
+            # Database-specific date comparison
+            if IS_PRODUCTION and DB_URL:
+                date_comparison = "date::date >= CURRENT_DATE"
+            else:
+                date_comparison = "date >= date('now')"
+            
+            # Single optimized query that finds events near ANY of the coordinates
+            query = f"""
+                SELECT DISTINCT id, title, description, short_description, date, start_time, end_time, end_date, 
+                       category, address, city, state, country, lat, lng, recurring, frequency, created_by, created_at,
+                       COALESCE(interest_count, 0) as interest_count,
+                       COALESCE(view_count, 0) as view_count,
+                       fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
+                       start_datetime, end_datetime, updated_at, verified
+                FROM events 
+                WHERE ({" OR ".join(distance_conditions)})
+                ORDER BY 
+                    CASE 
+                        WHEN {date_comparison} THEN 0
+                        ELSE 1                           
+                    END,
+                    interest_count DESC, date ASC
+                LIMIT 100
+            """
+            
+            cursor.execute(query, params)
+            events = cursor.fetchall()
+            
+            # Process results
+            result = []
+            seen_event_ids = set()
+            
+            for event in events:
+                try:
+                    # Convert to dict
+                    if hasattr(event, '_asdict'):
+                        event_dict = event._asdict()
+                    elif isinstance(event, dict):
+                        event_dict = dict(event)
+                    else:
+                        column_names = [
+                            'id', 'title', 'description', 'short_description', 'date', 'start_time', 'end_time',
+                            'end_date', 'category', 'address', 'city', 'state', 'country', 'lat', 'lng', 'recurring',
+                            'frequency', 'created_by', 'created_at', 'interest_count', 'view_count',
+                            'fee_required', 'price', 'currency', 'event_url', 'host_name', 'organizer_url', 'slug', 'is_published',
+                            'start_datetime', 'end_datetime', 'updated_at', 'verified'
+                        ]
+                        event_dict = dict(zip(column_names, event))
+                    
+                    # Deduplicate events
+                    event_id = event_dict.get('id')
+                    if event_id and event_id not in seen_event_ids:
+                        seen_event_ids.add(event_id)
+                        
+                        # Convert datetime fields
+                        event_dict = convert_event_datetime_fields(event_dict)
+                        
+                        # Ensure counters are integers
+                        event_dict['interest_count'] = int(event_dict.get('interest_count', 0) or 0)
+                        event_dict['view_count'] = int(event_dict.get('view_count', 0) or 0)
+                        
+                        result.append(event_dict)
+                        
+                except Exception as event_error:
+                    logger.warning(f"Error processing route event {event}: {event_error}")
+                    continue
+            
+            logger.info(f"Route batch query returned {len(result)} unique events for {len(request.coordinates)} coordinates")
+            return result
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Error retrieving route events: {error_msg}")
+        
+        if "timeout" in error_msg.lower():
+            raise HTTPException(status_code=504, detail="Route events query timed out")
+        elif "connection" in error_msg.lower():
+            raise HTTPException(status_code=503, detail="Database connection issues")
+        else:
+            raise HTTPException(status_code=500, detail="Error retrieving route events")

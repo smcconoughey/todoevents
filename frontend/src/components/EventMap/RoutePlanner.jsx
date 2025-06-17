@@ -66,84 +66,180 @@ const RoutePlanner = ({
     setWaypoints(newWaypoints);
   };
 
-  // Sample points along the route for event discovery
-  const sampleRoutePoints = (route, sampleDistance = 8000) => {
+  // Sample points along the route for event discovery (optimized for batch API)
+  const sampleRoutePoints = (route, sampleDistance = 15000) => {
     const points = [];
     const legs = route.legs;
+    
+    // Always include start and end points
+    if (legs.length > 0) {
+      // Add route start point
+      points.push({
+        lat: legs[0].start_location.lat(),
+        lng: legs[0].start_location.lng(),
+        legIndex: 0,
+        stepIndex: -1,
+        stepStart: true,
+        isWaypoint: true
+      });
+    }
     
     for (let legIndex = 0; legIndex < legs.length; legIndex++) {
       const leg = legs[legIndex];
       const steps = leg.steps;
       
+      // Add waypoint at the end of each leg (except the last one, handled separately)
+      if (legIndex < legs.length - 1) {
+        points.push({
+          lat: leg.end_location.lat(),
+          lng: leg.end_location.lng(),
+          legIndex,
+          stepIndex: 999,
+          stepStart: false,
+          isWaypoint: true
+        });
+      }
+      
+      // Sample points along major steps only (to reduce API calls)
       for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
         const step = steps[stepIndex];
-        const path = step.path || step.overview_path;
         
-        if (!path || path.length === 0) continue;
-        
-        // Add start point of each step
-        points.push({
-          lat: path[0].lat(),
-          lng: path[0].lng(),
-          legIndex,
-          stepIndex,
-          stepStart: true
-        });
-        
-        // Sample points along the step path
-        let accumulatedDistance = 0;
-        for (let i = 1; i < path.length; i++) {
-          const prev = path[i - 1];
-          const curr = path[i];
+        // Only sample from longer steps (> 10 miles) to reduce coordinate count
+        if (step.distance.value > 16000) {
+          const path = step.path || step.overview_path;
           
-          // Calculate distance between consecutive points using Haversine formula
-          const lat1 = prev.lat() * Math.PI / 180;
-          const lat2 = curr.lat() * Math.PI / 180;
-          const deltaLat = (curr.lat() - prev.lat()) * Math.PI / 180;
-          const deltaLng = (curr.lng() - prev.lng()) * Math.PI / 180;
+          if (!path || path.length === 0) continue;
           
-          const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-                    Math.cos(lat1) * Math.cos(lat2) *
-                    Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          const segmentDistance = 6371000 * c; // Earth radius in meters
-          
-          accumulatedDistance += segmentDistance;
-          
-          // Add sample point every sampleDistance meters
-          if (accumulatedDistance >= sampleDistance) {
-            points.push({
-              lat: curr.lat(),
-              lng: curr.lng(),
-              legIndex,
-              stepIndex,
-              stepStart: false
-            });
-            accumulatedDistance = 0;
+          // Sample fewer points along the step path for efficiency
+          let accumulatedDistance = 0;
+          for (let i = 1; i < path.length; i++) {
+            const prev = path[i - 1];
+            const curr = path[i];
+            
+            // Calculate distance between consecutive points using Haversine formula
+            const lat1 = prev.lat() * Math.PI / 180;
+            const lat2 = curr.lat() * Math.PI / 180;
+            const deltaLat = (curr.lat() - prev.lat()) * Math.PI / 180;
+            const deltaLng = (curr.lng() - prev.lng()) * Math.PI / 180;
+            
+            const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                      Math.cos(lat1) * Math.cos(lat2) *
+                      Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const segmentDistance = 6371000 * c; // Earth radius in meters
+            
+            accumulatedDistance += segmentDistance;
+            
+            // Add sample point every sampleDistance meters (increased from 8km to 15km)
+            if (accumulatedDistance >= sampleDistance) {
+              points.push({
+                lat: curr.lat(),
+                lng: curr.lng(),
+                legIndex,
+                stepIndex,
+                stepStart: false
+              });
+              accumulatedDistance = 0;
+            }
           }
         }
       }
     }
     
+    // Always include final destination
+    if (legs.length > 0) {
+      const lastLeg = legs[legs.length - 1];
+      points.push({
+        lat: lastLeg.end_location.lat(),
+        lng: lastLeg.end_location.lng(),
+        legIndex: legs.length - 1,
+        stepIndex: 999,
+        stepStart: false,
+        isWaypoint: true,
+        isDestination: true
+      });
+    }
+    
+    // Limit total points to prevent API overload
+    const maxPoints = 30;
+    if (points.length > maxPoints) {
+      console.log(`🔄 Reducing route sample points from ${points.length} to ${maxPoints} for efficiency`);
+      
+      // Keep waypoints and distribute remaining points evenly
+      const waypoints = points.filter(p => p.isWaypoint);
+      const nonWaypoints = points.filter(p => !p.isWaypoint);
+      
+      const remainingSlots = maxPoints - waypoints.length;
+      const step = Math.max(1, Math.floor(nonWaypoints.length / remainingSlots));
+      const sampledNonWaypoints = nonWaypoints.filter((_, index) => index % step === 0);
+      
+      return [...waypoints, ...sampledNonWaypoints.slice(0, remainingSlots)];
+    }
+    
     return points;
   };
 
-  // Fetch events along the route
+  // Fetch events along the route using efficient batch endpoint
   const fetchEventsAlongRoute = async (samplePoints) => {
+    try {
+      // Convert sample points to coordinate format for batch API
+      const coordinates = samplePoints.map(point => ({
+        lat: point.lat,
+        lng: point.lng
+      }));
+
+      // Use the new batch endpoint for efficient event retrieval
+      const response = await fetchWithTimeout(`${API_URL}/events/route-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coordinates: coordinates,
+          radius: searchRadius
+        })
+      }, 15000); // Increased timeout for batch request
+
+      if (!response.ok) {
+        throw new Error(`Batch API request failed: ${response.status}`);
+      }
+
+      const events = await response.json();
+      
+      // Add route context to events
+      const eventsWithContext = events.map(event => ({
+        ...event,
+        routeContext: {
+          estimatedArrivalTime: null // Will be calculated later
+        }
+      }));
+
+      console.log(`✅ Batch API returned ${eventsWithContext.length} events for ${coordinates.length} route points`);
+      return eventsWithContext;
+      
+    } catch (error) {
+      console.error('❌ Error fetching events along route via batch API:', error);
+      
+      // Fallback to original method if batch API fails
+      console.log('🔄 Falling back to individual requests...');
+      return await fetchEventsAlongRouteFallback(samplePoints);
+    }
+  };
+
+  // Fallback method using individual requests (kept for reliability)
+  const fetchEventsAlongRouteFallback = async (samplePoints) => {
     const allEvents = [];
     const seenEventIds = new Set();
     
     try {
-      // Batch requests to avoid overwhelming the API
-      const batchSize = 3;
+      // Reduced batch size and increased delay for fallback
+      const batchSize = 2;
       for (let i = 0; i < samplePoints.length; i += batchSize) {
         const batch = samplePoints.slice(i, i + batchSize);
         
         const promises = batch.map(point => 
-          fetchWithTimeout(`${API_URL}/events?lat=${point.lat}&lng=${point.lng}&radius=${searchRadius}&limit=15`, {
+          fetchWithTimeout(`${API_URL}/events?lat=${point.lat}&lng=${point.lng}&radius=${searchRadius}&limit=10`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
-          }, 10000)
+          }, 8000)
         );
         
         const responses = await Promise.allSettled(promises);
@@ -160,7 +256,7 @@ const RoutePlanner = ({
                   ...event,
                   routeContext: {
                     pointIndex: i,
-                    estimatedArrivalTime: null // Will be calculated later
+                    estimatedArrivalTime: null
                   }
                 });
               }
@@ -168,9 +264,9 @@ const RoutePlanner = ({
           }
         }
         
-        // Small delay between batches to be API-friendly
+        // Longer delay between batches for fallback
         if (i + batchSize < samplePoints.length) {
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
       
@@ -187,7 +283,7 @@ const RoutePlanner = ({
       });
       
     } catch (error) {
-      console.error('Error fetching events along route:', error);
+      console.error('❌ Fallback event fetching also failed:', error);
       return [];
     }
   };
