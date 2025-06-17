@@ -9379,7 +9379,7 @@ async def convert_trial_to_subscription(
                     'quantity': 1,
                 }],
                 mode='subscription',
-                success_url=f"{base_url}/subscription?session_id={{CHECKOUT_SESSION_ID}}&success=true",
+                success_url=f"{base_url}/?session_id={{CHECKOUT_SESSION_ID}}&success=true&tier={pricing_tier}",
                 cancel_url=f"{base_url}/subscription?cancelled=true",
                 customer_email=current_user['email'],
                 metadata={
@@ -9757,7 +9757,7 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=f"{base_url}/subscription?session_id={{CHECKOUT_SESSION_ID}}&success=true",
+            success_url=f"{base_url}/?session_id={{CHECKOUT_SESSION_ID}}&success=true&tier={pricing_tier}",
             cancel_url=f"{base_url}/subscription?cancelled=true",
             customer_email=current_user['email'],
             metadata={

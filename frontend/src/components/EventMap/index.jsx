@@ -80,7 +80,7 @@ import { WebIcon } from './WebIcons';
 import UserDropdown from "../UserDropdown";
 import { useAuth } from './AuthContext';
 import { useTheme } from '../ThemeContext';
-import { AnimatedModalWrapper, StaggeredListAnimation, SmoothLoader, PanelSlideAnimation } from '../ui/loading-animations';
+import { AnimatedModalWrapper, StaggeredListAnimation, SmoothLoader, PanelSlideAnimation, PremiumWelcomeAnimation } from '../ui/loading-animations';
 
 // Simple page visit tracking (privacy-friendly)
 const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
@@ -786,6 +786,9 @@ const EventMap = ({
   });
   // Track events that were manually closed to prevent re-opening from URL
   const [manuallyClosed, setManuallyClosed] = useState(new Set());
+  // Premium welcome animation state
+  const [showPremiumWelcome, setShowPremiumWelcome] = useState(false);
+  const [premiumWelcomeData, setPremiumWelcomeData] = useState(null);
 
 
   const mapRef = useRef(null);
@@ -1178,6 +1181,42 @@ const EventMap = ({
     if (user && !localStorage.getItem('hasSeenFirstTimeSignIn')) {
       setShowFirstTimeSignInPopup(true);
       localStorage.setItem('hasSeenFirstTimeSignIn', 'true');
+    }
+  }, [user]);
+
+  // Check for premium subscription success redirect
+  useEffect(() => {
+    const checkPremiumSuccess = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      const success = urlParams.get('success');
+      const tier = urlParams.get('tier');
+
+      if (success === 'true' && sessionId && tier && user) {
+        console.log('Premium subscription success detected:', { sessionId, tier, userId: user.id });
+        
+        // Clear the URL parameters
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('session_id');
+        newUrl.searchParams.delete('success');
+        newUrl.searchParams.delete('tier');
+        window.history.replaceState({}, '', newUrl.pathname + newUrl.search);
+
+        // Set welcome data and show animation
+        setPremiumWelcomeData({
+          tier: tier,
+          userName: user.email?.split('@')[0] || user.name || ''
+        });
+        setShowPremiumWelcome(true);
+
+        // Track the subscription success
+        trackPageVisit('subscription_success', `/?success=true&tier=${tier}`);
+      }
+    };
+
+    // Check on component mount and when user changes
+    if (user) {
+      checkPremiumSuccess();
     }
   }, [user]);
 
@@ -4094,6 +4133,18 @@ const EventMap = ({
         event={selectedEvent}
         user={user}
       />
+
+      {/* Premium Welcome Animation */}
+      {showPremiumWelcome && premiumWelcomeData && (
+        <PremiumWelcomeAnimation
+          tier={premiumWelcomeData.tier}
+          userName={premiumWelcomeData.userName}
+          onComplete={() => {
+            setShowPremiumWelcome(false);
+            setPremiumWelcomeData(null);
+          }}
+        />
+      )}
     </div>
   );
 };

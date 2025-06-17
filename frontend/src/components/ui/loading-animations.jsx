@@ -195,6 +195,103 @@ export const AccountCreationLoader = ({ step = 'creating', error = null }) => {
   );
 };
 
+// Premium Welcome Animation - beautiful celebration for new subscribers
+export const PremiumWelcomeAnimation = ({ tier = 'premium', userName = '', onComplete }) => {
+  const tierConfig = {
+    premium: {
+      color: 'pin-blue',
+      gradient: 'from-pin-blue to-pin-blue/60',
+      title: 'Welcome to Premium!',
+      subtitle: 'You now have access to all premium features',
+      features: ['Verified Events', 'Event Analytics', 'Recurring Events', 'Priority Support']
+    },
+    enterprise: {
+      color: 'vibrant-magenta',
+      gradient: 'from-vibrant-magenta to-vibrant-magenta/60',
+      title: 'Welcome to Enterprise!',
+      subtitle: 'You now have access to enterprise-grade features',
+      features: ['Enterprise Dashboard', 'Client Organization', 'Bulk Operations', 'Priority Support']
+    }
+  };
+
+  const config = tierConfig[tier] || tierConfig.premium;
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onComplete?.();
+    }, 6000); // Auto-close after 6 seconds
+
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+      {/* Main celebration card */}
+      <div className="bg-themed-surface border border-themed rounded-2xl p-8 max-w-md w-full text-center animate-scale-in shadow-2xl">
+        {/* Celebration burst */}
+        <div className="relative mb-6">
+          {/* Main icon */}
+          <div className={`w-20 h-20 mx-auto rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center animate-success-expand`}>
+            <CheckCircle className="w-10 h-10 text-white animate-bounce" style={{ animationDelay: '0.5s' }} />
+          </div>
+          
+          {/* Expanding celebration rings */}
+          <div className={`absolute inset-0 rounded-full border-2 border-${config.color}/30 animate-success-ring`}></div>
+          <div className={`absolute inset-0 rounded-full border-2 border-${config.color}/20 animate-success-ring`} style={{ animationDelay: '0.3s' }}></div>
+          
+          {/* Floating celebration elements */}
+          <div className="absolute -top-2 -right-2 w-3 h-3 bg-spark-yellow rounded-full animate-float-up" style={{ animationDelay: '0.8s' }}></div>
+          <div className="absolute -top-4 left-2 w-2 h-2 bg-fresh-teal rounded-full animate-float-up" style={{ animationDelay: '1.1s' }}></div>
+          <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-vibrant-magenta rounded-full animate-float-up" style={{ animationDelay: '1.4s' }}></div>
+          <div className="absolute -bottom-4 right-4 w-2 h-2 bg-pin-blue rounded-full animate-float-up" style={{ animationDelay: '1.7s' }}></div>
+        </div>
+
+        {/* Welcome message */}
+        <div className="space-y-4 mb-6">
+          <h1 className={`text-2xl font-bold text-${config.color} animate-fade-in-up`} style={{ animationDelay: '0.2s' }}>
+            {config.title}
+          </h1>
+          {userName && (
+            <p className="text-lg text-themed-primary animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+              Welcome, {userName}!
+            </p>
+          )}
+          <p className="text-themed-secondary animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+            {config.subtitle}
+          </p>
+        </div>
+
+        {/* Feature list */}
+        <div className="space-y-2 mb-6">
+          {config.features.map((feature, index) => (
+            <div 
+              key={feature}
+              className="flex items-center justify-center gap-2 text-sm text-themed-secondary animate-fade-in-up"
+              style={{ animationDelay: `${0.8 + index * 0.1}s` }}
+            >
+              <CheckCircle className={`w-4 h-4 text-${config.color}`} />
+              {feature}
+            </div>
+          ))}
+        </div>
+
+        {/* Call to action */}
+        <div className="space-y-3 animate-fade-in-up" style={{ animationDelay: '1.5s' }}>
+          <button
+            onClick={onComplete}
+            className={`w-full bg-gradient-to-r ${config.gradient} text-white py-3 px-6 rounded-lg font-medium hover:opacity-90 transition-opacity`}
+          >
+            Start Exploring Premium Features
+          </button>
+          <p className="text-xs text-themed-secondary">
+            Thank you for choosing TodoEvents {tier}!
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Success animation - clean and satisfying
 export const SuccessAnimation = ({ message = "Success!" }) => {
   return (
