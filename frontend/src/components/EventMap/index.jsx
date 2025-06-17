@@ -69,6 +69,8 @@ import {
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import AddressAutocomplete from './AddressAutocomplete';
 import WelcomePopup from '../WelcomePopup';
+import RoutePlanner from './RoutePlanner';
+import RouteTimeline from './RouteTimeline';
 
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
@@ -405,201 +407,201 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
   return (
     <AnimatedModalWrapper isOpen={true} className="absolute right-4 top-4 w-96 dialog-themed backdrop-blur-sm rounded-xl overflow-hidden z-20 shadow-2xl">
       <PanelSlideAnimation isOpen={true} direction="right">
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
-                <Icon className={`w-6 h-6 ${category.color}`} />
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
-                  {event.verified && (
-                    <div className="flex items-center gap-1 bg-green-500/20 px-2 py-1 rounded-full border border-green-500/30">
-                      <CheckCircle className="w-4 h-4 text-green-400" />
-                      <span className="text-xs font-medium text-green-400">Verified</span>
-                    </div>
-                  )}
-                </div>
-                <span className="text-xs event-id-text font-mono">ID: {event.id}</span>
-              </div>
+      <div className="p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
+              <Icon className={`w-6 h-6 ${category.color}`} />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Desktop close button clicked');
-                onClose();
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          {/* Tabs */}
-          <div className="flex gap-2 border-b border-white/10 mb-2">
-            <button
-              className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
-              onClick={() => setActiveTab('details')}
-            >Details</button>
-            <button
-              className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
-              onClick={() => setActiveTab('share')}
-            >Share</button>
-          </div>
-          {activeTab === 'details' ? (
-            <>
-              <p className="text-white/90 font-body leading-relaxed">{event.description}</p>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm text-white/70">
-                  <div className="p-1.5 rounded-md bg-pin-blue/10">
-                    <Calendar className="w-4 h-4 text-pin-blue" />
-                  </div>
-                  <span className="font-data">
-                    {formatEventDate(event)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-white/70">
-                  <div className="p-1.5 rounded-md bg-fresh-teal/10">
-                    <Clock className="w-4 h-4 text-fresh-teal" />
-                  </div>
-                  <span className="font-data">
-                    {formatEventTime(event)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-white/70">
-                  <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
-                    <MapPin className="w-4 h-4 text-vibrant-magenta" />
-                  </div>
-                  <span className="font-body">{event.address || 'No address provided'}</span>
-                </div>
-                
-                {/* Secondary Category Display */}
-                {event.secondary_category && (
-                  <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-spark-yellow/10">
-                      <Tag className="w-4 h-4 text-spark-yellow" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs text-white/50">Also in</span>
-                      <span className="font-body">{getCategory(event.secondary_category).name}</span>
-                    </div>
-                  </div>
-                )}
-                {event.distance !== undefined && (
-                  <div className="text-sm text-white/70 font-data">
-                    <WebIcon emoji="📍" size={14} className="mr-1" />
-                    {event.distance.toFixed(1)} miles away
-                  </div>
-                )}
-                
-                {/* New UX enhancement fields */}
-                {event.host_name && (
-                  <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-green-500/10">
-                      <Users className="w-4 h-4 text-green-400" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs text-white/50">Hosted by</span>
-                      <span className="font-body">{event.host_name}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {event.fee_required && (
-                  <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-yellow-500/10">
-                      <DollarSign className="w-4 h-4 text-yellow-400" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs text-white/50">Entry Requirements</span>
-                      <span className="font-body">{event.fee_required}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {event.event_url && (
-                  <div className="flex items-center gap-3 text-sm text-white/70">
-                    <div className="p-1.5 rounded-md bg-blue-500/10">
-                      <ExternalLink className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div className="flex flex-col flex-1">
-                      <span className="text-xs text-white/50">More Information</span>
-                      <button
-                        onClick={() => setExternalLinkDialog({ isOpen: true, url: event.event_url })}
-                        className="font-body text-blue-400 hover:text-blue-300 underline text-left transition-colors"
-                      >
-                        Visit Event Website
-                      </button>
-                    </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>
+                {event.verified && (
+                  <div className="flex items-center gap-1 bg-green-500/20 px-2 py-1 rounded-full border border-green-500/30">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-xs font-medium text-green-400">Verified</span>
                   </div>
                 )}
               </div>
+              <span className="text-xs event-id-text font-mono">ID: {event.id}</span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Desktop close button clicked');
+              onClose();
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-white/10 mb-2">
+          <button
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'details' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+            onClick={() => setActiveTab('details')}
+          >Details</button>
+          <button
+            className={`px-3 py-1 font-medium rounded-t ${activeTab === 'share' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'}`}
+            onClick={() => setActiveTab('share')}
+          >Share</button>
+        </div>
+        {activeTab === 'details' ? (
+          <>
+            <p className="text-white/90 font-body leading-relaxed">{event.description}</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-pin-blue/10">
+                  <Calendar className="w-4 h-4 text-pin-blue" />
+                </div>
+                <span className="font-data">
+                  {formatEventDate(event)}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-fresh-teal/10">
+                  <Clock className="w-4 h-4 text-fresh-teal" />
+                </div>
+                <span className="font-data">
+                  {formatEventTime(event)}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
+                  <MapPin className="w-4 h-4 text-vibrant-magenta" />
+                </div>
+                <span className="font-body">{event.address || 'No address provided'}</span>
+              </div>
               
-              {/* Add event interaction components to the details panel */}
-              <EventInteractionComponents eventId={String(event.id)} onReport={onReport} />
-              
-              {user && (user.id === event.created_by || user.role === 'admin') && (
-                <div className="pt-4 space-y-3 border-t border-white/10">
-                  <Button
-                    variant="ghost"
-                    className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
-                    onClick={onEdit}
-                  >
-                    Edit Event
-                  </Button>
-                  <Button
-                    className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
-                    onClick={() => onDelete(event.id)}
-                  >
-                    Delete Event
-                  </Button>
+              {/* Secondary Category Display */}
+              {event.secondary_category && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-spark-yellow/10">
+                    <Tag className="w-4 h-4 text-spark-yellow" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white/50">Also in</span>
+                    <span className="font-body">{getCategory(event.secondary_category).name}</span>
+                  </div>
                 </div>
               )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-4">
-              <div ref={shareCardRef} className="my-2">
-                <ShareCard event={event} />
-              </div>
-              <div className="flex flex-col gap-3 w-full">
-                <Button 
-                  onClick={handleDownload} 
-                  className="w-full btn-yellow-themed font-bold min-h-[44px]"
-                >
-                  Download Image
-                </Button>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleCopyLink} 
-                    variant="secondary" 
-                    className="flex-1 min-h-[40px]"
-                  >
-                    Copy Link
-                  </Button>
-                  <Button 
-                    onClick={handleFacebookShare} 
-                    variant="secondary" 
-                    className="flex-1 min-h-[40px]"
-                  >
-                    Share to Facebook
-                  </Button>
+              {event.distance !== undefined && (
+                <div className="text-sm text-white/70 font-data">
+                  <WebIcon emoji="📍" size={14} className="mr-1" />
+                  {event.distance.toFixed(1)} miles away
                 </div>
+              )}
+              
+              {/* New UX enhancement fields */}
+              {event.host_name && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-green-500/10">
+                    <Users className="w-4 h-4 text-green-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white/50">Hosted by</span>
+                    <span className="font-body">{event.host_name}</span>
+                  </div>
+                </div>
+              )}
+              
+              {event.fee_required && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-yellow-500/10">
+                    <DollarSign className="w-4 h-4 text-yellow-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white/50">Entry Requirements</span>
+                    <span className="font-body">{event.fee_required}</span>
+                  </div>
+                </div>
+              )}
+              
+              {event.event_url && (
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-blue-500/10">
+                    <ExternalLink className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="text-xs text-white/50">More Information</span>
+                    <button
+                      onClick={() => setExternalLinkDialog({ isOpen: true, url: event.event_url })}
+                      className="font-body text-blue-400 hover:text-blue-300 underline text-left transition-colors"
+                    >
+                      Visit Event Website
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Add event interaction components to the details panel */}
+            <EventInteractionComponents eventId={String(event.id)} onReport={onReport} />
+            
+            {user && (user.id === event.created_by || user.role === 'admin') && (
+              <div className="pt-4 space-y-3 border-t border-white/10">
+                <Button
+                  variant="ghost"
+                  className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={onEdit}
+                >
+                  Edit Event
+                </Button>
+                <Button
+                  className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02]"
+                  onClick={() => onDelete(event.id)}
+                >
+                  Delete Event
+                </Button>
               </div>
-              {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-              <div className="text-xs text-white/40 mt-1 text-center">
-                <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
-                <strong>Instagram:</strong> Download and upload the image to your story or feed!
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div ref={shareCardRef} className="my-2">
+              <ShareCard event={event} />
+            </div>
+            <div className="flex flex-col gap-3 w-full">
+              <Button 
+                onClick={handleDownload} 
+                className="w-full btn-yellow-themed font-bold min-h-[44px]"
+              >
+                Download Image
+              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleCopyLink} 
+                  variant="secondary" 
+                  className="flex-1 min-h-[40px]"
+                >
+                  Copy Link
+                </Button>
+                <Button 
+                  onClick={handleFacebookShare} 
+                  variant="secondary" 
+                  className="flex-1 min-h-[40px]"
+                >
+                  Share to Facebook
+                </Button>
               </div>
             </div>
-          )}
-        </div>
+            {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
+            <div className="text-xs text-white/40 mt-1 text-center">
+              <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
+              <strong>Instagram:</strong> Download and upload the image to your story or feed!
+            </div>
+          </div>
+        )}
+      </div>
       </PanelSlideAnimation>
     </AnimatedModalWrapper>
   );
@@ -789,6 +791,14 @@ const EventMap = ({
   // Premium welcome animation state
   const [showPremiumWelcome, setShowPremiumWelcome] = useState(false);
   const [premiumWelcomeData, setPremiumWelcomeData] = useState(null);
+  
+  // Route planning state
+  const [showRoutePlanner, setShowRoutePlanner] = useState(false);
+  const [routeData, setRouteData] = useState(null);
+  const [routeSteps, setRouteSteps] = useState([]);
+  const [routeEvents, setRouteEvents] = useState([]);
+  const [showRouteTimeline, setShowRouteTimeline] = useState(false);
+  const [routeDirectionsRenderer, setRouteDirectionsRenderer] = useState(null);
 
 
   const mapRef = useRef(null);
@@ -1433,13 +1443,13 @@ const EventMap = ({
       let score = 0;
       
       // Distance component (when location is set)
-      if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
+    if (selectedLocation && selectedLocation.lat != null && selectedLocation.lng != null) {
         const distance = calculateDistance(
-          selectedLocation.lat,
-          selectedLocation.lng,
+        selectedLocation.lat,
+        selectedLocation.lng,
           event.lat,
           event.lng
-        );
+      );
         // Closeness factor: inverse of distance (closer = higher score)
         // Add 1 to avoid division by zero, normalize to reasonable range
         const closeness = 1 / (distance + 0.1);
@@ -1507,6 +1517,59 @@ const EventMap = ({
     const dateB = new Date(`${b.date} ${b.start_time}`);
     return dateA - dateB;
   });
+
+  // Route planning handlers
+  const handleRouteCalculated = (directionsResult, steps) => {
+    setRouteData(directionsResult);
+    setRouteSteps(steps);
+    
+    if (directionsResult && mapRef.current) {
+      // Clear any existing directions renderer
+      if (routeDirectionsRenderer) {
+        routeDirectionsRenderer.setMap(null);
+      }
+      
+      // Create new directions renderer
+      const renderer = new window.google.maps.DirectionsRenderer({
+        map: mapRef.current,
+        directions: directionsResult,
+        draggable: true,
+        panel: null
+      });
+      
+      setRouteDirectionsRenderer(renderer);
+      setShowRouteTimeline(true);
+    }
+  };
+
+  const handleRouteEventsDiscovered = (events) => {
+    setRouteEvents(events || []);
+  };
+
+  const handleCloseRoutePlanner = () => {
+    setShowRoutePlanner(false);
+    
+    if (routeDirectionsRenderer) {
+      routeDirectionsRenderer.setMap(null);
+      setRouteDirectionsRenderer(null);
+    }
+    
+    setRouteData(null);
+    setRouteSteps([]);
+    setRouteEvents([]);
+    setShowRouteTimeline(false);
+  };
+
+  const handleToggleRoutePlanner = () => {
+    if (showRoutePlanner) {
+      handleCloseRoutePlanner();
+    } else {
+      setShowRoutePlanner(true);
+      if (activeView !== 'map') {
+        setActiveView('map');
+      }
+    }
+  };
 
   // Helper function to close event details and restore URL
   const handleCloseEventDetails = () => {
@@ -1694,7 +1757,7 @@ const EventMap = ({
       }
 
       console.log('Event created successfully:', createdEvent);
-
+      
       // Close the form immediately
       setIsCreateFormOpen(false);
       setEditingEvent(null);
@@ -1706,7 +1769,7 @@ const EventMap = ({
       // Redirect to the event page if we have a slug
       if (createdEvent.slug) {
         // Small delay to show success, then redirect
-        setTimeout(() => {
+      setTimeout(() => {
           window.location.href = `/e/${createdEvent.slug}`;
         }, 500);
       } else {
@@ -1724,11 +1787,11 @@ const EventMap = ({
             // Refresh events list
             await fetchEvents();
             
-            setEvents(currentEvents => {
-              const refreshedEvent = currentEvents.find(e => e.id === createdEvent.id);
-              if (refreshedEvent) {
+        setEvents(currentEvents => {
+          const refreshedEvent = currentEvents.find(e => e.id === createdEvent.id);
+          if (refreshedEvent) {
                 console.log('Found and selecting created event:', refreshedEvent.title);
-                setSelectedEvent(refreshedEvent);
+            setSelectedEvent(refreshedEvent);
                 
                 // Update URL if we have a slug
                 if (refreshedEvent.slug) {
@@ -1738,13 +1801,13 @@ const EventMap = ({
               } else if (attempts < maxAttempts) {
                 // Try again after a short delay
                 setTimeout(trySelectEvent, 1000);
-              } else {
+          } else {
                 console.warn('Could not find created event after', maxAttempts, 'attempts');
                 // As a last resort, just set the created event data
-                setSelectedEvent(createdEvent);
-              }
-              return currentEvents;
-            });
+            setSelectedEvent(createdEvent);
+          }
+          return currentEvents;
+        });
           };
           
           // Start the selection process
@@ -2358,6 +2421,15 @@ const EventMap = ({
               <HelpCircle className="h-5 w-5" />
             </Button>
             <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleRoutePlanner}
+              className={`text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px] ${showRoutePlanner ? 'bg-white/20' : ''}`}
+              title="Route Planner"
+            >
+              <Navigation className="h-5 w-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -3740,6 +3812,44 @@ const EventMap = ({
                 selectedDate={selectedDate}
               />
 
+              {/* Route Planning Overlay */}
+              {showRoutePlanner && (
+                <div className="absolute top-4 left-4 z-30 max-w-md">
+                  <RoutePlanner
+                    onRouteCalculated={handleRouteCalculated}
+                    onEventsDiscovered={handleRouteEventsDiscovered}
+                    mapInstance={mapRef.current}
+                    apiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
+                    onClose={handleCloseRoutePlanner}
+                    theme={theme}
+                  />
+                </div>
+              )}
+
+              {/* Route Timeline Overlay */}
+              {showRouteTimeline && routeSteps.length > 0 && (
+                <div className="absolute top-4 right-4 z-30 max-w-sm">
+                  <RouteTimeline
+                    routeSteps={routeSteps}
+                    routeEvents={routeEvents}
+                    onEventClick={handleEventClick}
+                    theme={theme}
+                  />
+                </div>
+              )}
+
+              {/* Route Planning Button */}
+              <div className="absolute bottom-4 left-4 z-30">
+                <Button
+                  onClick={handleToggleRoutePlanner}
+                  className={`bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-all duration-200 ${showRoutePlanner ? 'bg-blue-600' : ''}`}
+                  size="sm"
+                >
+                  <Navigation className="w-4 h-4 mr-2" />
+                  {showRoutePlanner ? 'Close Route Planner' : 'Plan Route'}
+                </Button>
+              </div>
+
               {/* Marker Style Toggle - Top Right Corner */}
 
 
@@ -3814,235 +3924,235 @@ const EventMap = ({
             }}
           />
           
-                  <div className={`
-            fixed bottom-0 left-0 right-0 
-            dialog-themed backdrop-blur-sm
-            border-t border-themed
+        <div className={`
+          fixed bottom-0 left-0 right-0 
+          dialog-themed backdrop-blur-sm
+          border-t border-themed
             rounded-t-lg z-50
-            sm:hidden
-            max-h-[80vh] overflow-y-auto shadow-2xl
+          sm:hidden
+          max-h-[80vh] overflow-y-auto shadow-2xl
           `}
           onClick={(e) => e.stopPropagation()}
           >
             <PanelSlideAnimation isOpen={selectedEvent} direction="up">
-              {/* Drag handle for mobile */}
-              <div 
-                className="flex justify-center pt-2 pb-1 cursor-pointer"
-                onClick={handleCloseEventDetails}
-              >
-                <div className="w-8 h-1 bg-white/20 rounded-full"></div>
+          {/* Drag handle for mobile */}
+          <div 
+            className="flex justify-center pt-2 pb-1 cursor-pointer"
+            onClick={handleCloseEventDetails}
+          >
+            <div className="w-8 h-1 bg-white/20 rounded-full"></div>
+          </div>
+          <div className="p-3 space-y-3 pb-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                {(() => {
+                  const category = getCategory(selectedEvent.category);
+                  const Icon = category.icon;
+                  return (
+                    <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20 flex-shrink-0">
+                      <Icon className={`w-5 h-5 ${category.color}`} />
+                    </div>
+                  );
+                })()}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h2 className="text-lg font-display font-semibold text-white break-words leading-tight">{selectedEvent.title}</h2>
+                  <span className="text-xs event-id-text font-mono mt-0.5">ID: {selectedEvent.id}</span>
+                </div>
               </div>
-              <div className="p-3 space-y-3 pb-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    {(() => {
-                      const category = getCategory(selectedEvent.category);
-                      const Icon = category.icon;
-                      return (
-                        <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20 flex-shrink-0">
-                          <Icon className={`w-5 h-5 ${category.color}`} />
-                        </div>
-                      );
-                    })()}
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <h2 className="text-lg font-display font-semibold text-white break-words leading-tight">{selectedEvent.title}</h2>
-                      <span className="text-xs event-id-text font-mono mt-0.5">ID: {selectedEvent.id}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0 touch-manipulation bg-black/20 backdrop-blur-sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Mobile close button clicked');
+                  handleCloseEventDetails();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Mobile close button touched');
+                  handleCloseEventDetails();
+                }}
+                style={{ 
+                  touchAction: 'manipulation',
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none'
+                }}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            {/* Mobile Tabs */}
+            <div className="flex gap-1 border-b border-white/10 -mx-3 px-3">
+              <button
+                className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
+                  activeTab === 'details' 
+                    ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
+                    : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
+                }`}
+                onClick={() => setActiveTab('details')}
+              >
+                Details
+              </button>
+              <button
+                className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
+                  activeTab === 'share' 
+                    ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
+                    : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
+                }`}
+                onClick={() => setActiveTab('share')}
+              >
+                Share
+              </button>
+            </div>
+            
+            {activeTab === 'details' ? (
+              <div className="space-y-4">
+                <p className="text-white/90 font-body leading-relaxed text-sm">{selectedEvent.description}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-pin-blue/10 flex-shrink-0">
+                      <Calendar className="w-4 h-4 text-pin-blue" />
                     </div>
+                    <span className="font-data">
+                      {formatEventDate(selectedEvent)}
+                    </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 flex-shrink-0 touch-manipulation bg-black/20 backdrop-blur-sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Mobile close button clicked');
-                      handleCloseEventDetails();
-                    }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Mobile close button touched');
-                      handleCloseEventDetails();
-                    }}
-                    style={{ 
-                      touchAction: 'manipulation',
-                      WebkitTouchCallout: 'none',
-                      WebkitUserSelect: 'none',
-                      userSelect: 'none'
-                    }}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-fresh-teal/10">
+                      <Clock className="w-4 h-4 text-fresh-teal" />
+                    </div>
+                    <span className="font-data">
+                      {formatEventTime(selectedEvent)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-vibrant-magenta/10 flex-shrink-0 mt-0.5">
+                      <MapPin className="w-4 h-4 text-vibrant-magenta" />
+                    </div>
+                    <span className="font-body break-words leading-relaxed">{selectedEvent.address || 'No address provided'}</span>
+                  </div>
+                  {selectedEvent.distance !== undefined && (
+                    <div className="text-sm text-white/70 font-data ml-8">
+                      \{selectedEvent.distance.toFixed(1)} miles away
+                    </div>
+                  )}
+                  
+                  {/* New UX enhancement fields - Mobile */}
+                  {selectedEvent.host_name && (
+                    <div className="flex items-center gap-3 text-sm text-white/70">
+                      <div className="p-1.5 rounded-md bg-green-500/10 flex-shrink-0">
+                        <Users className="w-4 h-4 text-green-400" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-white/50">Hosted by</span>
+                        <span className="font-body">{selectedEvent.host_name}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedEvent.fee_required && (
+                    <div className="flex items-center gap-3 text-sm text-white/70">
+                      <div className="p-1.5 rounded-md bg-yellow-500/10 flex-shrink-0">
+                        <DollarSign className="w-4 h-4 text-yellow-400" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-white/50">Entry Requirements</span>
+                        <span className="font-body">{selectedEvent.fee_required}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedEvent.event_url && (
+                    <div className="flex items-center gap-3 text-sm text-white/70">
+                      <div className="p-1.5 rounded-md bg-blue-500/10 flex-shrink-0">
+                        <ExternalLink className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div className="flex flex-col flex-1">
+                        <span className="text-xs text-white/50">More Information</span>
+                        <button
+                          onClick={() => setExternalLinkDialog({ isOpen: true, url: selectedEvent.event_url })}
+                          className="font-body text-blue-400 hover:text-blue-300 underline text-left transition-colors"
+                        >
+                          Visit Event Website
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
-                {/* Mobile Tabs */}
-                <div className="flex gap-1 border-b border-white/10 -mx-3 px-3">
-                  <button
-                    className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
-                      activeTab === 'details' 
-                        ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
-                        : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
-                    }`}
-                    onClick={() => setActiveTab('details')}
-                  >
-                    Details
-                  </button>
-                  <button
-                    className={`px-3 py-2 font-medium rounded-t-lg text-sm min-h-[36px] ${
-                      activeTab === 'share' 
-                        ? 'bg-themed-surface-hover text-themed-primary border-b-2 border-spark-yellow' 
-                        : 'text-themed-secondary hover:bg-themed-surface hover:text-themed-primary'
-                    }`}
-                    onClick={() => setActiveTab('share')}
-                  >
-                    Share
-                  </button>
-                </div>
+                {/* Event Interaction Components */}
+                <EventInteractionComponents eventId={String(selectedEvent.id)} onReport={() => setShowReportDialog(true)} />
                 
-                {activeTab === 'details' ? (
-                  <div className="space-y-4">
-                    <p className="text-white/90 font-body leading-relaxed text-sm">{selectedEvent.description}</p>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 text-sm text-white/70">
-                        <div className="p-1.5 rounded-md bg-pin-blue/10 flex-shrink-0">
-                          <Calendar className="w-4 h-4 text-pin-blue" />
-                        </div>
-                        <span className="font-data">
-                          {formatEventDate(selectedEvent)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-white/70">
-                        <div className="p-1.5 rounded-md bg-fresh-teal/10">
-                          <Clock className="w-4 h-4 text-fresh-teal" />
-                        </div>
-                        <span className="font-data">
-                          {formatEventTime(selectedEvent)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-white/70">
-                        <div className="p-1.5 rounded-md bg-vibrant-magenta/10 flex-shrink-0 mt-0.5">
-                          <MapPin className="w-4 h-4 text-vibrant-magenta" />
-                        </div>
-                        <span className="font-body break-words leading-relaxed">{selectedEvent.address || 'No address provided'}</span>
-                      </div>
-                      {selectedEvent.distance !== undefined && (
-                        <div className="text-sm text-white/70 font-data ml-8">
-                          \{selectedEvent.distance.toFixed(1)} miles away
-                        </div>
-                      )}
-                      
-                      {/* New UX enhancement fields - Mobile */}
-                      {selectedEvent.host_name && (
-                        <div className="flex items-center gap-3 text-sm text-white/70">
-                          <div className="p-1.5 rounded-md bg-green-500/10 flex-shrink-0">
-                            <Users className="w-4 h-4 text-green-400" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs text-white/50">Hosted by</span>
-                            <span className="font-body">{selectedEvent.host_name}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {selectedEvent.fee_required && (
-                        <div className="flex items-center gap-3 text-sm text-white/70">
-                          <div className="p-1.5 rounded-md bg-yellow-500/10 flex-shrink-0">
-                            <DollarSign className="w-4 h-4 text-yellow-400" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs text-white/50">Entry Requirements</span>
-                            <span className="font-body">{selectedEvent.fee_required}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {selectedEvent.event_url && (
-                        <div className="flex items-center gap-3 text-sm text-white/70">
-                          <div className="p-1.5 rounded-md bg-blue-500/10 flex-shrink-0">
-                            <ExternalLink className="w-4 h-4 text-blue-400" />
-                          </div>
-                          <div className="flex flex-col flex-1">
-                            <span className="text-xs text-white/50">More Information</span>
-                            <button
-                              onClick={() => setExternalLinkDialog({ isOpen: true, url: selectedEvent.event_url })}
-                              className="font-body text-blue-400 hover:text-blue-300 underline text-left transition-colors"
-                            >
-                              Visit Event Website
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Event Interaction Components */}
-                    <EventInteractionComponents eventId={String(selectedEvent.id)} onReport={() => setShowReportDialog(true)} />
-                    
-                    {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
-                      <div className="pt-3 space-y-2 border-t border-white/10">
-                        <Button
-                          variant="ghost"
-                          className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02] min-h-[40px] text-sm"
-                          onClick={() => {
-                            setEditingEvent(selectedEvent);
-                            setIsCreateFormOpen(true);
-                            setSelectedLocation({
-                              lat: selectedEvent.lat,
-                              lng: selectedEvent.lng,
-                              address: selectedEvent.address
-                            });
-                          }}
-                        >
-                          Edit Event
-                        </Button>
-                        <Button
-                          className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02] min-h-[40px] text-sm"
-                          onClick={() => handleEventDelete(selectedEvent.id)}
-                        >
-                          Delete Event
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <div ref={shareCardRef} className="my-1">
-                      <ShareCard event={selectedEvent} />
-                    </div>
-                    <div className="flex flex-col gap-3 w-full">
-                      <Button 
-                        onClick={handleDownload} 
-                        className="w-full btn-yellow-themed font-bold min-h-[44px]"
-                      >
-                        Download Image
-                      </Button>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={handleCopyLink} 
-                          variant="secondary" 
-                          className="flex-1 min-h-[40px]"
-                        >
-                          Copy Link
-                        </Button>
-                        <Button 
-                          onClick={handleFacebookShare} 
-                          variant="secondary" 
-                          className="flex-1 min-h-[40px]"
-                        >
-                          Share to Facebook
-                        </Button>
-                      </div>
-                    </div>
-                    {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-                    <div className="text-xs text-white/40 mt-1 text-center">
-                      <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
-                      <strong>Instagram:</strong> Download and upload the image to your story or feed!
-                    </div>
+                {user && (user.id === selectedEvent.created_by || user.role === 'admin') && (
+                  <div className="pt-3 space-y-2 border-t border-white/10">
+                    <Button
+                      variant="ghost"
+                      className="w-full btn-secondary text-white font-medium transition-all duration-200 hover:scale-[1.02] min-h-[40px] text-sm"
+                      onClick={() => {
+                        setEditingEvent(selectedEvent);
+                        setIsCreateFormOpen(true);
+                        setSelectedLocation({
+                          lat: selectedEvent.lat,
+                          lng: selectedEvent.lng,
+                          address: selectedEvent.address
+                        });
+                      }}
+                    >
+                      Edit Event
+                    </Button>
+                    <Button
+                      className="w-full bg-vibrant-magenta/20 hover:bg-vibrant-magenta/30 text-vibrant-magenta border border-vibrant-magenta/30 font-medium transition-all duration-200 hover:scale-[1.02] min-h-[40px] text-sm"
+                      onClick={() => handleEventDelete(selectedEvent.id)}
+                    >
+                      Delete Event
+                    </Button>
                   </div>
                 )}
               </div>
-            </PanelSlideAnimation>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <div ref={shareCardRef} className="my-1">
+                  <ShareCard event={selectedEvent} />
+                </div>
+                <div className="flex flex-col gap-3 w-full">
+                  <Button 
+                    onClick={handleDownload} 
+                    className="w-full btn-yellow-themed font-bold min-h-[44px]"
+                  >
+                    Download Image
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleCopyLink} 
+                      variant="secondary" 
+                      className="flex-1 min-h-[40px]"
+                    >
+                      Copy Link
+                    </Button>
+                    <Button 
+                      onClick={handleFacebookShare} 
+                      variant="secondary" 
+                      className="flex-1 min-h-[40px]"
+                    >
+                      Share to Facebook
+                    </Button>
+                  </div>
+                </div>
+                {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
+                <div className="text-xs text-white/40 mt-1 text-center">
+                  <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
+                  <strong>Instagram:</strong> Download and upload the image to your story or feed!
+                </div>
+              </div>
+            )}
           </div>
+            </PanelSlideAnimation>
+        </div>
         </>
       )}
 

@@ -63,7 +63,7 @@ const AccountPage = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
-
+    
   const loadUserData = async () => {
     try {
       setLoading(true);
@@ -541,8 +541,8 @@ const AccountPage = () => {
                       <div className="mb-2">
                         <span className="text-lg text-themed-secondary line-through">$40/month</span>
                         <div className="text-3xl font-bold text-themed-primary">
-                          $20
-                          <span className="text-lg font-normal text-themed-secondary">/month</span>
+                      $20
+                      <span className="text-lg font-normal text-themed-secondary">/month</span>
                         </div>
                       </div>
                       <p className="text-themed-secondary">Perfect for regular event creators</p>
@@ -803,7 +803,7 @@ const AccountPage = () => {
             {/* Premium Event Counter for Premium Users */}
             {isPremium && premiumStatus && (
               <div className="bg-themed-surface p-6 rounded-lg border border-themed mb-6">
-                <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-3 mb-4">
                   <Crown className="w-5 h-5 text-amber-500" />
                   <h3 className="text-lg font-semibold text-themed-primary">
                     {user?.role === 'enterprise' ? 'Enterprise' : 'Premium'} Event Usage
@@ -822,14 +822,14 @@ const AccountPage = () => {
                     </div>
                     <div className="text-sm text-themed-secondary">Events This Month</div>
                   </div>
-                  
+
                   <div className="text-center p-4 bg-themed-background rounded-lg">
                     <div className="text-2xl font-bold text-amber-500">
                       {premiumStatus.event_limit || 0}
-                    </div>
+                        </div>
                     <div className="text-sm text-themed-secondary">Monthly Limit</div>
                   </div>
-                  
+
                   <div className="text-center p-4 bg-themed-background rounded-lg">
                     <div className="text-2xl font-bold text-green-500">
                       {premiumStatus.events_remaining || 0}
@@ -852,8 +852,8 @@ const AccountPage = () => {
                     <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
                       <AlertTriangle className="w-4 h-4" />
                       <span className="text-sm">You've reached your premium event limit for this month.</span>
-                    </div>
                   </div>
+                </div>
                 )}
               </div>
             )}

@@ -1191,19 +1191,41 @@ const AdminDashboard = () => {
           return;
         }
         
-        const response = await fetchData('/admin/events/bulk-simple', 'POST', jsonData);
-        
-        if (response) {
-          setImportResults(response);
-          if (response.success_count > 0) {
-            setSuccess(`Successfully imported ${response.success_count} events!${response.error_count > 0 ? ` ${response.error_count} events had errors.` : ''}`);
-            if (response.error_count === 0) {
-              setJsonInput(''); // Clear input only on complete success
+        let successCount = 0;
+        let errorCount = 0;
+        const errorDetails = [];
+
+        for (let i = 0; i < jsonData.events.length; i++) {
+          const eventPayload = jsonData.events[i];
+          try {
+            const resp = await fetchData('/events', 'POST', eventPayload);
+            if (resp && resp.id) {
+              successCount++;
+            } else {
+              errorCount++;
+              errorDetails.push(`Event ${i + 1}: Unexpected response`);
+            }
+          } catch (indivErr) {
+            errorCount++;
+            errorDetails.push(`Event ${i + 1}: ${(indivErr?.message) || 'Error creating event'}`);
           }
+        }
+
+        const resultsSummary = {
+          success_count: successCount,
+          error_count: errorCount,
+          errors: errorDetails,
+        };
+        setImportResults(resultsSummary);
+
+        if (successCount > 0) {
+          setSuccess(`Successfully imported ${successCount} events!${errorCount > 0 ? ` ${errorCount} events had errors.` : ''}`);
+          if (errorCount === 0) {
+            setJsonInput('');
           }
-          if (response.error_count > 0 && response.success_count === 0) {
-            setBulkError(`All ${response.error_count} events failed to import. Check errors below.`);
-          }
+        }
+        if (errorCount > 0 && successCount === 0) {
+          setBulkError(`All ${errorCount} events failed to import. Check errors below.`);
         }
       } catch (error) {
         if (error instanceof SyntaxError) {

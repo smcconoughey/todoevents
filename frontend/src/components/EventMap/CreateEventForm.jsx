@@ -436,14 +436,14 @@ const CreateEventForm = ({
       
       // Wait for animation, then handle completion
       setTimeout(() => {
-        // Pass the saved event back to parent for any additional processing
-        // BUT DON'T make another API call - this was causing the duplication
-        if (onSubmit) {
-          onSubmit(savedEvent, true); // true = skip API call, form already made it
-        }
-        
-        // Close the form only after successful submission
-        onClose();
+      // Pass the saved event back to parent for any additional processing
+      // BUT DON'T make another API call - this was causing the duplication
+      if (onSubmit) {
+        onSubmit(savedEvent, true); // true = skip API call, form already made it
+      }
+      
+      // Close the form only after successful submission
+      onClose();
         setShowSuccessAnimation(false);
       }, 2000); // 2 second success animation
     } catch (error) {
@@ -504,11 +504,11 @@ const CreateEventForm = ({
             </div>
             <div>
               <DialogTitle className="text-xl sm:text-2xl font-display font-bold dialog-title-themed">
-                {initialEvent ? 'Edit Event' : 'Create New Event'}
-              </DialogTitle>
+            {initialEvent ? 'Edit Event' : 'Create New Event'}
+          </DialogTitle>
               <DialogDescription id="create-event-dialog-description" className="dialog-description-themed text-sm mt-1">
-                {initialEvent ? 'Edit an existing event with details' : 'Create a new event with details'}
-              </DialogDescription>
+            {initialEvent ? 'Edit an existing event with details' : 'Create a new event with details'}
+          </DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -521,7 +521,7 @@ const CreateEventForm = ({
               </div>
               <div>
                 <h4 className="font-medium mb-1">Error</h4>
-                <span className="text-sm">{connectionError ? 'Unable to connect to server. Please try again later.' : error}</span>
+              <span className="text-sm">{connectionError ? 'Unable to connect to server. Please try again later.' : error}</span>
               </div>
             </div>
           )}
@@ -542,14 +542,14 @@ const CreateEventForm = ({
                   <div className="w-2 h-2 bg-spark-yellow rounded-full"></div>
                   Event Title
                 </label>
-                <Input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter event title"
+              <Input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter event title"
                   className="input-themed h-12 text-base font-medium border-2 focus:border-pin-blue/50 focus:ring-2 focus:ring-pin-blue/20 transition-all duration-200"
-                />
-              </div>
+              />
+            </div>
 
               {/* Primary Category */}
               <div className="space-y-3">
@@ -557,27 +557,27 @@ const CreateEventForm = ({
                   <div className="w-2 h-2 bg-vibrant-magenta rounded-full"></div>
                   Primary Category
                 </label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-                >
+              <Select 
+                value={formData.category} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              >
                   <SelectTrigger className="input-themed h-12 border-2 focus:border-pin-blue/50 transition-all duration-200">
                     <SelectValue placeholder="Select category..." />
-                  </SelectTrigger>
+                </SelectTrigger>
                   <SelectContent className="bg-themed-surface border-themed shadow-xl">
-                    {categories.filter(cat => cat.id !== 'all').map(category => (
+                  {categories.filter(cat => cat.id !== 'all').map(category => (
                       <SelectItem key={category.id} value={category.id} className="hover:bg-themed-surface-hover">
                         <div className="flex items-center gap-3 py-1">
-                          {React.createElement(category.icon, {
+                        {React.createElement(category.icon, {
                             className: `w-5 h-5 ${category.color}`
-                          })}
+                        })}
                           <span className="font-medium">{category.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
               {/* Secondary Category */}
               <div className="space-y-3">
@@ -585,36 +585,36 @@ const CreateEventForm = ({
                   <div className="w-2 h-2 bg-fresh-teal rounded-full"></div>
                   Secondary Category
                 </label>
-                <div className="relative">
-                  <Select 
-                    value={formData.secondary_category || "none"} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value === "none" ? "" : value }))}
-                  >
+              <div className="relative">
+                <Select 
+                  value={formData.secondary_category || "none"} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, secondary_category: value === "none" ? "" : value }))}
+                >
                     <SelectTrigger className="input-themed h-12 border-2 focus:border-pin-blue/50 transition-all duration-200">
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
                     <SelectContent className="bg-themed-surface border-themed shadow-xl">
                       <SelectItem value="none" className="hover:bg-themed-surface-hover">
                         <span className="text-themed-muted font-medium">None</span>
-                      </SelectItem>
-                      {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
+                    </SelectItem>
+                    {categories.filter(cat => cat.id !== 'all' && cat.id !== formData.category).map(category => (
                         <SelectItem key={category.id} value={category.id} className="hover:bg-themed-surface-hover">
                           <div className="flex items-center gap-3 py-1">
-                            {React.createElement(category.icon, {
+                          {React.createElement(category.icon, {
                               className: `w-5 h-5 ${category.color}`
-                            })}
+                          })}
                             <span className="font-medium">{category.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                   <span className="absolute -top-2 right-3 text-xs font-medium text-themed-muted bg-themed-surface px-2 py-0.5 rounded-full border border-themed/30">
-                    Optional
-                  </span>
-                </div>
+                  Optional
+                </span>
               </div>
             </div>
+          </div>
 
             {/* Description */}
             <div className="space-y-3">
@@ -622,13 +622,13 @@ const CreateEventForm = ({
                 <div className="w-2 h-2 bg-pin-blue rounded-full"></div>
                 Description
               </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Enter event description"
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Enter event description"
                 className="w-full px-4 py-3 rounded-xl input-themed resize-none border-2 focus:border-pin-blue/50 focus:ring-2 focus:ring-pin-blue/20 transition-all duration-200 text-base"
                 rows="4"
-              />
+            />
             </div>
           </div>
 
@@ -678,15 +678,15 @@ const CreateEventForm = ({
                   End Date
                   {isSameDay && <span className="text-xs bg-themed-surface px-2 py-0.5 rounded-full border border-themed/30">Auto</span>}
                 </label>
-                <Input
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                  <Input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                   className="input-themed h-12 border-2 focus:border-pin-blue/50 transition-all duration-200"
-                  disabled={isSameDay}
+                    disabled={isSameDay}
                   required
-                />
-              </div>
+                  />
+                </div>
 
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
@@ -824,7 +824,7 @@ const CreateEventForm = ({
               <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
                 <div className="w-8 h-8 bg-gradient-to-br from-amber-500/20 to-yellow-500/20 rounded-lg flex items-center justify-center">
                   <Crown className="w-4 h-4 text-amber-500" />
-                </div>
+                  </div>
                 <h3 className="text-lg font-semibold text-themed-primary">Premium Event Features</h3>
               </div>
               
@@ -885,8 +885,8 @@ const CreateEventForm = ({
                           <AlertTriangle className="w-4 h-4" />
                           <span className="text-sm font-medium">You're running low on premium events this month!</span>
                         </div>
-                      </div>
-                    )}
+                  </div>
+                )}
                     
                     {premiumStatus.events_remaining === 0 && (
                       <div className="mt-4 p-3 bg-red-100/50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
@@ -897,11 +897,11 @@ const CreateEventForm = ({
                       </div>
                     )}
                   </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
-
+              )}
+              
           {/* Recurring Events Section - Only show when premium event is selected */}
           {isPremiumUser && formData.is_premium_event && (
             <div className="space-y-6">
@@ -978,21 +978,21 @@ const CreateEventForm = ({
                     </Select>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
+                  </div>
+                </div>
+              )}
 
           {/* Location Section */}
           <div className="space-y-6">
             <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
               <div className="w-8 h-8 bg-gradient-to-br from-pin-blue/20 to-pin-blue/10 rounded-lg flex items-center justify-center">
                 <MapPin className="w-4 h-4 text-pin-blue" />
-              </div>
-              <h3 className="text-lg font-semibold text-themed-primary">Event Location</h3>
             </div>
-            
+              <h3 className="text-lg font-semibold text-themed-primary">Event Location</h3>
+          </div>
+
             <div className="space-y-4">
-              <div className="space-y-3">
+          <div className="space-y-3">
                 <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
                   <div className="w-2 h-2 bg-pin-blue rounded-full"></div>
                   Search for a location
@@ -1003,7 +1003,7 @@ const CreateEventForm = ({
                   onChange={handleAddressChange}
                   className="input-themed h-12 border-2 focus:border-pin-blue/50 focus:ring-2 focus:ring-pin-blue/20 transition-all duration-200"
                 />
-              </div>
+                      </div>
               
               {formData.location && (
                 <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-pin-blue/5 to-pin-blue/10 rounded-xl border-2 border-pin-blue/20">
@@ -1052,7 +1052,7 @@ const CreateEventForm = ({
               ) : (
                 <>
                   <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                    <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4" />
                   </div>
                   {initialEvent ? 'Update Event' : 'Create Event'}
                 </>
