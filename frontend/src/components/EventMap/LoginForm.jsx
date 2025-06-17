@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, CheckCircle2, Loader2, Clock, Eye, EyeOff } from 'lucide-react';
 import PasswordResetForm from './PasswordResetForm';
-import { AccountCreationLoader, SuccessAnimation, SparkleLoader } from '../ui/loading-animations';
+import { AccountCreationLoader, SuccessAnimation, SmoothLoader } from '../ui/loading-animations';
 
 const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => {} }) => {
   const { login, registerUser, loading: authLoading, error: authError, statusMessage, clearError } = useContext(AuthContext);
@@ -28,43 +28,44 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
   const [showPassword, setShowPassword] = useState(false);
   const [accountCreationStep, setAccountCreationStep] = useState(null);
 
-  // This will help ensure that loading state doesn't get stuck
+  // Enhanced error handling to prevent stuck states
   useEffect(() => {
-    // If auth context is no longer loading, we shouldn't be either
     if (!authLoading && isLoading) {
       setIsLoading(false);
     }
 
-    // If auth context has an error, make sure we're not in loading state
     if (authError) {
       setIsLoading(false);
+      setAccountCreationStep(null);
+      setRegistrationStep(null);
       console.error("Auth error:", authError);
       
-      // If it's a timeout error on registration, show fallback option
       if (mode === 'register' && authError.includes('timeout')) {
         setShowFallbackOption(true);
       }
     }
   }, [authLoading, authError, mode]);
 
-  // Add a timeout to reset loading state after 30 seconds as a safety measure
+  // Safety timeout to prevent stuck states
   useEffect(() => {
     let timeout;
-    if (isLoading) {
+    if (isLoading || accountCreationStep) {
       timeout = setTimeout(() => {
-        console.warn("Login form loading timeout - resetting state");
+        console.warn("Form timeout - resetting state");
         setIsLoading(false);
-        const timeoutMessage = "Request took too long. The server might be busy.";
+        setAccountCreationStep(null);
+        setRegistrationStep(null);
+        
+        const timeoutMessage = "Request took too long. Please try again.";
         setError(timeoutMessage);
         
-        // Show fallback option if on registration screen
         if (mode === 'register') {
           setShowFallbackOption(true);
         }
-      }, 30000);  // Increased to 30 seconds
+      }, 30000);
     }
     return () => clearTimeout(timeout);
-  }, [isLoading, mode]);
+  }, [isLoading, accountCreationStep, mode]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -90,18 +91,25 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     setError(null);
     setIsLoading(true);
     setShowFallbackOption(false);
+    setAccountCreationStep(null);
+    setRegistrationStep(null);
 
     console.log(`Attempting to ${mode === 'login' ? 'login' : 'register'} with email: ${form.email}`);
 
-    // Safety timeout to ensure loading state is cleared
+    // Enhanced safety timeout
     const safetyTimeout = setTimeout(() => {
-      console.warn('Safety timeout triggered - clearing loading state');
+      console.warn('Safety timeout triggered - clearing all states');
       setIsLoading(false);
-      if (mode === 'register') {
-        setRegistrationStep('error');
-      }
+      setAccountCreationStep('error');
+      setRegistrationStep('error');
       setError('Request timeout. Please try again.');
-    }, 45000); // 45 second safety timeout
+      
+      // Auto-clear error state after showing it
+      setTimeout(() => {
+        setAccountCreationStep(null);
+        setRegistrationStep(null);
+      }, 3000);
+    }, 45000);
 
     try {
       if (mode === 'register') {
@@ -109,21 +117,22 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           throw new Error('Passwords do not match');
         }
         
-        // Check basic password requirements
         const allRequirementsMet = Object.values(validationStatus).every(Boolean);
         if (!allRequirementsMet) {
           throw new Error('Password does not meet all requirements');
         }
         
-        // Update UI to show registration step with enhanced animations
+        // Start animation sequence
         setRegistrationStep('creating');
         setAccountCreationStep('creating');
         
-        // Add progressive animation steps
-        setTimeout(() => setAccountCreationStep('verifying'), 1500);
-        setTimeout(() => setAccountCreationStep('finalizing'), 3000);
+        setTimeout(() => {
+          if (accountCreationStep === 'creating') setAccountCreationStep('verifying');
+        }, 1500);
+        setTimeout(() => {
+          if (accountCreationStep === 'verifying') setAccountCreationStep('finalizing');
+        }, 3000);
         
-        // Call register function - fetchWithTimeout is now implemented in AuthContext
         const success = await registerUser(form.email, form.password);
         
         if (success) {
@@ -132,14 +141,22 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           setTimeout(() => {
             onSuccess();
             setAccountCreationStep(null);
+            setRegistrationStep(null);
           }, 2000);
         } else {
+          // Handle registration failure
+          const errorMessage = authError || 'Registration failed. Please try again.';
+          setAccountCreationStep('error');
           setRegistrationStep('error');
-          setAccountCreationStep(null);
-          setError('Registration failed. Please try again.');
+          setError(errorMessage);
+          
+          // Auto-clear error animation after 3 seconds
+          setTimeout(() => {
+            setAccountCreationStep(null);
+            setRegistrationStep(null);
+          }, 3000);
         }
       } else {
-        // Call login function - fetchWithTimeout is now implemented in AuthContext
         const success = await login(form.email, form.password);
         
         if (success) {
@@ -150,25 +167,30 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       }
     } catch (err) {
       console.error(`${mode === 'login' ? 'Login' : 'Registration'} error:`, err);
-      setError(err.message || 'Authentication failed');
+      const errorMessage = err.message || 'Authentication failed';
+      setError(errorMessage);
+      
       if (mode === 'register') {
+        setAccountCreationStep('error');
         setRegistrationStep('error');
-        setAccountCreationStep(null);
+        
+        // Auto-clear error animation after 3 seconds
+        setTimeout(() => {
+          setAccountCreationStep(null);
+          setRegistrationStep(null);
+        }, 3000);
       }
       
-      // If this is a timeout error on registration, show fallback option
-      if (mode === 'register' && err.message && err.message.includes('timeout')) {
+      if (mode === 'register' && errorMessage.includes('timeout')) {
         setShowFallbackOption(true);
       }
     } finally {
-      // Always clear the safety timeout and loading state
       clearTimeout(safetyTimeout);
       setIsLoading(false);
     }
   };
 
   const handleContinueAnyway = () => {
-    // Store credentials in localStorage to attempt registration later
     try {
       localStorage.setItem('pendingRegistration', JSON.stringify({
         email: form.email,
@@ -178,18 +200,19 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       
       console.log("Stored registration info for later attempt");
       setRegistrationStep('deferred');
-      onSuccess(); // Allow user to continue using the app
+      setAccountCreationStep(null);
+      onSuccess();
     } catch (err) {
       console.error("Failed to save registration for later:", err);
     }
   };
 
   const toggleMode = () => {
-    // Clear any existing errors and reset loading state when switching modes
     setError(null);
     clearError();
     setIsLoading(false);
     setRegistrationStep(null);
+    setAccountCreationStep(null);
     setShowFallbackOption(false);
     onModeChange(mode === 'login' ? 'register' : 'login');
   };
@@ -202,53 +225,38 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
     setShowForgotPassword(false);
   };
 
-  // Password requirements component
   const PasswordRequirements = () => (
-    <div className="mt-2 space-y-1">
-      <p className="text-xs text-themed-tertiary">Password requirements:</p>
-      <ul className="space-y-1">
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.length ? 'text-validation-success' : 'text-themed-tertiary'}`}>
-          {validationStatus.length ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-          At least 8 characters
-        </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.uppercase ? 'text-validation-success' : 'text-themed-tertiary'}`}>
-          {validationStatus.uppercase ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-          At least one uppercase letter
-        </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.lowercase ? 'text-validation-success' : 'text-themed-tertiary'}`}>
-          {validationStatus.lowercase ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-          At least one lowercase letter
-        </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.number ? 'text-validation-success' : 'text-themed-tertiary'}`}>
-          {validationStatus.number ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-          At least one number
-        </li>
-        <li className={`text-xs flex items-center gap-1 ${validationStatus.special ? 'text-validation-success' : 'text-themed-tertiary'}`}>
-          {validationStatus.special ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-          At least one special character
-        </li>
-      </ul>
+    <div className="space-y-1 text-xs">
+      {Object.entries({
+        length: 'At least 8 characters',
+        uppercase: 'One uppercase letter',
+        lowercase: 'One lowercase letter', 
+        number: 'One number',
+        special: 'One special character'
+      }).map(([key, label]) => (
+        <div key={key} className={`flex items-center gap-1 ${validationStatus[key] ? 'text-green-400' : 'text-themed-tertiary'}`}>
+          {validationStatus[key] ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 border border-themed-tertiary rounded-full" />}
+          <span>{label}</span>
+        </div>
+      ))}
     </div>
   );
-
-  // Display either local error or auth context error
-  const displayError = error || authError;
-  // Combined loading state from both local and auth context
-  const isProcessing = isLoading || authLoading;
   
-  // If showing forgot password form
   if (showForgotPassword) {
-    return <PasswordResetForm onBack={handleBackFromReset} onSuccess={handleBackFromReset} />;
+    return <PasswordResetForm onBack={handleBackFromReset} />;
   }
+  
+  const isProcessing = isLoading || authLoading;
+  const displayError = error || authError;
 
-  // Show beautiful account creation animation
+  // Show enhanced account creation animation with error handling
   if (mode === 'register' && accountCreationStep) {
-    return <AccountCreationLoader step={accountCreationStep} />;
+    return <AccountCreationLoader step={accountCreationStep} error={displayError} />;
   }
 
   // Show login loading animation
   if (mode === 'login' && isProcessing) {
-    return <SparkleLoader message="Signing you in..." />;
+    return <SmoothLoader message="Signing you in..." />;
   }
 
   return (
@@ -282,7 +290,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
             {registrationStep === 'error' && (
               <>
                 <AlertCircle className="w-4 h-4" />
-                <span>Error creating account.</span>
+                <span>Error creating account. Please try again.</span>
               </>
             )}
           </div>
@@ -290,11 +298,10 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
       )}
       
       {/* Error Alert */}
-      {displayError && (
+      {displayError && !accountCreationStep && (
         <div className="bg-red-500/20 text-red-200 p-3 rounded-md flex items-start gap-2">
           <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
           <div>
-            {/* Add helpful additional context based on error type */}
             <p>{displayError}</p>
             {displayError.includes('Invalid credentials') && mode === 'login' && (
               <p className="text-sm mt-1">
@@ -309,6 +316,9 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
             )}
             {displayError.includes('timeout') && (
               <p className="text-sm mt-1">The server might be busy. Please try again later.</p>
+            )}
+            {displayError.includes('Email already registered') && (
+              <p className="text-sm mt-1">This email is already registered. Try signing in instead.</p>
             )}
           </div>
         </div>
@@ -338,7 +348,7 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
           </div>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm text-themed-secondary">Email</label>
@@ -374,7 +384,6 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
             </button>
           </div>
           
-          {/* Show password requirements for registration */}
           {mode === 'register' && <PasswordRequirements />}
         </div>
         
