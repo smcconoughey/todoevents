@@ -464,6 +464,33 @@ const RoutePlanner = ({
 
   return (
     <div className={`p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-96 overflow-y-auto ${isFrost ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 16px;
+          width: 16px;
+          background: #3b82f6;
+          border-radius: 50%;
+          cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+          height: 16px;
+          width: 16px;
+          background: #3b82f6;
+          border-radius: 50%;
+          cursor: pointer;
+          border: none;
+        }
+        
+        .dark .slider::-webkit-slider-thumb {
+          background: #60a5fa;
+        }
+        
+        .dark .slider::-moz-range-thumb {
+          background: #60a5fa;
+        }
+      `}</style>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Navigation className="w-5 h-5" />
@@ -533,7 +560,7 @@ const RoutePlanner = ({
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
               <Calendar className="w-4 h-4 inline mr-1" />
               Departure Date
             </label>
@@ -541,11 +568,11 @@ const RoutePlanner = ({
               type="date"
               value={departureDate}
               onChange={(e) => setDepartureDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
               <Clock className="w-4 h-4 inline mr-1" />
               Departure Time
             </label>
@@ -553,14 +580,14 @@ const RoutePlanner = ({
               type="time"
               value={departureTime}
               onChange={(e) => setDepartureTime(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
               <Calendar className="w-4 h-4 inline mr-1" />
               Arrival Date
             </label>
@@ -568,11 +595,11 @@ const RoutePlanner = ({
               type="date"
               value={arrivalDate}
               onChange={(e) => setArrivalDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
               <Clock className="w-4 h-4 inline mr-1" />
               Arrival Time
             </label>
@@ -580,7 +607,7 @@ const RoutePlanner = ({
               type="time"
               value={arrivalTime}
               onChange={(e) => setArrivalTime(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
         </div>
@@ -592,9 +619,9 @@ const RoutePlanner = ({
               id="enableEventTimeFilter"
               checked={enableEventTimeFilter}
               onChange={(e) => setEnableEventTimeFilter(e.target.checked)}
-              className="rounded"
+              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-800"
             />
-            <label htmlFor="enableEventTimeFilter" className="text-sm font-medium flex items-center gap-1">
+            <label htmlFor="enableEventTimeFilter" className="text-sm font-medium flex items-center gap-1 text-gray-900 dark:text-gray-100">
               <Calendar className="w-4 h-4" />
               Expand event search window
             </label>
@@ -602,7 +629,7 @@ const RoutePlanner = ({
           
           {enableEventTimeFilter && (
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                 Event Time Flexibility: ±{eventTimeFlexibility} day{eventTimeFlexibility !== 1 ? 's' : ''}
               </label>
               <input
@@ -611,7 +638,7 @@ const RoutePlanner = ({
                 max="7"
                 value={eventTimeFlexibility}
                 onChange={(e) => setEventTimeFlexibility(parseInt(e.target.value))}
-                className="w-full"
+                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
               />
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                 <span>±1 day</span>
@@ -625,7 +652,7 @@ const RoutePlanner = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
             Event Search Radius: {searchRadius} miles
           </label>
           <input
@@ -634,7 +661,7 @@ const RoutePlanner = ({
             max="50"
             value={searchRadius}
             onChange={(e) => setSearchRadius(parseInt(e.target.value))}
-            className="w-full"
+            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
           />
         </div>
 

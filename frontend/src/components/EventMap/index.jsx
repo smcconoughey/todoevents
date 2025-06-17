@@ -860,6 +860,7 @@ const EventMap = ({
       if (!response || !Array.isArray(response)) {
         console.warn('Invalid response format from events API:', response);
         setEvents([]);
+        setIsInitialLoading(false);
         return;
       }
 
@@ -949,6 +950,16 @@ const EventMap = ({
 
   useEffect(() => {
     fetchEvents();
+    
+    // Backup fetch mechanism - if events aren't loaded after 2 seconds, try again
+    const backupTimer = setTimeout(() => {
+      if (events.length === 0 && !error) {
+        console.log('🔄 Backup fetch triggered - no events loaded after 2 seconds');
+        fetchEvents();
+      }
+    }, 2000);
+    
+    return () => clearTimeout(backupTimer);
   }, []); // Only fetch events once on component mount
 
   // Handle preset filters from URL routing  
@@ -2387,8 +2398,8 @@ const EventMap = ({
 
 
 
-  // Show initial loading animation
-  if (isInitialLoading) {
+  // Show initial loading animation only if we're still on the very first load and have no events
+  if (isInitialLoading && events.length === 0) {
     return (
       <div className="h-screen w-full flex items-center justify-center" style={{backgroundColor: 'var(--bg-main)'}}>
         <SmoothLoader message="Loading your events..." />
