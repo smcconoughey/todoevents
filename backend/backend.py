@@ -9348,7 +9348,7 @@ async def convert_trial_to_subscription(
             # Calculate trial period if trial hasn't expired
             trial_period_days = None
             if trial_expires_at:
-                from datetime import datetime, timezone
+                from datetime import timezone
                 if isinstance(trial_expires_at, str):
                     expires_at = datetime.fromisoformat(trial_expires_at.replace('Z', '+00:00'))
                 else:
@@ -9446,7 +9446,7 @@ async def get_premium_trial_status(current_user: dict = Depends(get_current_user
             
             trial_info = None
             if user_data['premium_expires_at'] and not has_stripe_subscription:
-                from datetime import datetime, timezone
+                from datetime import timezone
                 expires_at = user_data['premium_expires_at']
                 if isinstance(expires_at, str):
                     expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
@@ -9736,7 +9736,7 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
         # If trial is provided and not expired, schedule subscription to start after trial
         if trial_ends_at:
             try:
-                from datetime import datetime, timezone
+                from datetime import timezone
                 trial_end_date = datetime.fromisoformat(trial_ends_at.replace('Z', '+00:00'))
                 
                 # Only schedule future billing if trial hasn't expired
@@ -9770,10 +9770,20 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
         )
         
         logger.info(f"✅ Created {pricing_tier} checkout session for user {current_user['id']} ({current_user['email']})")
+        
+        # Ensure we have a checkout URL
+        if not checkout_session.url:
+            logger.error(f"Checkout session created but no URL returned: {checkout_session.id}")
+            raise HTTPException(status_code=500, detail="No checkout URL received from Stripe")
+            
         return {"url": checkout_session.url}
         
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error creating checkout session: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
     except Exception as e:
         logger.error(f"Error creating checkout session: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to create checkout session")
 
 @app.post("/stripe/cancel-subscription")
@@ -10033,7 +10043,7 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                     user_data = c.fetchone()
                     
                     if user_data and user_data.get('premium_expires_at'):
-                        from datetime import datetime, timezone
+                        from datetime import timezone
                         expires_at = user_data['premium_expires_at']
                         if isinstance(expires_at, str):
                             expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
@@ -10207,7 +10217,7 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
                 user_data = c.fetchone()
                 
                 if user_data and user_data.get('premium_expires_at'):
-                    from datetime import datetime, timezone
+                    from datetime import timezone
                     expires_at = user_data['premium_expires_at']
                     if isinstance(expires_at, str):
                         expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
