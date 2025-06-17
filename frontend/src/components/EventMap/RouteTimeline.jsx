@@ -91,6 +91,16 @@ const RouteTimeline = ({
     });
   };
 
+  const formatDateTime = (date) => {
+    return {
+      date: date.toLocaleDateString([], { 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      time: formatTime(date)
+    };
+  };
+
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString([], { 
@@ -124,7 +134,7 @@ const RouteTimeline = ({
   }
 
   return (
-    <div className={`route-timeline ${isDark ? 'dark' : isFrost ? 'frost' : 'light'}`}>
+    <div className={`route-timeline bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 ${isFrost ? 'bg-opacity-25 backdrop-blur-md' : ''} ${isDark ? 'dark' : isFrost ? 'frost' : 'light'}`}>
       <div className="timeline-header">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -153,6 +163,25 @@ const RouteTimeline = ({
             </div>
           </div>
         )}
+
+        {/* Legend */}
+        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <h4 className="text-sm font-medium mb-2">Legend</h4>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+              <span>Waypoint</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span>Destination</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              <span>Major Stop</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="timeline-content">
@@ -170,7 +199,11 @@ const RouteTimeline = ({
                 <div key={step.id} className="relative">
                   {/* Timeline dot */}
                   <div className={`absolute left-4 w-4 h-4 rounded-full border-2 ${
-                    step.isMajorWaypoint 
+                    step.isWaypoint && step.isDestination
+                      ? 'bg-green-500 border-green-500' 
+                      : step.isWaypoint
+                      ? 'bg-purple-500 border-purple-500'
+                      : step.isMajorWaypoint 
                       ? 'bg-blue-500 border-blue-500' 
                       : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-500'
                   }`}></div>
@@ -188,10 +221,25 @@ const RouteTimeline = ({
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {formatTime(step.estimatedArrivalTime)}
-                            </span>
-                            {step.isMajorWaypoint && (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {formatDateTime(step.estimatedArrivalTime).time}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {formatDateTime(step.estimatedArrivalTime).date}
+                              </span>
+                            </div>
+                            {step.isWaypoint && step.isDestination && (
+                              <span className="px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 text-xs rounded-full">
+                                Destination
+                              </span>
+                            )}
+                            {step.isWaypoint && !step.isDestination && (
+                              <span className="px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-300 text-xs rounded-full">
+                                Waypoint
+                              </span>
+                            )}
+                            {step.isMajorWaypoint && !step.isWaypoint && (
                               <span className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 text-xs rounded-full">
                                 Major Stop
                               </span>
@@ -306,7 +354,7 @@ const RouteTimeline = ({
 
       <style jsx>{`
         .route-timeline {
-          max-height: 70vh;
+          max-height: 100%;
           overflow-y: auto;
         }
         

@@ -885,18 +885,34 @@ const AdminDashboard = () => {
     const templateJson = {
       "events": [
         {
+          "title": "Summerfest",
+          "description": "The World's Largest Music Festival, spanning multiple weekends in June and July. With hundreds of artists across 12 stages, it offers a diverse lineup from global superstars to emerging acts, alongside delicious food and vibrant lakefront views. A true music marathon for all ages and tastes.",
+          "date": "2025-06-19",
+          "start_time": "12:00",
+          "end_time": "23:00",
+          "end_date": "2025-07-05",
+          "category": "music",
+          "secondary_category": "fair-festival",
+          "address": "Henry Maier Festival Park, Milwaukee, WI, USA",
+          "lat": 43.0307,
+          "lng": -87.8979,
+          "recurring": false,
+          "frequency": null,
+          "fee_required": "Admission tickets required, some headliner shows require separate tickets",
+          "event_url": "https://www.summerfest.com/",
+          "host_name": "Milwaukee World Festival, Inc."
+        },
+        {
           "title": "Sample Music Festival",
           "description": "A wonderful outdoor music festival featuring local and international artists. Bring your friends and family for a day of great music, food, and fun.",
           "date": "2024-07-15",
           "start_time": "14:00",
           "end_time": "22:00",
-          "end_date": "2024-07-15",
           "category": "music",
           "address": "Central Park, New York, NY, USA",
           "lat": 40.7829,
           "lng": -73.9654,
           "recurring": false,
-          "frequency": null,
           "fee_required": "$25 general admission, $15 students/seniors",
           "event_url": "https://www.samplefestival.com",
           "host_name": "NYC Parks & Recreation"
@@ -1296,7 +1312,7 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
               <p><strong>Required fields:</strong> title, description, date, start_time, category, address, lat, lng</p>
-                  <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency, fee_required, event_url, host_name</p>
+                  <p><strong>Optional fields:</strong> end_time, end_date, recurring, frequency, fee_required, event_url, host_name, secondary_category</p>
                   <p><strong>UX Enhancement fields:</strong></p>
                   <ul className="ml-4 list-disc text-xs">
                     <li><strong>fee_required:</strong> Ticket/fee information (e.g., "Free admission", "$10 entry")</li>

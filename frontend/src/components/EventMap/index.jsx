@@ -3812,9 +3812,9 @@ const EventMap = ({
                 selectedDate={selectedDate}
               />
 
-              {/* Route Planning Overlay */}
+              {/* Route Planning Overlay - Right Side */}
               {showRoutePlanner && (
-                <div className="absolute top-4 left-4 z-30 max-w-md">
+                <div className="absolute top-4 right-4 z-30 max-w-md sm:max-w-sm">
                   <RoutePlanner
                     onRouteCalculated={handleRouteCalculated}
                     onEventsDiscovered={handleRouteEventsDiscovered}
@@ -3826,9 +3826,12 @@ const EventMap = ({
                 </div>
               )}
 
-              {/* Route Timeline Overlay */}
+              {/* Route Timeline Overlay - Below Route Planner */}
               {showRouteTimeline && routeSteps.length > 0 && (
-                <div className="absolute top-4 right-4 z-30 max-w-sm">
+                <div className="absolute top-4 right-4 z-30 max-w-md sm:max-w-sm" style={{ 
+                  marginTop: showRoutePlanner ? '420px' : '0px',
+                  maxHeight: showRoutePlanner ? 'calc(100vh - 440px)' : 'calc(100vh - 20px)'
+                }}>
                   <RouteTimeline
                     routeSteps={routeSteps}
                     routeEvents={routeEvents}

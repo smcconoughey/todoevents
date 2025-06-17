@@ -22,6 +22,16 @@ const RoutePlanner = ({
   const [routeEvents, setRouteEvents] = useState([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [travelMode, setTravelMode] = useState('DRIVING');
+  const [departureTime, setDepartureTime] = useState(() => {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
+  const [departureDate, setDepartureDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   
   const directionsServiceRef = useRef(null);
   const routeData = useRef(null);
@@ -214,23 +224,27 @@ const RoutePlanner = ({
           const route = result.routes[0];
           let cumulativeTime = 0;
           
+          // Calculate departure datetime from user input
+          const departureDateTime = new Date(`${departureDate}T${departureTime}`);
+          
           // Process route steps and extract major cities
           route.legs.forEach((leg, legIndex) => {
             // Add leg start as a major waypoint
             const legStart = {
               id: `leg-${legIndex}-start`,
-              instruction: `Depart from ${leg.start_address}`,
+              instruction: legIndex === 0 ? `Start your journey from ${leg.start_address}` : `Continue from ${leg.start_address}`,
               distance: '0 mi',
               duration: '0 mins',
               startLocation: {
                 lat: leg.start_location.lat(),
                 lng: leg.start_location.lng()
               },
-              estimatedArrivalTime: new Date(Date.now() + cumulativeTime * 1000),
+              estimatedArrivalTime: new Date(departureDateTime.getTime() + cumulativeTime * 1000),
               legIndex,
               stepIndex: -1,
               isMajorWaypoint: true,
-              address: leg.start_address
+              address: leg.start_address,
+              isWaypoint: true
             };
             steps.push(legStart);
 
@@ -244,7 +258,7 @@ const RoutePlanner = ({
                   lat: step.start_location.lat(),
                   lng: step.start_location.lng()
                 },
-                estimatedArrivalTime: new Date(Date.now() + cumulativeTime * 1000),
+                estimatedArrivalTime: new Date(departureDateTime.getTime() + cumulativeTime * 1000),
                 legIndex,
                 stepIndex,
                 isMajorWaypoint: step.distance.value > 16000 // Mark steps > 10 miles as major
@@ -257,18 +271,20 @@ const RoutePlanner = ({
             // Add leg end as a major waypoint
             const legEnd = {
               id: `leg-${legIndex}-end`,
-              instruction: `Arrive at ${leg.end_address}`,
+              instruction: legIndex === route.legs.length - 1 ? `Arrive at your destination: ${leg.end_address}` : `Waypoint: ${leg.end_address}`,
               distance: leg.distance.text,
               duration: leg.duration.text,
               startLocation: {
                 lat: leg.end_location.lat(),
                 lng: leg.end_location.lng()
               },
-              estimatedArrivalTime: new Date(Date.now() + cumulativeTime * 1000),
+              estimatedArrivalTime: new Date(departureDateTime.getTime() + cumulativeTime * 1000),
               legIndex,
               stepIndex: 999,
               isMajorWaypoint: true,
-              address: leg.end_address
+              address: leg.end_address,
+              isWaypoint: true,
+              isDestination: legIndex === route.legs.length - 1
             };
             steps.push(legEnd);
           });
@@ -313,7 +329,7 @@ const RoutePlanner = ({
   const isFrost = theme === 'frost';
 
   return (
-    <div className={`p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-80vh overflow-y-auto ${isFrost ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
+    <div className={`p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-96 overflow-y-auto ${isFrost ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Navigation className="w-5 h-5" />
@@ -379,6 +395,33 @@ const RoutePlanner = ({
             onChange={setEndLocation}
             onSelect={(data) => setEndLocation(data.address)}
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              <Calendar className="w-4 h-4 inline mr-1" />
+              Departure Date
+            </label>
+            <input
+              type="date"
+              value={departureDate}
+              onChange={(e) => setDepartureDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              <Clock className="w-4 h-4 inline mr-1" />
+              Departure Time
+            </label>
+            <input
+              type="time"
+              value={departureTime}
+              onChange={(e) => setDepartureTime(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+            />
+          </div>
         </div>
 
         <div>
