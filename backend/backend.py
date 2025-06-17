@@ -9395,7 +9395,7 @@ async def convert_trial_to_subscription(
             logger.info(f"✅ Created {pricing_tier} trial conversion checkout session for user {current_user['id']} ({current_user['email']})")
             
             return {
-                "url": checkout_session.url,
+                "checkout_url": checkout_session.url,
                 "session_id": checkout_session.id,
                 "pricing_tier": pricing_tier,
                 "trial_period_days": trial_period_days
@@ -9776,7 +9776,7 @@ async def create_checkout_session(request: Request, current_user: dict = Depends
             logger.error(f"Checkout session created but no URL returned: {checkout_session.id}")
             raise HTTPException(status_code=500, detail="No checkout URL received from Stripe")
             
-        return {"url": checkout_session.url}
+        return {"checkout_url": checkout_session.url}
         
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error creating checkout session: {str(e)}")

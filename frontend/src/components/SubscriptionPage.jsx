@@ -163,8 +163,8 @@ const SubscriptionPage = () => {
 
       const data = await response.json();
       
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
       } else {
         throw new Error('No checkout URL returned');
       }
@@ -199,8 +199,8 @@ const SubscriptionPage = () => {
 
       const data = await response.json();
       
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
       } else {
         throw new Error('No checkout URL returned');
       }
@@ -279,8 +279,8 @@ const SubscriptionPage = () => {
 
       const data = await response.json();
       
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
       } else {
         throw new Error('No checkout URL returned');
       }
@@ -315,8 +315,8 @@ const SubscriptionPage = () => {
 
       const data = await response.json();
       
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
       } else {
         throw new Error('No checkout URL returned');
       }
