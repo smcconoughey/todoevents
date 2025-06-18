@@ -101,6 +101,11 @@ def get_cors_origins():
             "https://todoevents-api.onrender.com",
             "https://todoevents-frontend.onrender.com",
             "https://todoevents-web.onrender.com",
+            # Add todo-events.com domains
+            "https://todo-events.com",
+            "https://www.todo-events.com",
+            "http://todo-events.com",
+            "http://www.todo-events.com",
         ]
         return base_origins + production_origins
     else:
