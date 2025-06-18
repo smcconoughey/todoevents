@@ -228,8 +228,8 @@ const ShareCard = ({ event }) => {
     color: textColor,
     border: `1px solid ${borderColor}`,
     fontFamily: 'Arial, sans-serif', // Use more basic font
-    width: '320px',  // Fixed width for 2:3 ratio
-    height: '480px', // Fixed height for 2:3 ratio
+    width: '340px',  // Slightly wider for two-column layout
+    height: '480px', // Keep same height for 2:3 ratio
     borderRadius: '16px',
     overflow: 'hidden',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
@@ -271,10 +271,10 @@ const ShareCard = ({ event }) => {
 
   const mapContainerStyle = {
     position: 'relative',
-    minHeight: '80px',   // Minimum height to ensure map is visible
-    maxHeight: '180px',  // Maximum height to prevent it from being too large
-    flex: '1 1 auto',    // Allow it to grow and shrink based on available space
-    flexShrink: 1        // Allow shrinking when content needs space
+    minHeight: '120px',   // Increased minimum height for better visibility
+    maxHeight: '200px',   // Increased maximum height for better detail
+    flex: '0 0 auto',     // Fixed size, don't grow/shrink
+    height: '160px'       // Fixed height for consistency
   };
 
   const mapImageStyle = {
@@ -286,13 +286,13 @@ const ShareCard = ({ event }) => {
 
   const mainContentStyle = {
     backgroundColor: cardBg,
-    padding: '12px 16px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
-    flex: '1 1 auto',    // Allow this section to grow/shrink
-    minHeight: '120px',  // Minimum height to ensure content fits
-    overflow: 'hidden'   // Prevent content overflow
+    gap: '12px',
+    flex: '1 1 auto',
+    minHeight: '0',
+    overflow: 'hidden'
   };
 
   const descriptionStyle = {
@@ -301,41 +301,45 @@ const ShareCard = ({ event }) => {
     color: textColor,
     margin: '0 0 12px 0',
     fontWeight: '400',
-    flex: '0 0 auto',    // Don't shrink description
-    maxHeight: '80px',   // Limit description height
-    overflow: 'hidden'   // Hide overflow text
+    // Better text truncation with word boundaries
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   };
 
   const detailsContainerStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-    flex: '1 1 auto',    // Allow details to use remaining space
-    minHeight: '0'       // Allow shrinking
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr', // Two-column layout
+    gap: '8px 12px',
+    flex: '1 1 auto',
+    alignItems: 'start'
   };
 
   const detailRowStyle = {
     display: 'flex',
-    alignItems: 'center',  // Changed from flex-start to center for better alignment
-    gap: '8px'
+    alignItems: 'center',
+    gap: '6px'
   };
 
   const iconContainerStyle = {
-    width: '20px',  // Fixed width for consistent alignment
-    height: '20px', // Fixed height
+    width: '16px',  // Smaller icons for compact layout
+    height: '16px',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0  // Prevent shrinking
+    flexShrink: 0
   };
 
   const detailTextStyle = {
-    fontSize: '11px',  // Smaller details text
-    lineHeight: '1.3',
-    color: secondaryTextColor,  // Use secondary color for less emphasis
+    fontSize: '10px',  // Smaller text for two-column layout
+    lineHeight: '1.2',
+    color: secondaryTextColor,
     margin: '0',
-    flex: 1
+    flex: 1,
+    wordBreak: 'break-word'  // Handle long text better
   };
 
   const footerStyle = {
@@ -450,10 +454,26 @@ const ShareCard = ({ event }) => {
               color: theme === "dark" ? '#94a3b8' : '#64748b',
               marginTop: '4px',
               display: 'flex',
-              gap: '12px'
+              gap: '12px',
+              alignItems: 'center'
             }}>
-              {event.view_count > 0 && <span>👁 {event.view_count} views</span>}
-              {event.interest_count > 0 && <span>❤️ {event.interest_count} interested</span>}
+              {event.view_count > 0 && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+                  </svg>
+                  {event.view_count} views
+                </span>
+              )}
+              {event.interest_count > 0 && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                  </svg>
+                  {event.interest_count} interested
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -482,60 +502,60 @@ const ShareCard = ({ event }) => {
         {event.description && (
           <div>
             <p style={descriptionStyle}>
-              {event.description.length > 120 ? event.description.substring(0, 120) + "..." : event.description}
+              {event.description}
             </p>
           </div>
         )}
         
-        {/* Event details - smaller at bottom */}
+        {/* Event details in two-column grid */}
         <div style={detailsContainerStyle}>
-        {/* Date and time */}
-        <div style={detailRowStyle}>
-          <div style={{
-            ...iconContainerStyle,
-            backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
-          }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
-                stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-            <p style={detailTextStyle}>
-              {formatDate(event)} • {formatTime(event)}
-            </p>
-        </div>
-        
-        {/* Location */}
-        <div style={detailRowStyle}>
-          <div style={{
-            ...iconContainerStyle,
-            backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
-          }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
-                stroke="#dc2626" strokeWidth="2"/>
-              <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
-                stroke="#dc2626" strokeWidth="2"/>
-            </svg>
-          </div>
-            <p style={detailTextStyle}>
-              {event.address}
-            </p>
-          </div>
-          
-          {/* Primary Category (if different from header) */}
+          {/* Date */}
           <div style={detailRowStyle}>
             <div style={{
               ...iconContainerStyle,
-              backgroundColor: theme === "dark" ? "rgba(245, 200, 66, 0.2)" : "#fef3c7"
+              backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
             }}>
-              <CategoryIcon 
-                category={event.category} 
-                style={{ width: '12px', height: '12px', color: '#f5c842' }}
-              />
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
+                  stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <p style={detailTextStyle}>
-              {getCategory(event.category)?.label || event.category}
+              {formatDate(event)}
+            </p>
+          </div>
+          
+          {/* Time */}
+          <div style={detailRowStyle}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
+            }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="2"/>
+                <polyline points="12,6 12,12 16,14" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <p style={detailTextStyle}>
+              {formatTime(event)}
+            </p>
+          </div>
+        
+          {/* Location (spans two columns for longer addresses) */}
+          <div style={{...detailRowStyle, gridColumn: '1 / -1'}}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
+            }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
+                  stroke="#dc2626" strokeWidth="2"/>
+                <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
+                  stroke="#dc2626" strokeWidth="2"/>
+              </svg>
+            </div>
+            <p style={detailTextStyle}>
+              {event.address}
             </p>
           </div>
           
@@ -547,13 +567,13 @@ const ShareCard = ({ event }) => {
                 backgroundColor: theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7"
               }}>
                 <HostIcon 
-                  style={{ width: '12px', height: '12px', color: '#16a34a' }}
+                  style={{ width: '10px', height: '10px', color: '#16a34a' }}
                 />
               </div>
               <p style={detailTextStyle}>
-                Hosted by {event.host_name}
+                {event.host_name}
               </p>
-        </div>
+            </div>
           )}
           
           {/* Payment Status */}
@@ -566,11 +586,11 @@ const ShareCard = ({ event }) => {
             }}>
               {isPaidEvent(event) ? (
                 <PaidIcon 
-                  style={{ width: '12px', height: '12px', color: '#eab308' }}
+                  style={{ width: '10px', height: '10px', color: '#eab308' }}
                 />
               ) : (
                 <FreeIcon 
-                  style={{ width: '12px', height: '12px', color: '#16a34a' }}
+                  style={{ width: '10px', height: '10px', color: '#16a34a' }}
                 />
               )}
             </div>
@@ -579,23 +599,23 @@ const ShareCard = ({ event }) => {
             </p>
           </div>
           
-          {/* Secondary Category */}
-          {event.secondary_category && (
-            <div style={detailRowStyle}>
+          {/* Secondary Category (only if it exists and is different from primary) */}
+          {event.secondary_category && event.secondary_category !== event.category && (
+            <div style={{...detailRowStyle, gridColumn: '1 / -1'}}>
               <div style={{
                 ...iconContainerStyle,
                 backgroundColor: theme === "dark" ? "rgba(139, 92, 246, 0.2)" : "#ede9fe"
               }}>
                 <CategoryIcon 
                   category={event.secondary_category} 
-                  style={{ width: '12px', height: '12px', color: '#8b5cf6' }}
+                  style={{ width: '10px', height: '10px', color: '#8b5cf6' }}
                 />
               </div>
               <p style={detailTextStyle}>
                 Also: {getCategory(event.secondary_category)?.label || event.secondary_category}
-            </p>
-          </div>
-        )}
+              </p>
+            </div>
+          )}
         </div>
       </div>
       
