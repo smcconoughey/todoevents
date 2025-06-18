@@ -101,11 +101,6 @@ selected theme.
    merge the provided `Info.plist` settings.
 3. Build and run the project on a simulator or device running iOS 14 or later.
    
-### Default Admin Account
-
-When the application first starts, it creates a default admin user:
-- **Email**: admin@todoevents.com
-- **Password**: Admin123!
 
 ## Deployment
 
