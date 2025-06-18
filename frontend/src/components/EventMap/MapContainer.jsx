@@ -417,7 +417,6 @@ const MapContainer = React.forwardRef(({
       const clusterOptions = {
         map: mapInstanceRef.current,
         markers: markers,
-        algorithm: new google.maps.marker.GridBasedAlgorithm({}),
         renderer: {
           render: ({ count, position, markers }) => {
             // Get ALL category IDs from markers for proper cluster rendering
@@ -440,25 +439,19 @@ const MapContainer = React.forwardRef(({
         },
       };
 
-      // Adjust clustering aggressiveness based on zoom level
+      // Adjust clustering aggressiveness based on zoom level using standard options
       if (currentZoom < 6) {
         // Very aggressive clustering for zoomed out views
-        clusterOptions.algorithm = new google.maps.marker.GridBasedAlgorithm({
-          gridSize: 80,
-          maxZoom: 8,
-        });
+        clusterOptions.gridSize = 80;
+        clusterOptions.maxZoom = 8;
       } else if (currentZoom < 10) {
         // Moderate clustering for medium zoom
-        clusterOptions.algorithm = new google.maps.marker.GridBasedAlgorithm({
-          gridSize: 60,
-          maxZoom: 12,
-        });
+        clusterOptions.gridSize = 60;
+        clusterOptions.maxZoom = 12;
       } else {
         // Light clustering for close zoom
-        clusterOptions.algorithm = new google.maps.marker.GridBasedAlgorithm({
-          gridSize: 40,
-          maxZoom: 15,
-        });
+        clusterOptions.gridSize = 40;
+        clusterOptions.maxZoom = 15;
       }
 
       clustererRef.current = new MarkerClusterer(clusterOptions);
