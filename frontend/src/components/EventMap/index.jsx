@@ -855,7 +855,8 @@ const EventMap = ({
     try {
       setError(null);
 
-      const response = await fetchWithTimeout(`${API_URL}/events`);
+      // Fetch events with a much higher limit to support better filtering
+      const response = await fetchWithTimeout(`${API_URL}/events?limit=1000`);
       
       if (!response || !Array.isArray(response)) {
         console.warn('Invalid response format from events API:', response);

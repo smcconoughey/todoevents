@@ -859,6 +859,10 @@ const AdminDashboard = () => {
   const [userFilterRole, setUserFilterRole] = useState('all');
   const [eventFilterCategory, setEventFilterCategory] = useState('all');
 
+  // Add sorting state for events table
+  const [eventSortField, setEventSortField] = useState('id');
+  const [eventSortDirection, setEventSortDirection] = useState('desc');
+
   // Bulk Action States
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectedEvents, setSelectedEvents] = useState([]);
@@ -1453,7 +1457,7 @@ const AdminDashboard = () => {
       if (!isLoggedIn) return;
 
       try {
-        // Fetch current user details
+        // Fetch current user details and check admin permissions
         const userMe = await fetchData('/users/me');
         setUserDetails(userMe);
 
@@ -1463,42 +1467,11 @@ const AdminDashboard = () => {
           throw new Error('Insufficient admin permissions');
         }
 
-        // Fetch admin data
-        const [usersData, eventsData] = await Promise.all([
-          fetchData('/admin/users'),
-          fetchData('/events')
-        ]);
-
-        setUsers(usersData);
-        setEvents(eventsData);
-
-        // Fetch privacy requests
-        await fetchPrivacyRequests();
-
-        // Compute Analytics
-        const userRoleDistribution = usersData.reduce((acc, user) => {
-          acc[user.role] = (acc[user.role] || 0) + 1;
-          return acc;
-        }, {});
-
-        const eventCategoryDistribution = eventsData.reduce((acc, event) => {
-          acc[event.category] = (acc[event.category] || 0) + 1;
-          return acc;
-        }, {});
-
-        setAnalytics({
-          userRoleDistribution,
-          eventCategoryDistribution,
-          totalUsers: usersData.length,
-          totalEvents: eventsData.length,
-          recentActivity: [] // Placeholder for activity logs
-        });
-
         setError(null);
         setAccessDenied(false);
       } catch (error) {
         setError(error.message);
-        console.error('Error fetching data:', error);
+        console.error('Error checking user authentication:', error);
 
         if (error.message === 'Insufficient admin permissions') {
           setAccessDenied(true);
@@ -1508,7 +1481,10 @@ const AdminDashboard = () => {
       }
     };
 
-    fetchUserAndData();
+    // Only check authentication and user details on login state change
+    if (isLoggedIn) {
+      fetchUserAndData();
+    }
   }, [isLoggedIn]);
 
   // Logout function
@@ -1521,9 +1497,24 @@ const AdminDashboard = () => {
   // Refresh data function
   const refreshData = async () => {
     try {
+      // Build query parameters for events with enhanced filtering
+      const eventParams = new URLSearchParams();
+      if (eventFilterCategory && eventFilterCategory !== 'all') {
+        eventParams.set('category', eventFilterCategory);
+      }
+      if (eventSearch && eventSearch.trim()) {
+        eventParams.set('search', eventSearch.trim());
+      }
+      // Set a high limit to fetch more events for better filtering
+      eventParams.set('limit', '5000');
+
+      const eventsEndpoint = eventParams.toString() 
+        ? `/events?${eventParams.toString()}`
+        : '/events?limit=5000';
+
       const [usersData, eventsData] = await Promise.all([
         fetchData('/admin/users'),
-        fetchData('/events')
+        fetchData(eventsEndpoint)
       ]);
 
       setUsers(usersData);
@@ -1555,6 +1546,26 @@ const AdminDashboard = () => {
     }
   };
 
+  // Debounced search effect to avoid too many API calls
+  useEffect(() => {
+    // Only refresh if user is authenticated and authorized
+    if (isLoggedIn && userDetails && !accessDenied) {
+      const timeoutId = setTimeout(() => {
+        refreshData();
+      }, 500); // 500ms delay
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [eventSearch, eventFilterCategory, isLoggedIn, userDetails, accessDenied]);
+
+  // Initial data load
+  useEffect(() => {
+    // Only load data if user is logged in and has access
+    if (isLoggedIn && userDetails && !accessDenied) {
+      refreshData();
+    }
+  }, [isLoggedIn, userDetails, accessDenied]);
+
   // Filtered Users
   const filteredUsers = useMemo(() => {
     return users.filter(user =>
@@ -1563,13 +1574,49 @@ const AdminDashboard = () => {
     );
   }, [users, userSearch, userFilterRole]);
 
-  // Filtered Events
+  // Filtered and Sorted Events
   const filteredEvents = useMemo(() => {
-    return events.filter(event =>
+    let filtered = events.filter(event =>
       (eventFilterCategory === 'all' || event.category === eventFilterCategory) &&
-      (event.title.toLowerCase().includes(eventSearch.toLowerCase()))
+      (event.title.toLowerCase().includes(eventSearch.toLowerCase()) ||
+       event.description?.toLowerCase().includes(eventSearch.toLowerCase()) ||
+       event.address?.toLowerCase().includes(eventSearch.toLowerCase()) ||
+       event.host_name?.toLowerCase().includes(eventSearch.toLowerCase()))
     );
-  }, [events, eventSearch, eventFilterCategory]);
+
+    // Sort the filtered events
+    filtered.sort((a, b) => {
+      let aValue = a[eventSortField];
+      let bValue = b[eventSortField];
+
+      // Handle different data types
+      if (eventSortField === 'date') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else if (eventSortField === 'created_at') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else if (eventSortField === 'verified') {
+        // Handle boolean values - convert to numbers for comparison
+        aValue = Boolean(aValue) ? 1 : 0;
+        bValue = Boolean(bValue) ? 1 : 0;
+      } else if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue?.toLowerCase() || '';
+      } else if (typeof aValue === 'number') {
+        aValue = aValue || 0;
+        bValue = bValue || 0;
+      }
+
+      if (eventSortDirection === 'asc') {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+      }
+    });
+
+    return filtered;
+  }, [events, eventSearch, eventFilterCategory, eventSortField, eventSortDirection]);
 
   // Delete user function
   const handleDeleteUser = async (userId) => {
@@ -2006,7 +2053,12 @@ const AdminDashboard = () => {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-blue-600">Event Management</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-blue-600">Event Management</h2>
+            <p className="text-sm text-gray-600">
+              Showing {filteredEvents.length} of {events.length} events
+            </p>
+          </div>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => exportData('events')}
@@ -2014,6 +2066,13 @@ const AdminDashboard = () => {
               title="Export Events"
             >
               <Download className="w-5 h-5 mr-2" /> Export
+            </button>
+            <button
+              onClick={refreshData}
+              className="flex items-center text-green-600 hover:text-green-800"
+              title="Refresh Events"
+            >
+              <RefreshCw className="w-5 h-5 mr-2" /> Refresh
             </button>
             {selectedEvents.length > 0 && (
               <button
@@ -2031,17 +2090,18 @@ const AdminDashboard = () => {
           <div className="relative flex-grow">
             <input
               type="text"
-              placeholder="Search events..."
+              placeholder="Search events by title, description, address, or host..."
               value={eventSearch}
               onChange={(e) => setEventSearch(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md pl-10"
+              className="w-full px-3 py-2 border rounded-md pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              autoComplete="off"
             />
-            <Search className="absolute left-3 top-3 text-gray-400" />
+            <Search className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
           </div>
           <select
             value={eventFilterCategory}
             onChange={(e) => setEventFilterCategory(e.target.value)}
-            className="px-3 py-2 border rounded-md"
+            className="px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All Categories</option>
             {[...new Set(events.map(e => e.category))].map(category => (
@@ -2051,90 +2111,253 @@ const AdminDashboard = () => {
         </div>
 
         {/* Event Table */}
-        <table className="w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={selectedEvents.length === filteredEvents.length && filteredEvents.length > 0}
-                  onChange={(e) =>
-                    setSelectedEvents(
-                      e.target.checked
-                        ? filteredEvents.map(event => event.id)
-                        : []
-                    )
-                  }
-                />
-              </th>
-              <th className="p-3 text-left">ID</th>
-              <th className="p-3 text-left">Title</th>
-              <th className="p-3 text-left">Date</th>
-              <th className="p-3 text-left">Category</th>
-              <th className="p-3 text-left">Created By</th>
-              <th className="p-3 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEvents.map(event => (
-              <tr key={event.id} className="border-b hover:bg-gray-50">
-                <td className="p-3">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-full">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">
                   <input
                     type="checkbox"
-                    checked={selectedEvents.includes(event.id)}
+                    checked={selectedEvents.length === filteredEvents.length && filteredEvents.length > 0}
                     onChange={(e) =>
-                      setSelectedEvents(prev =>
+                      setSelectedEvents(
                         e.target.checked
-                          ? [...prev, event.id]
-                          : prev.filter(id => id !== event.id)
+                          ? filteredEvents.map(event => event.id)
+                          : []
                       )
                     }
                   />
-                </td>
-                <td className="p-3">
-                  <span className="text-xs text-gray-500 font-mono">#{event.id}</span>
-                </td>
-                <td className="p-3">
-                  <div>
-                    <div className="font-medium">{event.title}</div>
-                    <div className="text-sm text-gray-500 truncate max-w-xs">{event.description}</div>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'id') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('id');
+                      setEventSortDirection('desc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>ID</span>
+                    {eventSortField === 'id' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
                   </div>
-                </td>
-                <td className="p-3">{event.date}</td>
-                <td className="p-3">
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
-                    {event.category}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <span className="text-sm text-gray-600">
-                    User #{event.created_by}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditingEvent(event);
-                      }}
-                      className="text-blue-500 hover:text-blue-700"
-                      title="Edit Event"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteEvent(event.id)}
-                      className="text-red-500 hover:text-red-700"
-                      title="Delete Event"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'title') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('title');
+                      setEventSortDirection('asc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Title</span>
+                    {eventSortField === 'title' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
                   </div>
-                </td>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'date') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('date');
+                      setEventSortDirection('desc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Date</span>
+                    {eventSortField === 'date' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'category') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('category');
+                      setEventSortDirection('asc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Category</span>
+                    {eventSortField === 'category' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'created_by') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('created_by');
+                      setEventSortDirection('asc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Created By</span>
+                    {eventSortField === 'created_by' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'view_count') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('view_count');
+                      setEventSortDirection('desc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Views</span>
+                    {eventSortField === 'view_count' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'interest_count') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('interest_count');
+                      setEventSortDirection('desc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Interested</span>
+                    {eventSortField === 'interest_count' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-3 text-left cursor-pointer hover:bg-gray-200 select-none" 
+                  onClick={() => {
+                    if (eventSortField === 'verified') {
+                      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setEventSortField('verified');
+                      setEventSortDirection('desc');
+                    }
+                  }}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Verified</span>
+                    {eventSortField === 'verified' && (
+                      eventSortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </th>
+                <th className="p-3 text-left">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredEvents.map(event => (
+                <tr key={event.id} className="border-b hover:bg-gray-50">
+                  <td className="p-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedEvents.includes(event.id)}
+                      onChange={(e) =>
+                        setSelectedEvents(prev =>
+                          e.target.checked
+                            ? [...prev, event.id]
+                            : prev.filter(id => id !== event.id)
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="p-3">
+                    <span className="text-xs text-gray-500 font-mono">#{event.id}</span>
+                  </td>
+                  <td className="p-3">
+                    <div>
+                      <div className="font-medium">{event.title}</div>
+                      <div className="text-sm text-gray-500 truncate max-w-xs">{event.description}</div>
+                    </div>
+                  </td>
+                  <td className="p-3">{event.date}</td>
+                  <td className="p-3">
+                    <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                      {event.category}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-sm text-gray-600">
+                      User #{event.created_by}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-sm text-gray-600">
+                      {event.view_count || 0}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-sm text-gray-600">
+                      {event.interest_count || 0}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center space-x-1">
+                      {event.verified ? (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <X className="w-4 h-4 text-gray-400" />
+                      )}
+                      <span className="text-sm text-gray-600">
+                        {event.verified ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => {
+                          setEditingEvent(event);
+                        }}
+                        className="text-blue-500 hover:text-blue-700"
+                        title="Edit Event"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvent(event.id)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Delete Event"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
