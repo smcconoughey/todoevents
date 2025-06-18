@@ -856,7 +856,8 @@ const EventMap = ({
       setError(null);
 
       // Fetch events with a much higher limit to support better filtering
-      const response = await fetchWithTimeout(`${API_URL}/events?limit=1000`);
+      // Use extra long timeout for main events fetch since it's critical
+      const response = await fetchWithTimeout(`${API_URL}/events?limit=1000`, {}, 45000);
       
       if (!response || !Array.isArray(response)) {
         console.warn('Invalid response format from events API:', response);
@@ -943,7 +944,18 @@ const EventMap = ({
 
     } catch (error) {
       console.error('Error fetching events:', error);
-      setError('Failed to load events. Please try again.');
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = 'Failed to load events. Please try again.';
+      if (error.message === 'Request timed out') {
+        errorMessage = 'Connection is slow. Events are still loading... Please wait or refresh the page.';
+      } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+        errorMessage = 'Network connection issue. Please check your internet and try again.';
+      } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
+        errorMessage = 'Server is temporarily unavailable. Please try again in a moment.';
+      }
+      
+      setError(errorMessage);
       setEvents([]); // Set empty array as fallback
       setIsInitialLoading(false);
     }
@@ -952,13 +964,13 @@ const EventMap = ({
   useEffect(() => {
     fetchEvents();
     
-    // Backup fetch mechanism - if events aren't loaded after 2 seconds, try again
+    // Backup fetch mechanism - if events aren't loaded after 5 seconds, try again
     const backupTimer = setTimeout(() => {
       if (events.length === 0 && !error) {
-        console.log('🔄 Backup fetch triggered - no events loaded after 2 seconds');
+        console.log('🔄 Backup fetch triggered - no events loaded after 5 seconds');
         fetchEvents();
       }
-    }, 2000);
+    }, 5000);
     
     return () => clearTimeout(backupTimer);
   }, []); // Only fetch events once on component mount

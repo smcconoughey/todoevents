@@ -23,15 +23,15 @@ const isMobileOrSlowConnection = () => {
   return isMobile || isSlowConnection;
 };
 
-export const fetchWithTimeout = async (url, options = {}, timeout = 15000) => {
+export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
   // Adjust timeout for mobile or slow connections
   let adjustedTimeout = timeout;
   if (isMobileOrSlowConnection()) {
-    adjustedTimeout = Math.max(timeout * 1.5, 10000); // At least 10 seconds for mobile
+    adjustedTimeout = Math.max(timeout * 1.5, 25000); // At least 25 seconds for mobile
   }
 
   const attempt = options._retryCount || 1;
-  const maxAttempts = 2;
+  const maxAttempts = 3;
   
   console.log(`Making request to ${url} (attempt ${attempt}/${maxAttempts}) with timeout ${adjustedTimeout}ms`);
 
@@ -78,11 +78,12 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 15000) => {
     return data;
   } catch (error) {
     // For timeout errors or network errors, try one more time
-    if ((error.message === 'Request timed out' || error.name === 'TypeError') && attempt < maxAttempts) {
-      console.log(`Request to ${url} failed (${error.message}), retrying...`);
+    if ((error.message === 'Request timed out' || error.name === 'TypeError' || error.name === 'AbortError') && attempt < maxAttempts) {
+      console.log(`Request to ${url} failed (${error.message}), retrying with longer timeout...`);
       
-      // Wait a bit before retrying (longer for mobile)
-      const waitTime = isMobileOrSlowConnection() ? 2000 : 1000;
+      // Wait a bit before retrying with exponential backoff
+      const baseWaitTime = isMobileOrSlowConnection() ? 3000 : 2000;
+      const waitTime = baseWaitTime * Math.pow(1.5, attempt - 1);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       
       // Create new options with retry count
@@ -91,12 +92,14 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 15000) => {
         _retryCount: attempt + 1
       };
       
-      // Try once more with an even longer timeout
-      return fetchWithTimeout(url, retryOptions, adjustedTimeout * 1.2);
+      // Try once more with a significantly longer timeout
+      const retryTimeout = adjustedTimeout * (1.5 + (attempt * 0.3)); // Progressive timeout increase
+      console.log(`Retrying with timeout: ${retryTimeout}ms`);
+      return fetchWithTimeout(url, retryOptions, retryTimeout);
     }
     
     // Throw the error for other cases
-    console.error(`Fetch error for ${url}:`, error.message);
+    console.error(`Fetch error for ${url} after ${attempt} attempts:`, error.message);
     throw error;
   }
 }; 
