@@ -3804,11 +3804,12 @@ const EventMap = ({
               <MapContainer
                 ref={mapRef}
                 events={
-                  filteredEvents.length > 0 || 
+                  // Always show all events unless filters are active
                   selectedDate || 
                   selectedTime !== 'all' || 
                   !selectedCategory.includes('all') || 
-                  mapCenter
+                  mapCenter ||
+                  miscFilters.feeFilter !== 'all'
                     ? filteredEvents
                     : events
                 }
@@ -3902,11 +3903,12 @@ const EventMap = ({
         ) : (
           <div className="h-full overflow-y-auto" style={{backgroundColor: 'var(--bg-main)'}}>
             {renderEventList(
-              filteredEvents.length > 0 || 
+              // Always show all events unless filters are active
               selectedDate || 
               selectedTime !== 'all' || 
               !selectedCategory.includes('all') || 
-              mapCenter
+              mapCenter ||
+              miscFilters.feeFilter !== 'all'
                 ? filteredEvents
                 : events,
               selectedEvent,
