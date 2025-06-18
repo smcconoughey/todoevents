@@ -240,7 +240,7 @@ const ShareCard = ({ event }) => {
   const headerStyle = {
     backgroundColor: cardBg,
     borderBottom: `1px solid ${borderColor}`,
-    padding: '10px 14px',  // Increased from 8px 12px
+    padding: '12px 16px',  // Increased padding
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -248,33 +248,33 @@ const ShareCard = ({ event }) => {
   };
 
   const titleStyle = {
-    fontSize: '15px',  // Increased from 14px
+    fontSize: '16px',  // Increased from 15px
     fontWeight: 'bold',
-    lineHeight: '1.15',  // Slightly looser
+    lineHeight: '1.2',  // Better line height
     color: textColor,
     margin: '0',
-    marginRight: '10px'  // Increased margin
+    marginRight: '12px'  // Increased margin
   };
 
   const categoryStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '5px',  // Increased from 4px
-    marginTop: '3px'  // Increased from 2px
+    gap: '6px',  // Increased from 5px
+    marginTop: '4px'  // Increased from 3px
   };
 
   const categoryTextStyle = {
-    fontSize: '10px',  // Increased from 9px
+    fontSize: '11px',  // Increased from 10px
     fontWeight: '500',
     color: category.color || "#F5C842"
   };
 
   const mapContainerStyle = {
     position: 'relative',
-    minHeight: '110px',   // Increased from 100px
-    maxHeight: '150px',   // Increased from 140px
+    minHeight: '120px',   // Increased from 110px
+    maxHeight: '160px',   // Increased from 150px
     flex: '0 0 auto',
-    height: '130px'       // Increased from 120px
+    height: '140px'       // Increased from 130px
   };
 
   const mapImageStyle = {
@@ -286,20 +286,20 @@ const ShareCard = ({ event }) => {
 
   const mainContentStyle = {
     backgroundColor: cardBg,
-    padding: '14px',  // Increased from 12px
+    padding: '16px',  // Increased from 14px
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',  // Increased from 8px
+    gap: '8px',  // Reduced from 10px (closer together)
     flex: '1 1 auto',
     minHeight: '0',
     overflow: 'hidden'
   };
 
   const descriptionStyle = {
-    fontSize: '12px',  // Increased from 11px
-    lineHeight: '1.35',  // Slightly looser
+    fontSize: '13px',  // Increased from 12px
+    lineHeight: '1.4',  // Better line height
     color: textColor,
-    margin: '0 0 10px 0',  // Increased bottom margin
+    margin: '0 0 8px 0',  // Reduced bottom margin (closer)
     fontWeight: '400',
     // Better text truncation with word boundaries
     display: '-webkit-box',
@@ -312,7 +312,7 @@ const ShareCard = ({ event }) => {
   const detailsContainerStyle = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '7px 10px',  // Increased from 6px 8px
+    gap: '6px 8px',  // Reduced from 7px 10px (closer together)
     flex: '1 1 auto',
     alignItems: 'start'
   };
@@ -320,12 +320,12 @@ const ShareCard = ({ event }) => {
   const detailRowStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '5px'  // Increased from 4px
+    gap: '6px'  // Increased from 5px
   };
 
   const iconContainerStyle = {
-    width: '16px',  // Increased from 14px
-    height: '16px',
+    width: '18px',  // Increased from 16px
+    height: '18px',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
@@ -334,8 +334,8 @@ const ShareCard = ({ event }) => {
   };
 
   const detailTextStyle = {
-    fontSize: '10px',  // Increased from 9px
-    lineHeight: '1.2',  // Slightly looser
+    fontSize: '11px',  // Increased from 10px
+    lineHeight: '1.3',  // Better line height
     color: secondaryTextColor,
     margin: '0',
     flex: 1,
@@ -343,7 +343,7 @@ const ShareCard = ({ event }) => {
   };
 
   const footerStyle = {
-    padding: '8px 14px',  // Increased padding
+    padding: '10px 16px',  // Increased padding
     textAlign: 'center',
     borderTop: `1px solid ${borderColor}`,
     backgroundColor: bgColor,
@@ -351,22 +351,22 @@ const ShareCard = ({ event }) => {
   };
 
   const footerTextStyle = {
-    fontSize: '8px',  // Increased from 7px
+    fontSize: '9px',  // Increased from 8px
     color: secondaryTextColor,
-    margin: '0 0 2px 0'  // Increased margin
+    margin: '0 0 2px 0'
   };
 
   const brandingStyle = {
-    fontSize: '11px',  // Increased from 10px
+    fontSize: '12px',  // Increased from 11px
     fontWeight: 'bold',
     color: "#F5C842",
     margin: '0'
   };
 
   const eventIdStyle = {
-    fontSize: '8px',  // Increased from 7px
+    fontSize: '8px',  // Keep same
     color: secondaryTextColor,
-    margin: '3px 0 0 0'  // Increased margin
+    margin: '3px 0 0 0'
   };
 
   // Helper function to determine if event is paid
@@ -428,19 +428,19 @@ const ShareCard = ({ event }) => {
           <div style={categoryStyle}>
             <CategoryIcon 
               category={event.category} 
-              style={{ width: '13px', height: '13px', color: category.color || "#F5C842" }}
+              style={{ width: '15px', height: '15px', color: category.color || "#F5C842" }}
             />
             <span style={categoryTextStyle}>
               {category.label || event.category}
             </span>
             {event.verified && (
               <div style={{
-                marginLeft: '7px',  // Slightly increased
-                padding: '2px 5px',  // Better padding
+                marginLeft: '8px',  // Increased
+                padding: '2px 6px',  // Better padding
                 backgroundColor: '#16a34a',
                 color: 'white',
-                fontSize: '9px',  // Slightly larger
-                borderRadius: '4px',  // Better radius
+                fontSize: '10px',  // Larger
+                borderRadius: '4px',
                 fontWeight: 'bold'
               }}>
                 VERIFIED
@@ -450,14 +450,14 @@ const ShareCard = ({ event }) => {
           {/* Engagement stats */}
           {event.interest_count > 0 && (
             <div style={{
-              fontSize: '9px',
+              fontSize: '10px',  // Increased
               color: theme === "dark" ? '#94a3b8' : '#64748b',
-              marginTop: '2px',
+              marginTop: '3px',  // Slightly increased
               display: 'flex',
               alignItems: 'center'
             }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" fill="none"/>
                 </svg>
                 {event.interest_count} interested
@@ -503,7 +503,7 @@ const ShareCard = ({ event }) => {
               ...iconContainerStyle,
               backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
             }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                 <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
                   stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -519,7 +519,7 @@ const ShareCard = ({ event }) => {
               ...iconContainerStyle,
               backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
             }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="2"/>
                 <polyline points="12,6 12,12 16,14" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round"/>
               </svg>
@@ -535,7 +535,7 @@ const ShareCard = ({ event }) => {
               ...iconContainerStyle,
               backgroundColor: theme === "dark" ? "rgba(220, 38, 38, 0.2)" : "#fee2e2"
             }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                 <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" 
                   stroke="#dc2626" strokeWidth="2"/>
                 <path d="M12 22C12 22 20 18 20 10.5C20 6.36 16.42 3 12 3C7.58 3 4 6.36 4 10.5C4 18 12 22 12 22Z" 
@@ -555,7 +555,7 @@ const ShareCard = ({ event }) => {
                 backgroundColor: theme === "dark" ? "rgba(34, 197, 94, 0.2)" : "#dcfce7"
               }}>
                 <HostIcon 
-                  style={{ width: '10px', height: '10px', color: '#16a34a' }}
+                  style={{ width: '12px', height: '12px', color: '#16a34a' }}
                 />
               </div>
               <p style={detailTextStyle}>
@@ -574,11 +574,11 @@ const ShareCard = ({ event }) => {
             }}>
               {isPaidEvent(event) ? (
                 <PaidIcon 
-                  style={{ width: '10px', height: '10px', color: '#eab308' }}
+                  style={{ width: '12px', height: '12px', color: '#eab308' }}
                 />
               ) : (
                 <FreeIcon 
-                  style={{ width: '10px', height: '10px', color: '#16a34a' }}
+                  style={{ width: '12px', height: '12px', color: '#16a34a' }}
                 />
               )}
             </div>
@@ -596,7 +596,7 @@ const ShareCard = ({ event }) => {
               }}>
                 <CategoryIcon 
                   category={event.secondary_category} 
-                  style={{ width: '10px', height: '10px', color: '#8b5cf6' }}
+                  style={{ width: '12px', height: '12px', color: '#8b5cf6' }}
                 />
               </div>
               <p style={detailTextStyle}>
