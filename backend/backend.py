@@ -8047,7 +8047,90 @@ async def notify_premium_granted(
         logger.error(f"Error sending premium notification: {str(e)}")
         raise HTTPException(status_code=500, detail="Error sending notification")
 
-@app.post("/admin/events/bulk-simple", response_model=BulkEventResponse)  
+class SimpleCache:
+    """Thread-safe TTL cache for frequently accessed data."""
+
+    def __init__(self, ttl_seconds: int = 300, max_size: int = 1000) -> None:
+        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.ttl = ttl_seconds
+        self.max_size = max_size
+        self._lock = threading.RLock()
+        self._last_cleanup = time.time()
+        self._cleanup_interval = 60
+
+    def _cleanup_expired(self) -> None:
+        current_time = time.time()
+        if current_time - self._last_cleanup < self._cleanup_interval:
+            return
+        with self._lock:
+            expired_keys = [k for k, v in self.cache.items() if current_time - v['timestamp'] >= self.ttl]
+            for key in expired_keys:
+                del self.cache[key]
+            if len(self.cache) > self.max_size:
+                sorted_items = sorted(self.cache.items(), key=lambda x: x[1]['timestamp'])
+                for i in range(len(self.cache) - self.max_size):
+                    del self.cache[sorted_items[i][0]]
+            self._last_cleanup = current_time
+            if expired_keys or len(self.cache) > self.max_size * 0.8:
+                logger.info(
+                    f"Cache cleanup: removed {len(expired_keys)} expired items, current size: {len(self.cache)}")
+
+    def get(self, key: str) -> Any:
+        self._cleanup_expired()
+        with self._lock:
+            if key in self.cache:
+                data = self.cache[key]
+                if time.time() - data['timestamp'] < self.ttl:
+                    data['last_access'] = time.time()
+                    return data['value']
+                del self.cache[key]
+        return None
+
+    def set(self, key: str, value: Any) -> None:
+        self._cleanup_expired()
+        with self._lock:
+            current_time = time.time()
+            self.cache[key] = {
+                'value': value,
+                'timestamp': current_time,
+                'last_access': current_time
+            }
+
+    def delete(self, key: str) -> None:
+        with self._lock:
+            if key in self.cache:
+                del self.cache[key]
+
+    def clear(self) -> None:
+        with self._lock:
+            self.cache.clear()
+            self._last_cleanup = time.time()
+
+    def stats(self) -> Dict[str, Any]:
+        self._cleanup_expired()
+        with self._lock:
+            return {
+                'size': len(self.cache),
+                'max_size': self.max_size,
+                'ttl_seconds': self.ttl,
+                'last_cleanup': self._last_cleanup,
+            }
+
+class BulkEventCreate(BaseModel):
+    events: List[EventCreate]
+
+
+class BulkEventResponse(BaseModel):
+    success_count: int
+    error_count: int
+    errors: List[dict]
+    created_events: List[EventResponse]
+
+
+event_cache = SimpleCache(ttl_seconds=180, max_size=500)
+
+
+@app.post("/admin/events/bulk-simple", response_model=BulkEventResponse)
 async def bulk_create_events_simple(
     bulk_events: BulkEventCreate, 
     current_user: dict = Depends(get_current_user)
@@ -8745,6 +8828,10 @@ async def get_event_share_card_png(event_id: int):
         logger.error(f"Error serving PNG share card for event {event_id}: {str(e)}")
         # Fallback to generic placeholder
         return RedirectResponse(url="https://via.placeholder.com/800x600/3B82F6/FFFFFF?text=TodoEvents", status_code=302)
+
+# ---------------------------------------------------------------------------
+# In-memory cache utilities and bulk event models
+# ---------------------------------------------------------------------------
 
 @app.post("/api/seo/migrate-events")
 async def migrate_events_for_seo(background_tasks: BackgroundTasks):
