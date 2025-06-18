@@ -88,49 +88,60 @@ const FallbackMap = ({ event, category, theme }) => (
 
 // Helper to format date/time in a more social-friendly way
 function formatDate(event) {
+  if (!event?.date) return 'Date TBD';
+  
   try {
-    if (!event?.date || !event?.start_time) {
-      return 'Date and time not specified';
-    }
-
     const startDate = new Date(event.date);
-    const formattedDate = startDate.toLocaleDateString(undefined, {
-      weekday: 'long',
-      month: 'long', 
+    let dateStr = startDate.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
-
-    // Format time range
-    let timeStr = event.start_time;
-    if (event.end_time) {
-      timeStr += ` - ${event.end_time}`;
-    }
-
-    // Handle multi-day events
+    
     if (event.end_date && event.end_date !== event.date) {
       const endDate = new Date(event.end_date);
-      const formattedEndDate = endDate.toLocaleDateString(undefined, {
-        weekday: 'long',
-        month: 'long', 
+      // If same year, don't repeat it
+      const endDateStr = endDate.toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: startDate.getFullYear() !== endDate.getFullYear() ? 'numeric' : undefined
       });
-      return `${formattedDate} - ${formattedEndDate} at ${timeStr}`;
+      dateStr += ` - ${endDateStr}`;
     }
-
-    return `${formattedDate} at ${timeStr}`;
+    
+    return dateStr;
   } catch (error) {
     console.error('Error formatting date:', error);
-    // Fallback formatting
-    let fallback = event.date || 'Date not specified';
-    if (event.start_time) {
-      fallback += ` at ${event.start_time}`;
-      if (event.end_time) {
-        fallback += ` - ${event.end_time}`;
-      }
+    return event.date || 'Date TBD';
+  }
+}
+
+function formatTime(event) {
+  if (!event?.start_time) return 'Time TBD';
+  
+  try {
+    const convertTo12Hour = (time24) => {
+      if (!time24) return time24;
+      const [hours, minutes] = time24.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) return time24;
+      
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      const minutesStr = minutes.toString().padStart(2, '0');
+      
+      return `${hours12}:${minutesStr} ${period}`;
+    };
+    
+    const startTime = convertTo12Hour(event.start_time);
+    const endTime = event.end_time ? convertTo12Hour(event.end_time) : null;
+    
+    if (endTime) {
+      return `${startTime} - ${endTime}`;
     }
-    return fallback;
+    return startTime;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return event.start_time || 'Time TBD';
   }
 }
 
@@ -418,7 +429,33 @@ const ShareCard = ({ event }) => {
             <span style={categoryTextStyle}>
               {category.label || event.category}
             </span>
+            {event.verified && (
+              <div style={{
+                marginLeft: '8px',
+                padding: '2px 6px',
+                backgroundColor: '#16a34a',
+                color: 'white',
+                fontSize: '10px',
+                borderRadius: '4px',
+                fontWeight: 'bold'
+              }}>
+                VERIFIED
+              </div>
+            )}
           </div>
+          {/* Engagement stats */}
+          {(event.view_count > 0 || event.interest_count > 0) && (
+            <div style={{
+              fontSize: '11px',
+              color: theme === "dark" ? '#94a3b8' : '#64748b',
+              marginTop: '4px',
+              display: 'flex',
+              gap: '12px'
+            }}>
+              {event.view_count > 0 && <span>👁 {event.view_count} views</span>}
+              {event.interest_count > 0 && <span>❤️ {event.interest_count} interested</span>}
+            </div>
+          )}
         </div>
         <TodoEventsLogo theme={theme} className="w-10 h-10" />
       </div>
@@ -459,12 +496,12 @@ const ShareCard = ({ event }) => {
             backgroundColor: theme === "dark" ? "rgba(30, 64, 175, 0.2)" : "#dbeafe"
           }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
+              <path d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 3 20V6C3 4.89543 3.89543 4 5 4Z" 
                 stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
             <p style={detailTextStyle}>
-              {formatDate(event)}
+              {formatDate(event)} • {formatTime(event)}
             </p>
         </div>
         
@@ -483,6 +520,22 @@ const ShareCard = ({ event }) => {
           </div>
             <p style={detailTextStyle}>
               {event.address}
+            </p>
+          </div>
+          
+          {/* Primary Category (if different from header) */}
+          <div style={detailRowStyle}>
+            <div style={{
+              ...iconContainerStyle,
+              backgroundColor: theme === "dark" ? "rgba(245, 200, 66, 0.2)" : "#fef3c7"
+            }}>
+              <CategoryIcon 
+                category={event.category} 
+                style={{ width: '12px', height: '12px', color: '#f5c842' }}
+              />
+            </div>
+            <p style={detailTextStyle}>
+              {getCategory(event.category)?.label || event.category}
             </p>
           </div>
           

@@ -475,6 +475,36 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
                   {formatEventTime(event)}
                 </span>
               </div>
+              {/* Enhanced Category Display */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-spark-yellow/10">
+                    {React.createElement(category.icon, {
+                      className: `w-4 h-4 ${category.color}`
+                    })}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-white/50">Primary Category</span>
+                    <span className="font-body font-medium text-white">{category.name}</span>
+                  </div>
+                </div>
+                
+                {/* Secondary Category Display */}
+                {event.secondary_category && (
+                  <div className="flex items-center gap-3 text-sm text-white/70">
+                    <div className="p-1.5 rounded-md bg-purple-500/10">
+                      {React.createElement(getCategory(event.secondary_category).icon, {
+                        className: `w-4 h-4 ${getCategory(event.secondary_category).color}`
+                      })}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-white/50">Secondary Category</span>
+                      <span className="font-body font-medium text-white">{getCategory(event.secondary_category).name}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-3 text-sm text-white/70">
                 <div className="p-1.5 rounded-md bg-vibrant-magenta/10">
                   <MapPin className="w-4 h-4 text-vibrant-magenta" />
@@ -482,18 +512,6 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
                 <span className="font-body">{event.address || 'No address provided'}</span>
               </div>
               
-              {/* Secondary Category Display */}
-              {event.secondary_category && (
-                <div className="flex items-center gap-3 text-sm text-white/70">
-                  <div className="p-1.5 rounded-md bg-spark-yellow/10">
-                    <Tag className="w-4 h-4 text-spark-yellow" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-white/50">Also in</span>
-                    <span className="font-body">{getCategory(event.secondary_category).name}</span>
-                  </div>
-                </div>
-              )}
               {event.distance !== undefined && (
                 <div className="text-sm text-white/70 font-data">
                   <WebIcon emoji="📍" size={14} className="mr-1" />

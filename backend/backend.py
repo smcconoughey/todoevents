@@ -14220,45 +14220,107 @@ async def get_events_by_location(
         }
 @app.get("/api/events/{event_id}/share-card")
 async def get_event_share_card(event_id: int):
-    """Generate auto-generated share card for social media"""
+    """Generate and serve pre-generated share card data for SEO and social media"""
     
-    with get_db() as conn:
-        cursor = conn.cursor()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Use database-specific syntax for share card
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL
+                cursor.execute('''
+                    SELECT id, title, description, date, start_time, end_time, address, 
+                           city, state, category, secondary_category, verified, 
+                           view_count, interest_count, host_name, fee_required
+                    FROM events 
+                    WHERE id = %s AND (is_published = true OR is_published IS NULL)
+                ''', (event_id,))
+            else:
+                # SQLite
+                cursor.execute('''
+                    SELECT id, title, description, date, start_time, end_time, address, 
+                           city, state, category, secondary_category, verified, 
+                           view_count, interest_count, host_name, fee_required
+                    FROM events 
+                    WHERE id = ? AND (is_published = 1 OR is_published IS NULL)
+                ''', (event_id,))
+            
+            event_row = cursor.fetchone()
+            if not event_row:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            event_dict = dict(event_row)
+            
+            # Return enhanced JSON data with proper image URL for SEO
+            share_card_data = {
+                "type": "share_card_image",
+                "event_id": event_id,
+                "title": event_dict["title"],
+                "date": event_dict["date"],
+                "time": f"{event_dict['start_time']}" + (f" - {event_dict['end_time']}" if event_dict.get('end_time') else ""),
+                "location": f"{event_dict.get('city', '')}, {event_dict.get('state', '')}".strip(', '),
+                "address": event_dict.get("address", ""),
+                "category": event_dict["category"],
+                "secondary_category": event_dict.get("secondary_category"),
+                "description": event_dict["description"][:120] + "..." if len(event_dict["description"]) > 120 else event_dict["description"],
+                "verified": bool(event_dict.get("verified", False)),
+                "view_count": event_dict.get("view_count", 0),
+                "interest_count": event_dict.get("interest_count", 0),
+                "host_name": event_dict.get("host_name"),
+                "is_free": not bool(event_dict.get("fee_required")),
+                "image_url": f"https://todoevents-backend.onrender.com/api/events/{event_id}/share-card.png",
+                "meta": {
+                    "width": 800,
+                    "height": 600,
+                    "format": "PNG",
+                    "seo_optimized": True,
+                    "social_ready": True
+                }
+            }
+            
+            return share_card_data
+            
+    except Exception as e:
+        logger.error(f"Error generating share card for event {event_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating share card")
+
+@app.get("/api/events/{event_id}/share-card.png")
+async def get_event_share_card_png(event_id: int):
+    """Serve actual PNG image for share cards (placeholder for future implementation)"""
+    
+    try:
+        # For now, redirect to a placeholder image service
+        # In production, this would generate and cache actual PNG images using PIL, Playwright, etc.
         
-        # Use database-specific syntax for share card
-        if IS_PRODUCTION and DB_URL:
-            # PostgreSQL
-            cursor.execute('''
-                SELECT title, description, date, start_time, city, state, category
-                FROM events 
-                WHERE id = %s AND (is_published = true OR is_published IS NULL)
-            ''', (event_id,))
-        else:
-            # SQLite
-            cursor.execute('''
-                SELECT title, description, date, start_time, city, state, category
-                FROM events 
-                WHERE id = ? AND (is_published = 1 OR is_published IS NULL)
-            ''', (event_id,))
-        
-        event_row = cursor.fetchone()
-        if not event_row:
-            raise HTTPException(status_code=404, detail="Event not found")
-        
-        event_dict = dict(event_row)
-        
-        # For now, return JSON data that could be used to generate an image
-        # In a full implementation, this would generate an actual image
-        return {
-            "title": event_dict["title"],
-            "date": event_dict["date"],
-            "time": event_dict["start_time"],
-            "location": f"{event_dict.get('city', '')}, {event_dict.get('state', '')}".strip(', '),
-            "category": event_dict["category"],
-            "description": event_dict["description"][:100] + "..." if len(event_dict["description"]) > 100 else event_dict["description"],
-            "generated_url": f"https://todo-events.com/api/events/{event_id}/share-card",
-            "type": "auto_generated_share_card"
-        }
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            if IS_PRODUCTION and DB_URL:
+                cursor.execute('''
+                    SELECT title, category, verified FROM events 
+                    WHERE id = %s AND (is_published = true OR is_published IS NULL)
+                ''', (event_id,))
+            else:
+                cursor.execute('''
+                    SELECT title, category, verified FROM events 
+                    WHERE id = ? AND (is_published = 1 OR is_published IS NULL)
+                ''', (event_id,))
+            
+            event_row = cursor.fetchone()
+            if not event_row:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            # Placeholder URL with event info
+            event_title = event_row['title'][:30] if len(event_row['title']) > 30 else event_row['title']
+            placeholder_url = f"https://via.placeholder.com/800x600/3B82F6/FFFFFF?text=Event+{event_id}%0A{event_title.replace(' ', '+')}"
+            
+            return RedirectResponse(url=placeholder_url, status_code=302)
+            
+    except Exception as e:
+        logger.error(f"Error serving PNG share card for event {event_id}: {str(e)}")
+        # Fallback to generic placeholder
+        return RedirectResponse(url="https://via.placeholder.com/800x600/3B82F6/FFFFFF?text=TodoEvents", status_code=302)
 
 @app.post("/api/seo/migrate-events")
 async def migrate_events_for_seo(background_tasks: BackgroundTasks):
