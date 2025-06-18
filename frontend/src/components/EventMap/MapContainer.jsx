@@ -153,6 +153,8 @@ const MapContainer = React.forwardRef(({
   const resizeObserverRef = useRef(null);
   const boundsTimeoutRef = useRef(null);
   const zoomTimeoutRef = useRef(null);
+  const lastUserZoomRef = useRef(DEFAULT_ZOOM);
+  const isUserZoomingRef = useRef(false);
   
   // Get current theme from context
   const { theme } = useContext(ThemeContext);
@@ -182,55 +184,64 @@ const MapContainer = React.forwardRef(({
       return categoryMatch && dateMatch && hasValidLocation;
     });
 
-    // Smoother zoom-based optimization to prevent abrupt changes
+    // Much more gradual optimization to prevent zoom snapping
     const totalEvents = baseFilteredEvents.length;
-    let targetCount;
     
-    if (zoom < 5) {
-      // Very zoomed out: show verified events + sample, but smoothly transition
-      const verifiedEvents = baseFilteredEvents.filter(event => event.verified);
-      const nonVerifiedEvents = baseFilteredEvents.filter(event => !event.verified);
-      
-      // Gradual sampling based on zoom level to prevent snapping
-      const samplePercentage = Math.max(0.15, (zoom - 3) * 0.1); // 15-35% based on zoom
-      const sampleSize = Math.min(200, Math.floor(nonVerifiedEvents.length * samplePercentage));
-      
-      // Use consistent seed for stable sampling (prevents flickering)
-      const sampledNonVerified = nonVerifiedEvents
-        .sort((a, b) => (a.id * 9301 + a.lat * 49297) % 233280 - (b.id * 9301 + b.lat * 49297) % 233280)
-        .slice(0, sampleSize);
-      
-      targetCount = Math.min(400, verifiedEvents.length + sampledNonVerified.length);
-      return [...verifiedEvents, ...sampledNonVerified].slice(0, targetCount);
+    // Always show at least verified events to maintain visual consistency
+    const verifiedEvents = baseFilteredEvents.filter(event => event.verified);
+    
+    // Very gradual percentage increase based on zoom (no abrupt changes)
+    let percentage;
+    if (zoom < 4) {
+      percentage = 0.25; // 25%
+    } else if (zoom < 5) {
+      percentage = 0.35; // 35%
+    } else if (zoom < 6) {
+      percentage = 0.45; // 45%
     } else if (zoom < 7) {
-      // Medium-low zoom: gradual increase in events shown
-      const percentage = 0.4 + ((zoom - 5) * 0.15); // 40-70% based on zoom
-      targetCount = Math.min(600, Math.floor(totalEvents * percentage));
+      percentage = 0.55; // 55%
+    } else if (zoom < 8) {
+      percentage = 0.65; // 65%
     } else if (zoom < 9) {
-      // Medium zoom: more events
-      const percentage = 0.65 + ((zoom - 7) * 0.125); // 65-90% based on zoom
-      targetCount = Math.min(800, Math.floor(totalEvents * percentage));
+      percentage = 0.75; // 75%
+    } else if (zoom < 10) {
+      percentage = 0.85; // 85%
     } else if (zoom < 11) {
-      // Close zoom: most events
-      const percentage = 0.85 + ((zoom - 9) * 0.075); // 85-100% based on zoom
-      targetCount = Math.min(1000, Math.floor(totalEvents * percentage));
+      percentage = 0.95; // 95%
     } else {
-      // Very close: show all events in viewport if available, otherwise all
-      if (bounds) {
+      // Very close zoom: show all events, but limit to viewport if too many
+      if (bounds && totalEvents > 1000) {
         const viewportEvents = baseFilteredEvents.filter(event => {
           const eventLatLng = new google.maps.LatLng(event.lat, event.lng);
           return bounds.contains(eventLatLng);
         });
-        return viewportEvents.length > 50 ? viewportEvents : baseFilteredEvents.slice(0, 1200);
+        return viewportEvents.length > 0 ? viewportEvents : baseFilteredEvents.slice(0, 1000);
       }
-      return baseFilteredEvents.slice(0, 1200);
+      return baseFilteredEvents;
     }
     
-    // Use stable sampling for consistent results
+    // Calculate target count with minimum to always show verified events
+    const targetCount = Math.max(
+      verifiedEvents.length, // Always show all verified events
+      Math.min(1000, Math.floor(totalEvents * percentage))
+    );
+    
+    // If we're showing less than total, use stable sampling
     if (targetCount < totalEvents) {
-      return baseFilteredEvents
-        .sort((a, b) => (a.id * 9301 + a.lat * 49297) % 233280 - (b.id * 9301 + b.lat * 49297) % 233280)
-        .slice(0, targetCount);
+      // Always include all verified events first
+      const nonVerifiedEvents = baseFilteredEvents.filter(event => !event.verified);
+      const remainingSlots = targetCount - verifiedEvents.length;
+      
+      if (remainingSlots > 0) {
+        // Use stable sampling for remaining slots
+        const sampledNonVerified = nonVerifiedEvents
+          .sort((a, b) => (a.id * 9301 + a.lat * 49297) % 233280 - (b.id * 9301 + b.lat * 49297) % 233280)
+          .slice(0, remainingSlots);
+        
+        return [...verifiedEvents, ...sampledNonVerified];
+      }
+      
+      return verifiedEvents;
     }
     
     return baseFilteredEvents;
@@ -281,13 +292,51 @@ const MapContainer = React.forwardRef(({
           mapTypeControl: false,
           fullscreenControl: false,
           clickableIcons: false,
-          gestureHandling: "greedy"
+          gestureHandling: "greedy",
+          // Prevent auto-zoom behaviors that cause snapping
+          disableDoubleClickZoom: false,
+          scrollwheel: true,
+          // Add zoom constraints to prevent extreme zooming
+          minZoom: 2,
+          maxZoom: 18,
+          // Disable auto-pan and auto-zoom behaviors
+          panControl: false,
+          zoomControl: true,
+          scaleControl: false
         });
 
         mapInstanceRef.current = map;
 
-        // Add debounced zoom change listener for smoother performance
+        // Track user zoom interactions to prevent auto-zoom interference
+        map.addListener('dragstart', () => {
+          isUserZoomingRef.current = true;
+        });
+        
+        map.addListener('dragend', () => {
+          setTimeout(() => {
+            isUserZoomingRef.current = false;
+          }, 500);
+        });
+
+        // Track scroll wheel zoom
+        mapRef.current.addEventListener('wheel', () => {
+          isUserZoomingRef.current = true;
+          setTimeout(() => {
+            isUserZoomingRef.current = false;
+          }, 1000);
+        }, { passive: true });
+
+        // Comprehensive zoom change listener with stability guards
         map.addListener('zoom_changed', () => {
+          // Mark as user interaction if zoom controls are being used
+          const zoomControlElements = mapRef.current?.querySelectorAll('[data-control-api-key]');
+          if (zoomControlElements?.length > 0) {
+            isUserZoomingRef.current = true;
+            setTimeout(() => {
+              isUserZoomingRef.current = false;
+            }, 1000);
+          }
+          
           // Debounce zoom changes to prevent excessive re-rendering
           if (zoomTimeoutRef.current) {
             clearTimeout(zoomTimeoutRef.current);
@@ -295,8 +344,22 @@ const MapContainer = React.forwardRef(({
           
           zoomTimeoutRef.current = setTimeout(() => {
             const newZoom = map.getZoom();
+            
+            // Prevent extreme zoom changes that could be auto-zoom behavior
+            const zoomDiff = Math.abs(newZoom - currentZoom);
+            
+            // If it's a very large zoom change (>3 levels) and user isn't actively zooming,
+            // it might be auto-zoom behavior - prevent it
+            if (zoomDiff > 3 && !isUserZoomingRef.current) {
+              console.log('Preventing potential auto-zoom snap from', currentZoom, 'to', newZoom);
+              // Restore the previous zoom level
+              map.setZoom(currentZoom);
+              return;
+            }
+            
             // Only update if zoom actually changed significantly
-            if (Math.abs(newZoom - currentZoom) > 0.1) {
+            if (zoomDiff > 0.1) {
+              lastUserZoomRef.current = newZoom;
               setCurrentZoom(newZoom);
             }
           }, 150); // 150ms debounce for zoom changes
@@ -476,33 +539,33 @@ const MapContainer = React.forwardRef(({
       // Much smoother clustering progression to prevent jarring transitions
       if (currentZoom < 4) {
         // Very aggressive clustering for world view
-        clusterOptions.gridSize = 120;
-        clusterOptions.maxZoom = 6;
-        clusterOptions.minimumClusterSize = 5;
+        clusterOptions.gridSize = 100;
+        clusterOptions.maxZoom = 5;
+        clusterOptions.minimumClusterSize = 3;
       } else if (currentZoom < 6) {
         // High clustering for continental view
-        clusterOptions.gridSize = 100;
-        clusterOptions.maxZoom = 8;
-        clusterOptions.minimumClusterSize = 4;
+        clusterOptions.gridSize = 80;
+        clusterOptions.maxZoom = 7;
+        clusterOptions.minimumClusterSize = 3;
       } else if (currentZoom < 8) {
         // Moderate clustering for regional view
-        clusterOptions.gridSize = 80;
-        clusterOptions.maxZoom = 10;
-        clusterOptions.minimumClusterSize = 3;
+        clusterOptions.gridSize = 70;
+        clusterOptions.maxZoom = 9;
+        clusterOptions.minimumClusterSize = 2;
       } else if (currentZoom < 10) {
         // Light clustering for city view
         clusterOptions.gridSize = 60;
-        clusterOptions.maxZoom = 12;
+        clusterOptions.maxZoom = 11;
         clusterOptions.minimumClusterSize = 2;
       } else if (currentZoom < 12) {
         // Very light clustering for neighborhood view
-        clusterOptions.gridSize = 40;
-        clusterOptions.maxZoom = 14;
+        clusterOptions.gridSize = 50;
+        clusterOptions.maxZoom = 13;
         clusterOptions.minimumClusterSize = 2;
       } else {
         // Minimal clustering for street view
-        clusterOptions.gridSize = 30;
-        clusterOptions.maxZoom = 16;
+        clusterOptions.gridSize = 40;
+        clusterOptions.maxZoom = 15;
         clusterOptions.minimumClusterSize = 2;
       }
 
