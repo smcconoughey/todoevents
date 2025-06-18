@@ -89,12 +89,6 @@ A standalone admin dashboard for managing the todo-events application.
    - Open http://localhost:5174
    - Login with admin credentials
 
-## Default Admin Credentials
-
-**Email**: `admin@todoevents.com`  
-**Password**: `Admin123!`
-
-⚠️ **Important**: Change the default password after first login!
 
 ## Configuration
 

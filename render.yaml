@@ -11,10 +11,6 @@ services:
         value: 3.11.0
       - key: RENDER
         value: true
-      - key: SECRET_KEY
-        value: 3a4f89cc0b7db4bf2a97e6fe9f9a8e29fcb43d8f5d67c8a3
-      - key: DATABASE_URL
-        value: postgresql://todoevents_user:9i7NARYK2tVZI6yXXV3gOw644m2SsjuE@dpg-d0od9fbe5dus73avgsk0-a.oregon-postgres.render.com/todoevents
       - key: PORT
         value: 8000
   
@@ -33,11 +29,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 18.x
-      - key: VITE_API_URL
-        value: https://todoevents-backend.onrender.com
       - key: NODE_ENV
         value: production
-
 # Database
 databases:
   - name: todoevents-db
