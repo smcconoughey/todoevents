@@ -152,6 +152,7 @@ const MapContainer = React.forwardRef(({
   const [mapBounds, setMapBounds] = useState(null);
   const resizeObserverRef = useRef(null);
   const boundsTimeoutRef = useRef(null);
+  const zoomTimeoutRef = useRef(null);
   
   // Get current theme from context
   const { theme } = useContext(ThemeContext);
@@ -181,36 +182,58 @@ const MapContainer = React.forwardRef(({
       return categoryMatch && dateMatch && hasValidLocation;
     });
 
-    // Zoom-based optimization
-    if (zoom < 6) {
-      // Very zoomed out: show only verified events + random sample
+    // Smoother zoom-based optimization to prevent abrupt changes
+    const totalEvents = baseFilteredEvents.length;
+    let targetCount;
+    
+    if (zoom < 5) {
+      // Very zoomed out: show verified events + sample, but smoothly transition
       const verifiedEvents = baseFilteredEvents.filter(event => event.verified);
       const nonVerifiedEvents = baseFilteredEvents.filter(event => !event.verified);
       
-      // Show all verified + 20% sample of non-verified, max 500 total
-      const sampleSize = Math.min(300, Math.floor(nonVerifiedEvents.length * 0.2));
+      // Gradual sampling based on zoom level to prevent snapping
+      const samplePercentage = Math.max(0.15, (zoom - 3) * 0.1); // 15-35% based on zoom
+      const sampleSize = Math.min(200, Math.floor(nonVerifiedEvents.length * samplePercentage));
+      
+      // Use consistent seed for stable sampling (prevents flickering)
       const sampledNonVerified = nonVerifiedEvents
-        .sort(() => Math.random() - 0.5)
+        .sort((a, b) => (a.id * 9301 + a.lat * 49297) % 233280 - (b.id * 9301 + b.lat * 49297) % 233280)
         .slice(0, sampleSize);
       
-      return [...verifiedEvents, ...sampledNonVerified].slice(0, 500);
-    } else if (zoom < 8) {
-      // Medium zoom: show 70% of events, max 800
-      const shuffled = baseFilteredEvents.sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, Math.min(800, Math.floor(baseFilteredEvents.length * 0.7)));
-    } else if (zoom < 10) {
-      // Closer zoom: show 90% of events, max 1000
-      const shuffled = baseFilteredEvents.sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, Math.min(1000, Math.floor(baseFilteredEvents.length * 0.9)));
+      targetCount = Math.min(400, verifiedEvents.length + sampledNonVerified.length);
+      return [...verifiedEvents, ...sampledNonVerified].slice(0, targetCount);
+    } else if (zoom < 7) {
+      // Medium-low zoom: gradual increase in events shown
+      const percentage = 0.4 + ((zoom - 5) * 0.15); // 40-70% based on zoom
+      targetCount = Math.min(600, Math.floor(totalEvents * percentage));
+    } else if (zoom < 9) {
+      // Medium zoom: more events
+      const percentage = 0.65 + ((zoom - 7) * 0.125); // 65-90% based on zoom
+      targetCount = Math.min(800, Math.floor(totalEvents * percentage));
+    } else if (zoom < 11) {
+      // Close zoom: most events
+      const percentage = 0.85 + ((zoom - 9) * 0.075); // 85-100% based on zoom
+      targetCount = Math.min(1000, Math.floor(totalEvents * percentage));
     } else {
-      // Very close: show all events in viewport
-      if (!bounds) return baseFilteredEvents;
-      
-      return baseFilteredEvents.filter(event => {
-        const eventLatLng = new google.maps.LatLng(event.lat, event.lng);
-        return bounds.contains(eventLatLng);
-      });
+      // Very close: show all events in viewport if available, otherwise all
+      if (bounds) {
+        const viewportEvents = baseFilteredEvents.filter(event => {
+          const eventLatLng = new google.maps.LatLng(event.lat, event.lng);
+          return bounds.contains(eventLatLng);
+        });
+        return viewportEvents.length > 50 ? viewportEvents : baseFilteredEvents.slice(0, 1200);
+      }
+      return baseFilteredEvents.slice(0, 1200);
     }
+    
+    // Use stable sampling for consistent results
+    if (targetCount < totalEvents) {
+      return baseFilteredEvents
+        .sort((a, b) => (a.id * 9301 + a.lat * 49297) % 233280 - (b.id * 9301 + b.lat * 49297) % 233280)
+        .slice(0, targetCount);
+    }
+    
+    return baseFilteredEvents;
   };
 
   // Reset view functionality
@@ -263,10 +286,20 @@ const MapContainer = React.forwardRef(({
 
         mapInstanceRef.current = map;
 
-        // Add zoom change listener for performance optimization
+        // Add debounced zoom change listener for smoother performance
         map.addListener('zoom_changed', () => {
-          const newZoom = map.getZoom();
-          setCurrentZoom(newZoom);
+          // Debounce zoom changes to prevent excessive re-rendering
+          if (zoomTimeoutRef.current) {
+            clearTimeout(zoomTimeoutRef.current);
+          }
+          
+          zoomTimeoutRef.current = setTimeout(() => {
+            const newZoom = map.getZoom();
+            // Only update if zoom actually changed significantly
+            if (Math.abs(newZoom - currentZoom) > 0.1) {
+              setCurrentZoom(newZoom);
+            }
+          }, 150); // 150ms debounce for zoom changes
         });
 
         // Add bounds change listener for viewport-based filtering
@@ -279,7 +312,7 @@ const MapContainer = React.forwardRef(({
           boundsTimeoutRef.current = setTimeout(() => {
             const bounds = map.getBounds();
             setMapBounds(bounds);
-          }, 100); // 100ms debounce
+          }, 200); // 200ms debounce for bounds (longer than zoom)
         });
 
         if (resizeObserverRef.current) {
@@ -311,6 +344,7 @@ const MapContainer = React.forwardRef(({
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (boundsTimeoutRef.current) clearTimeout(boundsTimeoutRef.current);
+      if (zoomTimeoutRef.current) clearTimeout(zoomTimeoutRef.current);
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }
@@ -413,7 +447,7 @@ const MapContainer = React.forwardRef(({
     markersRef.current = markers;
 
     if (markers.length > 0) {
-      // Use adaptive clustering based on zoom level
+      // Use adaptive clustering based on zoom level with smoother transitions
       const clusterOptions = {
         map: mapInstanceRef.current,
         markers: markers,
@@ -439,19 +473,37 @@ const MapContainer = React.forwardRef(({
         },
       };
 
-      // Adjust clustering aggressiveness based on zoom level using standard options
-      if (currentZoom < 6) {
-        // Very aggressive clustering for zoomed out views
-        clusterOptions.gridSize = 80;
+      // Much smoother clustering progression to prevent jarring transitions
+      if (currentZoom < 4) {
+        // Very aggressive clustering for world view
+        clusterOptions.gridSize = 120;
+        clusterOptions.maxZoom = 6;
+        clusterOptions.minimumClusterSize = 5;
+      } else if (currentZoom < 6) {
+        // High clustering for continental view
+        clusterOptions.gridSize = 100;
         clusterOptions.maxZoom = 8;
+        clusterOptions.minimumClusterSize = 4;
+      } else if (currentZoom < 8) {
+        // Moderate clustering for regional view
+        clusterOptions.gridSize = 80;
+        clusterOptions.maxZoom = 10;
+        clusterOptions.minimumClusterSize = 3;
       } else if (currentZoom < 10) {
-        // Moderate clustering for medium zoom
+        // Light clustering for city view
         clusterOptions.gridSize = 60;
         clusterOptions.maxZoom = 12;
-      } else {
-        // Light clustering for close zoom
+        clusterOptions.minimumClusterSize = 2;
+      } else if (currentZoom < 12) {
+        // Very light clustering for neighborhood view
         clusterOptions.gridSize = 40;
-        clusterOptions.maxZoom = 15;
+        clusterOptions.maxZoom = 14;
+        clusterOptions.minimumClusterSize = 2;
+      } else {
+        // Minimal clustering for street view
+        clusterOptions.gridSize = 30;
+        clusterOptions.maxZoom = 16;
+        clusterOptions.minimumClusterSize = 2;
       }
 
       clustererRef.current = new MarkerClusterer(clusterOptions);
