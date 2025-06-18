@@ -481,9 +481,11 @@ const CreateEventForm = ({
   if (showSuccessAnimation) {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="dialog-themed max-w-md w-full border-0 bg-transparent shadow-none">
+        <DialogContent className="dialog-themed max-w-lg w-full border-0 bg-transparent shadow-none">
           <SuccessAnimation 
             message={initialEvent ? 'Event updated successfully!' : 'Event created successfully!'}
+            showSocialSharing={!initialEvent} // Only show for new events, not edits
+            eventTitle={formData.title}
           />
         </DialogContent>
       </Dialog>

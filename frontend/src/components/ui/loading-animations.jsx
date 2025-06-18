@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart, Calendar, User, MapPin, Clock, Target, CheckCircle, AlertCircle } from 'lucide-react';
+import { ShareIcon, FacebookIcon, InstagramIcon, TwitterIcon, TipIcon } from '../EventMap/WebIcons';
 
 // Beautiful pulsing ring loader - minimal and clean
 export const PulsingRing = ({ size = 'md', color = 'pin-blue' }) => {
@@ -293,7 +294,7 @@ export const PremiumWelcomeAnimation = ({ tier = 'premium', userName = '', onCom
 };
 
 // Success animation - clean and satisfying
-export const SuccessAnimation = ({ message = "Success!" }) => {
+export const SuccessAnimation = ({ message = "Success!", showSocialSharing = false, eventTitle = "" }) => {
   return (
     <div className="flex flex-col items-center gap-4 p-6">
       <div className="relative">
@@ -308,7 +309,45 @@ export const SuccessAnimation = ({ message = "Success!" }) => {
         <div className="absolute inset-0 rounded-full border-2 border-fresh-teal/30 animate-success-ring"></div>
       </div>
       
-      <p className="text-lg font-semibold text-themed-primary animate-fade-in-up">{message}</p>
+      <div className="text-center space-y-3">
+        <p className="text-lg font-semibold text-themed-primary animate-fade-in-up">{message}</p>
+        
+        {/* Social sharing prompt for event creation */}
+        {showSocialSharing && (
+          <div className="animate-fade-in-up space-y-3 max-w-sm" style={{ animationDelay: '0.3s' }}>
+            <div className="bg-gradient-to-r from-spark-yellow/20 to-pin-blue/20 rounded-lg p-4 border border-spark-yellow/30">
+              <div className="flex items-center gap-2 mb-2">
+                <ShareIcon className="w-4 h-4 text-spark-yellow" />
+                <h3 className="text-sm font-semibold text-themed-primary">Share Your Event!</h3>
+              </div>
+              
+              <p className="text-xs text-themed-secondary mb-3 leading-relaxed">
+                Boost attendance by sharing your beautiful event card on social media:
+              </p>
+              
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="flex flex-col items-center gap-1 p-2 bg-themed-surface/50 rounded-lg">
+                  <FacebookIcon className="w-4 h-4 text-blue-500" />
+                  <span className="text-themed-secondary">Facebook</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-2 bg-themed-surface/50 rounded-lg">
+                  <InstagramIcon className="w-4 h-4 text-pink-500" />
+                  <span className="text-themed-secondary">Instagram</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-2 bg-themed-surface/50 rounded-lg">
+                  <TwitterIcon className="w-4 h-4 text-blue-400" />
+                  <span className="text-themed-secondary">Twitter</span>
+                </div>
+              </div>
+              
+              <div className="mt-3 text-xs text-themed-secondary text-center">
+                <TipIcon className="w-3 h-3 inline mr-1" />
+                Your event page has a "Share" button to download the image!
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
