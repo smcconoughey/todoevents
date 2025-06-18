@@ -192,22 +192,26 @@ const MapContainer = React.forwardRef(({
     
     // Very gradual percentage increase based on zoom (no abrupt changes)
     let percentage;
-    if (zoom < 4) {
-      percentage = 0.25; // 25%
-    } else if (zoom < 5) {
-      percentage = 0.35; // 35%
-    } else if (zoom < 6) {
-      percentage = 0.45; // 45%
-    } else if (zoom < 7) {
-      percentage = 0.55; // 55%
-    } else if (zoom < 8) {
-      percentage = 0.65; // 65%
-    } else if (zoom < 9) {
-      percentage = 0.75; // 75%
-    } else if (zoom < 10) {
-      percentage = 0.85; // 85%
-    } else if (zoom < 11) {
-      percentage = 0.95; // 95%
+    if (zoom < 2.5) {
+      percentage = 0.20; // 20% - very zoomed out
+    } else if (zoom < 3.5) {
+      percentage = 0.28; // 28% - gradual increase
+    } else if (zoom < 4.5) {
+      percentage = 0.36; // 36%
+    } else if (zoom < 5.5) {
+      percentage = 0.44; // 44%
+    } else if (zoom < 6.5) {
+      percentage = 0.52; // 52%
+    } else if (zoom < 7.5) {
+      percentage = 0.60; // 60%
+    } else if (zoom < 8.5) {
+      percentage = 0.68; // 68%
+    } else if (zoom < 9.5) {
+      percentage = 0.76; // 76%
+    } else if (zoom < 10.5) {
+      percentage = 0.84; // 84%
+    } else if (zoom < 11.5) {
+      percentage = 0.92; // 92%
     } else {
       // Very close zoom: show all events, but limit to viewport if too many
       if (bounds && totalEvents > 1000) {
@@ -297,7 +301,7 @@ const MapContainer = React.forwardRef(({
           disableDoubleClickZoom: false,
           scrollwheel: true,
           // Add zoom constraints to prevent extreme zooming
-          minZoom: 2,
+          minZoom: 1,
           maxZoom: 18,
           // Disable auto-pan and auto-zoom behaviors
           panControl: false,
@@ -348,9 +352,19 @@ const MapContainer = React.forwardRef(({
             // Prevent extreme zoom changes that could be auto-zoom behavior
             const zoomDiff = Math.abs(newZoom - currentZoom);
             
-            // If it's a very large zoom change (>3 levels) and user isn't actively zooming,
-            // it might be auto-zoom behavior - prevent it
-            if (zoomDiff > 3 && !isUserZoomingRef.current) {
+            // Extra protection for the problematic 2-3 zoom transition
+            if ((currentZoom >= 2 && currentZoom <= 4) || (newZoom >= 2 && newZoom <= 4)) {
+              // More strict checking in the problematic range
+              if (zoomDiff > 1.5 && !isUserZoomingRef.current) {
+                console.log('Preventing auto-zoom in critical 2-4 range from', currentZoom, 'to', newZoom);
+                map.setZoom(currentZoom);
+                return;
+              }
+            }
+            
+            // If it's a zoom change (>2 levels) and user isn't actively zooming,
+            // it might be auto-zoom behavior - prevent it (reduced from 3 to 2)
+            if (zoomDiff > 2 && !isUserZoomingRef.current) {
               console.log('Preventing potential auto-zoom snap from', currentZoom, 'to', newZoom);
               // Restore the previous zoom level
               map.setZoom(currentZoom);
@@ -362,7 +376,7 @@ const MapContainer = React.forwardRef(({
               lastUserZoomRef.current = newZoom;
               setCurrentZoom(newZoom);
             }
-          }, 150); // 150ms debounce for zoom changes
+          }, (currentZoom >= 2 && currentZoom <= 4) ? 250 : 150); // Longer debounce in critical range
         });
 
         // Add bounds change listener for viewport-based filtering
@@ -537,35 +551,40 @@ const MapContainer = React.forwardRef(({
       };
 
       // Much smoother clustering progression to prevent jarring transitions
-      if (currentZoom < 4) {
-        // Very aggressive clustering for world view
+      if (currentZoom < 2.5) {
+        // World view - very aggressive clustering
+        clusterOptions.gridSize = 120;
+        clusterOptions.maxZoom = 3;
+        clusterOptions.minimumClusterSize = 4;
+      } else if (currentZoom < 3.5) {
+        // Continental view - high clustering (critical transition zone)
         clusterOptions.gridSize = 100;
-        clusterOptions.maxZoom = 5;
+        clusterOptions.maxZoom = 4;
         clusterOptions.minimumClusterSize = 3;
-      } else if (currentZoom < 6) {
-        // High clustering for continental view
+      } else if (currentZoom < 5.5) {
+        // Regional view - moderate clustering
         clusterOptions.gridSize = 80;
-        clusterOptions.maxZoom = 7;
+        clusterOptions.maxZoom = 6;
         clusterOptions.minimumClusterSize = 3;
-      } else if (currentZoom < 8) {
-        // Moderate clustering for regional view
+      } else if (currentZoom < 7.5) {
+        // Area view - light clustering
         clusterOptions.gridSize = 70;
-        clusterOptions.maxZoom = 9;
+        clusterOptions.maxZoom = 8;
         clusterOptions.minimumClusterSize = 2;
-      } else if (currentZoom < 10) {
-        // Light clustering for city view
+      } else if (currentZoom < 9.5) {
+        // City view - lighter clustering
         clusterOptions.gridSize = 60;
-        clusterOptions.maxZoom = 11;
+        clusterOptions.maxZoom = 10;
         clusterOptions.minimumClusterSize = 2;
-      } else if (currentZoom < 12) {
-        // Very light clustering for neighborhood view
+      } else if (currentZoom < 11.5) {
+        // Neighborhood view - minimal clustering
         clusterOptions.gridSize = 50;
-        clusterOptions.maxZoom = 13;
+        clusterOptions.maxZoom = 12;
         clusterOptions.minimumClusterSize = 2;
       } else {
-        // Minimal clustering for street view
+        // Street view - very minimal clustering
         clusterOptions.gridSize = 40;
-        clusterOptions.maxZoom = 15;
+        clusterOptions.maxZoom = 14;
         clusterOptions.minimumClusterSize = 2;
       }
 
