@@ -148,11 +148,70 @@ const MapContainer = React.forwardRef(({
   const clustererRef = useRef(null);
   const proximityCircleRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentZoom, setCurrentZoom] = useState(DEFAULT_ZOOM);
+  const [mapBounds, setMapBounds] = useState(null);
   const resizeObserverRef = useRef(null);
+  const boundsTimeoutRef = useRef(null);
   
   // Get current theme from context
   const { theme } = useContext(ThemeContext);
   const isDarkMode = theme === THEME_DARK;
+
+  // Performance optimization: filter events based on zoom level and viewport
+  const getOptimizedEvents = (events, zoom, bounds) => {
+    // Base event filtering (past events, category, date)
+    const baseFilteredEvents = events.filter(event => {
+      // Filter out past events
+      if (isEventPast(event)) return false;
+      
+      // Category filter - handle both array and string formats
+      let categoryMatch;
+      if (Array.isArray(selectedCategory)) {
+        categoryMatch = selectedCategory.includes('all') || selectedCategory.includes(event.category);
+      } else {
+        categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
+      }
+      
+      // Date filter
+      const dateMatch = isDateInRange(event.date, selectedDate);
+
+      // Location validation
+      const hasValidLocation = event?.lat && event?.lng;
+
+      return categoryMatch && dateMatch && hasValidLocation;
+    });
+
+    // Zoom-based optimization
+    if (zoom < 6) {
+      // Very zoomed out: show only verified events + random sample
+      const verifiedEvents = baseFilteredEvents.filter(event => event.verified);
+      const nonVerifiedEvents = baseFilteredEvents.filter(event => !event.verified);
+      
+      // Show all verified + 20% sample of non-verified, max 500 total
+      const sampleSize = Math.min(300, Math.floor(nonVerifiedEvents.length * 0.2));
+      const sampledNonVerified = nonVerifiedEvents
+        .sort(() => Math.random() - 0.5)
+        .slice(0, sampleSize);
+      
+      return [...verifiedEvents, ...sampledNonVerified].slice(0, 500);
+    } else if (zoom < 8) {
+      // Medium zoom: show 70% of events, max 800
+      const shuffled = baseFilteredEvents.sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, Math.min(800, Math.floor(baseFilteredEvents.length * 0.7)));
+    } else if (zoom < 10) {
+      // Closer zoom: show 90% of events, max 1000
+      const shuffled = baseFilteredEvents.sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, Math.min(1000, Math.floor(baseFilteredEvents.length * 0.9)));
+    } else {
+      // Very close: show all events in viewport
+      if (!bounds) return baseFilteredEvents;
+      
+      return baseFilteredEvents.filter(event => {
+        const eventLatLng = new google.maps.LatLng(event.lat, event.lng);
+        return bounds.contains(eventLatLng);
+      });
+    }
+  };
 
   // Reset view functionality
   React.useImperativeHandle(ref, () => ({
@@ -204,6 +263,25 @@ const MapContainer = React.forwardRef(({
 
         mapInstanceRef.current = map;
 
+        // Add zoom change listener for performance optimization
+        map.addListener('zoom_changed', () => {
+          const newZoom = map.getZoom();
+          setCurrentZoom(newZoom);
+        });
+
+        // Add bounds change listener for viewport-based filtering
+        map.addListener('bounds_changed', () => {
+          // Debounce bounds changes to prevent excessive re-rendering
+          if (boundsTimeoutRef.current) {
+            clearTimeout(boundsTimeoutRef.current);
+          }
+          
+          boundsTimeoutRef.current = setTimeout(() => {
+            const bounds = map.getBounds();
+            setMapBounds(bounds);
+          }, 100); // 100ms debounce
+        });
+
         if (resizeObserverRef.current) {
           resizeObserverRef.current.disconnect();
         }
@@ -232,6 +310,7 @@ const MapContainer = React.forwardRef(({
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
+      if (boundsTimeoutRef.current) clearTimeout(boundsTimeoutRef.current);
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }
@@ -303,27 +382,9 @@ const MapContainer = React.forwardRef(({
       clustererRef.current.clearMarkers();
     }
 
-    const validEvents = events.filter(event => {
-      // Filter out past events
-      if (isEventPast(event)) return false;
-      
-      // Category filter - handle both array and string formats
-      let categoryMatch;
-      if (Array.isArray(selectedCategory)) {
-        categoryMatch = selectedCategory.includes('all') || selectedCategory.includes(event.category);
-      } else {
-        // Fallback for old string format
-        categoryMatch = selectedCategory === 'all' || event.category === selectedCategory;
-      }
-      
-      // Date filter
-      const dateMatch = isDateInRange(event.date, selectedDate);
+    const validEvents = getOptimizedEvents(events, currentZoom, mapBounds);
 
-      // Location validation
-      const hasValidLocation = event?.lat && event?.lng;
-
-      return categoryMatch && dateMatch && hasValidLocation;
-    });
+    console.log(`Map performance: Zoom ${currentZoom}, rendering ${validEvents.length}/${events.length} events`);
 
     const markers = validEvents.map(event => {
       // Find the category for this event
@@ -352,10 +413,11 @@ const MapContainer = React.forwardRef(({
     markersRef.current = markers;
 
     if (markers.length > 0) {
-      // Use simple clustering without text labels
-      clustererRef.current = new MarkerClusterer({
+      // Use adaptive clustering based on zoom level
+      const clusterOptions = {
         map: mapInstanceRef.current,
         markers: markers,
+        algorithm: new google.maps.marker.GridBasedAlgorithm({}),
         renderer: {
           render: ({ count, position, markers }) => {
             // Get ALL category IDs from markers for proper cluster rendering
@@ -376,9 +438,32 @@ const MapContainer = React.forwardRef(({
             return marker;
           },
         },
-      });
+      };
+
+      // Adjust clustering aggressiveness based on zoom level
+      if (currentZoom < 6) {
+        // Very aggressive clustering for zoomed out views
+        clusterOptions.algorithm = new google.maps.marker.GridBasedAlgorithm({
+          gridSize: 80,
+          maxZoom: 8,
+        });
+      } else if (currentZoom < 10) {
+        // Moderate clustering for medium zoom
+        clusterOptions.algorithm = new google.maps.marker.GridBasedAlgorithm({
+          gridSize: 60,
+          maxZoom: 12,
+        });
+      } else {
+        // Light clustering for close zoom
+        clusterOptions.algorithm = new google.maps.marker.GridBasedAlgorithm({
+          gridSize: 40,
+          maxZoom: 15,
+        });
+      }
+
+      clustererRef.current = new MarkerClusterer(clusterOptions);
     }
-  }, [events, selectedCategory, selectedDate, theme]);
+  }, [events, selectedCategory, selectedDate, theme, currentZoom, mapBounds]);
 
   // Determine background color based on theme
   const bgColor = isDarkMode ? 'bg-[#0A1A2F]' : 'bg-[#E8F0E6]';
