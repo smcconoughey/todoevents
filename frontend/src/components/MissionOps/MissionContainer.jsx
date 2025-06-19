@@ -21,7 +21,8 @@ import {
   Edit,
   Trash2,
   Brain,
-  Network
+  Network,
+  BookOpen
 } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 import { useMissionOps } from './MissionOpsContext';
@@ -311,11 +312,11 @@ const MissionContainer = ({
             {/* Tab Navigation */}
             <div className={`flex border-b ${theme === 'light' ? 'border-neutral-200/50' : 'border-neutral-700/50'}`}>
               {[
-                { id: 'tasks', label: 'Tasks', icon: CheckCircle2, count: mission.task_count || 0 },
-                { id: 'insights', label: 'AI Insights', icon: MessageSquare, count: mission.insight_count || 0 },
-                { id: 'relationships', label: 'Relationships', icon: Share2, count: mission.relationship_count || 0 },
-                { id: 'risks', label: 'Risks', icon: AlertTriangle, count: mission.risk_count || 0 },
-                { id: 'decisions', label: 'Decisions', icon: MessageSquare, count: mission.decision_count || 0 }
+                { id: 'tasks', label: 'Tasks', icon: CheckCircle2, count: mission.tasks_count || 0 },
+                { id: 'insights', label: 'AI Insights', icon: Brain, count: mission.insights_count || 0 },
+                { id: 'relationships', label: 'Relationships', icon: Network, count: mission.relationships_count || 0 },
+                { id: 'risks', label: 'Risks', icon: AlertTriangle, count: mission.risks_count || 0 },
+                { id: 'decisions', label: 'Decisions', icon: BookOpen, count: mission.decisions_count || 0 }
               ].map((tab) => (
                 <button
                   key={tab.id}

@@ -104,7 +104,7 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
                     # Fallback: assume it's a sequence and we know the column order
                     mission_dict = {
                         'id': mission[0],
-                        'title': mission[1], 
+                        'title': mission[1],
                         'description': mission[2],
                         'start_date': mission[3],
                         'end_date': mission[4],
@@ -115,8 +115,7 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
                         'grid_y': mission[9],
                         'owner_id': mission[10],
                         'created_at': mission[11],
-                        'updated_at': mission[12],
-                        'access_level': mission[13] if len(mission) > 13 else 'owner'
+                        'updated_at': mission[12]
                     }
                 
                 # Convert datetime objects to strings
@@ -1822,3 +1821,62 @@ async def assign_resource_to_task(task_resource: TaskResourceCreate, current_use
     except Exception as e:
         logger.error(f"Error assigning resource to task: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to assign resource to task")
+
+@missionops_router.get("/debug/mission/{mission_id}")
+async def debug_mission_access(mission_id: int, current_user: dict = Depends(get_current_user)):
+    """Debug endpoint to check mission access"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if mission exists
+            c.execute(f"SELECT * FROM missionops_missions WHERE id = {placeholder}", (mission_id,))
+            mission_raw = c.fetchone()
+            
+            if not mission_raw:
+                return {
+                    "mission_exists": False,
+                    "user_id": current_user["id"],
+                    "mission_id": mission_id
+                }
+            
+            mission_dict = dict(mission_raw)
+            
+            # Check access via get_mission_by_id
+            mission_access = get_mission_by_id(mission_id, current_user["id"])
+            
+            # Check access via has_mission_access
+            has_access = has_mission_access(mission_id, current_user["id"], "view")
+            
+            # Check shared access
+            c.execute(f'''
+                SELECT s.access_level
+                FROM missionops_mission_shares s
+                WHERE s.mission_id = {placeholder} AND s.shared_with_id = {placeholder}
+            ''', (mission_id, current_user["id"]))
+            shared_access = c.fetchone()
+            
+            return {
+                "mission_exists": True,
+                "mission_id": mission_id,
+                "user_id": current_user["id"],
+                "mission_owner_id": mission_dict.get("owner_id"),
+                "is_owner": mission_dict.get("owner_id") == current_user["id"],
+                "shared_access": shared_access[0] if shared_access else None,
+                "has_access_function": has_access,
+                "get_mission_result": mission_access is not None,
+                "mission_title": mission_dict.get("title"),
+                "raw_mission_fields": list(mission_dict.keys())
+            }
+            
+    except Exception as e:
+        logger.error(f"Debug mission access error: {str(e)}")
+        import traceback
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "user_id": current_user.get("id"),
+            "mission_id": mission_id
+        }
