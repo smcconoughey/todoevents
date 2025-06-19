@@ -2710,7 +2710,7 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
                 cursor.execute("SELECT COUNT(*) FROM events WHERE slug = %s", (base_slug,))
         
         result = cursor.fetchone()
-        count = result[0] if result else 0
+        count = (result[0] if isinstance(result, (tuple, list)) else result.get("count", result.get("COUNT(*)", 0))) if result else 0
         
         if count > 0:
             # Slug exists, append a number or event ID
@@ -3035,7 +3035,6 @@ async def create_event(event: EventCreate, current_user: dict = Depends(get_curr
                 cursor = conn.cursor()
                 
                 # Count premium events created this month
-                from datetime import datetime
                 start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                 
                 if IS_PRODUCTION and DB_URL:
