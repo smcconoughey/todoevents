@@ -17,9 +17,20 @@ from shared_utils import get_current_user, get_db, get_placeholder, IS_PRODUCTIO
 # Import MissionOps models and utilities
 from missionops_models import (
     MissionCreate, MissionUpdate, MissionResponse,
+    MissionRelationshipCreate, MissionRelationshipResponse,
     TaskCreate, TaskUpdate, TaskResponse,
+    TaskCreateEnhanced, TaskUpdateEnhanced, TaskResponseEnhanced,
+    TaskDependencyCreate, TaskDependencyResponse,
+    ResourceCreate, ResourceResponse,
+    TaskResourceCreate, TaskResourceResponse,
     RiskCreate, RiskUpdate, RiskResponse,
+    RiskCreateEnhanced, RiskResponseEnhanced,
+    DecisionWorkflowCreate, DecisionWorkflowResponse,
+    DecisionNodeCreate, DecisionNodeUpdate, DecisionNodeResponse,
+    DecisionConnectionCreate, DecisionConnectionResponse,
+    AIInsightCreate, AIInsightResponse,
     DecisionLogCreate, DecisionLogResponse,
+    DecisionLogCreateEnhanced, DecisionLogResponseEnhanced,
     MissionShareCreate, MissionShareResponse,
     init_missionops_db, dict_from_row, get_user_missions_access, has_mission_access,
     get_mission_tasks_with_subtasks, get_task_by_id, get_mission_by_id
@@ -894,3 +905,920 @@ async def update_mission_position(
     except Exception as e:
         logger.error(f"Error updating mission position: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update mission position")
+
+# MISSION RELATIONSHIP ENDPOINTS
+
+@missionops_router.get("/missions/{mission_id}/relationships", response_model=List[MissionRelationshipResponse])
+async def get_mission_relationships(mission_id: int, current_user: dict = Depends(get_current_user)):
+    """Get all relationships for a mission"""
+    if not has_mission_access(mission_id, current_user["id"], "view"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get relationships where this mission is the source
+            c.execute(f'''
+                SELECT r.*, m1.title as from_mission_title, m2.title as to_mission_title
+                FROM missionops_mission_relationships r
+                JOIN missionops_missions m1 ON r.from_mission_id = m1.id
+                JOIN missionops_missions m2 ON r.to_mission_id = m2.id
+                WHERE r.from_mission_id = {placeholder} OR r.to_mission_id = {placeholder}
+                ORDER BY r.created_at DESC
+            ''', (mission_id, mission_id))
+            
+            relationships = c.fetchall()
+            result = []
+            
+            for rel in relationships:
+                rel_data = dict(rel)
+                rel_data = convert_datetime_to_string(rel_data)
+                result.append(rel_data)
+            
+            return result
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting mission relationships: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get mission relationships")
+
+@missionops_router.post("/mission-relationships", response_model=MissionRelationshipResponse)
+async def create_mission_relationship(relationship: MissionRelationshipCreate, current_user: dict = Depends(get_current_user)):
+    """Create a relationship between two missions"""
+    # Check access to both missions
+    if not has_mission_access(relationship.from_mission_id, current_user["id"], "edit"):
+        raise HTTPException(status_code=403, detail="Access denied to source mission")
+    if not has_mission_access(relationship.to_mission_id, current_user["id"], "view"):
+        raise HTTPException(status_code=403, detail="Access denied to target mission")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Insert relationship
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    INSERT INTO missionops_mission_relationships 
+                    (from_mission_id, to_mission_id, relationship_type, dependency_type, strength, notes)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                ''', (relationship.from_mission_id, relationship.to_mission_id, relationship.relationship_type,
+                      relationship.dependency_type, relationship.strength, relationship.notes))
+                rel_id = c.fetchone()['id']
+            else:
+                c.execute(f'''
+                    INSERT INTO missionops_mission_relationships 
+                    (from_mission_id, to_mission_id, relationship_type, dependency_type, strength, notes)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ''', (relationship.from_mission_id, relationship.to_mission_id, relationship.relationship_type,
+                      relationship.dependency_type, relationship.strength, relationship.notes))
+                rel_id = c.lastrowid
+            
+            conn.commit()
+            
+            # Get the created relationship with mission titles
+            c.execute(f'''
+                SELECT r.*, m1.title as from_mission_title, m2.title as to_mission_title
+                FROM missionops_mission_relationships r
+                JOIN missionops_missions m1 ON r.from_mission_id = m1.id
+                JOIN missionops_missions m2 ON r.to_mission_id = m2.id
+                WHERE r.id = {placeholder}
+            ''', (rel_id,))
+            
+            rel_data = dict(c.fetchone())
+            rel_data = convert_datetime_to_string(rel_data)
+            
+            return rel_data
+            
+    except Exception as e:
+        logger.error(f"Error creating mission relationship: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create mission relationship")
+
+@missionops_router.delete("/mission-relationships/{relationship_id}")
+async def delete_mission_relationship(relationship_id: int, current_user: dict = Depends(get_current_user)):
+    """Delete a mission relationship"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user has access to the relationship
+            c.execute(f'''
+                SELECT r.from_mission_id, r.to_mission_id
+                FROM missionops_mission_relationships r
+                WHERE r.id = {placeholder}
+            ''', (relationship_id,))
+            
+            rel = c.fetchone()
+            if not rel:
+                raise HTTPException(status_code=404, detail="Relationship not found")
+            
+            # Check access to source mission
+            if not has_mission_access(rel[0], current_user["id"], "edit"):
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # Delete the relationship
+            c.execute(f"DELETE FROM missionops_mission_relationships WHERE id = {placeholder}", (relationship_id,))
+            
+            if c.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Relationship not found")
+            
+            conn.commit()
+            
+            return {"detail": "Mission relationship deleted successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting mission relationship: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete mission relationship")
+
+# TASK DEPENDENCY ENDPOINTS
+
+@missionops_router.get("/tasks/{task_id}/dependencies", response_model=List[TaskDependencyResponse])
+async def get_task_dependencies(task_id: int, current_user: dict = Depends(get_current_user)):
+    """Get all dependencies for a task"""
+    # Verify user has access to the task
+    task = get_task_by_id(task_id, current_user["id"])
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found or access denied")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get dependencies (both as predecessor and successor)
+            c.execute(f'''
+                SELECT d.*, t1.title as predecessor_title, t2.title as successor_title
+                FROM missionops_task_dependencies d
+                JOIN missionops_tasks t1 ON d.predecessor_task_id = t1.id
+                JOIN missionops_tasks t2 ON d.successor_task_id = t2.id
+                WHERE d.predecessor_task_id = {placeholder} OR d.successor_task_id = {placeholder}
+                ORDER BY d.created_at DESC
+            ''', (task_id, task_id))
+            
+            dependencies = c.fetchall()
+            result = []
+            
+            for dep in dependencies:
+                dep_data = dict(dep)
+                dep_data = convert_datetime_to_string(dep_data)
+                result.append(dep_data)
+            
+            return result
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting task dependencies: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get task dependencies")
+
+@missionops_router.post("/task-dependencies", response_model=TaskDependencyResponse)
+async def create_task_dependency(dependency: TaskDependencyCreate, current_user: dict = Depends(get_current_user)):
+    """Create a dependency between two tasks"""
+    # Verify user has access to both tasks
+    pred_task = get_task_by_id(dependency.predecessor_task_id, current_user["id"])
+    succ_task = get_task_by_id(dependency.successor_task_id, current_user["id"])
+    
+    if not pred_task:
+        raise HTTPException(status_code=404, detail="Predecessor task not found or access denied")
+    if not succ_task:
+        raise HTTPException(status_code=404, detail="Successor task not found or access denied")
+    
+    # Prevent circular dependencies
+    if dependency.predecessor_task_id == dependency.successor_task_id:
+        raise HTTPException(status_code=400, detail="Task cannot depend on itself")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Insert dependency
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    INSERT INTO missionops_task_dependencies 
+                    (predecessor_task_id, successor_task_id, dependency_type, lag_time_hours)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                ''', (dependency.predecessor_task_id, dependency.successor_task_id, 
+                      dependency.dependency_type, dependency.lag_time_hours))
+                dep_id = c.fetchone()['id']
+            else:
+                c.execute(f'''
+                    INSERT INTO missionops_task_dependencies 
+                    (predecessor_task_id, successor_task_id, dependency_type, lag_time_hours)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ''', (dependency.predecessor_task_id, dependency.successor_task_id, 
+                      dependency.dependency_type, dependency.lag_time_hours))
+                dep_id = c.lastrowid
+            
+            conn.commit()
+            
+            # Get the created dependency with task titles
+            c.execute(f'''
+                SELECT d.*, t1.title as predecessor_title, t2.title as successor_title
+                FROM missionops_task_dependencies d
+                JOIN missionops_tasks t1 ON d.predecessor_task_id = t1.id
+                JOIN missionops_tasks t2 ON d.successor_task_id = t2.id
+                WHERE d.id = {placeholder}
+            ''', (dep_id,))
+            
+            dep_data = dict(c.fetchone())
+            dep_data = convert_datetime_to_string(dep_data)
+            
+            return dep_data
+            
+    except Exception as e:
+        logger.error(f"Error creating task dependency: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create task dependency")
+
+@missionops_router.delete("/task-dependencies/{dependency_id}")
+async def delete_task_dependency(dependency_id: int, current_user: dict = Depends(get_current_user)):
+    """Delete a task dependency"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user has access to the dependency
+            c.execute(f'''
+                SELECT d.predecessor_task_id, d.successor_task_id
+                FROM missionops_task_dependencies d
+                WHERE d.id = {placeholder}
+            ''', (dependency_id,))
+            
+            dep = c.fetchone()
+            if not dep:
+                raise HTTPException(status_code=404, detail="Dependency not found")
+            
+            # Check access to both tasks
+            pred_task = get_task_by_id(dep[0], current_user["id"])
+            succ_task = get_task_by_id(dep[1], current_user["id"])
+            
+            if not pred_task or not succ_task:
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # Delete the dependency
+            c.execute(f"DELETE FROM missionops_task_dependencies WHERE id = {placeholder}", (dependency_id,))
+            
+            if c.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Dependency not found")
+            
+            conn.commit()
+            
+            return {"detail": "Task dependency deleted successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting task dependency: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete task dependency")
+
+# DECISION WORKFLOW ENDPOINTS
+
+@missionops_router.get("/missions/{mission_id}/decision-workflows", response_model=List[DecisionWorkflowResponse])
+async def get_mission_decision_workflows(mission_id: int, current_user: dict = Depends(get_current_user)):
+    """Get all decision workflows for a mission"""
+    if not has_mission_access(mission_id, current_user["id"], "view"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get workflows
+            c.execute(f'''
+                SELECT * FROM missionops_decision_workflows
+                WHERE mission_id = {placeholder}
+                ORDER BY created_at DESC
+            ''', (mission_id,))
+            
+            workflows = c.fetchall()
+            result = []
+            
+            for workflow in workflows:
+                workflow_data = dict(workflow)
+                workflow_data = convert_datetime_to_string(workflow_data)
+                
+                # Get nodes for this workflow
+                c.execute(f'''
+                    SELECT * FROM missionops_decision_nodes
+                    WHERE workflow_id = {placeholder}
+                    ORDER BY position_y, position_x
+                ''', (workflow_data['id'],))
+                
+                nodes = [dict(node) for node in c.fetchall()]
+                for node in nodes:
+                    node = convert_datetime_to_string(node)
+                
+                # Get connections for this workflow
+                c.execute(f'''
+                    SELECT * FROM missionops_decision_connections
+                    WHERE workflow_id = {placeholder}
+                    ORDER BY created_at
+                ''', (workflow_data['id'],))
+                
+                connections = [dict(conn) for conn in c.fetchall()]
+                for connection in connections:
+                    connection = convert_datetime_to_string(connection)
+                
+                workflow_data.update({
+                    'nodes': nodes,
+                    'connections': connections
+                })
+                
+                result.append(workflow_data)
+            
+            return result
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting decision workflows: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get decision workflows")
+
+@missionops_router.post("/decision-workflows", response_model=DecisionWorkflowResponse)
+async def create_decision_workflow(workflow: DecisionWorkflowCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new decision workflow"""
+    if not has_mission_access(workflow.mission_id, current_user["id"], "edit"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Insert workflow
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    INSERT INTO missionops_decision_workflows 
+                    (mission_id, title, description, workflow_type, created_by)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                ''', (workflow.mission_id, workflow.title, workflow.description, 
+                      workflow.workflow_type, current_user["id"]))
+                workflow_id = c.fetchone()['id']
+            else:
+                c.execute(f'''
+                    INSERT INTO missionops_decision_workflows 
+                    (mission_id, title, description, workflow_type, created_by)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ''', (workflow.mission_id, workflow.title, workflow.description, 
+                      workflow.workflow_type, current_user["id"]))
+                workflow_id = c.lastrowid
+            
+            conn.commit()
+            
+            # Get the created workflow
+            c.execute(f"SELECT * FROM missionops_decision_workflows WHERE id = {placeholder}", (workflow_id,))
+            workflow_data = dict(c.fetchone())
+            workflow_data = convert_datetime_to_string(workflow_data)
+            workflow_data.update({
+                'nodes': [],
+                'connections': []
+            })
+            
+            return workflow_data
+            
+    except Exception as e:
+        logger.error(f"Error creating decision workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create decision workflow")
+
+@missionops_router.post("/decision-nodes", response_model=DecisionNodeResponse)
+async def create_decision_node(node: DecisionNodeCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new decision node"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Verify user has access to the workflow
+            c.execute(f'''
+                SELECT w.mission_id FROM missionops_decision_workflows w
+                WHERE w.id = {placeholder}
+            ''', (node.workflow_id,))
+            
+            workflow = c.fetchone()
+            if not workflow:
+                raise HTTPException(status_code=404, detail="Workflow not found")
+            
+            if not has_mission_access(workflow[0], current_user["id"], "edit"):
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # Insert node
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    INSERT INTO missionops_decision_nodes 
+                    (workflow_id, title, description, node_type, position_x, position_y, decision_criteria, options)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                ''', (node.workflow_id, node.title, node.description, node.node_type,
+                      node.position_x, node.position_y, node.decision_criteria, node.options))
+                node_id = c.fetchone()['id']
+            else:
+                c.execute(f'''
+                    INSERT INTO missionops_decision_nodes 
+                    (workflow_id, title, description, node_type, position_x, position_y, decision_criteria, options)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ''', (node.workflow_id, node.title, node.description, node.node_type,
+                      node.position_x, node.position_y, node.decision_criteria, node.options))
+                node_id = c.lastrowid
+            
+            conn.commit()
+            
+            # Get the created node
+            c.execute(f"SELECT * FROM missionops_decision_nodes WHERE id = {placeholder}", (node_id,))
+            node_data = dict(c.fetchone())
+            node_data = convert_datetime_to_string(node_data)
+            
+            return node_data
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating decision node: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create decision node")
+
+@missionops_router.put("/decision-nodes/{node_id}", response_model=DecisionNodeResponse)
+async def update_decision_node(node_id: int, node_updates: DecisionNodeUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a decision node"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Verify user has access to the node
+            c.execute(f'''
+                SELECT n.workflow_id, w.mission_id
+                FROM missionops_decision_nodes n
+                JOIN missionops_decision_workflows w ON n.workflow_id = w.id
+                WHERE n.id = {placeholder}
+            ''', (node_id,))
+            
+            node_info = c.fetchone()
+            if not node_info:
+                raise HTTPException(status_code=404, detail="Node not found")
+            
+            if not has_mission_access(node_info[1], current_user["id"], "edit"):
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # Build update query
+            update_fields = []
+            update_values = []
+            
+            for field, value in node_updates.dict(exclude_unset=True).items():
+                if value is not None:
+                    update_fields.append(f"{field} = {placeholder}")
+                    update_values.append(value)
+            
+            if not update_fields:
+                raise HTTPException(status_code=400, detail="No fields to update")
+            
+            update_values.append(node_id)
+            
+            update_query = f'''
+                UPDATE missionops_decision_nodes 
+                SET {', '.join(update_fields)}
+                WHERE id = {placeholder}
+            '''
+            
+            c.execute(update_query, update_values)
+            conn.commit()
+            
+            # Get the updated node
+            c.execute(f"SELECT * FROM missionops_decision_nodes WHERE id = {placeholder}", (node_id,))
+            node_data = dict(c.fetchone())
+            node_data = convert_datetime_to_string(node_data)
+            
+            return node_data
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating decision node: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update decision node")
+
+@missionops_router.post("/decision-connections", response_model=DecisionConnectionResponse)
+async def create_decision_connection(connection: DecisionConnectionCreate, current_user: dict = Depends(get_current_user)):
+    """Create a connection between decision nodes"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Verify user has access to the workflow
+            c.execute(f'''
+                SELECT w.mission_id FROM missionops_decision_workflows w
+                WHERE w.id = {placeholder}
+            ''', (connection.workflow_id,))
+            
+            workflow = c.fetchone()
+            if not workflow:
+                raise HTTPException(status_code=404, detail="Workflow not found")
+            
+            if not has_mission_access(workflow[0], current_user["id"], "edit"):
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # Verify both nodes exist and belong to the workflow
+            c.execute(f'''
+                SELECT COUNT(*) FROM missionops_decision_nodes
+                WHERE workflow_id = {placeholder} AND id IN ({placeholder}, {placeholder})
+            ''', (connection.workflow_id, connection.from_node_id, connection.to_node_id))
+            
+            node_count = c.fetchone()[0]
+            if node_count != 2:
+                raise HTTPException(status_code=400, detail="Invalid node IDs")
+            
+            # Insert connection
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    INSERT INTO missionops_decision_connections 
+                    (workflow_id, from_node_id, to_node_id, condition_text)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                ''', (connection.workflow_id, connection.from_node_id, 
+                      connection.to_node_id, connection.condition_text))
+                conn_id = c.fetchone()['id']
+            else:
+                c.execute(f'''
+                    INSERT INTO missionops_decision_connections 
+                    (workflow_id, from_node_id, to_node_id, condition_text)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ''', (connection.workflow_id, connection.from_node_id, 
+                      connection.to_node_id, connection.condition_text))
+                conn_id = c.lastrowid
+            
+            conn.commit()
+            
+            # Get the created connection
+            c.execute(f"SELECT * FROM missionops_decision_connections WHERE id = {placeholder}", (conn_id,))
+            conn_data = dict(c.fetchone())
+            conn_data = convert_datetime_to_string(conn_data)
+            
+            return conn_data
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating decision connection: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create decision connection")
+
+# AI INSIGHTS ENDPOINTS
+
+@missionops_router.get("/missions/{mission_id}/ai-insights", response_model=List[AIInsightResponse])
+async def get_mission_ai_insights(mission_id: int, current_user: dict = Depends(get_current_user)):
+    """Get all AI insights for a mission"""
+    if not has_mission_access(mission_id, current_user["id"], "view"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            c.execute(f'''
+                SELECT * FROM missionops_ai_insights
+                WHERE mission_id = {placeholder} AND status != 'dismissed'
+                ORDER BY priority_level DESC, created_at DESC
+            ''', (mission_id,))
+            
+            insights = c.fetchall()
+            result = []
+            
+            for insight in insights:
+                insight_data = dict(insight)
+                insight_data = convert_datetime_to_string(insight_data)
+                result.append(insight_data)
+            
+            return result
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting AI insights: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get AI insights")
+
+@missionops_router.post("/missions/{mission_id}/ai-insights/generate")
+async def generate_ai_insights(mission_id: int, current_user: dict = Depends(get_current_user)):
+    """Generate AI insights for a mission"""
+    if not has_mission_access(mission_id, current_user["id"], "view"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        # Get mission data for analysis
+        mission = get_mission_by_id(mission_id, current_user["id"])
+        if not mission:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        
+        tasks = get_mission_tasks_with_subtasks(mission_id)
+        
+        # Generate insights using simple heuristics (can be replaced with actual AI later)
+        insights = []
+        
+        # Risk analysis
+        high_risk_tasks = [t for t in tasks if t.get('priority') == 'critical' and t.get('status') != 'completed']
+        if high_risk_tasks:
+            insights.append({
+                'insight_type': 'risk_analysis',
+                'title': 'High-Risk Tasks Detected',
+                'content': f'Found {len(high_risk_tasks)} critical priority tasks that require immediate attention.',
+                'confidence_score': 0.9,
+                'action_items': json.dumps([f"Review task: {t['title']}" for t in high_risk_tasks[:3]]),
+                'priority_level': 'high'
+            })
+        
+        # Timeline analysis
+        overdue_tasks = []
+        for task in tasks:
+            if task.get('due_date') and task.get('status') != 'completed':
+                try:
+                    due_date = datetime.fromisoformat(task['due_date'].replace('Z', '+00:00'))
+                    if due_date < datetime.now():
+                        overdue_tasks.append(task)
+                except:
+                    pass
+        
+        if overdue_tasks:
+            insights.append({
+                'insight_type': 'timeline_analysis',
+                'title': 'Overdue Tasks Impact Timeline',
+                'content': f'{len(overdue_tasks)} overdue tasks may impact mission timeline.',
+                'confidence_score': 0.95,
+                'action_items': json.dumps(['Reschedule overdue tasks', 'Update mission timeline', 'Notify stakeholders']),
+                'priority_level': 'high'
+            })
+        
+        # Bottleneck detection
+        incomplete_tasks = [t for t in tasks if t.get('status') not in ['completed', 'cancelled']]
+        if len(incomplete_tasks) > 10:
+            insights.append({
+                'insight_type': 'bottleneck_detection',
+                'title': 'Task Overload Detected',
+                'content': f'Mission has {len(incomplete_tasks)} incomplete tasks which may indicate resource bottlenecks.',
+                'confidence_score': 0.8,
+                'action_items': json.dumps(['Review task priorities', 'Consider task delegation', 'Break down complex tasks']),
+                'priority_level': 'medium'
+            })
+        
+        # Priority optimization
+        unassigned_tasks = [t for t in tasks if not t.get('assigned_to') and t.get('status') not in ['completed', 'cancelled']]
+        if unassigned_tasks:
+            insights.append({
+                'insight_type': 'priority_optimization',
+                'title': 'Unassigned Tasks Need Attention',
+                'content': f'{len(unassigned_tasks)} tasks are unassigned and may delay mission progress.',
+                'confidence_score': 0.85,
+                'action_items': json.dumps(['Assign task owners', 'Review resource availability', 'Prioritize critical tasks']),
+                'priority_level': 'medium'
+            })
+        
+        # Store insights in database
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Clear old insights of the same types
+            c.execute(f'''
+                UPDATE missionops_ai_insights 
+                SET status = 'expired' 
+                WHERE mission_id = {placeholder} AND status = 'new'
+            ''', (mission_id,))
+            
+            result_insights = []
+            
+            for insight in insights:
+                if IS_PRODUCTION and DB_URL:
+                    c.execute(f'''
+                        INSERT INTO missionops_ai_insights 
+                        (mission_id, insight_type, title, content, confidence_score, action_items, priority_level)
+                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                        RETURNING id
+                    ''', (mission_id, insight['insight_type'], insight['title'], insight['content'],
+                          insight['confidence_score'], insight['action_items'], insight['priority_level']))
+                    insight_id = c.fetchone()['id']
+                else:
+                    c.execute(f'''
+                        INSERT INTO missionops_ai_insights 
+                        (mission_id, insight_type, title, content, confidence_score, action_items, priority_level)
+                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    ''', (mission_id, insight['insight_type'], insight['title'], insight['content'],
+                          insight['confidence_score'], insight['action_items'], insight['priority_level']))
+                    insight_id = c.lastrowid
+                
+                # Get the created insight
+                c.execute(f"SELECT * FROM missionops_ai_insights WHERE id = {placeholder}", (insight_id,))
+                insight_data = dict(c.fetchone())
+                insight_data = convert_datetime_to_string(insight_data)
+                result_insights.append(insight_data)
+            
+            conn.commit()
+        
+        return {
+            "detail": f"Generated {len(result_insights)} AI insights",
+            "insights": result_insights
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating AI insights: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate AI insights")
+
+@missionops_router.put("/ai-insights/{insight_id}/status")
+async def update_ai_insight_status(insight_id: int, status_update: dict, current_user: dict = Depends(get_current_user)):
+    """Update AI insight status (e.g., mark as addressed, dismissed)"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Verify user has access to the insight
+            c.execute(f'''
+                SELECT i.mission_id
+                FROM missionops_ai_insights i
+                WHERE i.id = {placeholder}
+            ''', (insight_id,))
+            
+            insight = c.fetchone()
+            if not insight:
+                raise HTTPException(status_code=404, detail="Insight not found")
+            
+            if not has_mission_access(insight[0], current_user["id"], "edit"):
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # Update status
+            new_status = status_update.get('status', 'new')
+            c.execute(f'''
+                UPDATE missionops_ai_insights 
+                SET status = {placeholder}
+                WHERE id = {placeholder}
+            ''', (new_status, insight_id))
+            
+            if c.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Insight not found")
+            
+            conn.commit()
+            
+            return {"detail": "AI insight status updated successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating AI insight status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update AI insight status")
+
+# RESOURCE MANAGEMENT ENDPOINTS
+
+@missionops_router.get("/resources", response_model=List[ResourceResponse])
+async def list_resources(current_user: dict = Depends(get_current_user)):
+    """Get all resources owned by the current user"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            c.execute(f'''
+                SELECT * FROM missionops_resources
+                WHERE owner_id = {placeholder}
+                ORDER BY created_at DESC
+            ''', (current_user["id"],))
+            
+            resources = c.fetchall()
+            result = []
+            
+            for resource in resources:
+                resource_data = dict(resource)
+                resource_data = convert_datetime_to_string(resource_data)
+                result.append(resource_data)
+            
+            return result
+            
+    except Exception as e:
+        logger.error(f"Error listing resources: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to list resources")
+
+@missionops_router.post("/resources", response_model=ResourceResponse)
+async def create_resource(resource: ResourceCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new resource"""
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Insert resource
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    INSERT INTO missionops_resources 
+                    (name, type, capacity, cost_per_hour, availability_start, availability_end, owner_id)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                ''', (resource.name, resource.type, resource.capacity, resource.cost_per_hour,
+                      resource.availability_start, resource.availability_end, current_user["id"]))
+                resource_id = c.fetchone()['id']
+            else:
+                c.execute(f'''
+                    INSERT INTO missionops_resources 
+                    (name, type, capacity, cost_per_hour, availability_start, availability_end, owner_id)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ''', (resource.name, resource.type, resource.capacity, resource.cost_per_hour,
+                      resource.availability_start, resource.availability_end, current_user["id"]))
+                resource_id = c.lastrowid
+            
+            conn.commit()
+            
+            # Get the created resource
+            c.execute(f"SELECT * FROM missionops_resources WHERE id = {placeholder}", (resource_id,))
+            resource_data = dict(c.fetchone())
+            resource_data = convert_datetime_to_string(resource_data)
+            
+            return resource_data
+            
+    except Exception as e:
+        logger.error(f"Error creating resource: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create resource")
+
+@missionops_router.post("/task-resources", response_model=TaskResourceResponse)
+async def assign_resource_to_task(task_resource: TaskResourceCreate, current_user: dict = Depends(get_current_user)):
+    """Assign a resource to a task"""
+    try:
+        # Verify user has access to the task
+        task = get_task_by_id(task_resource.task_id, current_user["id"])
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found or access denied")
+        
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Verify user owns the resource
+            c.execute(f'''
+                SELECT id FROM missionops_resources
+                WHERE id = {placeholder} AND owner_id = {placeholder}
+            ''', (task_resource.resource_id, current_user["id"]))
+            
+            if not c.fetchone():
+                raise HTTPException(status_code=404, detail="Resource not found or access denied")
+            
+            # Insert task resource assignment
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''
+                    INSERT INTO missionops_task_resources 
+                    (task_id, resource_id, allocation_percentage, start_date, end_date)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                    RETURNING id
+                ''', (task_resource.task_id, task_resource.resource_id, task_resource.allocation_percentage,
+                      task_resource.start_date, task_resource.end_date))
+                tr_id = c.fetchone()['id']
+            else:
+                c.execute(f'''
+                    INSERT INTO missionops_task_resources 
+                    (task_id, resource_id, allocation_percentage, start_date, end_date)
+                    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                ''', (task_resource.task_id, task_resource.resource_id, task_resource.allocation_percentage,
+                      task_resource.start_date, task_resource.end_date))
+                tr_id = c.lastrowid
+            
+            conn.commit()
+            
+            # Get the created task resource with resource info
+            c.execute(f'''
+                SELECT tr.*, r.name as resource_name, r.type as resource_type
+                FROM missionops_task_resources tr
+                JOIN missionops_resources r ON tr.resource_id = r.id
+                WHERE tr.id = {placeholder}
+            ''', (tr_id,))
+            
+            tr_data = dict(c.fetchone())
+            tr_data = convert_datetime_to_string(tr_data)
+            
+            return tr_data
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error assigning resource to task: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to assign resource to task")
