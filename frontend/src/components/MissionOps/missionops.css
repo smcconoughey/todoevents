@@ -604,3 +604,72 @@
 .missionops-container [class*="focus:ring-pin-blue"]:focus {
   --tw-ring-color: var(--pin-blue) !important;
 }
+
+/* ==== MODAL THEME OVERRIDES ==== */
+/* These target MissionOps modals specifically, regardless of scope */
+
+/* Light mode modal overrides */
+.light-mode .missionops-modal [class*="bg-neutral-900"] {
+  background-color: #ffffff !important;
+}
+
+.light-mode .missionops-modal [class*="bg-neutral-800"] {
+  background-color: #f8fafc !important;
+}
+
+.light-mode .missionops-modal [class*="text-white"] {
+  color: #1e293b !important;
+}
+
+.light-mode .missionops-modal [class*="text-neutral-400"] {
+  color: #64748b !important;
+}
+
+.light-mode .missionops-modal [class*="border-neutral-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .missionops-modal [class*="border-neutral-600"] {
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .missionops-modal input,
+.light-mode .missionops-modal textarea,
+.light-mode .missionops-modal select {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .missionops-modal input::placeholder,
+.light-mode .missionops-modal textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Glass mode modal overrides */
+.glass-mode .missionops-modal [class*="bg-neutral-900"] {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.glass-mode .missionops-modal [class*="bg-neutral-800"] {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.glass-mode .missionops-modal [class*="text-white"] {
+  color: #1e293b !important;
+}
+
+.glass-mode .missionops-modal [class*="text-neutral-400"] {
+  color: #475569 !important;
+}
+
+.glass-mode .missionops-modal input,
+.glass-mode .missionops-modal textarea,
+.glass-mode .missionops-modal select {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(8px) !important;
+}

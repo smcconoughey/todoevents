@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
 # Import existing auth and database utilities
-from backend import get_current_user, get_db, get_placeholder, IS_PRODUCTION, DB_URL
+from shared_utils import get_current_user, get_db, get_placeholder, IS_PRODUCTION, DB_URL
 
 # Import MissionOps models and utilities
 from missionops_models import (

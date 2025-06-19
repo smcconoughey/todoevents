@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Target, Calendar, AlertCircle, Tag, Users } from 'lucide-react';
+import { useTheme } from '../ThemeContext';
 
 const CreateMissionModal = ({ 
   onClose, 
@@ -7,6 +8,7 @@ const CreateMissionModal = ({
   defaultPosition,
   yToDate 
 }) => {
+  const { theme } = useTheme();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -111,28 +113,60 @@ const CreateMissionModal = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className={`fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4 missionops-modal ${
+        theme === 'light' ? 'bg-black/30' : 
+        theme === 'glass' ? 'bg-blue-500/10' : 'bg-black/50'
+      }`}
       onClick={handleBackdropClick}
     >
-      <div className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div className={`
+        rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border
+        ${theme === 'light' ? 'bg-white border-gray-200' :
+          theme === 'glass' ? 'bg-white/25 backdrop-blur-md border-white/20' :
+          'bg-neutral-900 border-neutral-700'}
+      `}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-neutral-700">
+        <div className={`flex items-center justify-between p-6 border-b ${
+          theme === 'light' ? 'border-gray-200' :
+          theme === 'glass' ? 'border-white/20' :
+          'border-neutral-700'
+        }`}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-600/20 rounded-lg">
+            <div className={`p-2 rounded-lg ${
+              theme === 'light' ? 'bg-blue-50' :
+              theme === 'glass' ? 'bg-blue-500/20' :
+              'bg-blue-600/20'
+            }`}>
               <Target className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">Create New Mission</h2>
-              <p className="text-sm text-neutral-400">
+              <h2 className={`text-xl font-semibold ${
+                theme === 'light' ? 'text-gray-900' :
+                theme === 'glass' ? 'text-gray-900' :
+                'text-white'
+              }`}>Create New Mission</h2>
+              <p className={`text-sm ${
+                theme === 'light' ? 'text-gray-600' :
+                theme === 'glass' ? 'text-gray-700' :
+                'text-neutral-400'
+              }`}>
                 Define your mission objectives and timeline
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+            className={`p-2 rounded-lg transition-colors ${
+              theme === 'light' ? 'hover:bg-gray-100' :
+              theme === 'glass' ? 'hover:bg-white/20' :
+              'hover:bg-neutral-800'
+            }`}
           >
-            <X className="w-5 h-5 text-neutral-400" />
+            <X className={`w-5 h-5 ${
+              theme === 'light' ? 'text-gray-600' :
+              theme === 'glass' ? 'text-gray-700' :
+              'text-neutral-400'
+            }`} />
           </button>
         </div>
 
