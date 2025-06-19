@@ -5,14 +5,17 @@ import categories from './categoryConfig';
 // Shows duplicate icons of the dominant category rather than different categories
 
 // Helper function to create clean icon-only SVG markers - no rings, bigger size
-const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) => {
+const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK, isVerified = false) => {
   const isDarkMode = theme === THEME_DARK;
   const outlineColor = isDarkMode ? '#FFFFFF' : '#000000';
   
+  // Use gold color for verified events, category color for regular events
+  const markerColor = isVerified ? '#FFD700' : categoryColor;
+  
   // Clean icon path with better visibility
   const cleanIconPath = iconPath
-    .replace(/stroke="white"/g, `stroke="${categoryColor}"`)
-    .replace(/fill="white"/g, `fill="${categoryColor}"`)
+    .replace(/stroke="white"/g, `stroke="${markerColor}"`)
+    .replace(/fill="white"/g, `fill="${markerColor}"`)
     .replace(/stroke-width="[\d.]+"/g, 'stroke-width="4"');
   
   return `
@@ -25,6 +28,13 @@ const createIconOnlyMarkerSVG = (iconPath, categoryColor, theme = THEME_DARK) =>
       <g transform="translate(112, 112) scale(4)">
         ${iconPath.replace(/fill="white"/g, 'fill="none"').replace(/stroke="white"/g, `stroke="${outlineColor}"`).replace(/stroke-width="[\d.]+"/g, 'stroke-width="3"')}
       </g>
+      ${isVerified ? `
+      <!-- Verification indicator (small star in corner) -->
+      <g transform="translate(240, 80) scale(2)">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" 
+              fill="#FFD700" stroke="#FFA500" stroke-width="1"/>
+      </g>
+      ` : ''}
     </svg>
   `;
 };
@@ -284,14 +294,14 @@ const categoryIconMap = {
 };
 
 // Create larger, cleaner icon-only marker
-export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
+export const createIconOnlyMarker = (category, theme = THEME_DARK, isVerified = false) => {
   const iconName = categoryIconMap[category.id] || 'MapPin';
   const iconPath = iconPaths[iconName];
   
   if (!iconPath) {
     console.warn('No icon path found for category:', category.id, 'using MapPin');
     const fallbackPath = iconPaths.MapPin;
-    const svg = createIconOnlyMarkerSVG(fallbackPath, category.markerColor, theme);
+    const svg = createIconOnlyMarkerSVG(fallbackPath, category.markerColor, theme, isVerified);
     
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
@@ -302,7 +312,7 @@ export const createIconOnlyMarker = (category, theme = THEME_DARK) => {
     };
   }
   
-  const svg = createIconOnlyMarkerSVG(iconPath, category.markerColor, theme);
+  const svg = createIconOnlyMarkerSVG(iconPath, category.markerColor, theme, isVerified);
   
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),

@@ -403,7 +403,7 @@ const MapContainer = React.forwardRef(({
       const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
         map: mapInstanceRef.current,
-        icon: createMarkerIcon(eventCategory.id, true, theme),
+        icon: createMarkerIcon(eventCategory.id, true, theme, event.verified),
         optimized: true,
         title: event.title,
         zIndex: event.id

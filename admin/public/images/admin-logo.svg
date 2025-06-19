@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 140" width="100" height="140">
+  <defs>
+    <linearGradient id="adminBlueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1565C0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="orbitalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#FFC107;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8F00;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Pin shape -->
+  <path d="M50 10 C70 10 85 25 85 45 C85 65 70 80 50 120 C30 80 15 65 15 45 C15 25 30 10 50 10 Z" 
+        fill="url(#adminBlueGradient)" 
+        stroke="#0D47A1" 
+        stroke-width="2"/>
+  
+  <!-- Castle structure -->
+  <g transform="translate(50,45)">
+    <!-- Main castle body -->
+    <rect x="-12" y="-5" width="24" height="18" fill="#263238" rx="1"/>
+    
+    <!-- Castle towers -->
+    <rect x="-14" y="-10" width="6" height="15" fill="#263238"/>
+    <rect x="-3" y="-12" width="6" height="17" fill="#263238"/>
+    <rect x="8" y="-10" width="6" height="15" fill="#263238"/>
+    
+    <!-- Tower tops -->
+    <rect x="-14" y="-12" width="6" height="2" fill="#263238"/>
+    <rect x="-3" y="-14" width="6" height="2" fill="#263238"/>
+    <rect x="8" y="-12" width="6" height="2" fill="#263238"/>
+    
+    <!-- Battlements -->
+    <rect x="-13" y="-12" width="1" height="1" fill="#263238"/>
+    <rect x="-10" y="-12" width="1" height="1" fill="#263238"/>
+    <rect x="-2" y="-14" width="1" height="1" fill="#263238"/>
+    <rect x="1" y="-14" width="1" height="1" fill="#263238"/>
+    <rect x="9" y="-12" width="1" height="1" fill="#263238"/>
+    <rect x="12" y="-12" width="1" height="1" fill="#263238"/>
+    
+    <!-- Castle gate -->
+    <path d="M-4 13 Q0 8 4 13 Z" fill="#37474F"/>
+    <rect x="-1" y="9" width="2" height="4" fill="#37474F"/>
+  </g>
+  
+  <!-- Orbital ring -->
+  <ellipse cx="50" cy="45" rx="30" ry="8" 
+           fill="none" 
+           stroke="url(#orbitalGradient)" 
+           stroke-width="3" 
+           opacity="0.9"
+           transform="rotate(-15 50 45)"/>
+</svg> 

@@ -3744,7 +3744,10 @@ const AdminDashboard = () => {
       <div className="flex">
         {/* Sidebar */}
         <div className="w-64 bg-white border-r shadow-md p-4">
-          <h1 className="text-2xl font-bold mb-8 text-blue-600">Admin Portal</h1>
+          <div className="flex items-center mb-8">
+            <img src="/images/todo.png" alt="TodoEvents" className="w-8 h-8 mr-3" style={{objectFit: 'contain'}} />
+            <h1 className="text-2xl font-bold text-blue-600">Admin Portal</h1>
+          </div>
           <nav className="space-y-2">
             {[
               { name: 'Dashboard', icon: <Server className="mr-2" />, tab: 'dashboard' },
