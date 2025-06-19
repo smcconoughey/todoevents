@@ -1,0 +1,11 @@
+# Netlify redirects file for watchtowerab.com
+
+# Redirect www to non-www
+https://www.watchtowerab.com/* https://watchtowerab.com/:splat 301!
+
+# Redirect HTTP to HTTPS
+http://watchtowerab.com/* https://watchtowerab.com/:splat 301!
+http://www.watchtowerab.com/* https://watchtowerab.com/:splat 301!
+
+# Single Page Application fallback (not needed for static site, but good to have)
+/*    /index.html   200
