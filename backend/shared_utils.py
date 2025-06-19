@@ -106,28 +106,49 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    if not token:
+        raise credentials_exception
+        
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        email: str = payload.get("sub")  # JWT contains email, not user_id
+        if email is None:
             raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
     
-    # Get user from database
-    placeholder = get_placeholder()
-    with get_db() as conn:
-        c = conn.cursor()
-        c.execute(f"SELECT id, email, role FROM users WHERE id = {placeholder}", (user_id,))
-        user = c.fetchone()
-        if user is None:
-            raise credentials_exception
+    try:
+        # Get user from database by email
+        placeholder = get_placeholder()
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute(f"SELECT id, email, role FROM users WHERE email = {placeholder}", (email,))
+            user = c.fetchone()
+            
+            if not user:
+                raise credentials_exception
+                
+            return {
+                "id": user[0] if isinstance(user, (tuple, list)) else user["id"],
+                "email": user[1] if isinstance(user, (tuple, list)) else user["email"],
+                "role": user[2] if isinstance(user, (tuple, list)) else user["role"]
+            }
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Database error during user lookup: {error_msg}")
         
-        return {
-            "id": user["id"] if hasattr(user, 'keys') else user[0],
-            "email": user["email"] if hasattr(user, 'keys') else user[1],
-            "role": user["role"] if hasattr(user, 'keys') else user[2]
-        }
+        if "timeout" in error_msg.lower() or "deadlock" in error_msg.lower():
+            raise HTTPException(
+                status_code=408, 
+                detail="Request timed out. Please try again."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Internal server error during authentication",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
 
 def format_cursor_row(row, column_names):
