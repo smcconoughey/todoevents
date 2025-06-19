@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: watchtowerab-business-site
+    env: static
+    buildCommand: echo "No build required for static site"
+    staticPublishPath: ./
+    domains:
+      - watchtowerab.com
+      - www.watchtowerab.com
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
+      - path: /*.css
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*.js
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*.svg
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*.ico
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*.png
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*.jpg
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    redirects:
+      - source: https://www.watchtowerab.com/*
+        destination: https://watchtowerab.com/:splat
+        type: permanent
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
