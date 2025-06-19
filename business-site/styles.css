@@ -827,3 +827,116 @@ body {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+/* Features Showcase Section */
+.features-showcase {
+    padding: 6rem 0;
+    background: linear-gradient(135deg, #f8fafe 0%, #ffffff 100%);
+}
+
+.features-grid {
+    margin-top: 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6rem;
+}
+
+.feature-showcase {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+}
+
+.feature-showcase.reverse {
+    direction: rtl;
+}
+
+.feature-showcase.reverse > * {
+    direction: ltr;
+}
+
+.feature-content {
+    padding: 2rem 0;
+}
+
+.feature-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #1a1a1a 0%, #3C92FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.feature-description {
+    font-size: 1.2rem;
+    color: #666;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+}
+
+.feature-highlights {
+    display: grid;
+    gap: 1rem;
+}
+
+.highlight {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #333;
+    padding: 0.75rem 0;
+}
+
+.feature-image {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #f0f4f8 0%, #ffffff 100%);
+}
+
+.screenshot {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 16px;
+    transition: transform 0.3s ease;
+}
+
+.feature-image:hover .screenshot {
+    transform: scale(1.02);
+}
+
+/* Mobile responsiveness for features */
+@media (max-width: 768px) {
+    .features-showcase {
+        padding: 4rem 0;
+    }
+    
+    .feature-showcase {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        text-align: center;
+    }
+    
+    .feature-showcase.reverse {
+        direction: ltr;
+    }
+    
+    .feature-title {
+        font-size: 2rem;
+    }
+    
+    .feature-description {
+        font-size: 1.1rem;
+    }
+    
+    .features-grid {
+        gap: 4rem;
+    }
+}
