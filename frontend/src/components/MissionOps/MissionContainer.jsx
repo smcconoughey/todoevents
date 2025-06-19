@@ -19,11 +19,16 @@ import {
   MessageSquare,
   Settings,
   Edit,
-  Trash2
+  Trash2,
+  Brain,
+  Network
 } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 import { useMissionOps } from './MissionOpsContext';
 import TaskList from './TaskList';
+import AIInsightsList from './AIInsightsList';
+import MissionRelationships from './MissionRelationships';
+import DecisionWorkflows from './DecisionWorkflows';
 
 const MissionContainer = ({ 
   mission, 
@@ -36,7 +41,7 @@ const MissionContainer = ({
   const dragRef = useRef(null);
   const [isDragStarted, setIsDragStarted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState('tasks'); // tasks, risks, decisions
+  const [activeTab, setActiveTab] = useState('tasks'); // tasks, risks, decisions, insights, relationships
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   
   const { createTask, getTasks, getRisks, getDecisions, deleteMission } = useMissionOps();
@@ -307,6 +312,8 @@ const MissionContainer = ({
             <div className={`flex border-b ${theme === 'light' ? 'border-neutral-200/50' : 'border-neutral-700/50'}`}>
               {[
                 { id: 'tasks', label: 'Tasks', icon: CheckCircle2, count: mission.task_count || 0 },
+                { id: 'insights', label: 'AI Insights', icon: MessageSquare, count: mission.insight_count || 0 },
+                { id: 'relationships', label: 'Relationships', icon: Share2, count: mission.relationship_count || 0 },
                 { id: 'risks', label: 'Risks', icon: AlertTriangle, count: mission.risk_count || 0 },
                 { id: 'decisions', label: 'Decisions', icon: MessageSquare, count: mission.decision_count || 0 }
               ].map((tab) => (
@@ -348,17 +355,20 @@ const MissionContainer = ({
               {activeTab === 'tasks' && (
                 <TaskList missionId={mission.id} theme={theme} />
               )}
+              {activeTab === 'insights' && (
+                <AIInsightsList missionId={mission.id} theme={theme} />
+              )}
+              {activeTab === 'relationships' && (
+                <MissionRelationships missionId={mission.id} theme={theme} />
+              )}
               {activeTab === 'risks' && (
                 <div className={`text-center py-8 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>Risk management coming soon</p>
+                  <p>Enhanced risk management coming soon</p>
                 </div>
               )}
               {activeTab === 'decisions' && (
-                <div className={`text-center py-8 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'}`}>
-                  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>Decision tracking coming soon</p>
-                </div>
+                <DecisionWorkflows missionId={mission.id} theme={theme} />
               )}
             </div>
           </div>

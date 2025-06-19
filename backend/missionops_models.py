@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # Pydantic Models for MissionOps
 class MissionOpsBaseModel(BaseModel):
     class Config:
+        extra = "forbid"
         validate_assignment = True
 
 class MissionCreate(MissionOpsBaseModel):
@@ -163,207 +164,658 @@ class MissionShareResponse(MissionOpsBaseModel):
     shared_by: int
     created_at: str
 
+# Mission Relationship Models
+class MissionRelationshipCreate(MissionOpsBaseModel):
+    from_mission_id: int
+    to_mission_id: int
+    relationship_type: str  # depends_on, blocks, related_to, duplicates, splits_from
+    dependency_type: Optional[str] = None  # hard, soft, informational
+    strength: Optional[float] = 1.0  # 0.0 to 1.0
+    notes: Optional[str] = ""
+
+class MissionRelationshipResponse(MissionOpsBaseModel):
+    id: int
+    from_mission_id: int
+    to_mission_id: int
+    relationship_type: str
+    dependency_type: Optional[str]
+    strength: float
+    notes: Optional[str]
+    created_at: str
+    from_mission_title: Optional[str] = ""
+    to_mission_title: Optional[str] = ""
+
+# Enhanced Task Models
+class TaskCreateEnhanced(MissionOpsBaseModel):
+    mission_id: int
+    title: str
+    description: Optional[str] = ""
+    due_date: Optional[str] = None
+    estimated_hours: Optional[float] = None
+    priority: Optional[str] = "medium"
+    status: Optional[str] = "todo"
+    parent_task_id: Optional[int] = None
+    assigned_to: Optional[int] = None
+
+class TaskUpdateEnhanced(MissionOpsBaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[str] = None
+    estimated_hours: Optional[float] = None
+    actual_hours: Optional[float] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assigned_to: Optional[int] = None
+    completion_percentage: Optional[int] = None
+
+class TaskResponseEnhanced(MissionOpsBaseModel):
+    id: int
+    mission_id: int
+    title: str
+    description: Optional[str]
+    due_date: Optional[str]
+    estimated_hours: Optional[float]
+    actual_hours: Optional[float]
+    priority: str
+    status: str
+    parent_task_id: Optional[int]
+    assigned_to: Optional[int]
+    created_by: int
+    completion_percentage: int
+    created_at: str
+    updated_at: Optional[str]
+    subtasks: Optional[List['TaskResponseEnhanced']] = []
+    dependencies: Optional[List['TaskDependencyResponse']] = []
+    dependents: Optional[List['TaskDependencyResponse']] = []
+    resources: Optional[List['TaskResourceResponse']] = []
+
+# Task Dependency Models
+class TaskDependencyCreate(MissionOpsBaseModel):
+    predecessor_task_id: int
+    successor_task_id: int
+    dependency_type: Optional[str] = "finish_to_start"  # finish_to_start, start_to_start, finish_to_finish, start_to_finish
+    lag_time_hours: Optional[int] = 0
+
+class TaskDependencyResponse(MissionOpsBaseModel):
+    id: int
+    predecessor_task_id: int
+    successor_task_id: int
+    dependency_type: str
+    lag_time_hours: int
+    created_at: str
+    predecessor_title: Optional[str] = ""
+    successor_title: Optional[str] = ""
+
+# Resource Management Models
+class ResourceCreate(MissionOpsBaseModel):
+    name: str
+    type: str  # person, equipment, material, budget
+    capacity: Optional[float] = 1.0
+    cost_per_hour: Optional[float] = 0.0
+    availability_start: Optional[str] = None
+    availability_end: Optional[str] = None
+
+class ResourceResponse(MissionOpsBaseModel):
+    id: int
+    name: str
+    type: str
+    capacity: float
+    cost_per_hour: float
+    availability_start: Optional[str]
+    availability_end: Optional[str]
+    owner_id: int
+    created_at: str
+
+class TaskResourceCreate(MissionOpsBaseModel):
+    task_id: int
+    resource_id: int
+    allocation_percentage: Optional[float] = 100.0
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+class TaskResourceResponse(MissionOpsBaseModel):
+    id: int
+    task_id: int
+    resource_id: int
+    allocation_percentage: float
+    start_date: Optional[str]
+    end_date: Optional[str]
+    created_at: str
+    resource_name: Optional[str] = ""
+    resource_type: Optional[str] = ""
+
+# Enhanced Risk Models
+class RiskCreateEnhanced(RiskCreate):
+    risk_score: Optional[float] = None
+    owner_id: Optional[int] = None
+
+class RiskResponseEnhanced(RiskResponse):
+    risk_score: Optional[float] = None
+    owner_id: Optional[int] = None
+
+# Decision Workflow Models
+class DecisionWorkflowCreate(MissionOpsBaseModel):
+    mission_id: int
+    title: str
+    description: Optional[str] = ""
+    workflow_type: Optional[str] = "linear"  # linear, branching, parallel
+
+class DecisionWorkflowResponse(MissionOpsBaseModel):
+    id: int
+    mission_id: int
+    title: str
+    description: Optional[str]
+    workflow_type: str
+    status: str
+    created_by: int
+    created_at: str
+    nodes: Optional[List['DecisionNodeResponse']] = []
+    connections: Optional[List['DecisionConnectionResponse']] = []
+
+class DecisionNodeCreate(MissionOpsBaseModel):
+    workflow_id: int
+    title: str
+    description: Optional[str] = ""
+    node_type: str  # decision, action, condition, milestone
+    position_x: Optional[float] = 0.0
+    position_y: Optional[float] = 0.0
+    decision_criteria: Optional[str] = ""
+    options: Optional[str] = ""  # JSON string of options
+
+class DecisionNodeUpdate(MissionOpsBaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    position_x: Optional[float] = None
+    position_y: Optional[float] = None
+    decision_criteria: Optional[str] = None
+    options: Optional[str] = None
+    selected_option: Optional[str] = None
+    rationale: Optional[str] = None
+    status: Optional[str] = None
+
+class DecisionNodeResponse(MissionOpsBaseModel):
+    id: int
+    workflow_id: int
+    title: str
+    description: Optional[str]
+    node_type: str
+    position_x: float
+    position_y: float
+    decision_criteria: Optional[str]
+    options: Optional[str]
+    selected_option: Optional[str]
+    rationale: Optional[str]
+    status: str
+    created_at: str
+
+class DecisionConnectionCreate(MissionOpsBaseModel):
+    workflow_id: int
+    from_node_id: int
+    to_node_id: int
+    condition_text: Optional[str] = ""
+
+class DecisionConnectionResponse(MissionOpsBaseModel):
+    id: int
+    workflow_id: int
+    from_node_id: int
+    to_node_id: int
+    condition_text: Optional[str]
+    created_at: str
+
+# AI Insights Models
+class AIInsightCreate(MissionOpsBaseModel):
+    mission_id: int
+    insight_type: str  # risk_analysis, priority_optimization, resource_conflict, timeline_analysis, bottleneck_detection
+    title: str
+    content: str
+    confidence_score: Optional[float] = None
+    action_items: Optional[str] = ""
+    priority_level: Optional[str] = "medium"
+
+class AIInsightResponse(MissionOpsBaseModel):
+    id: int
+    mission_id: int
+    insight_type: str
+    title: str
+    content: str
+    confidence_score: Optional[float]
+    action_items: Optional[str]
+    priority_level: str
+    status: str
+    created_at: str
+    expires_at: Optional[str]
+
+# Enhanced Decision Log Models
+class DecisionLogCreateEnhanced(DecisionLogCreate):
+    impact_assessment: Optional[str] = ""
+    review_date: Optional[str] = None
+
+class DecisionLogResponseEnhanced(DecisionLogResponse):
+    impact_assessment: Optional[str] = ""
+    review_date: Optional[str] = None
+
 # Database initialization for MissionOps
 def init_missionops_db():
     """Initialize MissionOps database tables"""
+    
     try:
+        logger.info("🚀 Initializing MissionOps database tables...")
+        
         with get_db() as conn:
             c = conn.cursor()
             
             if IS_PRODUCTION and DB_URL:
-                # PostgreSQL table creation
-                
-                # Missions table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_missions (
-                        id SERIAL PRIMARY KEY,
-                        title TEXT NOT NULL,
-                        description TEXT,
-                        start_date DATE,
-                        end_date DATE,
-                        priority TEXT NOT NULL DEFAULT 'medium',
-                        status TEXT NOT NULL DEFAULT 'active',
-                        tags TEXT,
-                        grid_x REAL DEFAULT 0.0,
-                        grid_y REAL DEFAULT 0.0,
-                        owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Tasks table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_tasks (
-                        id SERIAL PRIMARY KEY,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        title TEXT NOT NULL,
-                        description TEXT,
-                        due_date DATE,
-                        priority TEXT NOT NULL DEFAULT 'medium',
-                        status TEXT NOT NULL DEFAULT 'todo',
-                        parent_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
-                        assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Risks table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_risks (
-                        id SERIAL PRIMARY KEY,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE SET NULL,
-                        title TEXT NOT NULL,
-                        description TEXT,
-                        probability TEXT NOT NULL DEFAULT 'medium',
-                        impact TEXT NOT NULL DEFAULT 'medium',
-                        mitigation TEXT,
-                        status TEXT NOT NULL DEFAULT 'open',
-                        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Decision logs table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_decision_logs (
-                        id SERIAL PRIMARY KEY,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        title TEXT NOT NULL,
-                        description TEXT NOT NULL,
-                        decision TEXT NOT NULL,
-                        rationale TEXT,
-                        alternatives TEXT,
-                        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Mission sharing table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_mission_shares (
-                        id SERIAL PRIMARY KEY,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        shared_with_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        access_level TEXT NOT NULL DEFAULT 'view',
-                        shared_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE(mission_id, shared_with_id)
-                    )
-                ''')
-                
+                # PostgreSQL schema
+                queries = [
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_missions (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            start_date DATE,
+            end_date DATE,
+            priority VARCHAR(20) DEFAULT 'medium',
+            status VARCHAR(20) DEFAULT 'active',
+            tags TEXT,
+            grid_x FLOAT DEFAULT 0.0,
+            grid_y FLOAT DEFAULT 0.0,
+            owner_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_mission_relationships (
+            id SERIAL PRIMARY KEY,
+            from_mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            to_mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            relationship_type VARCHAR(50) NOT NULL,
+            dependency_type VARCHAR(50),
+            strength FLOAT DEFAULT 1.0,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(from_mission_id, to_mission_id, relationship_type)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_tasks (
+            id SERIAL PRIMARY KEY,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            due_date DATE,
+            estimated_hours FLOAT,
+            actual_hours FLOAT,
+            priority VARCHAR(20) DEFAULT 'medium',
+            status VARCHAR(20) DEFAULT 'todo',
+            parent_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            assigned_to INTEGER,
+            created_by INTEGER NOT NULL,
+            completion_percentage INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_task_dependencies (
+            id SERIAL PRIMARY KEY,
+            predecessor_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            successor_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            dependency_type VARCHAR(50) DEFAULT 'finish_to_start',
+            lag_time_hours INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(predecessor_task_id, successor_task_id)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_resources (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            capacity FLOAT DEFAULT 1.0,
+            cost_per_hour FLOAT DEFAULT 0.0,
+            availability_start DATE,
+            availability_end DATE,
+            owner_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_task_resources (
+            id SERIAL PRIMARY KEY,
+            task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            resource_id INTEGER REFERENCES missionops_resources(id) ON DELETE CASCADE,
+            allocation_percentage FLOAT DEFAULT 100.0,
+            start_date DATE,
+            end_date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(task_id, resource_id)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_risks (
+            id SERIAL PRIMARY KEY,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE SET NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            probability VARCHAR(20) NOT NULL,
+            impact VARCHAR(20) NOT NULL,
+            risk_score FLOAT,
+            mitigation TEXT,
+            status VARCHAR(20) DEFAULT 'open',
+            owner_id INTEGER,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_workflows (
+            id SERIAL PRIMARY KEY,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            workflow_type VARCHAR(50) DEFAULT 'linear',
+            status VARCHAR(20) DEFAULT 'active',
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_nodes (
+            id SERIAL PRIMARY KEY,
+            workflow_id INTEGER REFERENCES missionops_decision_workflows(id) ON DELETE CASCADE,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            node_type VARCHAR(50) NOT NULL,
+            position_x FLOAT DEFAULT 0.0,
+            position_y FLOAT DEFAULT 0.0,
+            decision_criteria TEXT,
+            options TEXT,
+            selected_option VARCHAR(255),
+            rationale TEXT,
+            status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_connections (
+            id SERIAL PRIMARY KEY,
+            workflow_id INTEGER REFERENCES missionops_decision_workflows(id) ON DELETE CASCADE,
+            from_node_id INTEGER REFERENCES missionops_decision_nodes(id) ON DELETE CASCADE,
+            to_node_id INTEGER REFERENCES missionops_decision_nodes(id) ON DELETE CASCADE,
+            condition_text TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(from_node_id, to_node_id)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_ai_insights (
+            id SERIAL PRIMARY KEY,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            insight_type VARCHAR(50) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            content TEXT NOT NULL,
+            confidence_score FLOAT,
+            action_items TEXT,
+            priority_level VARCHAR(20) DEFAULT 'medium',
+            status VARCHAR(20) DEFAULT 'new',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_logs (
+            id SERIAL PRIMARY KEY,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            decision TEXT NOT NULL,
+            rationale TEXT,
+            alternatives TEXT,
+            impact_assessment TEXT,
+            review_date DATE,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_mission_shares (
+            id SERIAL PRIMARY KEY,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            shared_with_id INTEGER NOT NULL,
+            access_level VARCHAR(20) DEFAULT 'view',
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(mission_id, shared_with_id)
+        )
+        '''
+                ]
             else:
-                # SQLite table creation
-                
-                # Missions table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_missions (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        title TEXT NOT NULL,
-                        description TEXT,
-                        start_date TEXT,
-                        end_date TEXT,
-                        priority TEXT NOT NULL DEFAULT 'medium',
-                        status TEXT NOT NULL DEFAULT 'active',
-                        tags TEXT,
-                        grid_x REAL DEFAULT 0.0,
-                        grid_y REAL DEFAULT 0.0,
-                        owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Tasks table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_tasks (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        title TEXT NOT NULL,
-                        description TEXT,
-                        due_date TEXT,
-                        priority TEXT NOT NULL DEFAULT 'medium',
-                        status TEXT NOT NULL DEFAULT 'todo',
-                        parent_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
-                        assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Risks table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_risks (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE SET NULL,
-                        title TEXT NOT NULL,
-                        description TEXT,
-                        probability TEXT NOT NULL DEFAULT 'medium',
-                        impact TEXT NOT NULL DEFAULT 'medium',
-                        mitigation TEXT,
-                        status TEXT NOT NULL DEFAULT 'open',
-                        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Decision logs table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_decision_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        title TEXT NOT NULL,
-                        description TEXT NOT NULL,
-                        decision TEXT NOT NULL,
-                        rationale TEXT,
-                        alternatives TEXT,
-                        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Mission sharing table
-                c.execute('''
-                    CREATE TABLE IF NOT EXISTS missionops_mission_shares (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
-                        shared_with_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        access_level TEXT NOT NULL DEFAULT 'view',
-                        shared_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE(mission_id, shared_with_id)
-                    )
-                ''')
+                # SQLite schema
+                queries = [
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_missions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            start_date DATE,
+            end_date DATE,
+            priority TEXT DEFAULT 'medium',
+            status TEXT DEFAULT 'active',
+            tags TEXT,
+            grid_x REAL DEFAULT 0.0,
+            grid_y REAL DEFAULT 0.0,
+            owner_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_mission_relationships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            from_mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            to_mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            relationship_type TEXT NOT NULL,
+            dependency_type TEXT,
+            strength REAL DEFAULT 1.0,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(from_mission_id, to_mission_id, relationship_type)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT,
+            due_date DATE,
+            estimated_hours REAL,
+            actual_hours REAL,
+            priority TEXT DEFAULT 'medium',
+            status TEXT DEFAULT 'todo',
+            parent_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            assigned_to INTEGER,
+            created_by INTEGER NOT NULL,
+            completion_percentage INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_task_dependencies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            predecessor_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            successor_task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            dependency_type TEXT DEFAULT 'finish_to_start',
+            lag_time_hours INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(predecessor_task_id, successor_task_id)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_resources (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            capacity REAL DEFAULT 1.0,
+            cost_per_hour REAL DEFAULT 0.0,
+            availability_start DATE,
+            availability_end DATE,
+            owner_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_task_resources (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE CASCADE,
+            resource_id INTEGER REFERENCES missionops_resources(id) ON DELETE CASCADE,
+            allocation_percentage REAL DEFAULT 100.0,
+            start_date DATE,
+            end_date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(task_id, resource_id)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_risks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            task_id INTEGER REFERENCES missionops_tasks(id) ON DELETE SET NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            probability TEXT NOT NULL,
+            impact TEXT NOT NULL,
+            risk_score REAL,
+            mitigation TEXT,
+            status TEXT DEFAULT 'open',
+            owner_id INTEGER,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_workflows (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT,
+            workflow_type TEXT DEFAULT 'linear',
+            status TEXT DEFAULT 'active',
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_nodes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workflow_id INTEGER REFERENCES missionops_decision_workflows(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT,
+            node_type TEXT NOT NULL,
+            position_x REAL DEFAULT 0.0,
+            position_y REAL DEFAULT 0.0,
+            decision_criteria TEXT,
+            options TEXT,
+            selected_option TEXT,
+            rationale TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_connections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workflow_id INTEGER REFERENCES missionops_decision_workflows(id) ON DELETE CASCADE,
+            from_node_id INTEGER REFERENCES missionops_decision_nodes(id) ON DELETE CASCADE,
+            to_node_id INTEGER REFERENCES missionops_decision_nodes(id) ON DELETE CASCADE,
+            condition_text TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(from_node_id, to_node_id)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_ai_insights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            insight_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            confidence_score REAL,
+            action_items TEXT,
+            priority_level TEXT DEFAULT 'medium',
+            status TEXT DEFAULT 'new',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_decision_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT,
+            decision TEXT NOT NULL,
+            rationale TEXT,
+            alternatives TEXT,
+            impact_assessment TEXT,
+            review_date DATE,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_mission_shares (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
+            shared_with_id INTEGER NOT NULL,
+            access_level TEXT DEFAULT 'view',
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(mission_id, shared_with_id)
+        )
+        '''
+                ]
+            
+            # Execute table creation queries
+            for query in queries:
+                c.execute(query)
             
             # Create indexes for performance
-            indexes = [
+            index_queries = [
                 'CREATE INDEX IF NOT EXISTS idx_missionops_missions_owner ON missionops_missions(owner_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_missions_status ON missionops_missions(status)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_mission_relationships_from ON missionops_mission_relationships(from_mission_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_mission_relationships_to ON missionops_mission_relationships(to_mission_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_tasks_mission ON missionops_tasks(mission_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_tasks_assignee ON missionops_tasks(assigned_to)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_tasks_parent ON missionops_tasks(parent_task_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_task_dependencies_pred ON missionops_task_dependencies(predecessor_task_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_task_dependencies_succ ON missionops_task_dependencies(successor_task_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_resources_owner ON missionops_resources(owner_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_task_resources_task ON missionops_task_resources(task_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_task_resources_resource ON missionops_task_resources(resource_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_risks_mission ON missionops_risks(mission_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_decision_workflows_mission ON missionops_decision_workflows(mission_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_decision_nodes_workflow ON missionops_decision_nodes(workflow_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_decision_connections_workflow ON missionops_decision_connections(workflow_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_ai_insights_mission ON missionops_ai_insights(mission_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_decision_logs_mission ON missionops_decision_logs(mission_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_shares_mission ON missionops_mission_shares(mission_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_shares_user ON missionops_mission_shares(shared_with_id)',
             ]
             
-            for index_sql in indexes:
-                try:
-                    c.execute(index_sql)
-                except Exception as e:
-                    logger.warning(f"Could not create index: {e}")
-                    
-            conn.commit()
-            logger.info("✅ MissionOps database tables initialized successfully")
+            for index_query in index_queries:
+                c.execute(index_query)
             
+            conn.commit()
+        
+        logger.info("✅ MissionOps database tables initialized successfully")
+        
     except Exception as e:
         logger.error(f"❌ Error initializing MissionOps database: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to initialize MissionOps database")
