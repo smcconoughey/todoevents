@@ -7,6 +7,7 @@ const PRIMARY_API_URL = import.meta.env.VITE_API_URL ||
 
 // Fallback API URLs to try if primary fails
 const FALLBACK_API_URLS = [
+  'http://localhost:8000',
   'https://todoevents-backend.onrender.com'
 ];
 
