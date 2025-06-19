@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://watchtowerab.com/sitemap.xml
+
+# Block any crawling of potentially sensitive files
+Disallow: /.git/
+Disallow: /node_modules/
+Disallow: /.env
+
+# Allow crawling of all public content
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js

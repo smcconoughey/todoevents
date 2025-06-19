@@ -1,151 +1,206 @@
-# Watchtower AB Business Site
+# Watchtower AB Business Site - watchtowerab.com
 
-Professional business landing page for Watchtower AB, showcasing all company products and services.
+Professional business landing page for Watchtower AB, optimized for the `watchtowerab.com` domain.
 
-## Overview
+## ✅ Domain Optimization Complete
 
-This is a static HTML/CSS/JavaScript website that serves as the master page for Watchtower AB (inc), featuring:
+The site is now fully configured for **watchtowerab.com** with:
 
-- **TodoEvents** - Event discovery and management platform
-- **MissionOps** - Advanced project planning and risk management
-- **Premium & Enterprise Services** - Enhanced features and support
-- Professional company information and contact details
+- **SEO Meta Tags**: Canonical URL, keywords, proper descriptions
+- **Open Graph Tags**: Social media sharing optimization  
+- **JSON-LD Structured Data**: Rich snippets for search engines
+- **Favicon Configuration**: Multiple sizes for all devices
+- **Email Tracking**: All contact forms include "from watchtowerab.com" attribution
 
-## Features
+## 📸 **EXACT IMAGES NEEDED**
 
-- Modern, responsive design that works on all devices
-- Professional branding with gradient highlights
-- Smooth scrolling navigation
-- Interactive contact form
-- Mobile-first responsive design
-- SEO optimized with proper meta tags
-- Professional typography using Inter font
-- Animated elements and micro-interactions
+Please provide these specific images with exact dimensions:
 
-## Required Images
+### **PRIORITY IMAGES (Required for Launch)**
 
-To complete the site, please provide the following images:
+#### 1. **Hero Background Image**
+- **File Name**: `hero-background.jpg`
+- **Dimensions**: `1920px × 1080px` (16:9 ratio)
+- **Format**: JPG, optimized for web (under 500KB)
+- **Content**: Professional technology workspace, modern office, or abstract tech background
+- **Style**: Should convey innovation, professionalism, technology leadership
 
-### Logo & Icons
-- `images/watchtower-logo.svg` - Main Watchtower AB logo (SVG format preferred)
-- `images/todoevents-icon.svg` - TodoEvents product icon
-- `images/missionops-icon.svg` - MissionOps product icon  
-- `images/premium-icon.svg` - Premium/Enterprise services icon
-- `favicon.ico` - Site favicon
+#### 2. **Enterprise Dashboard Screenshot**
+- **File Name**: `enterprise-dashboard.png`
+- **Dimensions**: `1200px × 800px` (3:2 ratio)
+- **Format**: PNG for crisp UI elements
+- **Content**: Screenshot or mockup of TodoEvents enterprise dashboard
+- **Style**: Clean, professional interface showing charts, data, event management
 
-### Hero Background
-- `images/hero-background.jpg` - Professional technology/workspace image (1920x1080px minimum)
-  - Suggestions: Modern office space, technology workspace, team collaboration, or abstract tech background
-  - Should convey professionalism, innovation, and technology
+#### 3. **Team/Workspace Photo**
+- **File Name**: `team-workspace.jpg`
+- **Dimensions**: `800px × 600px` (4:3 ratio)
+- **Format**: JPG, optimized for web
+- **Content**: Professional team collaboration, modern Swedish office, or technology workspace
+- **Style**: Bright, modern, showing innovation and collaboration
 
-### Content Images
-- `images/enterprise-dashboard.png` - Screenshot or mockup of enterprise dashboard (1200x800px)
-- `images/team-workspace.jpg` - Professional team/office photo (800x600px)
+### **FAVICON PACKAGE (Multiple Sizes)**
 
-### Image Specifications
-- **Format**: JPG for photos, SVG for logos/icons, PNG for screenshots
-- **Quality**: High resolution, web-optimized
-- **Style**: Professional, modern, consistent with brand colors (blues: #3C92FF, #2684FF)
+#### 4. **Standard Favicon**
+- **File Name**: `favicon.ico`
+- **Dimensions**: `32px × 32px` (ICO format)
+- **Content**: Simplified Watchtower AB logo/icon
 
-## File Structure
+#### 5. **Apple Touch Icon**
+- **File Name**: `apple-touch-icon.png`
+- **Dimensions**: `180px × 180px`
+- **Format**: PNG with transparent or solid background
+- **Content**: Clean Watchtower AB logo for iOS devices
 
+#### 6. **Favicon PNG (32px)**
+- **File Name**: `favicon-32x32.png`
+- **Dimensions**: `32px × 32px`
+- **Format**: PNG
+
+#### 7. **Favicon PNG (16px)**
+- **File Name**: `favicon-16x16.png`
+- **Dimensions**: `16px × 16px`
+- **Format**: PNG
+
+### **OPTIONAL BRANDING UPGRADES**
+
+#### 8. **Custom Watchtower Logo**
+- **File Name**: `watchtower-logo.svg`
+- **Dimensions**: Vector (scalable)
+- **Format**: SVG preferred
+- **Content**: Official Watchtower AB logo with company name
+- **Colors**: Should use brand blues (#3C92FF, #2684FF)
+
+#### 9. **Product Icons** (Optional Replacements)
+- **TodoEvents Icon**: `todoevents-icon.svg` (60px × 60px)
+- **MissionOps Icon**: `missionops-icon.svg` (60px × 60px)  
+- **Premium Icon**: `premium-icon.svg` (60px × 60px)
+
+## 🌐 **Domain Configuration**
+
+### **DNS Setup for watchtowerab.com**
+
+Point your domain to your hosting provider:
+
+```
+Type: A Record
+Name: @
+Value: [Your hosting IP]
+
+Type: A Record  
+Name: www
+Value: [Your hosting IP]
+
+Type: CNAME
+Name: www
+Value: watchtowerab.com
+```
+
+### **Hosting Provider Setup**
+
+#### **Netlify** (Recommended)
+1. Drag and drop the `business-site` folder to Netlify
+2. Add custom domain: `watchtowerab.com`
+3. Enable HTTPS (automatic)
+4. Set redirects: `www.watchtowerab.com` → `watchtowerab.com`
+
+#### **Vercel**
+1. Connect GitHub repo
+2. Add domain in project settings
+3. Configure DNS as instructed
+
+#### **Cloudflare Pages**
+1. Connect repository
+2. Build settings: Static site
+3. Custom domain: `watchtowerab.com`
+
+## 📁 **File Structure**
 ```
 business-site/
-├── index.html          # Main landing page
-├── styles.css          # All CSS styles
-├── script.js           # JavaScript functionality
-├── README.md           # This file
-├── favicon.ico         # Site icon
-└── images/             # Image assets
-    ├── watchtower-logo.svg
-    ├── todoevents-icon.svg
-    ├── missionops-icon.svg
-    ├── premium-icon.svg
-    ├── hero-background.jpg
-    ├── enterprise-dashboard.png
-    └── team-workspace.jpg
+├── index.html                 ✅ Domain optimized
+├── styles.css                 ✅ Complete
+├── script.js                  ✅ Complete
+├── README.md                  ✅ Updated
+├── favicon.ico                📸 NEEDED
+├── apple-touch-icon.png       📸 NEEDED
+├── favicon-32x32.png          📸 NEEDED
+├── favicon-16x16.png          📸 NEEDED
+└── images/
+    ├── watchtower-logo.svg    ✅ Placeholder (upgrade optional)
+    ├── todoevents-icon.svg    ✅ Placeholder 
+    ├── missionops-icon.svg    ✅ Placeholder
+    ├── premium-icon.svg       ✅ Placeholder
+    ├── hero-background.jpg    📸 PRIORITY - NEEDED
+    ├── enterprise-dashboard.png 📸 PRIORITY - NEEDED
+    └── team-workspace.jpg     📸 PRIORITY - NEEDED
 ```
 
-## Setup Instructions
+## 🎨 **Image Style Guidelines**
 
-1. **Create Images Directory**:
-   ```bash
-   mkdir business-site/images
-   ```
+### **Brand Colors to Use**
+- **Primary Blue**: `#3C92FF`
+- **Secondary Blue**: `#2684FF`  
+- **Accent Gold**: `#FFD700` / `#FFA500`
+- **Professional Dark**: `#1a1a1a`
+- **Clean White**: `#ffffff`
 
-2. **Add Image Files**: Place all required images in the `images/` directory according to the specifications above.
+### **Photography Style**
+- **Modern and clean** compositions
+- **Professional lighting** (bright, not dim)
+- **Technology-focused** environment
+- **Scandinavian aesthetic** (clean, minimal, functional)
+- **Diversity and inclusion** in team photos
 
-3. **Serve the Site**: 
-   - For local development: Use any static file server
-   - For production: Deploy to any static hosting service (Netlify, Vercel, GitHub Pages, etc.)
+### **UI Screenshots**
+- **High contrast** and readable text
+- **Professional color scheme** matching brand
+- **Real data examples** (anonymized if needed)
+- **Clean interface design** with clear navigation
 
-## Deployment Options
+## 🚀 **Launch Checklist**
 
-### Static Hosting Services
-- **Netlify**: Drag and drop the `business-site` folder
-- **Vercel**: Connect GitHub repo and deploy
-- **GitHub Pages**: Push to repo and enable Pages
-- **AWS S3**: Upload files and configure static website hosting
-- **Cloudflare Pages**: Connect repo for automatic deployments
+### **Before Going Live**
+- [ ] Add priority images (hero, dashboard, team)
+- [ ] Add favicon package
+- [ ] Test on mobile devices
+- [ ] Verify all email links work
+- [ ] Check social media preview with meta tags
 
-### Custom Domain Setup
-After deployment, you can configure a custom domain like `watchtower-ab.com` or `company.todo-events.com`.
+### **After Launch**
+- [ ] Submit to Google Search Console
+- [ ] Set up Google Analytics (optional)
+- [ ] Monitor email inquiries from contact form
+- [ ] Regular content updates
 
-## Customization
+## 📧 **Contact Form Features**
 
-### Colors
-The site uses a professional blue color scheme:
-- Primary Blue: `#3C92FF`
-- Secondary Blue: `#2684FF`
-- Accent Gold: `#FFD700` / `#FFA500`
-- Dark: `#1a1a1a`
-- Light Gray: `#f8f9fa`
+**Enhanced for watchtowerab.com:**
+- All emails include domain attribution
+- Subject lines reference the source domain
+- Professional inquiry categorization
+- Automatic organization field inclusion
 
-### Content Updates
-- Company information in the "About" section
-- Product descriptions and features
-- Contact information and response times
-- Legal links and policies
+**Email Template Example:**
+```
+To: support@todo-events.com
+Subject: Enterprise Solutions from watchtowerab.com
+Body: Organization: [Company Name]
 
-### Contact Form
-The contact form uses `mailto:` functionality. For production use, consider integrating with:
-- Formspree
-- Netlify Forms
-- AWS SES
-- Custom backend API
+[User's message]
+```
 
-## Brand Guidelines
+## 🔧 **Technical Features**
 
-- **Typography**: Inter font family for modern, professional appearance
-- **Spacing**: Consistent 120px section padding, 4rem internal spacing
-- **Buttons**: Rounded corners (12px), gradient backgrounds, hover animations
-- **Cards**: 20px border radius, subtle shadows, hover effects
-- **Icons**: Lucide icon style, consistent sizing
-
-## Performance
-
-- Optimized CSS with efficient selectors
-- Minimal JavaScript for functionality
-- Lazy loading ready for images
-- Mobile-first responsive design
-- Fast loading static assets
-
-## Browser Support
-
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- Mobile browsers (iOS Safari, Chrome Mobile)
-- Responsive design for all screen sizes
-- Graceful degradation for older browsers
-
-## Legal Compliance
-
-- Links to TodoEvents legal pages
-- Proper copyright attribution
-- Commercial license compliance
-- Privacy policy references
+- **Mobile-first responsive design**
+- **Progressive enhancement** (works without JavaScript)
+- **Semantic HTML5** for accessibility
+- **Performance optimized** CSS and JS
+- **SEO optimized** with structured data
+- **Social media ready** with Open Graph tags
 
 ---
 
-**Watchtower AB, Inc.**  
-Email: support@todo-events.com  
-Licensed under TODO-EVENTS COMMERCIAL LICENSE AGREEMENT
+**Ready to deploy to watchtowerab.com once you provide the required images!**
+
+**Contact**: support@todo-events.com  
+**License**: TODO-EVENTS COMMERCIAL LICENSE AGREEMENT
