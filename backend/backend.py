@@ -7027,6 +7027,11 @@ class EnterpriseInviteRequest(BaseModel):
     months: int = 1
     message: Optional[str] = None
 
+class RouteEventRequest(BaseModel):
+    coordinates: List[Dict[str, float]]  # List of {lat: float, lng: float}
+    radius: float = 25.0  # Default radius in miles
+    dateRange: Optional[Dict[str, str]] = None  # Optional {startDate: str, endDate: str}
+
 # Premium Management Endpoints
 @app.get("/admin/premium-users")
 async def get_premium_users(current_user: dict = Depends(get_current_user)):
