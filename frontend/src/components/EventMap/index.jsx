@@ -9,6 +9,7 @@ import MapContainer from "./MapContainer";
 import ShareCard from "./ShareCard";
 import FirstTimeSignInPopup from "../FirstTimeSignInPopup";
 import ReportDialog from './ReportDialog';
+import RecommendationsPanel from '../RecommendationsPanel';
 
 import { getMarkerStyle, setMarkerStyle } from "./markerUtils";
 import categories, { getCategory } from "./categoryConfig";
@@ -3927,6 +3928,24 @@ const EventMap = ({
                     setExternalLinkDialog={setExternalLinkDialog}
                 />
               </div>
+              )}
+
+              {/* Recommendations Panel - Desktop Only */}
+              {!selectedEvent && (
+                <div className="hidden sm:block">
+                  <RecommendationsPanel
+                    userLocation={mapCenter || DEFAULT_CENTER}
+                    onEventClick={handleEventClick}
+                    onExploreMore={() => {
+                      // Reset view to show all events
+                      setSelectedDate(null);
+                      setSelectedTime('all');
+                      setSelectedCategory(['all']);
+                      setMapCenter(null);
+                      setMiscFilters({ feeFilter: 'all' });
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>
