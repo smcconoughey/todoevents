@@ -13,6 +13,8 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Lightbulb,
   Target,
   TrendingUp,
@@ -31,6 +33,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('upcoming');
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [userActualLocation, setUserActualLocation] = useState(null);
@@ -191,10 +194,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         
         console.log(`Deduplicated ${(data.events || []).length} events to ${uniqueEvents.length} unique events`);
         setRecommendations(uniqueEvents);
-        // Only trigger animation on initial load, not on every refresh
-        if (recommendations.length === 0) {
-          setAnimationKey(prev => prev + 1);
-        }
+        // Remove animation trigger to prevent stutters - animations handled by CSS
       } else {
         console.error('Failed to fetch recommendations - HTTP status:', response.status);
       }
@@ -432,13 +432,16 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           ? 'bg-white/10 border border-white/20'
           : 'bg-neutral-900/80 border border-white/10'
         }
-        ${isExpanded ? 'translate-x-0' : 'translate-x-full'}
-        /* Desktop: Right panel */
-        lg:right-4 lg:top-4 lg:w-96 lg:max-h-[calc(100vh-2rem)]
+        /* Desktop: Right panel with collapse support */
+        lg:right-4 lg:top-4 lg:max-h-[calc(100vh-2rem)]
         /* Mobile: Bottom sheet */
         bottom-0 right-0 left-0 max-h-[80vh] lg:left-auto
-        /* Mobile collapsed state - show as bottom tab */
-        ${!isExpanded ? 'lg:translate-x-80' : ''}
+        /* Handle collapsed state */
+        ${isCollapsed 
+          ? 'lg:w-16 lg:translate-x-0' 
+          : 'lg:w-96 lg:translate-x-0'
+        }
+        ${isExpanded ? 'translate-x-0' : 'translate-x-full'}
       `}
     >
       {/* Mobile Handle Bar - only show on mobile when expanded */}
@@ -446,10 +449,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         <div className="w-12 h-1 bg-white/30 rounded-full" />
       </div>
 
-      {/* Header */}
-      <div className="p-4 lg:p-6 border-b border-white/10">
+      {/* Header - always visible */}
+      <div className={`p-4 lg:p-6 ${!isCollapsed ? 'border-b border-white/10' : ''}`}>
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
             <div className={`
               p-2 rounded-xl
               ${theme === 'frost' 
@@ -459,68 +462,98 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
             `}>
               <Compass className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg lg:text-xl font-display font-bold text-white">
-                Discover
-              </h2>
-              <p className="text-xs lg:text-sm text-white/60 leading-tight">
-                Events near your location
-              </p>
-            </div>
+            {!isCollapsed && (
+              <div>
+                <h2 className="text-lg lg:text-xl font-display font-bold text-white">
+                  Discover
+                </h2>
+                <p className="text-xs lg:text-sm text-white/60 leading-tight">
+                  Events near your location
+                </p>
+              </div>
+            )}
           </div>
           
-          {/* Persistent Explore Cities button */}
-          <button
-            onClick={handleExploreCities}
-            className={`
-              p-2 rounded-xl transition-all duration-200 hover:scale-105
-              ${theme === 'frost'
-                ? 'bg-white/20 hover:bg-white/30 border border-white/30'
-                : 'bg-white/10 hover:bg-white/20 border border-white/20'
-              }
-            `}
-            title="Explore other cities"
-          >
-            <Globe className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-          </button>
+          {!isCollapsed && (
+            <div className="flex items-center gap-2">
+              {/* Persistent Explore Cities button */}
+              <button
+                onClick={handleExploreCities}
+                className={`
+                  p-2 rounded-xl transition-all duration-200 hover:scale-105
+                  ${theme === 'frost'
+                    ? 'bg-white/20 hover:bg-white/30 border border-white/30'
+                    : 'bg-white/10 hover:bg-white/20 border border-white/20'
+                  }
+                `}
+                title="Explore other cities"
+              >
+                <Globe className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+              </button>
+              
+              {/* Collapse button */}
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className={`
+                  hidden lg:flex p-2 rounded-xl transition-all duration-200 hover:scale-105
+                  ${theme === 'frost'
+                    ? 'bg-white/20 hover:bg-white/30 border border-white/30'
+                    : 'bg-white/10 hover:bg-white/20 border border-white/20'
+                  }
+                `}
+                title={isCollapsed ? "Expand recommendations" : "Collapse recommendations"}
+              >
+                {isCollapsed ? (
+                  <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Emotional message - smaller on mobile */}
-        <div className="text-center py-2 lg:py-3">
-          <p 
-            key={currentMessage}
-            className="text-base lg:text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
-          >
-            {emotionalMessages[currentMessage]}
-          </p>
-        </div>
+        {/* Content when not collapsed */}
+        {!isCollapsed && (
+          <>
+            {/* Emotional message - smaller on mobile */}
+            <div className="text-center py-2 lg:py-3">
+              <p 
+                key={currentMessage}
+                className="text-base lg:text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
+              >
+                {emotionalMessages[currentMessage]}
+              </p>
+            </div>
 
-        {/* Filter tabs - responsive layout */}
-        <div className="flex gap-1 lg:gap-2 mt-4">
-          {[
-            { key: 'upcoming', label: 'Soon', icon: Clock },
-            { key: 'this_weekend', label: 'Weekend', icon: Star },
-            { key: 'next_2_weeks', label: '2 Weeks', icon: TrendingUp }
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setSelectedFilter(key)}
-              className={`
-                flex-1 flex items-center justify-center gap-1 lg:gap-2 py-2 px-2 lg:px-3 rounded-lg
-                text-xs lg:text-sm font-medium transition-all duration-200
-                ${selectedFilter === key
-                  ? theme === 'frost'
-                    ? 'bg-white/30 text-white border border-white/40'
-                    : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
-                  : 'text-white/60 hover:bg-white/10 border border-transparent'
-                }
-              `}
-            >
-              <Icon className="w-3 h-3 lg:w-4 lg:h-4" />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
+            {/* Filter tabs - responsive layout */}
+            <div className="flex gap-1 lg:gap-2 mt-4">
+              {[
+                { key: 'upcoming', label: 'Soon', icon: Clock },
+                { key: 'this_weekend', label: 'Weekend', icon: Star },
+                { key: 'next_2_weeks', label: '2 Weeks', icon: TrendingUp }
+              ].map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedFilter(key)}
+                  className={`
+                    flex-1 flex items-center justify-center gap-1 lg:gap-2 py-2 px-2 lg:px-3 rounded-lg
+                    text-xs lg:text-sm font-medium transition-all duration-200
+                    ${selectedFilter === key
+                      ? theme === 'frost'
+                        ? 'bg-white/30 text-white border border-white/40'
+                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
+                      : 'text-white/60 hover:bg-white/10 border border-transparent'
+                    }
+                  `}
+                >
+                  <Icon className="w-3 h-3 lg:w-4 lg:h-4" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Content */}
@@ -594,14 +627,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Collapsed state hint */}
-      {!isExpanded && (
-        <div className="p-3 lg:p-4 text-center">
-          <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-spark-yellow mx-auto animate-pulse" />
-          <p className="text-xs text-white/60 mt-1">Recommendations</p>
         </div>
       )}
 

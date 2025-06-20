@@ -3940,6 +3940,7 @@ const EventMap = ({
               {!selectedEvent && (
                 <div className="hidden sm:block">
                   <RecommendationsPanel
+                    key={`recommendations-${selectedLocation?.lat || effectiveMapCenter?.lat || 0}-${selectedLocation?.lng || effectiveMapCenter?.lng || 0}`}
                     userLocation={selectedLocation || effectiveMapCenter || DEFAULT_CENTER}
                     onEventClick={handleEventClick}
                     onExploreMore={(city) => {
