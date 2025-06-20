@@ -106,24 +106,46 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     
                     # Build and execute query
                     where_clause = " AND ".join(where_conditions)
-                    query = f"""
-                        SELECT *, 
-                               (julianday('now') - julianday(created_at)) as days_since_created,
-                               CASE 
-                                   WHEN verified = 1 THEN 10
-                                   ELSE 0
-                               END as verification_bonus,
-                               CASE
-                                   WHEN (julianday('now') - julianday(created_at)) <= 7 THEN 5
-                                   WHEN (julianday('now') - julianday(created_at)) <= 30 THEN 2
-                                   ELSE 0
-                               END as recency_bonus
-                        FROM events 
-                        WHERE {where_clause}
-                        ORDER BY verification_bonus DESC, recency_bonus DESC, 
-                                 date ASC, start_time ASC
-                        LIMIT {request.limit * 2}
-                    """
+                    
+                    # Database-agnostic query - avoid SQLite-specific functions
+                    if get_placeholder() == "%s":  # PostgreSQL
+                        query = f"""
+                            SELECT *, 
+                                   EXTRACT(days FROM (CURRENT_TIMESTAMP - created_at)) as days_since_created,
+                                   CASE 
+                                       WHEN verified = true THEN 10
+                                       ELSE 0
+                                   END as verification_bonus,
+                                   CASE
+                                       WHEN EXTRACT(days FROM (CURRENT_TIMESTAMP - created_at)) <= 7 THEN 5
+                                       WHEN EXTRACT(days FROM (CURRENT_TIMESTAMP - created_at)) <= 30 THEN 2
+                                       ELSE 0
+                                   END as recency_bonus
+                            FROM events 
+                            WHERE {where_clause}
+                            ORDER BY verification_bonus DESC, recency_bonus DESC, 
+                                     date ASC, start_time ASC
+                            LIMIT {request.limit * 2}
+                        """
+                    else:  # SQLite
+                        query = f"""
+                            SELECT *, 
+                                   (julianday('now') - julianday(created_at)) as days_since_created,
+                                   CASE 
+                                       WHEN verified = 1 THEN 10
+                                       ELSE 0
+                                   END as verification_bonus,
+                                   CASE
+                                       WHEN (julianday('now') - julianday(created_at)) <= 7 THEN 5
+                                       WHEN (julianday('now') - julianday(created_at)) <= 30 THEN 2
+                                       ELSE 0
+                                   END as recency_bonus
+                            FROM events 
+                            WHERE {where_clause}
+                            ORDER BY verification_bonus DESC, recency_bonus DESC, 
+                                     date ASC, start_time ASC
+                            LIMIT {request.limit * 2}
+                        """
                     
                     c.execute(query, params)
                     rows = c.fetchall()
@@ -383,11 +405,16 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     
                     # Add event counts to major cities
                     for city in major_cities:
-                        # Quick count of upcoming events near this city
+                        # Quick count of upcoming events near this city - database agnostic
+                        if get_placeholder() == "%s":  # PostgreSQL
+                            date_filter = "date >= CURRENT_DATE"
+                        else:  # SQLite
+                            date_filter = "date >= date('now')"
+                            
                         c.execute(f"""
                             SELECT COUNT(*) as event_count
                             FROM events 
-                            WHERE date >= date('now')
+                            WHERE {date_filter}
                             AND (6371 * acos(cos(radians({city['lat']})) * cos(radians(lat)) * 
                                  cos(radians(lng) - radians({city['lng']})) + sin(radians({city['lat']})) * 
                                  sin(radians(lat)))) * 0.621371 <= 50
@@ -400,6 +427,12 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     return cities_with_events[:limit]
                 
                 # Find cities with events within distance, sorted by distance
+                # Database-agnostic date filtering
+                if get_placeholder() == "%s":  # PostgreSQL
+                    date_filter = "date >= CURRENT_DATE"
+                else:  # SQLite
+                    date_filter = "date >= date('now')"
+                    
                 query = f"""
                     SELECT 
                         city, 
@@ -411,7 +444,7 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                          cos(radians(AVG(lng)) - radians({lng})) + sin(radians({lat})) * 
                          sin(radians(AVG(lat))))) * 0.621371 as distance_miles
                     FROM events 
-                    WHERE date >= date('now')
+                    WHERE {date_filter}
                     AND city IS NOT NULL 
                     AND state IS NOT NULL
                     AND city != ''
