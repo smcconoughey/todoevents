@@ -19,7 +19,8 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogDescription
 } from "../ui/radix-dialog";
 import {
   Sheet,
@@ -61,9 +62,6 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DialogDescription
-} from "@/components/ui/radix-dialog";
 import {
   SheetClose
 } from "@/components/ui/sheet";
@@ -3954,12 +3952,97 @@ const EventMap = ({
                       }
                     }}
                   />
+
                 </div>
               )}
             </div>
           </div>
-        </div>
-      </ErrorBoundary>
+        ) : (
+          // List View
+          <div className="p-4 overflow-y-auto h-full">
+            {renderEventList(filteredEvents, selectedEvent, handleEventClick, user, mapCenter)}
+          </div>
+        )}
+      </div>
+
+      {/* Create Event Form Dialog */}
+      {isCreateFormOpen && (
+        <CreateEventForm
+          isOpen={isCreateFormOpen}
+          onClose={() => {
+            setIsCreateFormOpen(false);
+            setSelectedLocation(null);
+            setEditingEvent(null);
+            setError(null);
+          }}
+          onSubmit={handleCreateEvent}
+          selectedLocation={selectedLocation}
+          onLocationSelect={setSelectedLocation}
+          initialEvent={editingEvent}
+        />
+      )}
+
+      {/* Login Dialog */}
+      {showLoginDialog && (
+        <LoginForm
+          isOpen={showLoginDialog}
+          onClose={() => setShowLoginDialog(false)}
+          mode={loginMode}
+        />
+      )}
+
+      {/* Report Dialog */}
+      {showReportDialog && selectedEvent && (
+        <ReportDialog
+          isOpen={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          eventId={selectedEvent.id}
+          eventTitle={selectedEvent.title}
+        />
+      )}
+
+      {/* External Link Dialog */}
+      {externalLinkDialog.show && (
+        <Dialog open={externalLinkDialog.show} onOpenChange={() => setExternalLinkDialog({ show: false, url: '' })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>External Link</DialogTitle>
+              <DialogDescription>
+                You're about to open an external link. This will take you away from TodoEvents.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setExternalLinkDialog({ show: false, url: '' })}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                window.open(externalLinkDialog.url, '_blank');
+                setExternalLinkDialog({ show: false, url: '' });
+              }}>
+                Continue
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Hidden ShareCard for download */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+        {selectedEvent && (
+          <ShareCard 
+            ref={shareCardRef}
+            event={selectedEvent} 
+            showDownloadButton={false}
+          />
+        )}
+      </div>
+
+      {/* First Time Sign In Popup */}
+      {showFirstTimePopup && (
+        <FirstTimeSignInPopup 
+          onClose={() => setShowFirstTimePopup(false)}
+        />
+      )}
     </div>
   );
 };
