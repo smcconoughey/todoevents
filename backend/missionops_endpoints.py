@@ -5,7 +5,7 @@ All endpoints are prefixed with /missionops to avoid conflicts with main todo-ev
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 
