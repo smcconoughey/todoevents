@@ -16,7 +16,9 @@ import {
   Lightbulb,
   Target,
   TrendingUp,
-  Gift
+  Gift,
+  Navigation,
+  X
 } from 'lucide-react';
 import { WebIcon } from './EventMap/WebIcons';
 import { CategoryIcon } from './EventMap/CategoryIcons';
@@ -31,6 +33,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [selectedFilter, setSelectedFilter] = useState('upcoming');
   const [isExpanded, setIsExpanded] = useState(true);
   const [animationKey, setAnimationKey] = useState(0);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
+  const [userActualLocation, setUserActualLocation] = useState(null);
+  const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
   const containerRef = useRef(null);
 
   // Emotional copy variations
@@ -53,18 +58,74 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch recommendations
+  // Check if we should ask for location on first load
+  useEffect(() => {
+    const hasAskedBefore = localStorage.getItem('locationPermissionAsked');
+    if (!hasAskedBefore && !locationPermissionAsked) {
+      // Show popup after a short delay for better UX
+      setTimeout(() => {
+        setShowLocationPopup(true);
+      }, 1500);
+    }
+  }, []);
+
+  // Request user's actual location
+  const requestUserLocation = () => {
+    setLocationPermissionAsked(true);
+    localStorage.setItem('locationPermissionAsked', 'true');
+    setShowLocationPopup(false);
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            city: 'Your location'
+          };
+          setUserActualLocation(location);
+          localStorage.setItem('userLocation', JSON.stringify(location));
+        },
+        (error) => {
+          console.log('Location access denied or failed:', error);
+          // Continue with fallback location
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    }
+  };
+
+  // Load saved location on startup
+  useEffect(() => {
+    const savedLocation = localStorage.getItem('userLocation');
+    if (savedLocation) {
+      try {
+        setUserActualLocation(JSON.parse(savedLocation));
+      } catch (e) {
+        console.error('Error parsing saved location:', e);
+      }
+    }
+  }, []);
+
+  // Fetch recommendations with actual user location if available
   useEffect(() => {
     fetchRecommendations();
-  }, [userLocation, selectedFilter]);
+  }, [userLocation, selectedFilter, userActualLocation]);
 
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
+      // Use actual user location if available, otherwise fall back to provided location
+      const locationToUse = userActualLocation || userLocation;
+      
       const requestBody = {
-        lat: userLocation?.lat || null,
-        lng: userLocation?.lng || null,
-        city: userLocation?.city || null,
+        lat: locationToUse?.lat || null,
+        lng: locationToUse?.lng || null,
+        city: locationToUse?.city || null,
         time_filter: selectedFilter,
         limit: 8
       };
@@ -278,11 +339,19 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               <Compass className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-display font-bold text-white">
+              <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
                 Discover
+                {userActualLocation && (
+                  <div className="flex items-center gap-1">
+                    <Navigation className="w-4 h-4 text-green-400" />
+                    <span className="text-xs bg-green-400/20 text-green-400 px-2 py-1 rounded-full border border-green-400/30">
+                      Precise
+                    </span>
+                  </div>
+                )}
               </h2>
               <p className="text-sm text-white/60">
-                Events near you
+                {userActualLocation ? 'Events near your location' : 'Events near you'}
               </p>
             </div>
           </div>
@@ -420,6 +489,84 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         <div className="p-4 text-center">
           <Sparkles className="w-6 h-6 text-spark-yellow mx-auto animate-pulse" />
           <p className="text-xs text-white/60 mt-1">Recommendations</p>
+        </div>
+      )}
+
+      {/* Location Permission Popup */}
+      {showLocationPopup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`
+            relative max-w-md w-full rounded-2xl p-6 shadow-2xl animate-scale-in
+            ${theme === 'frost'
+              ? 'bg-white/20 border border-white/30'
+              : 'bg-neutral-900/90 border border-white/20'
+            }
+          `}>
+            <button
+              onClick={() => {
+                setShowLocationPopup(false);
+                setLocationPermissionAsked(true);
+                localStorage.setItem('locationPermissionAsked', 'true');
+              }}
+              className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5 text-white/70" />
+            </button>
+            
+            <div className="text-center space-y-4">
+              <div className={`
+                w-16 h-16 rounded-full mx-auto flex items-center justify-center
+                ${theme === 'frost' 
+                  ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
+                  : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
+                }
+              `}>
+                <Navigation className="w-8 h-8 text-white" />
+              </div>
+              
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Find Events Near You
+                </h3>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  Share your location to discover amazing events happening right around you. 
+                  We'll show you the most relevant local experiences based on your exact location.
+                </p>
+              </div>
+              
+              <div className="space-y-3 pt-2">
+                <button
+                  onClick={requestUserLocation}
+                  className={`
+                    w-full py-3 px-4 rounded-xl font-medium transition-all duration-200
+                    hover:scale-[1.02] flex items-center justify-center gap-2
+                    ${theme === 'frost'
+                      ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 text-white border border-white/40 hover:from-blue-400/50 hover:to-purple-400/50'
+                      : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
+                    }
+                  `}
+                >
+                  <Navigation className="w-5 h-5" />
+                  Share My Location
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowLocationPopup(false);
+                    setLocationPermissionAsked(true);
+                    localStorage.setItem('locationPermissionAsked', 'true');
+                  }}
+                  className="w-full py-3 px-4 rounded-xl font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                >
+                  Maybe Later
+                </button>
+              </div>
+              
+              <p className="text-xs text-white/50 mt-4">
+                Your location is only used to find nearby events and is never stored on our servers.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
