@@ -118,7 +118,7 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     # Database-agnostic query - avoid SQLite-specific functions
                     if get_placeholder() == "%s":  # PostgreSQL
                         query = f"""
-                            SELECT *, 
+                            SELECT DISTINCT ON (id) *, 
                                    EXTRACT(days FROM (CURRENT_TIMESTAMP - created_at)) as days_since_created,
                                    CASE 
                                        WHEN verified = true THEN 10
@@ -131,7 +131,7 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                                    END as recency_bonus
                             FROM events 
                             WHERE {where_clause}
-                            ORDER BY verification_bonus DESC, recency_bonus DESC, 
+                            ORDER BY id, verification_bonus DESC, recency_bonus DESC, 
                                      date ASC, start_time ASC
                             LIMIT {request.limit * 2}
                         """
@@ -150,6 +150,7 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                                    END as recency_bonus
                             FROM events 
                             WHERE {where_clause}
+                            GROUP BY id
                             ORDER BY verification_bonus DESC, recency_bonus DESC, 
                                      date ASC, start_time ASC
                             LIMIT {request.limit * 2}
@@ -228,6 +229,18 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     # If we have enough events, break
                     if len(events) >= 5:
                         break
+                
+                # Deduplicate events by ID (additional safety check)
+                unique_events = []
+                seen_ids = set()
+                for event in events:
+                    event_id = event.get('id')
+                    if event_id and event_id not in seen_ids:
+                        seen_ids.add(event_id)
+                        unique_events.append(event)
+                
+                events = unique_events
+                logger.info(f"After deduplication: {len(events)} unique events")
                 
                 # Sort events by priority score
                 def calculate_priority_score(event):

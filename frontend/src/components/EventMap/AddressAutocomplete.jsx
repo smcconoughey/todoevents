@@ -139,6 +139,13 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
     setSelectedIndex(-1); // Reset selection when typing
     
     if (newValue && newValue.length >= 2) {
+      // Check if Google Maps is available before making requests
+      if (!window.google?.maps?.places) {
+        console.warn('Google Places API not available, enabling manual mode');
+        setPredictions([]);
+        setShowPredictions(false);
+        return;
+      }
       getPlacePredictions(newValue);
     } else {
       setPredictions([]);
@@ -383,7 +390,7 @@ const AddressAutocomplete = ({ onSelect, value, onChange }) => {
           onKeyDown={handleKeyDown}
           onFocus={() => value && value.length >= 2 && predictions.length > 0 && setShowPredictions(true)}
           className="w-full pl-10 pr-4 py-2 rounded-md bg-white/10 border-0 text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/20 transition-all"
-          placeholder="Type address and select from dropdown (or press Enter for first option)"
+          placeholder={window.google?.maps?.places ? "Type address and select from dropdown" : "Enter location (Google Maps loading...)"}
           autoComplete="off"
         />
         <button 

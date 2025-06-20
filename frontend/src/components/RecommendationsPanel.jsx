@@ -177,7 +177,20 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       if (response.ok) {
         const data = await response.json();
         console.log('Recommendations fetched successfully:', data);
-        setRecommendations(data.events || []);
+        
+        // Deduplicate events by ID to prevent showing the same event multiple times
+        const uniqueEvents = [];
+        const seenIds = new Set();
+        
+        (data.events || []).forEach(event => {
+          if (event.id && !seenIds.has(event.id)) {
+            seenIds.add(event.id);
+            uniqueEvents.push(event);
+          }
+        });
+        
+        console.log(`Deduplicated ${(data.events || []).length} events to ${uniqueEvents.length} unique events`);
+        setRecommendations(uniqueEvents);
         setAnimationKey(prev => prev + 1);
       } else {
         console.error('Failed to fetch recommendations - HTTP status:', response.status);
