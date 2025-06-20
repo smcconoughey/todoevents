@@ -782,6 +782,7 @@ const EventMap = ({
   const [selectedTime, setSelectedTime] = useState('all');
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [proximityRange, setProximityRange] = useState(15);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -826,10 +827,11 @@ const EventMap = ({
   const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
   const DEFAULT_ZOOM = 4;
 
-  const mapCenter = selectedLocation ? {
+  // Compute effective map center
+  const effectiveMapCenter = mapCenter || (selectedLocation ? {
     lat: selectedLocation.lat,
     lng: selectedLocation.lng
-  } : null;
+  } : null);
 
   const handleResetView = () => {
     setSelectedLocation(null);
@@ -3956,14 +3958,14 @@ const EventMap = ({
               selectedDate || 
               selectedTime !== 'all' || 
               !selectedCategory.includes('all') || 
-              mapCenter ||
+              effectiveMapCenter ||
               miscFilters.feeFilter !== 'all'
                 ? filteredEvents
                 : events,
               selectedEvent,
               handleEventClick,
               user,
-              mapCenter
+              effectiveMapCenter
             )}
           </div>
         )}
