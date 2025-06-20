@@ -4038,9 +4038,9 @@ const EventMap = ({
       </div>
 
       {/* First Time Sign In Popup */}
-      {showFirstTimePopup && (
+      {showFirstTimeSignInPopup && (
         <FirstTimeSignInPopup 
-          onClose={() => setShowFirstTimePopup(false)}
+          onClose={() => setShowFirstTimeSignInPopup(false)}
         />
       )}
     </div>
