@@ -141,7 +141,26 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                         event_lng = event_dict.get('lng')
                         
                         if event_lat is not None and event_lng is not None:
-                            distance = math.sqrt((request.lat - event_lat)**2 + (request.lng - event_lng)**2) * 69
+                            # Use proper haversine formula for accurate distance calculation
+                            def haversine_distance(lat1, lng1, lat2, lng2):
+                                """Calculate accurate distance between two points using haversine formula"""
+                                import math
+                                
+                                # Convert decimal degrees to radians
+                                lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
+                                
+                                # Haversine formula
+                                dlat = lat2 - lat1
+                                dlng = lng2 - lng1
+                                a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng/2)**2
+                                c = 2 * math.asin(math.sqrt(a))
+                                
+                                # Radius of earth in miles
+                                r = 3959
+                                
+                                return c * r
+                            
+                            distance = haversine_distance(request.lat, request.lng, event_lat, event_lng)
                         else:
                             distance = float('inf')  # Skip events without valid coordinates
                         

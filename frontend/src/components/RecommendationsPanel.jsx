@@ -63,9 +63,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     const hasAskedBefore = localStorage.getItem('locationPermissionAsked');
     if (!hasAskedBefore && !locationPermissionAsked) {
       // Show popup after a short delay for better UX
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         setShowLocationPopup(true);
       }, 1500);
+      
+      // Cleanup function to prevent memory leak
+      return () => {
+        clearTimeout(timeoutId);
+      };
     }
   }, []);
 
