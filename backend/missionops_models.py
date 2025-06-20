@@ -842,15 +842,12 @@ def get_user_missions_access(user_id: int):
             
             # Query for missions owned by user or shared with user
             c.execute(f'''
-                SELECT DISTINCT m.*, 
-                       CASE WHEN m.owner_id = {placeholder} THEN 'owner' 
-                            WHEN s.access_level IS NOT NULL THEN s.access_level 
-                            ELSE 'none' END as access_level
+                SELECT DISTINCT m.*
                 FROM missionops_missions m
                 LEFT JOIN missionops_mission_shares s ON m.id = s.mission_id AND s.shared_with_id = {placeholder}
                 WHERE m.owner_id = {placeholder} OR s.shared_with_id = {placeholder}
                 ORDER BY m.updated_at DESC, m.created_at DESC
-            ''', (user_id, user_id, user_id, user_id))
+            ''', (user_id, user_id, user_id))
             
             missions = c.fetchall()
             logger.info(f"Query returned {len(missions) if missions else 0} missions")

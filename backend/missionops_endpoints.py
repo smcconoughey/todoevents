@@ -121,6 +121,10 @@ async def list_missions(current_user: dict = Depends(get_current_user)):
                 # Convert datetime objects to strings
                 mission_dict = convert_datetime_to_string(mission_dict)
                 
+                # Remove access_level field if it exists (not part of MissionResponse model)
+                if 'access_level' in mission_dict:
+                    del mission_dict['access_level']
+                
                 # Get tasks and risks count
                 with get_db() as conn:
                     c = conn.cursor()
@@ -233,6 +237,10 @@ async def create_mission(mission: MissionCreate, current_user: dict = Depends(ge
             # Convert datetime objects to strings
             mission_data = convert_datetime_to_string(mission_data)
             
+            # Remove access_level field if it exists (not part of MissionResponse model)
+            if 'access_level' in mission_data:
+                del mission_data['access_level']
+            
             mission_data.update({
                 'tasks_count': 0,
                 'risks_count': 0,
@@ -267,6 +275,10 @@ async def get_mission(mission_id: int, current_user: dict = Depends(get_current_
             
             # Convert datetime objects to strings
             mission_dict = convert_datetime_to_string(mission_dict)
+            
+            # Remove access_level field if it exists (not part of MissionResponse model)
+            if 'access_level' in mission_dict:
+                del mission_dict['access_level']
             
             # Get tasks and risks count
             c.execute(f"SELECT COUNT(*) FROM missionops_tasks WHERE mission_id = {placeholder}", (mission_id,))
