@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import traceback
+import math
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from contextlib import contextmanager
@@ -395,9 +396,6 @@ def validate_recurring_event(event_data, user_role):
     # For now, just return the event data unchanged
     # Can be enhanced later with actual validation logic
     return event_data
-
-
-
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -4805,7 +4803,6 @@ async def get_premium_trial_status(current_user: dict = Depends(get_current_user
     except Exception as e:
         logger.error(f"Error getting trial status: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get trial status")
-
 # User account management endpoints
 @app.post("/user/delete-account")
 async def delete_user_account(current_user: dict = Depends(get_current_user)):
@@ -5586,7 +5583,6 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
 async def test_webhook():
     """Simple test endpoint to verify webhook URL is reachable"""
     return {"status": "ok", "message": "Webhook endpoint is reachable", "timestamp": datetime.utcnow().isoformat()}
-
 @app.post("/admin/quick-upgrade-user-3")
 async def quick_upgrade_user_3():
     """Quick upgrade for user 3 since payment was successful but webhook may have been missed"""
@@ -7030,7 +7026,6 @@ class RouteEventRequest(BaseModel):
     coordinates: List[Dict[str, float]]  # List of {lat: float, lng: float}
     radius: float = 25.0  # Default radius in miles
     dateRange: Optional[Dict[str, str]] = None  # Optional {startDate: str, endDate: str}
-
 # Premium Management Endpoints
 @app.get("/admin/premium-users")
 async def get_premium_users(current_user: dict = Depends(get_current_user)):
@@ -8520,7 +8515,6 @@ def sanitize_ux_field(value):
     result = value if value is not None else ""
     logger.info(f"sanitize_ux_field returning: {result!r} (type: {type(result)})")
     return result
-
 def convert_event_datetime_fields(event_dict):
     """Convert datetime objects to ISO format strings for API response"""
     from datetime import datetime, timezone
@@ -10585,7 +10579,6 @@ async def update_privacy_request_status(
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     """Get current user information"""
     return current_user
-
 @app.post("/events/route-batch")
 async def get_route_events_batch(request: RouteEventRequest):
     """

@@ -227,25 +227,25 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         `} />
 
         {/* Content */}
-        <div className="relative p-4 space-y-3">
+        <div className="relative p-3 lg:p-4 space-y-2 lg:space-y-3">
           {/* Header with category icon and tags */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
               <div className={`
-                p-2 rounded-xl transition-colors duration-200
+                p-1.5 lg:p-2 rounded-xl transition-colors duration-200
                 ${theme === 'frost' 
                   ? 'bg-white/20 group-hover:bg-white/30' 
                   : 'bg-spark-yellow/10 group-hover:bg-spark-yellow/20'
                 }
               `}>
-                <Icon className={`w-4 h-4 ${category.color}`} />
+                <Icon className={`w-3 h-3 lg:w-4 lg:h-4 ${category.color}`} />
               </div>
               <div className="flex flex-wrap gap-1">
                 {event.tags?.slice(0, 2).map((tag, i) => (
                   <span
                     key={i}
                     className={`
-                      px-2 py-1 text-xs font-medium rounded-full
+                      px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs font-medium rounded-full
                       ${theme === 'frost'
                         ? 'bg-blue-400/20 text-blue-100 border border-blue-300/30'
                         : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30'
@@ -260,14 +260,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           </div>
 
           {/* Event title */}
-          <h3 className="font-display font-semibold text-white text-lg leading-tight line-clamp-2 group-hover:text-spark-yellow transition-colors duration-200">
+          <h3 className="font-display font-semibold text-white text-base lg:text-lg leading-tight line-clamp-2 group-hover:text-spark-yellow transition-colors duration-200">
             {event.title}
           </h3>
 
           {/* Event details */}
-          <div className="space-y-2 text-sm text-white/70">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-pin-blue" />
+          <div className="space-y-1.5 lg:space-y-2 text-xs lg:text-sm text-white/70">
+            <div className="flex items-center gap-1.5 lg:gap-2">
+              <Calendar className="w-3 h-3 lg:w-4 lg:h-4 text-pin-blue" />
               <span className="font-medium">
                 {formatEventDate(event)}
                 {formatEventTime(event) && (
@@ -279,8 +279,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               </span>
             </div>
             
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-fresh-teal" />
+            <div className="flex items-center gap-1.5 lg:gap-2">
+              <MapPin className="w-3 h-3 lg:w-4 lg:h-4 text-fresh-teal" />
               <span className="truncate flex-1">
                 {event.address?.split(',')[0] || 'Location TBD'}
               </span>
@@ -292,20 +292,21 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
             </div>
           </div>
 
-          {/* Description preview */}
+          {/* Description preview - hide on very small screens */}
           {event.description && (
-            <p className="text-sm text-white/60 line-clamp-2 leading-relaxed">
+            <p className="hidden sm:block text-xs lg:text-sm text-white/60 line-clamp-2 leading-relaxed">
               {event.description}
             </p>
           )}
 
           {/* Action hint */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between pt-1.5 lg:pt-2">
             <div className="flex items-center gap-1 text-xs text-white/50">
-              <Zap className="w-3 h-3" />
-              <span>Click to explore</span>
+              <Zap className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
+              <span className="hidden sm:inline">Click to explore</span>
+              <span className="sm:hidden">Tap</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors duration-200" />
+            <ArrowRight className="w-3 h-3 lg:w-4 lg:h-4 text-white/30 group-hover:text-white/60 transition-colors duration-200" />
           </div>
         </div>
       </div>
@@ -316,17 +317,27 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     <div
       ref={containerRef}
       className={`
-        fixed right-4 top-4 z-30 w-96 max-h-[calc(100vh-2rem)]
-        backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
+        fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
         ${theme === 'frost'
           ? 'bg-white/10 border border-white/20'
           : 'bg-neutral-900/80 border border-white/10'
         }
-        ${isExpanded ? 'translate-x-0' : 'translate-x-80'}
+        ${isExpanded ? 'translate-x-0' : 'translate-x-full'}
+        /* Desktop: Right panel */
+        lg:right-4 lg:top-4 lg:w-96 lg:max-h-[calc(100vh-2rem)]
+        /* Mobile: Bottom sheet */
+        bottom-0 right-0 left-0 max-h-[80vh] lg:left-auto
+        /* Mobile collapsed state - show as bottom tab */
+        ${!isExpanded ? 'lg:translate-x-80' : ''}
       `}
     >
+      {/* Mobile Handle Bar - only show on mobile when expanded */}
+      <div className="lg:hidden flex justify-center p-2 border-b border-white/10">
+        <div className="w-12 h-1 bg-white/30 rounded-full" />
+      </div>
+
       {/* Header */}
-      <div className="p-6 border-b border-white/10">
+      <div className="p-4 lg:p-6 border-b border-white/10">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className={`
@@ -339,7 +350,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               <Compass className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg lg:text-xl font-display font-bold text-white flex items-center gap-2 flex-wrap">
                 Discover
                 {userActualLocation && (
                   <div className="flex items-center gap-1">
@@ -350,7 +361,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                   </div>
                 )}
               </h2>
-              <p className="text-sm text-white/60">
+              <p className="text-xs lg:text-sm text-white/60">
                 {userActualLocation ? 'Events near your location' : 'Events near you'}
               </p>
             </div>
@@ -373,18 +384,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           </button>
         </div>
 
-        {/* Emotional message */}
-        <div className="text-center py-3">
+        {/* Emotional message - smaller on mobile */}
+        <div className="text-center py-2 lg:py-3">
           <p 
             key={currentMessage}
-            className="text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
+            className="text-base lg:text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
           >
             {emotionalMessages[currentMessage]}
           </p>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 mt-4">
+        {/* Filter tabs - responsive layout */}
+        <div className="flex gap-1 lg:gap-2 mt-4">
           {[
             { key: 'upcoming', label: 'Soon', icon: Clock },
             { key: 'this_weekend', label: 'Weekend', icon: Star },
@@ -394,8 +405,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               key={key}
               onClick={() => setSelectedFilter(key)}
               className={`
-                flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg
-                text-sm font-medium transition-all duration-200
+                flex-1 flex items-center justify-center gap-1 lg:gap-2 py-2 px-2 lg:px-3 rounded-lg
+                text-xs lg:text-sm font-medium transition-all duration-200
                 ${selectedFilter === key
                   ? theme === 'frost'
                     ? 'bg-white/30 text-white border border-white/40'
@@ -404,8 +415,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                 }
               `}
             >
-              <Icon className="w-4 h-4" />
-              {label}
+              <Icon className="w-3 h-3 lg:w-4 lg:h-4" />
+              <span className="hidden sm:inline">{label}</span>
             </button>
           ))}
         </div>
@@ -413,21 +424,21 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
       {/* Content */}
       {isExpanded && (
-        <div className="p-4 overflow-y-auto max-h-96">
+        <div className="p-3 lg:p-4 overflow-y-auto max-h-60 lg:max-h-96">
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-3 lg:space-y-4">
               {[...Array(3)].map((_, i) => (
                 <div
                   key={i}
                   className={`
-                    h-32 rounded-2xl animate-pulse
+                    h-24 lg:h-32 rounded-2xl animate-pulse
                     ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
                   `}
                 />
               ))}
             </div>
           ) : recommendations.length > 0 ? (
-            <div key={animationKey} className="space-y-4">
+            <div key={animationKey} className="space-y-3 lg:space-y-4">
               {recommendations.map((event, index) => (
                 <EventCard key={event.id} event={event} index={index} />
               ))}
@@ -436,29 +447,30 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               <button
                 onClick={onExploreMore}
                 className={`
-                  w-full py-4 rounded-2xl font-medium transition-all duration-200
+                  w-full py-3 lg:py-4 rounded-2xl font-medium transition-all duration-200
                   hover:scale-[1.02] flex items-center justify-center gap-2
+                  text-sm lg:text-base
                   ${theme === 'frost'
                     ? 'bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border border-white/30 hover:from-blue-400/40 hover:to-purple-400/40'
                     : 'bg-gradient-to-r from-spark-yellow/20 to-pin-blue/20 text-white border border-spark-yellow/30 hover:from-spark-yellow/30 hover:to-pin-blue/30'
                   }
                 `}
               >
-                <Globe className="w-5 h-5" />
+                <Globe className="w-4 h-4 lg:w-5 lg:h-5" />
                 Explore all events on map
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4 lg:w-5 lg:h-5" />
               </button>
             </div>
           ) : (
-            <div className="text-center py-8 space-y-4">
+            <div className="text-center py-6 lg:py-8 space-y-4">
               <div className={`
-                w-16 h-16 rounded-full mx-auto flex items-center justify-center
+                w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
                 ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
               `}>
-                <Lightbulb className="w-8 h-8 text-white/60" />
+                <Lightbulb className="w-6 h-6 lg:w-8 lg:h-8 text-white/60" />
               </div>
               <div>
-                <h3 className="text-lg font-medium text-white mb-2">
+                <h3 className="text-base lg:text-lg font-medium text-white mb-2">
                   Nothing nearby right now
                 </h3>
                 <p className="text-white/60 text-sm mb-4">
@@ -467,15 +479,15 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                 <button
                   onClick={onExploreMore}
                   className={`
-                    px-6 py-3 rounded-xl font-medium transition-all duration-200
-                    hover:scale-[1.02] flex items-center gap-2 mx-auto
+                    px-4 lg:px-6 py-2 lg:py-3 rounded-xl font-medium transition-all duration-200
+                    hover:scale-[1.02] flex items-center gap-2 mx-auto text-sm lg:text-base
                     ${theme === 'frost'
                       ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
                       : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'
                     }
                   `}
                 >
-                  <Target className="w-4 h-4" />
+                  <Target className="w-3 h-3 lg:w-4 lg:h-4" />
                   Explore other cities
                 </button>
               </div>
@@ -486,8 +498,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
       {/* Collapsed state hint */}
       {!isExpanded && (
-        <div className="p-4 text-center">
-          <Sparkles className="w-6 h-6 text-spark-yellow mx-auto animate-pulse" />
+        <div className="p-3 lg:p-4 text-center">
+          <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-spark-yellow mx-auto animate-pulse" />
           <p className="text-xs text-white/60 mt-1">Recommendations</p>
         </div>
       )}
@@ -496,7 +508,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       {showLocationPopup && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className={`
-            relative max-w-md w-full rounded-2xl p-6 shadow-2xl animate-scale-in
+            relative max-w-sm lg:max-w-md w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in
             ${theme === 'frost'
               ? 'bg-white/20 border border-white/30'
               : 'bg-neutral-900/90 border border-white/20'
@@ -508,24 +520,24 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                 setLocationPermissionAsked(true);
                 localStorage.setItem('locationPermissionAsked', 'true');
               }}
-              className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
+              className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
             >
-              <X className="w-5 h-5 text-white/70" />
+              <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
             </button>
             
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-3 lg:space-y-4">
               <div className={`
-                w-16 h-16 rounded-full mx-auto flex items-center justify-center
+                w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
                 ${theme === 'frost' 
                   ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
                   : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
                 }
               `}>
-                <Navigation className="w-8 h-8 text-white" />
+                <Navigation className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
               </div>
               
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">
+                <h3 className="text-lg lg:text-xl font-bold text-white mb-2">
                   Find Events Near You
                 </h3>
                 <p className="text-white/70 text-sm leading-relaxed">
@@ -539,14 +551,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                   onClick={requestUserLocation}
                   className={`
                     w-full py-3 px-4 rounded-xl font-medium transition-all duration-200
-                    hover:scale-[1.02] flex items-center justify-center gap-2
+                    hover:scale-[1.02] flex items-center justify-center gap-2 text-sm lg:text-base
                     ${theme === 'frost'
                       ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 text-white border border-white/40 hover:from-blue-400/50 hover:to-purple-400/50'
                       : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
                     }
                   `}
                 >
-                  <Navigation className="w-5 h-5" />
+                  <Navigation className="w-4 h-4 lg:w-5 lg:h-5" />
                   Share My Location
                 </button>
                 
@@ -556,7 +568,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                     setLocationPermissionAsked(true);
                     localStorage.setItem('locationPermissionAsked', 'true');
                   }}
-                  className="w-full py-3 px-4 rounded-xl font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  className="w-full py-3 px-4 rounded-xl font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm lg:text-base"
                 >
                   Maybe Later
                 </button>
