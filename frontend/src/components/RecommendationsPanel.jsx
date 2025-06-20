@@ -426,34 +426,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   };
 
   return (
-    <>
-      {/* DEBUG: Super obvious test panel */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '50px',
-          right: '50px',
-          width: '300px',
-          height: '200px',
-          backgroundColor: 'red',
-          color: 'white',
-          zIndex: 9999,
-          border: '5px solid yellow',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '20px',
-          fontWeight: 'bold'
-        }}
-      >
-        RECOMMENDATIONS PANEL IS HERE!
-      </div>
-      
     <div
       ref={containerRef}
       className={`
         fixed z-50 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
-        border-4 border-red-500 bg-red-500/20
         ${theme === 'frost'
           ? 'bg-white/10 border border-white/20'
           : 'bg-neutral-900/80 border border-white/10'
@@ -469,12 +445,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         }
         ${isExpanded ? 'translate-x-0' : 'translate-x-full'}
       `}
-      style={{ 
-        minHeight: '200px',
-        backgroundColor: 'rgba(255, 0, 0, 0.5)',
-        border: '4px solid red',
-        zIndex: 9999
-      }}
     >
       {/* Mobile Handle Bar - only show on mobile when expanded */}
       <div className="lg:hidden flex justify-center p-2 border-b border-white/10">
@@ -867,7 +837,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         </div>
       )}
     </div>
-    </>
   );
 };
 
