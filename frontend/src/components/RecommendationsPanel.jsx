@@ -1,0 +1,429 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useTheme } from './ThemeContext';
+import { 
+  Calendar,
+  Clock,
+  MapPin,
+  Star,
+  Sparkles,
+  Heart,
+  Compass,
+  Globe,
+  Zap,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  Target,
+  TrendingUp,
+  Gift
+} from 'lucide-react';
+import { WebIcon } from './EventMap/WebIcons';
+import { CategoryIcon } from './EventMap/CategoryIcons';
+import categories, { getCategory } from './EventMap/categoryConfig';
+import { API_URL } from '../config';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
+
+const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => {
+  const { theme } = useTheme();
+  const [recommendations, setRecommendations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState('upcoming');
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [animationKey, setAnimationKey] = useState(0);
+  const containerRef = useRef(null);
+
+  // Emotional copy variations
+  const emotionalMessages = [
+    "Discover magic happening near you",
+    "Your next adventure awaits",
+    "Life's too short for boring weekends",
+    "The world is full of wonder",
+    "Connect with your community",
+    "Create memories that last forever"
+  ];
+
+  const [currentMessage, setCurrentMessage] = useState(0);
+
+  // Rotate emotional messages
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentMessage(prev => (prev + 1) % emotionalMessages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch recommendations
+  useEffect(() => {
+    fetchRecommendations();
+  }, [userLocation, selectedFilter]);
+
+  const fetchRecommendations = async () => {
+    setLoading(true);
+    try {
+      const requestBody = {
+        lat: userLocation?.lat || null,
+        lng: userLocation?.lng || null,
+        city: userLocation?.city || null,
+        time_filter: selectedFilter,
+        limit: 8
+      };
+
+      const response = await fetchWithTimeout(`${API_URL}/api/recommendations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }, 10000);
+
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendations(data.events || []);
+        setAnimationKey(prev => prev + 1);
+      } else {
+        console.error('Failed to fetch recommendations');
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatEventDate = (event) => {
+    try {
+      const date = new Date(event.date);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow';
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+      }
+    } catch {
+      return event.date;
+    }
+  };
+
+  const formatEventTime = (event) => {
+    try {
+      if (!event.start_time) return '';
+      const [hours, minutes] = event.start_time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${displayHour}:${minutes} ${ampm}`;
+    } catch {
+      return event.start_time || '';
+    }
+  };
+
+  const getDistanceText = (distance) => {
+    if (!distance || distance === Infinity) return '';
+    if (distance < 1) return 'Very close';
+    if (distance < 5) return `${distance.toFixed(1)} mi`;
+    if (distance < 25) return `${Math.round(distance)} mi`;
+    return 'Worth the trip';
+  };
+
+  const EventCard = ({ event, index }) => {
+    const category = getCategory(event.category);
+    const Icon = category.icon;
+
+    return (
+      <div
+        className={`
+          group relative overflow-hidden rounded-2xl backdrop-blur-sm
+          transition-all duration-500 hover:scale-[1.02] cursor-pointer
+          animate-slide-in-up
+          ${theme === 'frost' 
+            ? 'bg-white/15 border border-white/20 hover:bg-white/25' 
+            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+          }
+        `}
+        style={{
+          animationDelay: `${index * 100}ms`,
+          animationFillMode: 'both'
+        }}
+        onClick={() => onEventClick && onEventClick(event)}
+      >
+        {/* Gradient overlay */}
+        <div className={`
+          absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300
+          ${theme === 'frost' 
+            ? 'bg-gradient-to-br from-blue-400/10 to-purple-400/10' 
+            : 'bg-gradient-to-br from-spark-yellow/5 to-pin-blue/5'
+          }
+        `} />
+
+        {/* Content */}
+        <div className="relative p-4 space-y-3">
+          {/* Header with category icon and tags */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`
+                p-2 rounded-xl transition-colors duration-200
+                ${theme === 'frost' 
+                  ? 'bg-white/20 group-hover:bg-white/30' 
+                  : 'bg-spark-yellow/10 group-hover:bg-spark-yellow/20'
+                }
+              `}>
+                <Icon className={`w-4 h-4 ${category.color}`} />
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {event.tags?.slice(0, 2).map((tag, i) => (
+                  <span
+                    key={i}
+                    className={`
+                      px-2 py-1 text-xs font-medium rounded-full
+                      ${theme === 'frost'
+                        ? 'bg-blue-400/20 text-blue-100 border border-blue-300/30'
+                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30'
+                      }
+                    `}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Event title */}
+          <h3 className="font-display font-semibold text-white text-lg leading-tight line-clamp-2 group-hover:text-spark-yellow transition-colors duration-200">
+            {event.title}
+          </h3>
+
+          {/* Event details */}
+          <div className="space-y-2 text-sm text-white/70">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-pin-blue" />
+              <span className="font-medium">
+                {formatEventDate(event)}
+                {formatEventTime(event) && (
+                  <>
+                    <span className="text-white/50 mx-1">•</span>
+                    {formatEventTime(event)}
+                  </>
+                )}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-fresh-teal" />
+              <span className="truncate flex-1">
+                {event.address?.split(',')[0] || 'Location TBD'}
+              </span>
+              {event.distance && (
+                <span className="text-xs text-white/50">
+                  {getDistanceText(event.distance)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Description preview */}
+          {event.description && (
+            <p className="text-sm text-white/60 line-clamp-2 leading-relaxed">
+              {event.description}
+            </p>
+          )}
+
+          {/* Action hint */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-1 text-xs text-white/50">
+              <Zap className="w-3 h-3" />
+              <span>Click to explore</span>
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-white/60 transition-colors duration-200" />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={`
+        fixed right-4 top-4 z-30 w-96 max-h-[calc(100vh-2rem)]
+        backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
+        ${theme === 'frost'
+          ? 'bg-white/10 border border-white/20'
+          : 'bg-neutral-900/80 border border-white/10'
+        }
+        ${isExpanded ? 'translate-x-0' : 'translate-x-80'}
+      `}
+    >
+      {/* Header */}
+      <div className="p-6 border-b border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`
+              p-2 rounded-xl
+              ${theme === 'frost' 
+                ? 'bg-gradient-to-br from-blue-400/20 to-purple-400/20' 
+                : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
+              }
+            `}>
+              <Compass className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-display font-bold text-white">
+                Discover
+              </h2>
+              <p className="text-sm text-white/60">
+                Events near you
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`
+              p-2 rounded-lg transition-colors duration-200
+              ${theme === 'frost'
+                ? 'hover:bg-white/20'
+                : 'hover:bg-white/10'
+              }
+            `}
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-5 h-5 text-white/70" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-white/70" />
+            )}
+          </button>
+        </div>
+
+        {/* Emotional message */}
+        <div className="text-center py-3">
+          <p 
+            key={currentMessage}
+            className="text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
+          >
+            {emotionalMessages[currentMessage]}
+          </p>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 mt-4">
+          {[
+            { key: 'upcoming', label: 'Soon', icon: Clock },
+            { key: 'this_weekend', label: 'Weekend', icon: Star },
+            { key: 'next_2_weeks', label: '2 Weeks', icon: TrendingUp }
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setSelectedFilter(key)}
+              className={`
+                flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg
+                text-sm font-medium transition-all duration-200
+                ${selectedFilter === key
+                  ? theme === 'frost'
+                    ? 'bg-white/30 text-white border border-white/40'
+                    : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
+                  : 'text-white/60 hover:bg-white/10 border border-transparent'
+                }
+              `}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      {isExpanded && (
+        <div className="p-4 overflow-y-auto max-h-96">
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`
+                    h-32 rounded-2xl animate-pulse
+                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                  `}
+                />
+              ))}
+            </div>
+          ) : recommendations.length > 0 ? (
+            <div key={animationKey} className="space-y-4">
+              {recommendations.map((event, index) => (
+                <EventCard key={event.id} event={event} index={index} />
+              ))}
+              
+              {/* Explore more button */}
+              <button
+                onClick={onExploreMore}
+                className={`
+                  w-full py-4 rounded-2xl font-medium transition-all duration-200
+                  hover:scale-[1.02] flex items-center justify-center gap-2
+                  ${theme === 'frost'
+                    ? 'bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border border-white/30 hover:from-blue-400/40 hover:to-purple-400/40'
+                    : 'bg-gradient-to-r from-spark-yellow/20 to-pin-blue/20 text-white border border-spark-yellow/30 hover:from-spark-yellow/30 hover:to-pin-blue/30'
+                  }
+                `}
+              >
+                <Globe className="w-5 h-5" />
+                Explore all events on map
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-8 space-y-4">
+              <div className={`
+                w-16 h-16 rounded-full mx-auto flex items-center justify-center
+                ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+              `}>
+                <Lightbulb className="w-8 h-8 text-white/60" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-white mb-2">
+                  Nothing nearby right now
+                </h3>
+                <p className="text-white/60 text-sm mb-4">
+                  But there's a whole world of events to discover!
+                </p>
+                <button
+                  onClick={onExploreMore}
+                  className={`
+                    px-6 py-3 rounded-xl font-medium transition-all duration-200
+                    hover:scale-[1.02] flex items-center gap-2 mx-auto
+                    ${theme === 'frost'
+                      ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                      : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'
+                    }
+                  `}
+                >
+                  <Target className="w-4 h-4" />
+                  Explore other cities
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collapsed state hint */}
+      {!isExpanded && (
+        <div className="p-4 text-center">
+          <Sparkles className="w-6 h-6 text-spark-yellow mx-auto animate-pulse" />
+          <p className="text-xs text-white/60 mt-1">Recommendations</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RecommendationsPanel;

@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import traceback
+import math
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from contextlib import contextmanager
@@ -395,9 +396,6 @@ def validate_recurring_event(event_data, user_role):
     # For now, just return the event data unchanged
     # Can be enhanced later with actual validation logic
     return event_data
-
-
-
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -1663,99 +1661,8 @@ try:
         logger.info("✅ Default admin user initialization completed")
 except Exception as e:
     logger.error(f"❌ Error creating default admin user during startup: {str(e)}")
-class PasswordValidator:
-    """
-    Comprehensive password validation system with detailed feedback
-    """
-    @staticmethod
-    def validate_password(password: str) -> dict:
-        """
-        Validate password and return detailed feedback
-        
-        Returns a dictionary with:
-        - is_valid: Boolean indicating if password meets all criteria
-        - feedback: List of specific validation messages
-        - strength: Strength rating (weak/medium/strong)
-        """
-        # Initialize validation results
-        validation_result = {
-            "is_valid": True,
-            "feedback": [],
-            "strength": "weak"
-        }
-        
-        # Check length - reduced requirement
-        if len(password) < 6:
-            validation_result["is_valid"] = False
-            validation_result["feedback"].append(
-                "Password must be at least 6 characters long"
-            )
-        
-        # Count character types present
-        character_types = 0
-        character_type_messages = []
-        
-        # Check for uppercase letters
-        if re.search(r'[A-Z]', password):
-            character_types += 1
-        else:
-            character_type_messages.append("uppercase letter")
-        
-        # Check for lowercase letters
-        if re.search(r'[a-z]', password):
-            character_types += 1
-        else:
-            character_type_messages.append("lowercase letter")
-        
-        # Check for numbers
-        if re.search(r'\d', password):
-            character_types += 1
-        else:
-            character_type_messages.append("number")
-        
-        # Check for special characters
-        if re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            character_types += 1
-        else:
-            character_type_messages.append("special character (!@#$%^&*(),.?\":{}|<>)")
-        
-        # Require at least 3 out of 4 character types (more flexible)
-        if character_types < 3:
-            validation_result["is_valid"] = False
-            missing_types = 4 - character_types
-            validation_result["feedback"].append(
-                f"Password must contain at least 3 different character types. "
-                f"Missing {missing_types} types from: {', '.join(character_type_messages)}"
-            )
-        
-        # Check for common weak passwords
-        common_weak_passwords = [
-            "password", "123456", "qwerty", "admin", 
-            "letmein", "welcome", "monkey", "abc123"
-        ]
-        if password.lower() in common_weak_passwords:
-            validation_result["is_valid"] = False
-            validation_result["feedback"].append(
-                "Password is too common and easily guessable"
-            )
-        
-        # Determine strength based on length and character variety
-        strength_criteria = 0
-        if len(password) >= 8:
-            strength_criteria += 1
-        if len(password) >= 12:
-            strength_criteria += 1
-        strength_criteria += character_types
-        
-        if strength_criteria <= 2:
-            validation_result["strength"] = "weak"
-        elif strength_criteria <= 4:
-            validation_result["strength"] = "medium"
-        else:
-            validation_result["strength"] = "strong"
-        
-        return validation_result
-# Pydantic Models
+
+# ... (rest of the code remains unchanged)
 class EventBase(BaseModel):
     title: str
     description: str
@@ -1930,7 +1837,6 @@ class EventResponse(EventBase):
 
 class UserBase(BaseModel):
     email: EmailStr
-
 class UserCreate(UserBase):
     password: str
     role: UserRole = UserRole.USER
@@ -2680,7 +2586,6 @@ async def read_event(event_id: int):
     except Exception as e:
         logger.error(f"Error retrieving event {event_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving event")
-
 def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
     """Ensure slug uniqueness by appending event ID if needed"""
     if not base_slug:
@@ -4805,7 +4710,6 @@ async def get_premium_trial_status(current_user: dict = Depends(get_current_user
     except Exception as e:
         logger.error(f"Error getting trial status: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get trial status")
-
 # User account management endpoints
 @app.post("/user/delete-account")
 async def delete_user_account(current_user: dict = Depends(get_current_user)):
@@ -4949,7 +4853,6 @@ async def delete_user_account(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error deleting user account {current_user['id']}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to delete account")
-
 @app.post("/user/cancel-account-deletion")
 async def cancel_account_deletion(current_user: dict = Depends(get_current_user)):
     """
@@ -5586,7 +5489,6 @@ async def get_detailed_subscription_status(current_user: dict = Depends(get_curr
 async def test_webhook():
     """Simple test endpoint to verify webhook URL is reachable"""
     return {"status": "ok", "message": "Webhook endpoint is reachable", "timestamp": datetime.utcnow().isoformat()}
-
 @app.post("/admin/quick-upgrade-user-3")
 async def quick_upgrade_user_3():
     """Quick upgrade for user 3 since payment was successful but webhook may have been missed"""
@@ -5734,7 +5636,6 @@ async def stripe_webhook(request: Request):
         logger.error(f"❌ Webhook traceback: {traceback.format_exc()}")
         # Return 200 to prevent Stripe from retrying
         return {"status": "error", "message": str(e)}
-
 async def handle_successful_payment(session):
     """Handle successful payment from Stripe checkout"""
     try:
@@ -6280,6 +6181,7 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
     except Exception as e:
         logger.error(f"Error getting subscription status: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get subscription status")
+
 # Enhanced Marketing Analytics Endpoints
 
 # Comprehensive analytics now handled by main /users/analytics endpoint with comprehensive=true parameter
@@ -7646,7 +7548,7 @@ async def get_enterprise_overview(
                     COUNT(DISTINCT CASE WHEN e.created_by IS NOT NULL THEN u.id END) as active_clients
                 FROM users u
                 LEFT JOIN events e ON u.id = e.created_by
-                WHERE u.role IN ('user', 'premium', 'enterprise')
+                WHERE u.role IN ('user', 'premium')
             """)
             client_data = c.fetchone()
             
@@ -8520,7 +8422,6 @@ def sanitize_ux_field(value):
     result = value if value is not None else ""
     logger.info(f"sanitize_ux_field returning: {result!r} (type: {type(result)})")
     return result
-
 def convert_event_datetime_fields(event_dict):
     """Convert datetime objects to ISO format strings for API response"""
     from datetime import datetime, timezone
@@ -9890,16 +9791,16 @@ async def verify_premium_events(current_user: dict = Depends(get_current_user)):
         logger.error(f"Error verifying premium events: {str(e)}")
         raise HTTPException(status_code=500, detail="Error verifying premium events")
 
-@app.get("/admin/analytics/page-visits")
-async def get_page_visits_analytics(
-    current_user: dict = Depends(get_current_user),
-    metric: str = "page_visits",  # page_visits
-    period: str = "daily",   # daily, weekly, monthly
-    cumulative: Optional[bool] = None,  # Auto-default to True for page visits
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    exclude_users: Optional[str] = None,
-    page_type: Optional[str] = None  # Filter by page type
+# Register recommendations endpoints
+try:
+    from recommendations_endpoints import create_recommendations_endpoints
+    create_recommendations_endpoints(app, get_db, get_placeholder)
+    logger.info("Recommendations endpoints registered successfully")
+except Exception as e:
+    logger.error(f"Failed to register recommendations endpoints: {e}")
+
+@app.post("/events/route-batch")
+async def get_route_events_batch(request: RouteEventRequest):
 ):
     """Get page visit analytics with time series data"""
     # Check admin permission
@@ -10586,7 +10487,13 @@ async def read_users_me(current_user: dict = Depends(get_current_user)):
     """Get current user information"""
     return current_user
 
-@app.post("/events/route-batch")
+# Register recommendations endpoints
+try:
+    from recommendations_endpoints import create_recommendations_endpoints
+    create_recommendations_endpoints(app, get_db, get_placeholder)
+    logger.info("Recommendations endpoints registered successfully")
+except Exception as e:
+    logger.error(f"Failed to register recommendations endpoints: {e}")
 async def get_route_events_batch(request: RouteEventRequest):
     """
     Efficiently retrieve events along a route using batch processing.
