@@ -8,6 +8,9 @@
  * @returns {Promise<any>} - Parsed response data
  */
 
+// Import API_URL from config to get proper fallback
+import { API_URL as CONFIG_API_URL } from '../config';
+
 // Track connection health
 let connectionHealth = {
   isHealthy: true,
@@ -41,7 +44,8 @@ const performHealthCheck = async () => {
   }
   
   try {
-    const API_URL = import.meta.env.VITE_API_URL;
+    // Import API_URL from config to get proper fallback instead of undefined
+    const { API_URL } = await import('../config.js');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // Quick 5s timeout for health check
     
@@ -104,7 +108,8 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
   const maxAttempts = 3;
   
   // Pre-flight connection health check for critical endpoints
-  const isCriticalEndpoint = url.includes('/events') || url.includes('/auth');
+  // Temporarily disabled to prevent blocking recommendations - health check causing issues
+  const isCriticalEndpoint = false; // url.includes('/events') || url.includes('/auth');
   if (isCriticalEndpoint && attempt === 1) {
     const isHealthy = await performHealthCheck();
     if (!isHealthy && connectionHealth.consecutiveFailures > 2) {
