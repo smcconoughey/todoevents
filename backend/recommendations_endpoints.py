@@ -456,8 +456,10 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     AND city != ''
                     AND state != ''
                     GROUP BY city, state
-                    HAVING distance_miles <= {max_distance}
-                    AND event_count >= 2
+                    HAVING (6371 * acos(cos(radians({lat})) * cos(radians(AVG(lat))) * 
+                           cos(radians(AVG(lng)) - radians({lng})) + sin(radians({lat})) * 
+                           sin(radians(AVG(lat))))) * 0.621371 <= {max_distance}
+                    AND COUNT(*) >= 2
                     ORDER BY distance_miles ASC
                     LIMIT {limit * 2}
                 """
