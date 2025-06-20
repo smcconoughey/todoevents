@@ -28,6 +28,8 @@ import categories, { getCategory } from './EventMap/categoryConfig';
 import { API_URL } from '../config';
 
 const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => {
+  console.log('RecommendationsPanel rendering with location:', userLocation);
+  
   const { theme } = useTheme();
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -427,7 +429,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     <div
       ref={containerRef}
       className={`
-        fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
+        fixed z-50 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
         ${theme === 'frost'
           ? 'bg-white/10 border border-white/20'
           : 'bg-neutral-900/80 border border-white/10'
