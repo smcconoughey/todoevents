@@ -3,6 +3,12 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "dependencies": {
+    "@emailjs/browser": "^3.11.0",
+    "@react-oauth/google": "^0.11.1",
+    "@react-pdf/renderer": "^3.1.12",
+    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "openai": "^4.20.0",
     "react-helmet-async": "^2.0.5"
   }
 }

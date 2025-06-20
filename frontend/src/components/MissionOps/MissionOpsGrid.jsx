@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Target, Calendar, Users, AlertTriangle, FileText, Clock, Grip, Settings, Home } from 'lucide-react';
+import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
+import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { useTheme } from '../ThemeContext';
 import MissionContainer from './MissionContainer';
 import CreateMissionModal from './CreateMissionModal';

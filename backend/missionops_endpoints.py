@@ -1,45 +1,46 @@
 """
-MissionOps API Endpoints
-All endpoints are prefixed with /missionops to avoid conflicts with existing todo-events endpoints.
+MissionOps API Endpoints - Isolated planning tool endpoints
+All endpoints are prefixed with /missionops to avoid conflicts with main todo-events
 """
 
 import json
 import logging
-from datetime import datetime, date
-from typing import List, Optional
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, Depends, Query
 
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import JSONResponse
-
-# Import existing auth and database utilities
-from shared_utils import get_current_user, get_db, get_placeholder, IS_PRODUCTION, DB_URL
-
-# Import MissionOps models and utilities
 from missionops_models import (
     MissionCreate, MissionUpdate, MissionResponse,
-    MissionRelationshipCreate, MissionRelationshipResponse,
     TaskCreate, TaskUpdate, TaskResponse,
+    RiskCreate, RiskUpdate, RiskResponse,
+    DecisionLogCreate, DecisionLogResponse,
+    MissionShareCreate, MissionShareResponse,
+    MissionRelationshipCreate, MissionRelationshipResponse,
     TaskCreateEnhanced, TaskUpdateEnhanced, TaskResponseEnhanced,
     TaskDependencyCreate, TaskDependencyResponse,
     ResourceCreate, ResourceResponse,
     TaskResourceCreate, TaskResourceResponse,
-    RiskCreate, RiskUpdate, RiskResponse,
     RiskCreateEnhanced, RiskResponseEnhanced,
     DecisionWorkflowCreate, DecisionWorkflowResponse,
     DecisionNodeCreate, DecisionNodeUpdate, DecisionNodeResponse,
     DecisionConnectionCreate, DecisionConnectionResponse,
     AIInsightCreate, AIInsightResponse,
-    DecisionLogCreate, DecisionLogResponse,
     DecisionLogCreateEnhanced, DecisionLogResponseEnhanced,
-    MissionShareCreate, MissionShareResponse,
-    init_missionops_db, dict_from_row, get_user_missions_access, has_mission_access,
-    get_mission_tasks_with_subtasks, get_task_by_id, get_mission_by_id
+    init_missionops_db, dict_from_row,
+    get_user_missions_access, has_mission_access, get_mission_tasks_with_subtasks,
+    get_task_by_id, get_mission_by_id
 )
+
+from shared_utils import get_current_user, get_db, get_placeholder, IS_PRODUCTION, DB_URL
 
 logger = logging.getLogger(__name__)
 
-# Create router for MissionOps endpoints
-missionops_router = APIRouter(prefix="/missionops", tags=["MissionOps"])
+# Create router with missionops prefix
+missionops_router = APIRouter(
+    prefix="/missionops",
+    tags=["missionops"],
+    dependencies=[Depends(get_current_user)]
+)
 
 # Initialize database on import
 init_missionops_db()
@@ -1535,76 +1536,120 @@ async def generate_ai_insights(mission_id: int, current_user: dict = Depends(get
         raise HTTPException(status_code=403, detail="Access denied")
     
     try:
+        # Import AI module
+        from missionops_ai import missionops_ai
+        
         # Get mission data for analysis
         mission = get_mission_by_id(mission_id, current_user["id"])
         if not mission:
             raise HTTPException(status_code=404, detail="Mission not found")
         
-        tasks = get_mission_tasks_with_subtasks(mission_id)
+        # Get all user's missions (for cross-mission analysis)
+        all_missions = []
+        all_tasks = []
+        all_relationships = []
+        all_dependencies = []
         
-        # Generate insights using simple heuristics (can be replaced with actual AI later)
-        insights = []
-        
-        # Risk analysis
-        high_risk_tasks = [t for t in tasks if t.get('priority') == 'critical' and t.get('status') != 'completed']
-        if high_risk_tasks:
-            insights.append({
-                'insight_type': 'risk_analysis',
-                'title': 'High-Risk Tasks Detected',
-                'content': f'Found {len(high_risk_tasks)} critical priority tasks that require immediate attention.',
-                'confidence_score': 0.9,
-                'action_items': json.dumps([f"Review task: {t['title']}" for t in high_risk_tasks[:3]]),
-                'priority_level': 'high'
-            })
-        
-        # Timeline analysis
-        overdue_tasks = []
-        for task in tasks:
-            if task.get('due_date') and task.get('status') != 'completed':
-                try:
-                    due_date = datetime.fromisoformat(task['due_date'].replace('Z', '+00:00'))
-                    if due_date < datetime.now():
-                        overdue_tasks.append(task)
-                except:
-                    pass
-        
-        if overdue_tasks:
-            insights.append({
-                'insight_type': 'timeline_analysis',
-                'title': 'Overdue Tasks Impact Timeline',
-                'content': f'{len(overdue_tasks)} overdue tasks may impact mission timeline.',
-                'confidence_score': 0.95,
-                'action_items': json.dumps(['Reschedule overdue tasks', 'Update mission timeline', 'Notify stakeholders']),
-                'priority_level': 'high'
-            })
-        
-        # Bottleneck detection
-        incomplete_tasks = [t for t in tasks if t.get('status') not in ['completed', 'cancelled']]
-        if len(incomplete_tasks) > 10:
-            insights.append({
-                'insight_type': 'bottleneck_detection',
-                'title': 'Task Overload Detected',
-                'content': f'Mission has {len(incomplete_tasks)} incomplete tasks which may indicate resource bottlenecks.',
-                'confidence_score': 0.8,
-                'action_items': json.dumps(['Review task priorities', 'Consider task delegation', 'Break down complex tasks']),
-                'priority_level': 'medium'
-            })
-        
-        # Priority optimization
-        unassigned_tasks = [t for t in tasks if not t.get('assigned_to') and t.get('status') not in ['completed', 'cancelled']]
-        if unassigned_tasks:
-            insights.append({
-                'insight_type': 'priority_optimization',
-                'title': 'Unassigned Tasks Need Attention',
-                'content': f'{len(unassigned_tasks)} tasks are unassigned and may delay mission progress.',
-                'confidence_score': 0.85,
-                'action_items': json.dumps(['Assign task owners', 'Review resource availability', 'Prioritize critical tasks']),
-                'priority_level': 'medium'
-            })
-        
-        # Store insights in database
         placeholder = get_placeholder()
         
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get all missions the user has access to
+            c.execute(f'''
+                SELECT DISTINCT m.*
+                FROM missionops_missions m
+                LEFT JOIN missionops_mission_shares s ON m.id = s.mission_id
+                WHERE m.owner_id = {placeholder} OR s.shared_with_id = {placeholder}
+                ORDER BY m.created_at DESC
+            ''', (current_user["id"], current_user["id"]))
+            
+            for mission_row in c.fetchall():
+                mission_dict = dict(mission_row)
+                mission_dict = convert_datetime_to_string(mission_dict)
+                all_missions.append(mission_dict)
+                
+                # Get tasks for each mission
+                mission_tasks = get_mission_tasks_with_subtasks(mission_dict['id'])
+                all_tasks.extend(mission_tasks)
+            
+            # Get all relationships
+            c.execute(f'''
+                SELECT r.* FROM missionops_mission_relationships r
+                JOIN missionops_missions m1 ON r.from_mission_id = m1.id
+                JOIN missionops_missions m2 ON r.to_mission_id = m2.id
+                WHERE m1.owner_id = {placeholder} OR m2.owner_id = {placeholder}
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m1.id AND s.shared_with_id = {placeholder})
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m2.id AND s.shared_with_id = {placeholder})
+            ''', (current_user["id"], current_user["id"], current_user["id"], current_user["id"]))
+            
+            for rel_row in c.fetchall():
+                rel_dict = dict(rel_row)
+                rel_dict = convert_datetime_to_string(rel_dict)
+                all_relationships.append(rel_dict)
+            
+            # Get all task dependencies
+            c.execute(f'''
+                SELECT d.* FROM missionops_task_dependencies d
+                JOIN missionops_tasks t1 ON d.predecessor_task_id = t1.id
+                JOIN missionops_tasks t2 ON d.successor_task_id = t2.id
+                JOIN missionops_missions m1 ON t1.mission_id = m1.id
+                JOIN missionops_missions m2 ON t2.mission_id = m2.id
+                WHERE m1.owner_id = {placeholder} OR m2.owner_id = {placeholder}
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m1.id AND s.shared_with_id = {placeholder})
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m2.id AND s.shared_with_id = {placeholder})
+            ''', (current_user["id"], current_user["id"], current_user["id"], current_user["id"]))
+            
+            for dep_row in c.fetchall():
+                dep_dict = dict(dep_row)
+                dep_dict = convert_datetime_to_string(dep_dict)
+                all_dependencies.append(dep_dict)
+        
+        # Use AI to generate insights if configured
+        if missionops_ai.client:
+            logger.info(f"Generating AI insights for mission {mission_id} using LLM")
+            insights = missionops_ai.generate_insights_for_mission(
+                mission_id, all_missions, all_tasks, all_relationships, all_dependencies
+            )
+        else:
+            # Fallback to heuristic-based insights
+            logger.warning("No AI provider configured, using heuristic insights")
+            insights = []
+            
+            # Risk analysis
+            high_risk_tasks = [t for t in all_tasks if t.get('mission_id') == mission_id and t.get('priority') == 'critical' and t.get('status') != 'completed']
+            if high_risk_tasks:
+                insights.append({
+                    'insight_type': 'risk_analysis',
+                    'title': 'High-Risk Tasks Detected',
+                    'content': f'Found {len(high_risk_tasks)} critical priority tasks that require immediate attention.',
+                    'confidence_score': 0.9,
+                    'action_items': json.dumps([f"Review task: {t['title']}" for t in high_risk_tasks[:3]]),
+                    'priority_level': 'high'
+                })
+            
+            # Timeline analysis
+            overdue_tasks = []
+            for task in all_tasks:
+                if task.get('mission_id') == mission_id and task.get('due_date') and task.get('status') != 'completed':
+                    try:
+                        due_date = datetime.fromisoformat(task['due_date'].replace('Z', '+00:00'))
+                        if due_date < datetime.now():
+                            overdue_tasks.append(task)
+                    except:
+                        pass
+            
+            if overdue_tasks:
+                insights.append({
+                    'insight_type': 'timeline_analysis',
+                    'title': 'Overdue Tasks Impact Timeline',
+                    'content': f'{len(overdue_tasks)} overdue tasks may impact mission timeline.',
+                    'confidence_score': 0.95,
+                    'action_items': json.dumps(['Reschedule overdue tasks', 'Update mission timeline', 'Notify stakeholders']),
+                    'priority_level': 'high'
+                })
+        
+        # Store insights in database
         with get_db() as conn:
             c = conn.cursor()
             
@@ -1625,7 +1670,7 @@ async def generate_ai_insights(mission_id: int, current_user: dict = Depends(get
                         VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                         RETURNING id
                     ''', (mission_id, insight['insight_type'], insight['title'], insight['content'],
-                          insight['confidence_score'], insight['action_items'], insight['priority_level']))
+                          insight.get('confidence_score'), insight.get('action_items'), insight['priority_level']))
                     insight_id = c.fetchone()['id']
                 else:
                     c.execute(f'''
@@ -1633,7 +1678,7 @@ async def generate_ai_insights(mission_id: int, current_user: dict = Depends(get
                         (mission_id, insight_type, title, content, confidence_score, action_items, priority_level)
                         VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                     ''', (mission_id, insight['insight_type'], insight['title'], insight['content'],
-                          insight['confidence_score'], insight['action_items'], insight['priority_level']))
+                          insight.get('confidence_score'), insight.get('action_items'), insight['priority_level']))
                     insight_id = c.lastrowid
                 
                 # Get the created insight
@@ -1646,7 +1691,8 @@ async def generate_ai_insights(mission_id: int, current_user: dict = Depends(get
         
         return {
             "detail": f"Generated {len(result_insights)} AI insights",
-            "insights": result_insights
+            "insights": result_insights,
+            "ai_provider": AI_PROVIDER if missionops_ai.client else "heuristic"
         }
         
     except HTTPException:
@@ -1892,3 +1938,122 @@ async def debug_mission_access(mission_id: int, current_user: dict = Depends(get
             "user_id": current_user.get("id"),
             "mission_id": mission_id
         }
+
+# Add this after the other AI insights endpoints
+
+@missionops_router.post("/api/ai/analyze")
+async def analyze_mission_network(
+    network_data: Optional[Dict] = None,
+    mission_id: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Analyze mission network with AI to generate insights.
+    Can either provide full network data or just a mission_id to analyze.
+    """
+    try:
+        from missionops_ai import missionops_ai, AI_PROVIDER
+        
+        if not missionops_ai.client:
+            raise HTTPException(status_code=503, detail="AI service not configured")
+        
+        # If network data is provided directly, use it
+        if network_data:
+            analysis = missionops_ai.analyze_mission_network(network_data)
+            if not analysis:
+                raise HTTPException(status_code=500, detail="Failed to analyze network")
+            
+            return {
+                "analysis": analysis,
+                "ai_provider": AI_PROVIDER
+            }
+        
+        # Otherwise, gather data for the specified mission
+        if not mission_id:
+            raise HTTPException(status_code=400, detail="Either network_data or mission_id must be provided")
+        
+        if not has_mission_access(mission_id, current_user["id"], "view"):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Gather all relevant data
+        placeholder = get_placeholder()
+        all_missions = []
+        all_tasks = []
+        all_relationships = []
+        all_dependencies = []
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get all missions the user has access to
+            c.execute(f'''
+                SELECT DISTINCT m.*
+                FROM missionops_missions m
+                LEFT JOIN missionops_mission_shares s ON m.id = s.mission_id
+                WHERE m.owner_id = {placeholder} OR s.shared_with_id = {placeholder}
+                ORDER BY m.created_at DESC
+            ''', (current_user["id"], current_user["id"]))
+            
+            for mission_row in c.fetchall():
+                mission_dict = dict(mission_row)
+                mission_dict = convert_datetime_to_string(mission_dict)
+                all_missions.append(mission_dict)
+                
+                # Get tasks for each mission
+                mission_tasks = get_mission_tasks_with_subtasks(mission_dict['id'])
+                all_tasks.extend(mission_tasks)
+            
+            # Get all relationships
+            c.execute(f'''
+                SELECT r.* FROM missionops_mission_relationships r
+                JOIN missionops_missions m1 ON r.from_mission_id = m1.id
+                JOIN missionops_missions m2 ON r.to_mission_id = m2.id
+                WHERE m1.owner_id = {placeholder} OR m2.owner_id = {placeholder}
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m1.id AND s.shared_with_id = {placeholder})
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m2.id AND s.shared_with_id = {placeholder})
+            ''', (current_user["id"], current_user["id"], current_user["id"], current_user["id"]))
+            
+            for rel_row in c.fetchall():
+                rel_dict = dict(rel_row)
+                rel_dict = convert_datetime_to_string(rel_dict)
+                all_relationships.append(rel_dict)
+            
+            # Get all task dependencies
+            c.execute(f'''
+                SELECT d.* FROM missionops_task_dependencies d
+                JOIN missionops_tasks t1 ON d.predecessor_task_id = t1.id
+                JOIN missionops_tasks t2 ON d.successor_task_id = t2.id
+                JOIN missionops_missions m1 ON t1.mission_id = m1.id
+                JOIN missionops_missions m2 ON t2.mission_id = m2.id
+                WHERE m1.owner_id = {placeholder} OR m2.owner_id = {placeholder}
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m1.id AND s.shared_with_id = {placeholder})
+                   OR EXISTS (SELECT 1 FROM missionops_mission_shares s WHERE s.mission_id = m2.id AND s.shared_with_id = {placeholder})
+            ''', (current_user["id"], current_user["id"], current_user["id"], current_user["id"]))
+            
+            for dep_row in c.fetchall():
+                dep_dict = dict(dep_row)
+                dep_dict = convert_datetime_to_string(dep_dict)
+                all_dependencies.append(dep_dict)
+        
+        # Compose and analyze the network
+        network = missionops_ai.compose_mission_network(
+            all_missions, all_tasks, all_relationships, all_dependencies
+        )
+        
+        analysis = missionops_ai.analyze_mission_network(network)
+        
+        if not analysis:
+            raise HTTPException(status_code=500, detail="Failed to analyze network")
+        
+        return {
+            "analysis": analysis,
+            "ai_provider": AI_PROVIDER,
+            "mission_id": mission_id,
+            "network_stats": network.get("metadata", {})
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in AI analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
