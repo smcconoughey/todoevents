@@ -82,11 +82,17 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     params = []
                     
                     # Date filtering - prioritize events starting today or later
-                    where_conditions.append(f"date >= {placeholder}")
+                    if get_placeholder() == "%s":  # PostgreSQL
+                        where_conditions.append(f"date::date >= {placeholder}")
+                    else:  # SQLite
+                        where_conditions.append(f"date >= {placeholder}")
                     params.append(str(start_date))
                     
                     if request.time_filter != "upcoming":
-                        where_conditions.append(f"date <= {placeholder}")
+                        if get_placeholder() == "%s":  # PostgreSQL
+                            where_conditions.append(f"date::date <= {placeholder}")
+                        else:  # SQLite
+                            where_conditions.append(f"date <= {placeholder}")
                         params.append(str(end_date))
                     
                     # Location filtering with expanding radius
@@ -407,7 +413,7 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     for city in major_cities:
                         # Quick count of upcoming events near this city - database agnostic
                         if get_placeholder() == "%s":  # PostgreSQL
-                            date_filter = "date >= CURRENT_DATE"
+                            date_filter = "date::date >= CURRENT_DATE"
                         else:  # SQLite
                             date_filter = "date >= date('now')"
                             
@@ -429,7 +435,7 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                 # Find cities with events within distance, sorted by distance
                 # Database-agnostic date filtering
                 if get_placeholder() == "%s":  # PostgreSQL
-                    date_filter = "date >= CURRENT_DATE"
+                    date_filter = "date::date >= CURRENT_DATE"
                 else:  # SQLite
                     date_filter = "date >= date('now')"
                     
