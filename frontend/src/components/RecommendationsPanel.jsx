@@ -126,7 +126,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       (userLocation && userLocation.lat !== 39.8283 && userLocation.lng !== -98.5795);
     
     if (hasValidLocation) {
-      fetchRecommendations();
+      // Debounce the fetch to prevent constant refreshing
+      const timeoutId = setTimeout(() => {
+        fetchRecommendations();
+      }, 300); // 300ms debounce
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [userLocation, selectedFilter, userActualLocation]);
 
@@ -146,7 +151,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       const requestBody = {
         lat: locationToUse?.lat || null,
         lng: locationToUse?.lng || null,
-        city: locationToUse?.city || null,
+        city: locationToUse?.city || locationToUse?.address || null,
         time_filter: selectedFilter,
         limit: 8,
         max_distance: 50  // Limit to 50 miles for more relevant results
@@ -237,14 +242,20 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   const formatEventDate = (event) => {
     try {
-      const date = new Date(event.date);
+      // Use UTC to avoid timezone issues that can shift dates by 1 day
+      const dateParts = event.date.split('-');
+      const date = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      if (date.toDateString() === today.toDateString()) {
+      // Reset event date time for comparison
+      date.setHours(0, 0, 0, 0);
+
+      if (date.getTime() === today.getTime()) {
         return 'Today';
-      } else if (date.toDateString() === tomorrow.toDateString()) {
+      } else if (date.getTime() === tomorrow.getTime()) {
         return 'Tomorrow';
       } else {
         return date.toLocaleDateString('en-US', { 
@@ -433,37 +444,28 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               <Compass className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg lg:text-xl font-display font-bold text-white flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg lg:text-xl font-display font-bold text-white">
                 Discover
-                {userActualLocation && (
-                  <div className="flex items-center gap-1">
-                    <Navigation className="w-4 h-4 text-green-400" />
-                    <span className="text-xs bg-green-400/20 text-green-400 px-2 py-1 rounded-full border border-green-400/30">
-                      Precise
-                    </span>
-                  </div>
-                )}
               </h2>
-              <p className="text-xs lg:text-sm text-white/60">
-                {userActualLocation ? 'Events near your location' : 'Events near you'}
+              <p className="text-xs lg:text-sm text-white/60 leading-tight">
+                Events near your location
               </p>
             </div>
           </div>
+          
+          {/* Persistent Explore Cities button */}
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={handleExploreCities}
             className={`
-              p-2 rounded-lg transition-colors duration-200
+              p-2 rounded-xl transition-all duration-200 hover:scale-105
               ${theme === 'frost'
-                ? 'hover:bg-white/20'
-                : 'hover:bg-white/10'
+                ? 'bg-white/20 hover:bg-white/30 border border-white/30'
+                : 'bg-white/10 hover:bg-white/20 border border-white/20'
               }
             `}
+            title="Explore other cities"
           >
-            {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-white/70" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-white/70" />
-            )}
+            <Globe className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
           </button>
         </div>
 
@@ -507,7 +509,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
       {/* Content */}
       {isExpanded && (
-        <div className="p-3 lg:p-4 overflow-y-auto max-h-60 lg:max-h-96">
+        <div className="p-3 lg:p-4 overflow-y-auto max-h-[60vh] lg:max-h-[70vh]">
           {loading ? (
             <div className="space-y-3 lg:space-y-4">
               {[...Array(3)].map((_, i) => (
