@@ -1434,6 +1434,12 @@ const EventMap = ({
     });
     setSearchValue(data.address);
     
+    // Also update map center to move the map to the selected location
+    setMapCenter({
+      lat: data.lat,
+      lng: data.lng
+    });
+    
     // Close mobile menu if open
     if (isMobileMenuOpen) {
       setIsMobileMenuOpen(false);

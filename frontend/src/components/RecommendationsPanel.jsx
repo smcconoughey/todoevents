@@ -191,7 +191,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         
         console.log(`Deduplicated ${(data.events || []).length} events to ${uniqueEvents.length} unique events`);
         setRecommendations(uniqueEvents);
-        setAnimationKey(prev => prev + 1);
+        // Only trigger animation on initial load, not on every refresh
+        if (recommendations.length === 0) {
+          setAnimationKey(prev => prev + 1);
+        }
       } else {
         console.error('Failed to fetch recommendations - HTTP status:', response.status);
       }
