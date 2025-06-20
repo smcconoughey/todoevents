@@ -120,7 +120,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   // Fetch recommendations with actual user location if available
   useEffect(() => {
-    fetchRecommendations();
+    // Only fetch recommendations if we have a proper location
+    // Don't fetch for the default center coordinates
+    const hasValidLocation = userActualLocation || 
+      (userLocation && userLocation.lat !== 39.8283 && userLocation.lng !== -98.5795);
+    
+    if (hasValidLocation) {
+      fetchRecommendations();
+    }
   }, [userLocation, selectedFilter, userActualLocation]);
 
   const fetchRecommendations = async () => {
@@ -129,12 +136,20 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       // Use actual user location if available, otherwise fall back to provided location
       const locationToUse = userActualLocation || userLocation;
       
+      // Don't fetch if we only have the default center coordinates
+      if (!locationToUse || (locationToUse.lat === 39.8283 && locationToUse.lng === -98.5795)) {
+        console.log('Skipping recommendations fetch - no valid location');
+        setLoading(false);
+        return;
+      }
+      
       const requestBody = {
         lat: locationToUse?.lat || null,
         lng: locationToUse?.lng || null,
         city: locationToUse?.city || null,
         time_filter: selectedFilter,
-        limit: 8
+        limit: 8,
+        max_distance: 50  // Limit to 50 miles for more relevant results
       };
 
       console.log('Fetching recommendations with simple fetch...', requestBody);

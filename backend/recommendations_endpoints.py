@@ -12,7 +12,7 @@ class RecommendationsRequest(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
     city: Optional[str] = None
-    max_distance: Optional[float] = 100.0
+    max_distance: Optional[float] = 50.0  # Reduced from 100 to 50 miles for better relevance
     limit: Optional[int] = 20
     time_filter: Optional[str] = "upcoming"  # "this_weekend", "next_2_weeks", "upcoming"
 
@@ -70,12 +70,14 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                 elif request.time_filter == "next_2_weeks":
                     start_date = current_date
                     end_date = current_date + timedelta(days=14)
-                else:  # "upcoming" - all future events
+                else:  # "upcoming" - events within next 3 months for relevance
                     start_date = current_date
-                    end_date = current_date + timedelta(days=365)  # 1 year out
+                    end_date = current_date + timedelta(days=90)  # 3 months out for better relevance
                 
                 events = []
-                radius_attempts = [10, 30, 50, 100, None]  # Expanding search radius
+                # More reasonable radius expansion based on user preference
+                max_radius = request.max_distance or 50
+                radius_attempts = [max_radius * 0.5, max_radius, max_radius * 1.2]  # Start smaller, then expand moderately
                 
                 for radius in radius_attempts:
                     where_conditions = []
