@@ -36,6 +36,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [userActualLocation, setUserActualLocation] = useState(null);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const [citySuggestions, setCitySuggestions] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const containerRef = useRef(null);
 
   // Emotional copy variations
@@ -155,6 +158,52 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCitySuggestions = async () => {
+    setLoadingCities(true);
+    try {
+      // Use actual user location if available, otherwise fall back to provided location
+      const locationToUse = userActualLocation || userLocation;
+      
+      const params = new URLSearchParams();
+      if (locationToUse?.lat && locationToUse?.lng) {
+        params.append('lat', locationToUse.lat.toString());
+        params.append('lng', locationToUse.lng.toString());
+      }
+      params.append('limit', '8');
+      params.append('max_distance', '500');
+
+      const response = await fetchWithTimeout(`${API_URL}/api/recommendations/nearby-cities?${params}`, {}, 10000);
+
+      if (response.ok) {
+        const cities = await response.json();
+        setCitySuggestions(cities || []);
+      } else {
+        console.error('Failed to fetch city suggestions');
+        setCitySuggestions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching city suggestions:', error);
+      setCitySuggestions([]);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  const handleExploreCities = async () => {
+    setShowCitySuggestions(true);
+    if (citySuggestions.length === 0) {
+      await fetchCitySuggestions();
+    }
+  };
+
+  const handleCitySelect = (city) => {
+    // Set the map center to the selected city and close the suggestions
+    if (onExploreMore) {
+      onExploreMore(city);
+    }
+    setShowCitySuggestions(false);
   };
 
   const formatEventDate = (event) => {
@@ -450,7 +499,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               
               {/* Explore more button */}
               <button
-                onClick={onExploreMore}
+                onClick={handleExploreCities}
                 className={`
                   w-full py-3 lg:py-4 rounded-2xl font-medium transition-all duration-200
                   hover:scale-[1.02] flex items-center justify-center gap-2
@@ -482,7 +531,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                   But there's a whole world of events to discover!
                 </p>
                 <button
-                  onClick={onExploreMore}
+                  onClick={handleExploreCities}
                   className={`
                     px-4 lg:px-6 py-2 lg:py-3 rounded-xl font-medium transition-all duration-200
                     hover:scale-[1.02] flex items-center gap-2 mx-auto text-sm lg:text-base
@@ -582,6 +631,133 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               <p className="text-xs text-white/50 mt-4">
                 Your location is only used to find nearby events and is never stored on our servers.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* City Suggestions Modal */}
+      {showCitySuggestions && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`
+            relative max-w-lg w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in max-h-[80vh] overflow-y-auto
+            ${theme === 'frost'
+              ? 'bg-white/20 border border-white/30'
+              : 'bg-neutral-900/90 border border-white/20'
+            }
+          `}>
+            <button
+              onClick={() => setShowCitySuggestions(false)}
+              className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
+            </button>
+            
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <div className={`
+                  w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
+                  ${theme === 'frost' 
+                    ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
+                    : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
+                  }
+                `}>
+                  <Globe className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
+                </div>
+                
+                <div>
+                  <h3 className="text-lg lg:text-xl font-bold text-white mb-1">
+                    Explore Other Cities
+                  </h3>
+                  <p className="text-white/70 text-sm">
+                    Discover events in nearby cities with active communities
+                  </p>
+                </div>
+              </div>
+
+              {loadingCities ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`
+                        h-16 rounded-xl animate-pulse
+                        ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                      `}
+                    />
+                  ))}
+                </div>
+              ) : citySuggestions.length > 0 ? (
+                <div className="space-y-2">
+                  {citySuggestions.map((city, index) => (
+                    <button
+                      key={`${city.city}-${city.state}`}
+                      onClick={() => handleCitySelect(city)}
+                      className={`
+                        w-full p-3 lg:p-4 rounded-xl text-left transition-all duration-200
+                        hover:scale-[1.02] border
+                        ${theme === 'frost'
+                          ? 'bg-white/10 border-white/20 hover:bg-white/20'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-white truncate">
+                            {city.city}, {city.state}
+                          </h4>
+                          <div className="flex items-center gap-3 mt-1 text-sm text-white/70">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {city.event_count} events
+                            </span>
+                            {city.distance > 0 && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {city.distance} miles away
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 space-y-2">
+                  <div className={`
+                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
+                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                  `}>
+                    <Lightbulb className="w-6 h-6 text-white/60" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-white mb-1">
+                      No nearby cities found
+                    </h4>
+                    <p className="text-white/60 text-sm">
+                      Try exploring the main map for events in other areas
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowCitySuggestions(false);
+                      onExploreMore && onExploreMore();
+                    }}
+                    className={`
+                      mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
+                      ${theme === 'frost'
+                        ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'
+                      }
+                    `}
+                  >
+                    View All Events
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

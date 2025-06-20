@@ -349,3 +349,102 @@ def create_recommendations_endpoints(app, get_db, get_placeholder):
                     "city_name": city
                 }
             }
+
+    @app.get("/api/recommendations/nearby-cities")
+    async def get_nearby_cities_with_events(
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+        max_distance: Optional[float] = 500.0,  # Default 500 mile radius
+        limit: Optional[int] = 10
+    ):
+        """
+        Get nearby cities that have upcoming events, sorted by distance.
+        Used for "Explore other cities" functionality.
+        """
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                placeholder = get_placeholder()
+                
+                # If no location provided, use major US metros as fallback
+                if not lat or not lng:
+                    major_cities = [
+                        {"city": "New York", "state": "NY", "lat": 40.7128, "lng": -74.0060, "distance": 0},
+                        {"city": "Los Angeles", "state": "CA", "lat": 34.0522, "lng": -118.2437, "distance": 0},
+                        {"city": "Chicago", "state": "IL", "lat": 41.8781, "lng": -87.6298, "distance": 0},
+                        {"city": "Miami", "state": "FL", "lat": 25.7617, "lng": -80.1918, "distance": 0},
+                        {"city": "Phoenix", "state": "AZ", "lat": 33.4484, "lng": -112.0740, "distance": 0},
+                        {"city": "Orlando", "state": "FL", "lat": 28.5383, "lng": -81.3792, "distance": 0},
+                        {"city": "Denver", "state": "CO", "lat": 39.7392, "lng": -104.9903, "distance": 0},
+                        {"city": "Atlanta", "state": "GA", "lat": 33.7490, "lng": -84.3880, "distance": 0},
+                        {"city": "San Francisco", "state": "CA", "lat": 37.7749, "lng": -122.4194, "distance": 0},
+                        {"city": "Boston", "state": "MA", "lat": 42.3601, "lng": -71.0589, "distance": 0}
+                    ]
+                    
+                    # Add event counts to major cities
+                    for city in major_cities:
+                        # Quick count of upcoming events near this city
+                        c.execute(f"""
+                            SELECT COUNT(*) as event_count
+                            FROM events 
+                            WHERE date >= date('now')
+                            AND (6371 * acos(cos(radians({city['lat']})) * cos(radians(lat)) * 
+                                 cos(radians(lng) - radians({city['lng']})) + sin(radians({city['lat']})) * 
+                                 sin(radians(lat)))) * 0.621371 <= 50
+                        """)
+                        result = c.fetchone()
+                        city['event_count'] = result[0] if result else 0
+                    
+                    # Filter cities with events and limit
+                    cities_with_events = [city for city in major_cities if city['event_count'] > 0]
+                    return cities_with_events[:limit]
+                
+                # Find cities with events within distance, sorted by distance
+                query = f"""
+                    SELECT 
+                        city, 
+                        state, 
+                        AVG(lat) as avg_lat, 
+                        AVG(lng) as avg_lng,
+                        COUNT(*) as event_count,
+                        (6371 * acos(cos(radians({lat})) * cos(radians(AVG(lat))) * 
+                         cos(radians(AVG(lng)) - radians({lng})) + sin(radians({lat})) * 
+                         sin(radians(AVG(lat))))) * 0.621371 as distance_miles
+                    FROM events 
+                    WHERE date >= date('now')
+                    AND city IS NOT NULL 
+                    AND state IS NOT NULL
+                    AND city != ''
+                    AND state != ''
+                    GROUP BY city, state
+                    HAVING distance_miles <= {max_distance}
+                    AND event_count >= 2
+                    ORDER BY distance_miles ASC
+                    LIMIT {limit * 2}
+                """
+                
+                c.execute(query)
+                results = c.fetchall()
+                
+                cities = []
+                for row in results:
+                    if isinstance(row, dict):
+                        city_data = dict(row)
+                    else:
+                        column_names = ['city', 'state', 'avg_lat', 'avg_lng', 'event_count', 'distance_miles']
+                        city_data = dict(zip(column_names, row))
+                    
+                    cities.append({
+                        'city': city_data['city'],
+                        'state': city_data['state'],
+                        'lat': float(city_data['avg_lat']),
+                        'lng': float(city_data['avg_lng']),
+                        'event_count': int(city_data['event_count']),
+                        'distance': round(float(city_data['distance_miles']), 1)
+                    })
+                
+                return cities[:limit]
+                
+        except Exception as e:
+            logger.error(f"Error getting nearby cities: {str(e)}")
+            return []

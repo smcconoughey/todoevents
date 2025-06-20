@@ -3936,15 +3936,22 @@ const EventMap = ({
               {!selectedEvent && (
                 <div className="hidden sm:block">
                   <RecommendationsPanel
-                    userLocation={mapCenter || DEFAULT_CENTER}
+                    userLocation={effectiveMapCenter || DEFAULT_CENTER}
                     onEventClick={handleEventClick}
-                    onExploreMore={() => {
-                      // Reset view to show all events
-                      setSelectedDate(null);
-                      setSelectedTime('all');
-                      setSelectedCategory(['all']);
-                      setMapCenter(null);
-                      setMiscFilters({ feeFilter: 'all' });
+                    onExploreMore={(city) => {
+                      if (city && city.lat && city.lng) {
+                        // City was selected, center map on the city
+                        setMapCenter({ lat: city.lat, lng: city.lng });
+                        setSelectedLocation({ lat: city.lat, lng: city.lng, city: city.city + ', ' + city.state });
+                        setSearchValue(city.city + ', ' + city.state);
+                      } else {
+                        // No city selected, just reset view to show all events
+                        setSelectedDate(null);
+                        setSelectedTime('all');
+                        setSelectedCategory(['all']);
+                        setMapCenter(null);
+                        setMiscFilters({ feeFilter: 'all' });
+                      }
                     }}
                   />
                 </div>
