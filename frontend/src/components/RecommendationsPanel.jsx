@@ -24,7 +24,6 @@ import { WebIcon } from './EventMap/WebIcons';
 import { CategoryIcon } from './EventMap/CategoryIcons';
 import categories, { getCategory } from './EventMap/categoryConfig';
 import { API_URL } from '../config';
-import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => {
   const { theme } = useTheme();
@@ -138,20 +137,30 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         limit: 8
       };
 
-      const response = await fetchWithTimeout(`${API_URL}/api/recommendations`, {
+      console.log('Fetching recommendations with simple fetch...', requestBody);
+
+      // Use simple fetch instead of fetchWithTimeout to bypass health check issues
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      const response = await fetch(`${API_URL}/api/recommendations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
-      }, 10000);
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Recommendations fetched successfully:', data);
         setRecommendations(data.events || []);
         setAnimationKey(prev => prev + 1);
       } else {
-        console.error('Failed to fetch recommendations');
+        console.error('Failed to fetch recommendations - HTTP status:', response.status);
       }
     } catch (error) {
       console.error('Error fetching recommendations:', error);
@@ -174,7 +183,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       params.append('limit', '8');
       params.append('max_distance', '500');
 
-      const response = await fetchWithTimeout(`${API_URL}/api/recommendations/nearby-cities?${params}`, {}, 10000);
+      const response = await fetch(`${API_URL}/api/recommendations/nearby-cities?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (response.ok) {
         const cities = await response.json();

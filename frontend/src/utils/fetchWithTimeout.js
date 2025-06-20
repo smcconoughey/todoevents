@@ -222,4 +222,38 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
 }; 
 
 // Export connection health status for UI components to use
-export const getConnectionHealth = () => ({ ...connectionHealth }); 
+export const getConnectionHealth = () => ({ ...connectionHealth });
+
+// Simple fetch with timeout - bypass health check issues
+export const fetchWithTimeoutSimple = async (url, options = {}, timeout = 30000) => {
+  console.log(`Making simple request to ${url} with timeout ${timeout}ms`);
+
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`Simple request to ${url} succeeded`);
+    return data;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error(`Simple request to ${url} failed:`, error.message);
+    throw error;
+  }
+}; 
