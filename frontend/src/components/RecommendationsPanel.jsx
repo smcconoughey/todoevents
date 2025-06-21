@@ -136,8 +136,25 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     }, 300) // 300ms debounce
   ).current;
 
+  // Track previous location to trigger animation only when location changes
+  const [previousLocation, setPreviousLocation] = useState(null);
+
   // Fetch recommendations with actual user location if available
   useEffect(() => {
+    const currentLocationKey = `${userLocation?.lat}-${userLocation?.lng}-${userActualLocation?.lat}-${userActualLocation?.lng}`;
+    const prevLocationKey = `${previousLocation?.userLat}-${previousLocation?.userLng}-${previousLocation?.gpsLat}-${previousLocation?.gpsLng}`;
+    
+    // Only trigger animation if location actually changed
+    if (currentLocationKey !== prevLocationKey) {
+      setAnimationKey(prev => prev + 1);
+      setPreviousLocation({
+        userLat: userLocation?.lat,
+        userLng: userLocation?.lng,
+        gpsLat: userActualLocation?.lat,
+        gpsLng: userActualLocation?.lng
+      });
+    }
+    
     debouncedFetchRecommendations();
   }, [userLocation, selectedFilter, userActualLocation]);
 
@@ -163,6 +180,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         requestBody.lng = -81.0228;
         requestBody.city = "Daytona Beach";
       }
+      
+      // Debug: Check what location we're actually using
+      console.log('🔍 Final request location:', {
+        received_userLocation: userLocation,
+        final_requestBody: requestBody
+      });
 
       console.log('Fetching recommendations with simple fetch...', requestBody);
 
@@ -185,7 +208,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         const data = await response.json();
         console.log('Recommendations fetched successfully:', data);
         setRecommendations(data.events || []);
-        setAnimationKey(prev => prev + 1);
+        // Only animate on significant changes, not every fetch
+        // setAnimationKey(prev => prev + 1);
       } else {
         console.error('Failed to fetch recommendations - HTTP status:', response.status);
       }
