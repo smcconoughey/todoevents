@@ -1432,6 +1432,8 @@ const EventMap = ({
   }, [events.length, user, slug, manuallyClosed]); // Include manuallyClosed to react to close actions
 
   const handleAddressSelect = (data) => {
+    console.log('🏠 handleAddressSelect called with data:', data);
+    
     setSelectedLocation({
       lat: data.lat,
       lng: data.lng,
@@ -1444,6 +1446,8 @@ const EventMap = ({
       lat: data.lat,
       lng: data.lng
     });
+    
+    console.log('🏠 Updated selectedLocation and mapCenter to:', { lat: data.lat, lng: data.lng });
     
     // Close mobile menu if open
     if (isMobileMenuOpen) {
@@ -3945,7 +3949,14 @@ const EventMap = ({
               {!selectedEvent && (
                 <div className="hidden sm:block">
                   <RecommendationsPanel
-                    userLocation={effectiveMapCenter || DEFAULT_CENTER}
+                    userLocation={(() => {
+                      const location = effectiveMapCenter || DEFAULT_CENTER;
+                      console.log('🎯 RecommendationsPanel receiving location:', location);
+                      console.log('🎯 Debug - mapCenter:', mapCenter);
+                      console.log('🎯 Debug - selectedLocation:', selectedLocation);
+                      console.log('🎯 Debug - effectiveMapCenter:', effectiveMapCenter);
+                      return location;
+                    })()}
                     onEventClick={handleEventClick}
                     onExploreMore={(city) => {
                       if (city && city.lat && city.lng) {
