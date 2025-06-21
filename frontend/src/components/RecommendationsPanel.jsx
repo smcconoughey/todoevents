@@ -148,6 +148,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       // When user manually selects a location, it should override GPS location until reset
       const locationToUse = userLocation || userActualLocation;
       
+      // Temporary debugging
+      console.log('🔍 RecommendationsPanel fetchRecommendations:');
+      console.log('  userLocation (prop):', userLocation);
+      console.log('  userActualLocation (GPS):', userActualLocation);
+      console.log('  locationToUse (final):', locationToUse);
+      
       const requestBody = {
         lat: locationToUse?.lat || null,
         lng: locationToUse?.lng || null,
