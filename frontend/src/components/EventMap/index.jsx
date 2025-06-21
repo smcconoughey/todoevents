@@ -1441,6 +1441,8 @@ const EventMap = ({
   }, [events.length, user, slug, manuallyClosed]); // Include manuallyClosed to react to close actions
 
   const handleAddressSelect = (data) => {
+    console.log('🏠 handleAddressSelect called with:', data);
+    
     setSelectedLocation({
       lat: data.lat,
       lng: data.lng,
@@ -1452,6 +1454,11 @@ const EventMap = ({
     setMapCenter({
       lat: data.lat,
       lng: data.lng
+    });
+    
+    console.log('🏠 Set selectedLocation and mapCenter to:', {
+      selectedLocation: { lat: data.lat, lng: data.lng, address: data.address },
+      mapCenter: { lat: data.lat, lng: data.lng }
     });
     
     // Close mobile menu if open
