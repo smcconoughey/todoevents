@@ -25,6 +25,17 @@ import { CategoryIcon } from './EventMap/CategoryIcons';
 import categories, { getCategory } from './EventMap/categoryConfig';
 import { API_URL } from '../config';
 
+// Debounce helper function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
+
 const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => {
   const { theme } = useTheme();
   const [recommendations, setRecommendations] = useState([]);
@@ -118,16 +129,24 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     }
   }, []);
 
+  // Debounced fetch function to prevent excessive API calls
+  const debouncedFetchRecommendations = useRef(
+    debounce(() => {
+      fetchRecommendations();
+    }, 300) // 300ms debounce
+  ).current;
+
   // Fetch recommendations with actual user location if available
   useEffect(() => {
-    fetchRecommendations();
+    debouncedFetchRecommendations();
   }, [userLocation, selectedFilter, userActualLocation]);
 
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
-      // Use actual user location if available, otherwise fall back to provided location
-      const locationToUse = userActualLocation || userLocation;
+      // Priority: 1) Manually selected location (userLocation), 2) GPS location (userActualLocation), 3) Default
+      // When user manually selects a location, it should override GPS location until reset
+      const locationToUse = userLocation || userActualLocation;
       
       const requestBody = {
         lat: locationToUse?.lat || null,
@@ -172,8 +191,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const fetchCitySuggestions = async () => {
     setLoadingCities(true);
     try {
-      // Use actual user location if available, otherwise fall back to provided location
-      const locationToUse = userActualLocation || userLocation;
+      // Priority: 1) Manually selected location (userLocation), 2) GPS location (userActualLocation), 3) Default
+      const locationToUse = userLocation || userActualLocation;
       
       const params = new URLSearchParams();
       if (locationToUse?.lat && locationToUse?.lng) {

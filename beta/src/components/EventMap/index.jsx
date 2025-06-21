@@ -747,6 +747,9 @@ const EventMap = ({
       feeFilter: 'all'
     });
     
+    // Reset map center to show all events
+    setMapCenter(null);
+    
     if (mapRef.current) {
       mapRef.current.resetView();
     }
@@ -1227,6 +1230,12 @@ const EventMap = ({
       address: data.address
     });
     setSearchValue(data.address);
+    
+    // Set map center to zoom to the selected location
+    setMapCenter({
+      lat: data.lat,
+      lng: data.lng
+    });
     
     // Close mobile menu if open
     if (isMobileMenuOpen) {
