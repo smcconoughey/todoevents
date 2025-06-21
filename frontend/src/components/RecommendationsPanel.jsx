@@ -145,15 +145,16 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     const prevLocationKey = `${previousLocation?.userLat}-${previousLocation?.userLng}-${previousLocation?.gpsLat}-${previousLocation?.gpsLng}`;
     
     // Only trigger animation if location actually changed
-    if (currentLocationKey !== prevLocationKey) {
+    if (currentLocationKey !== prevLocationKey && previousLocation !== null) {
       setAnimationKey(prev => prev + 1);
-      setPreviousLocation({
-        userLat: userLocation?.lat,
-        userLng: userLocation?.lng,
-        gpsLat: userActualLocation?.lat,
-        gpsLng: userActualLocation?.lng
-      });
     }
+    
+    setPreviousLocation({
+      userLat: userLocation?.lat,
+      userLng: userLocation?.lng,
+      gpsLat: userActualLocation?.lat,
+      gpsLng: userActualLocation?.lng
+    });
     
     debouncedFetchRecommendations();
   }, [userLocation, selectedFilter, userActualLocation]);
@@ -182,10 +183,11 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       }
       
       // Debug: Check what location we're actually using
-      console.log('🔍 Final request location:', {
-        received_userLocation: userLocation,
-        final_requestBody: requestBody
-      });
+      console.log('🔍 Final request location:');
+      console.log('  received_userLocation:', userLocation);
+      console.log('  userActualLocation:', userActualLocation);
+      console.log('  locationToUse:', locationToUse);
+      console.log('  final_requestBody:', requestBody);
 
       console.log('Fetching recommendations with simple fetch...', requestBody);
 
@@ -506,8 +508,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         {/* Emotional message - smaller on mobile */}
         <div className="text-center py-2 lg:py-3">
           <p 
-            key={currentMessage}
-            className="text-base lg:text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
+            className="text-base lg:text-lg font-medium text-white bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
           >
             {emotionalMessages[currentMessage]}
           </p>
