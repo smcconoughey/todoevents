@@ -148,19 +148,21 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       // When user manually selects a location, it should override GPS location until reset
       const locationToUse = userLocation || userActualLocation;
       
-      // Temporary debugging
-      console.log('🔍 RecommendationsPanel fetchRecommendations:');
-      console.log('  userLocation (prop):', userLocation);
-      console.log('  userActualLocation (GPS):', userActualLocation);
-      console.log('  locationToUse (final):', locationToUse);
-      
       const requestBody = {
         lat: locationToUse?.lat || null,
         lng: locationToUse?.lng || null,
-        city: locationToUse?.city || null,
+        city: locationToUse?.city || locationToUse?.address || null,
         time_filter: selectedFilter,
         limit: 8
       };
+      
+      // If using default center (no specific location), try a known active area
+      if (requestBody.lat === 39.8283 && requestBody.lng === -98.5795) {
+        // Use Daytona Beach as fallback since it's known to have events
+        requestBody.lat = 29.2108;
+        requestBody.lng = -81.0228;
+        requestBody.city = "Daytona Beach";
+      }
 
       console.log('Fetching recommendations with simple fetch...', requestBody);
 
