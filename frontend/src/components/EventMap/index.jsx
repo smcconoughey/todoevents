@@ -3908,7 +3908,7 @@ const EventMap = ({
 
               {/* Desktop Event Details Panel */}
               {selectedEvent && (
-              <div className="hidden sm:block">
+              <div className="block">
                 <EventDetailsPanel
                   event={selectedEvent}
                   user={user}
@@ -3936,31 +3936,29 @@ const EventMap = ({
               </div>
               )}
 
-              {/* Recommendations Panel - Desktop Only */}
-              {!selectedEvent && (
-                <div className="hidden sm:block">
-                  <RecommendationsPanel
-                    userLocation={selectedLocation || effectiveMapCenter || DEFAULT_CENTER}
-                    onEventClick={handleEventClick}
-                    onExploreMore={(city) => {
-                      if (city && city.lat && city.lng) {
-                        // City was selected, center map on the city
-                        setMapCenter({ lat: city.lat, lng: city.lng });
-                        setSelectedLocation({ lat: city.lat, lng: city.lng, city: city.city + ', ' + city.state });
-                        setSearchValue(city.city + ', ' + city.state);
-                      } else {
-                        // No city selected, just reset view to show all events
-                        setSelectedDate(null);
-                        setSelectedTime('all');
-                        setSelectedCategory(['all']);
-                        setMapCenter(null);
-                        setMiscFilters({ feeFilter: 'all' });
-                      }
-                    }}
-                  />
-
-                </div>
-              )}
+              {/* Recommendations Panel - All Screen Sizes */}
+              <div className="block">
+                <RecommendationsPanel
+                  key={`recommendations-${selectedLocation?.lat || effectiveMapCenter?.lat || 0}-${selectedLocation?.lng || effectiveMapCenter?.lng || 0}`}
+                  userLocation={selectedLocation || effectiveMapCenter || DEFAULT_CENTER}
+                  onEventClick={handleEventClick}
+                  onExploreMore={(city) => {
+                    if (city && city.lat && city.lng) {
+                      // City was selected, center map on the city
+                      setMapCenter({ lat: city.lat, lng: city.lng });
+                      setSelectedLocation({ lat: city.lat, lng: city.lng, city: city.city + ', ' + city.state });
+                      setSearchValue(city.city + ', ' + city.state);
+                    } else {
+                      // No city selected, just reset view to show all events
+                      setSelectedDate(null);
+                      setSelectedTime('all');
+                      setSelectedCategory(['all']);
+                      setMapCenter(null);
+                      setMiscFilters({ feeFilter: 'all' });
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
         ) : (

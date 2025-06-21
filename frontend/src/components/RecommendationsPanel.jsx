@@ -13,6 +13,8 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Lightbulb,
   Target,
   TrendingUp,
@@ -26,11 +28,14 @@ import categories, { getCategory } from './EventMap/categoryConfig';
 import { API_URL } from '../config';
 
 const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => {
+  console.log('RecommendationsPanel rendering with location:', userLocation);
+  
   const { theme } = useTheme();
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('upcoming');
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [userActualLocation, setUserActualLocation] = useState(null);
@@ -191,10 +196,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         
         console.log(`Deduplicated ${(data.events || []).length} events to ${uniqueEvents.length} unique events`);
         setRecommendations(uniqueEvents);
-        // Only trigger animation on initial load, not on every refresh
-        if (recommendations.length === 0) {
-          setAnimationKey(prev => prev + 1);
-        }
+        // Remove animation trigger to prevent stutters - animations handled by CSS
       } else {
         console.error('Failed to fetch recommendations - HTTP status:', response.status);
       }
@@ -424,107 +426,142 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   };
 
   return (
-    <div
-      ref={containerRef}
-      className={`
-        fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
-        ${theme === 'frost'
-          ? 'bg-white/10 border border-white/20'
-          : 'bg-neutral-900/80 border border-white/10'
-        }
-        ${isExpanded ? 'translate-x-0' : 'translate-x-full'}
-        /* Desktop: Right panel */
-        lg:right-4 lg:top-4 lg:w-96 lg:max-h-[calc(100vh-2rem)]
-        /* Mobile: Bottom sheet */
-        bottom-0 right-0 left-0 max-h-[80vh] lg:left-auto
-        /* Mobile collapsed state - show as bottom tab */
-        ${!isExpanded ? 'lg:translate-x-80' : ''}
-      `}
-    >
-      {/* Mobile Handle Bar - only show on mobile when expanded */}
-      <div className="lg:hidden flex justify-center p-2 border-b border-white/10">
-        <div className="w-12 h-1 bg-white/30 rounded-full" />
-      </div>
+    <div>
+      {/* Debug indicator */}
 
-      {/* Header */}
-      <div className="p-4 lg:p-6 border-b border-white/10">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={`
-              p-2 rounded-xl
-              ${theme === 'frost' 
-                ? 'bg-gradient-to-br from-blue-400/20 to-purple-400/20' 
-                : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
-              }
-            `}>
-              <Compass className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg lg:text-xl font-display font-bold text-white">
-                Discover
-              </h2>
-              <p className="text-xs lg:text-sm text-white/60 leading-tight">
-                Events near your location
-              </p>
-            </div>
-          </div>
-          
-          {/* Persistent Explore Cities button */}
-          <button
-            onClick={handleExploreCities}
-            className={`
-              p-2 rounded-xl transition-all duration-200 hover:scale-105
-              ${theme === 'frost'
-                ? 'bg-white/20 hover:bg-white/30 border border-white/30'
-                : 'bg-white/10 hover:bg-white/20 border border-white/20'
-              }
-            `}
-            title="Explore other cities"
-          >
-            <Globe className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-          </button>
+      
+      <div
+        ref={containerRef}
+        className={`
+          fixed z-50 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
+          ${theme === 'frost'
+            ? 'bg-white/10 border border-white/20'
+            : 'bg-neutral-900/80 border border-white/10'
+          }
+          /* Desktop: Right panel with collapse support */
+          lg:right-4 lg:top-4 lg:max-h-[calc(100vh-2rem)]
+          /* Mobile: Bottom sheet */
+          bottom-0 right-0 left-0 max-h-[80vh] lg:left-auto
+          /* Handle collapsed state */
+          ${isCollapsed 
+            ? 'lg:w-16 lg:translate-x-0' 
+            : 'lg:w-96 lg:translate-x-0'
+          }
+        `}
+      >
+        {/* Mobile Handle Bar - only show on mobile when expanded */}
+        <div className="lg:hidden flex justify-center p-2 border-b border-white/10">
+          <div className="w-12 h-1 bg-white/30 rounded-full" />
         </div>
 
-        {/* Emotional message - smaller on mobile */}
-        <div className="text-center py-2 lg:py-3">
-          <p 
-            key={currentMessage}
-            className="text-base lg:text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
-          >
-            {emotionalMessages[currentMessage]}
-          </p>
-        </div>
-
-        {/* Filter tabs - responsive layout */}
-        <div className="flex gap-1 lg:gap-2 mt-4">
-          {[
-            { key: 'upcoming', label: 'Soon', icon: Clock },
-            { key: 'this_weekend', label: 'Weekend', icon: Star },
-            { key: 'next_2_weeks', label: '2 Weeks', icon: TrendingUp }
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setSelectedFilter(key)}
-              className={`
-                flex-1 flex items-center justify-center gap-1 lg:gap-2 py-2 px-2 lg:px-3 rounded-lg
-                text-xs lg:text-sm font-medium transition-all duration-200
-                ${selectedFilter === key
-                  ? theme === 'frost'
-                    ? 'bg-white/30 text-white border border-white/40'
-                    : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
-                  : 'text-white/60 hover:bg-white/10 border border-transparent'
+        {/* Header - always visible */}
+        <div className={`p-4 lg:p-6 ${!isCollapsed ? 'border-b border-white/10' : ''}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
+              <div className={`
+                p-2 rounded-xl
+                ${theme === 'frost' 
+                  ? 'bg-gradient-to-br from-blue-400/20 to-purple-400/20' 
+                  : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
                 }
-              `}
-            >
-              <Icon className="w-3 h-3 lg:w-4 lg:h-4" />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+              `}>
+                <Compass className="w-6 h-6 text-white" />
+              </div>
+              {!isCollapsed && (
+                <div>
+                  <h2 className="text-lg lg:text-xl font-display font-bold text-white">
+                    Discover
+                  </h2>
+                  <p className="text-xs lg:text-sm text-white/60 leading-tight">
+                    Events near your location
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {!isCollapsed && (
+              <div className="flex items-center gap-2">
+                {/* Persistent Explore Cities button */}
+                <button
+                  onClick={handleExploreCities}
+                  className={`
+                    p-2 rounded-xl transition-all duration-200 hover:scale-105
+                    ${theme === 'frost'
+                      ? 'bg-white/20 hover:bg-white/30 border border-white/30'
+                      : 'bg-white/10 hover:bg-white/20 border border-white/20'
+                    }
+                  `}
+                  title="Explore other cities"
+                >
+                  <Globe className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                </button>
+                
+                {/* Collapse button */}
+                <button
+                  onClick={() => setIsCollapsed(!isCollapsed)}
+                  className={`
+                    hidden lg:flex p-2 rounded-xl transition-all duration-200 hover:scale-105
+                    ${theme === 'frost'
+                      ? 'bg-white/20 hover:bg-white/30 border border-white/30'
+                      : 'bg-white/10 hover:bg-white/20 border border-white/20'
+                    }
+                  `}
+                  title={isCollapsed ? "Expand recommendations" : "Collapse recommendations"}
+                >
+                  {isCollapsed ? (
+                    <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
 
-      {/* Content */}
-      {isExpanded && (
+          {/* Content when not collapsed */}
+          {!isCollapsed && (
+            <>
+              {/* Emotional message - smaller on mobile */}
+              <div className="text-center py-2 lg:py-3">
+                <p 
+                  key={currentMessage}
+                  className="text-base lg:text-lg font-medium text-white animate-fade-in bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
+                >
+                  {emotionalMessages[currentMessage]}
+                </p>
+              </div>
+
+              {/* Filter tabs - responsive layout */}
+              <div className="flex gap-1 lg:gap-2 mt-4">
+                {[
+                  { key: 'upcoming', label: 'Soon', icon: Clock },
+                  { key: 'this_weekend', label: 'Weekend', icon: Star },
+                  { key: 'next_2_weeks', label: '2 Weeks', icon: TrendingUp }
+                ].map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedFilter(key)}
+                    className={`
+                      flex-1 flex items-center justify-center gap-1 lg:gap-2 py-2 px-2 lg:px-3 rounded-lg
+                      text-xs lg:text-sm font-medium transition-all duration-200
+                      ${selectedFilter === key
+                        ? theme === 'frost'
+                          ? 'bg-white/30 text-white border border-white/40'
+                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
+                        : 'text-white/60 hover:bg-white/10 border border-transparent'
+                      }
+                    `}
+                  >
+                    <Icon className="w-3 h-3 lg:w-4 lg:h-4" />
+                    <span className="hidden sm:inline">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Content */}
         <div className="p-3 lg:p-4 overflow-y-auto max-h-[60vh] lg:max-h-[70vh]">
           {loading ? (
             <div className="space-y-3 lg:space-y-4">
@@ -595,113 +632,29 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
             </div>
           )}
         </div>
-      )}
 
-      {/* Collapsed state hint */}
-      {!isExpanded && (
-        <div className="p-3 lg:p-4 text-center">
-          <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-spark-yellow mx-auto animate-pulse" />
-          <p className="text-xs text-white/60 mt-1">Recommendations</p>
-        </div>
-      )}
-
-      {/* Location Permission Popup */}
-      {showLocationPopup && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`
-            relative max-w-sm lg:max-w-md w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in
-            ${theme === 'frost'
-              ? 'bg-white/20 border border-white/30'
-              : 'bg-neutral-900/90 border border-white/20'
-            }
-          `}>
-            <button
-              onClick={() => {
-                setShowLocationPopup(false);
-                setLocationPermissionAsked(true);
-                localStorage.setItem('locationPermissionAsked', 'true');
-              }}
-              className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
-            </button>
-            
-            <div className="text-center space-y-3 lg:space-y-4">
-              <div className={`
-                w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
-                ${theme === 'frost' 
-                  ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
-                  : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
-                }
-              `}>
-                <Navigation className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
-              </div>
+        {/* Location Permission Popup */}
+        {showLocationPopup && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className={`
+              relative max-w-sm lg:max-w-md w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in
+              ${theme === 'frost'
+                ? 'bg-white/20 border border-white/30'
+                : 'bg-neutral-900/90 border border-white/20'
+              }
+            `}>
+              <button
+                onClick={() => {
+                  setShowLocationPopup(false);
+                  setLocationPermissionAsked(true);
+                  localStorage.setItem('locationPermissionAsked', 'true');
+                }}
+                className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
+              </button>
               
-              <div>
-                <h3 className="text-lg lg:text-xl font-bold text-white mb-2">
-                  Find Events Near You
-                </h3>
-                <p className="text-white/70 text-sm leading-relaxed">
-                  Share your location to discover amazing events happening right around you. 
-                  We'll show you the most relevant local experiences based on your exact location.
-                </p>
-              </div>
-              
-              <div className="space-y-3 pt-2">
-                <button
-                  onClick={requestUserLocation}
-                  className={`
-                    w-full py-3 px-4 rounded-xl font-medium transition-all duration-200
-                    hover:scale-[1.02] flex items-center justify-center gap-2 text-sm lg:text-base
-                    ${theme === 'frost'
-                      ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 text-white border border-white/40 hover:from-blue-400/50 hover:to-purple-400/50'
-                      : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
-                    }
-                  `}
-                >
-                  <Navigation className="w-4 h-4 lg:w-5 lg:h-5" />
-                  Share My Location
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setShowLocationPopup(false);
-                    setLocationPermissionAsked(true);
-                    localStorage.setItem('locationPermissionAsked', 'true');
-                  }}
-                  className="w-full py-3 px-4 rounded-xl font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm lg:text-base"
-                >
-                  Maybe Later
-                </button>
-              </div>
-              
-              <p className="text-xs text-white/50 mt-4">
-                Your location is only used to find nearby events and is never stored on our servers.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* City Suggestions Modal */}
-      {showCitySuggestions && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`
-            relative max-w-lg w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in max-h-[80vh] overflow-y-auto
-            ${theme === 'frost'
-              ? 'bg-white/20 border border-white/30'
-              : 'bg-neutral-900/90 border border-white/20'
-            }
-          `}>
-            <button
-              onClick={() => setShowCitySuggestions(false)}
-              className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
-            </button>
-            
-            <div className="space-y-4">
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-3 lg:space-y-4">
                 <div className={`
                   w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
                   ${theme === 'frost' 
@@ -709,106 +662,182 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                     : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
                   }
                 `}>
-                  <Globe className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
+                  <Navigation className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
                 </div>
                 
                 <div>
-                  <h3 className="text-lg lg:text-xl font-bold text-white mb-1">
-                    Explore Other Cities
+                  <h3 className="text-lg lg:text-xl font-bold text-white mb-2">
+                    Find Events Near You
                   </h3>
-                  <p className="text-white/70 text-sm">
-                    Discover events in nearby cities with active communities
+                  <p className="text-white/70 text-sm leading-relaxed">
+                    Share your location to discover amazing events happening right around you. 
+                    We'll show you the most relevant local experiences based on your exact location.
                   </p>
                 </div>
-              </div>
-
-              {loadingCities ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`
-                        h-16 rounded-xl animate-pulse
-                        ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
-                      `}
-                    />
-                  ))}
-                </div>
-              ) : citySuggestions.length > 0 ? (
-                <div className="space-y-2">
-                  {citySuggestions.map((city, index) => (
-                    <button
-                      key={`${city.city}-${city.state}`}
-                      onClick={() => handleCitySelect(city)}
-                      className={`
-                        w-full p-3 lg:p-4 rounded-xl text-left transition-all duration-200
-                        hover:scale-[1.02] border
-                        ${theme === 'frost'
-                          ? 'bg-white/10 border-white/20 hover:bg-white/20'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-white truncate">
-                            {city.city}, {city.state}
-                          </h4>
-                          <div className="flex items-center gap-3 mt-1 text-sm text-white/70">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {city.event_count} events
-                            </span>
-                            {city.distance > 0 && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {city.distance} miles away
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 space-y-2">
-                  <div className={`
-                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
-                  `}>
-                    <Lightbulb className="w-6 h-6 text-white/60" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-white mb-1">
-                      No nearby cities found
-                    </h4>
-                    <p className="text-white/60 text-sm">
-                      Try exploring the main map for events in other areas
-                    </p>
-                  </div>
+                
+                <div className="space-y-3 pt-2">
                   <button
-                    onClick={() => {
-                      setShowCitySuggestions(false);
-                      onExploreMore && onExploreMore();
-                    }}
+                    onClick={requestUserLocation}
                     className={`
-                      mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
+                      w-full py-3 px-4 rounded-xl font-medium transition-all duration-200
+                      hover:scale-[1.02] flex items-center justify-center gap-2 text-sm lg:text-base
                       ${theme === 'frost'
-                        ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'
+                        ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 text-white border border-white/40 hover:from-blue-400/50 hover:to-purple-400/50'
+                        : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
                       }
                     `}
                   >
-                    View All Events
+                    <Navigation className="w-4 h-4 lg:w-5 lg:h-5" />
+                    Share My Location
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setShowLocationPopup(false);
+                      setLocationPermissionAsked(true);
+                      localStorage.setItem('locationPermissionAsked', 'true');
+                    }}
+                    className="w-full py-3 px-4 rounded-xl font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm lg:text-base"
+                  >
+                    Maybe Later
                   </button>
                 </div>
-              )}
+                
+                <p className="text-xs text-white/50 mt-4">
+                  Your location is only used to find nearby events and is never stored on our servers.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* City Suggestions Modal */}
+        {showCitySuggestions && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className={`
+              relative max-w-lg w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in max-h-[80vh] overflow-y-auto
+              ${theme === 'frost'
+                ? 'bg-white/20 border border-white/30'
+                : 'bg-neutral-900/90 border border-white/20'
+              }
+            `}>
+              <button
+                onClick={() => setShowCitySuggestions(false)}
+                className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
+              </button>
+              
+              <div className="space-y-4">
+                <div className="text-center space-y-2">
+                  <div className={`
+                    w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
+                    ${theme === 'frost' 
+                      ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
+                      : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
+                    }
+                  `}>
+                    <Globe className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg lg:text-xl font-bold text-white mb-1">
+                      Explore Other Cities
+                    </h3>
+                    <p className="text-white/70 text-sm">
+                      Discover events in nearby cities with active communities
+                    </p>
+                  </div>
+                </div>
+
+                {loadingCities ? (
+                  <div className="space-y-3">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={`
+                          h-16 rounded-xl animate-pulse
+                          ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                        `}
+                      />
+                    ))}
+                  </div>
+                ) : citySuggestions.length > 0 ? (
+                  <div className="space-y-2">
+                    {citySuggestions.map((city, index) => (
+                      <button
+                        key={`${city.city}-${city.state}`}
+                        onClick={() => handleCitySelect(city)}
+                        className={`
+                          w-full p-3 lg:p-4 rounded-xl text-left transition-all duration-200
+                          hover:scale-[1.02] border
+                          ${theme === 'frost'
+                            ? 'bg-white/10 border-white/20 hover:bg-white/20'
+                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-white truncate">
+                              {city.city}, {city.state}
+                            </h4>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-white/70">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {city.event_count} events
+                              </span>
+                              {city.distance > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {city.distance} miles away
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 space-y-2">
+                    <div className={`
+                      w-12 h-12 rounded-full mx-auto flex items-center justify-center
+                      ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                    `}>
+                      <Lightbulb className="w-6 h-6 text-white/60" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-white mb-1">
+                        No nearby cities found
+                      </h4>
+                      <p className="text-white/60 text-sm">
+                        Try exploring the main map for events in other areas
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowCitySuggestions(false);
+                        onExploreMore && onExploreMore();
+                      }}
+                      className={`
+                        mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
+                        ${theme === 'frost'
+                          ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'
+                        }
+                      `}
+                    >
+                      View All Events
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
