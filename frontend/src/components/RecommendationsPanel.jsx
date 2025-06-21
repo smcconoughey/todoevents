@@ -426,28 +426,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   };
 
   return (
-    <>
-      {/* SUPER OBVIOUS DEBUG PANEL */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '10px',
-          right: '10px',
-          width: '300px',
-          height: '100px',
-          backgroundColor: 'red',
-          color: 'white',
-          zIndex: 9999,
-          border: '5px solid yellow',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '20px',
-          fontWeight: 'bold'
-        }}
-      >
-        RECOMMENDATIONS PANEL IS WORKING!
-      </div>
+    <div>
+      {/* Debug indicator */}
+
       
       <div
         ref={containerRef}
@@ -466,7 +447,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
             ? 'lg:w-16 lg:translate-x-0' 
             : 'lg:w-96 lg:translate-x-0'
           }
-          ${isExpanded ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         {/* Mobile Handle Bar - only show on mobile when expanded */}
@@ -858,7 +838,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 
