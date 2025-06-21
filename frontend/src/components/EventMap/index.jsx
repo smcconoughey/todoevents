@@ -835,6 +835,14 @@ const EventMap = ({
   
   // Compute effective location for recommendations (includes all location data)
   const effectiveLocationForRecommendations = selectedLocation || (mapCenter ? mapCenter : null);
+  
+  // Debug: Check what we're passing to RecommendationsPanel
+  console.log('🎯 EventMap passing to RecommendationsPanel:', {
+    selectedLocation,
+    mapCenter,
+    effectiveLocationForRecommendations,
+    finalUserLocation: effectiveLocationForRecommendations || DEFAULT_CENTER
+  });
 
   const handleResetView = () => {
     setSelectedLocation(null);
