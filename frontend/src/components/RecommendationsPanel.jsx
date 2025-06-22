@@ -39,29 +39,27 @@ const debounce = (func, delay) => {
 const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => {
   const { theme } = useTheme();
   const [recommendations, setRecommendations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState('upcoming');
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [animationKey, setAnimationKey] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('all');
   const [showLocationPopup, setShowLocationPopup] = useState(false);
-  const [userActualLocation, setUserActualLocation] = useState(null);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
+  const [userActualLocation, setUserActualLocation] = useState(null);
+  const [animationKey, setAnimationKey] = useState(0);
+  const [currentMessage, setCurrentMessage] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  // City suggestions state
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
   const [citySuggestions, setCitySuggestions] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
-  const containerRef = useRef(null);
 
-  // Emotional copy variations
   const emotionalMessages = [
-    "Discover magic happening near you",
-    "Your next adventure awaits",
-    "Life's too short for boring weekends",
-    "The world is full of wonder",
+    "Discover amazing events near you",
     "Connect with your community",
-    "Create memories that last forever"
+    "Find your next adventure",
+    "Explore local experiences",
+    "Create lasting memories"
   ];
-
-  const [currentMessage, setCurrentMessage] = useState(0);
 
   // Rotate emotional messages
   useEffect(() => {
@@ -71,7 +69,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     return () => clearInterval(interval);
   }, []);
 
-  // Check if we should ask for location on first load
+  // Check if we should ask for location on first load - BUT don't auto-load saved location
   useEffect(() => {
     const hasAskedBefore = localStorage.getItem('locationPermissionAsked');
     if (!hasAskedBefore && !locationPermissionAsked) {
@@ -80,7 +78,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         setShowLocationPopup(true);
       }, 1500);
       
-      // Cleanup function to prevent memory leak
       return () => {
         clearTimeout(timeoutId);
       };
@@ -102,7 +99,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
             city: 'Your location'
           };
           setUserActualLocation(location);
-          localStorage.setItem('userLocation', JSON.stringify(location));
+          // Remove persistent caching - let it work fresh each time
         },
         (error) => {
           console.log('Location access denied or failed:', error);
@@ -117,17 +114,35 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     }
   };
 
-  // Load saved location on startup
-  useEffect(() => {
-    const savedLocation = localStorage.getItem('userLocation');
-    if (savedLocation) {
-      try {
-        setUserActualLocation(JSON.parse(savedLocation));
-      } catch (e) {
-        console.error('Error parsing saved location:', e);
-      }
+  // Handle Current Location button click
+  const handleCurrentLocation = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            city: 'Your location'
+          };
+          setUserActualLocation(location);
+        },
+        (error) => {
+          console.log('Location access failed:', error);
+          // Show a user-friendly message
+          alert('Unable to access your location. Please check your browser settings and try again.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000 // 1 minute cache for manual requests
+        }
+      );
+    } else {
+      alert('Geolocation is not supported by your browser.');
     }
-  }, []);
+  };
+
+  // Remove auto-loading of saved location - let users manually request location each time
 
   // Debounced fetch function to prevent excessive API calls
   const debouncedFetchRecommendations = useRef(
@@ -162,12 +177,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
-      let manualLocation = null;
-      try {
-        manualLocation = JSON.parse(localStorage.getItem('manualLocation')) || null;
-      } catch (_) {}
-
-      const locationToUse = manualLocation || userLocation || userActualLocation;
+      // Priority: 1) Manual search selection (userLocation), 2) GPS location (userActualLocation), 3) Default
+      const locationToUse = userLocation || userActualLocation;
       
       const requestBody = {
         lat: locationToUse?.lat || null,
@@ -427,7 +438,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   return (
     <div
-      ref={containerRef}
       className={`
         fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
         ${theme === 'frost'
@@ -505,12 +515,54 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           </p>
         </div>
 
+        {/* Current Location Button */}
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={handleCurrentLocation}
+            className={`
+              flex items-center justify-center gap-2 py-2 px-3 rounded-lg
+              text-sm font-medium transition-all duration-200 min-w-0 flex-shrink-0
+              ${userActualLocation
+                ? theme === 'frost'
+                  ? 'bg-green-400/20 text-green-400 border border-green-400/40'
+                  : 'bg-green-400/20 text-green-400 border border-green-400/40'
+                : theme === 'frost'
+                  ? 'bg-blue-400/20 text-blue-400 border border-blue-400/40 hover:bg-blue-400/30'
+                  : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 hover:bg-pin-blue/30'
+              }
+            `}
+            title={userActualLocation ? 'Using your location' : 'Get your current location'}
+          >
+            <Navigation className="w-4 h-4" />
+            <span className="hidden sm:inline">
+              {userActualLocation ? 'Current' : 'Get Location'}
+            </span>
+          </button>
+          
+          <button
+            onClick={handleExploreCities}
+            className={`
+              flex items-center justify-center gap-2 py-2 px-3 rounded-lg
+              text-sm font-medium transition-all duration-200 min-w-0 flex-shrink-0
+              ${theme === 'frost'
+                ? 'bg-purple-400/20 text-purple-400 border border-purple-400/40 hover:bg-purple-400/30'
+                : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40 hover:bg-spark-yellow/30'
+              }
+            `}
+            title="Explore nearby cities"
+          >
+            <Globe className="w-4 h-4" />
+            <span className="hidden sm:inline">Cities</span>
+          </button>
+        </div>
+
         {/* Filter tabs - responsive layout */}
-        <div className="flex gap-1 lg:gap-2 mt-4">
+        <div className="flex gap-1 lg:gap-2 mt-3">
           {[
+            { key: 'all', label: 'All', icon: Clock },
             { key: 'upcoming', label: 'Soon', icon: Clock },
-            { key: 'this_weekend', label: 'Weekend', icon: Star },
-            { key: 'next_2_weeks', label: '2 Weeks', icon: TrendingUp }
+            { key: 'this_weekend', label: 'Weekend', icon: Calendar },
+            { key: 'next_2_weeks', label: '2 Weeks', icon: Calendar }
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -553,55 +605,43 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               {recommendations.map((event, index) => (
                 <EventCard key={event.id} event={event} index={index} />
               ))}
-              
-              {/* Explore more button */}
-              <button
-                onClick={handleExploreCities}
-                className={`
-                  w-full py-3 lg:py-4 rounded-2xl font-medium transition-all duration-200
-                  hover:scale-[1.02] flex items-center justify-center gap-2
-                  text-sm lg:text-base
-                  ${theme === 'frost'
-                    ? 'bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border border-white/30 hover:from-blue-400/40 hover:to-purple-400/40'
-                    : 'bg-gradient-to-r from-spark-yellow/20 to-pin-blue/20 text-white border border-spark-yellow/30 hover:from-spark-yellow/30 hover:to-pin-blue/30'
-                  }
-                `}
-              >
-                <Globe className="w-4 h-4 lg:w-5 lg:h-5" />
-                Explore all events on map
-                <ArrowRight className="w-4 h-4 lg:w-5 lg:h-5" />
-              </button>
             </div>
           ) : (
-            <div className="text-center py-6 space-y-2">
+            <div className="text-center py-6 space-y-3">
               <div className={`
                 w-12 h-12 rounded-full mx-auto flex items-center justify-center
                 ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
               `}>
-                <Lightbulb className="w-6 h-6 text-white/60" />
+                <MapPin className="w-6 h-6 text-white/60" />
               </div>
               <div>
                 <h4 className="font-medium text-white mb-1">
-                  No nearby cities found
+                  {userActualLocation || userLocation 
+                    ? 'No events found nearby' 
+                    : 'Share your location to find events'
+                  }
                 </h4>
                 <p className="text-white/60 text-sm">
-                  Try exploring the map to discover more areas
+                  {userActualLocation || userLocation 
+                    ? 'Try adjusting your filters or exploring other areas'
+                    : 'Get your current location to discover amazing events near you'
+                  }
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setShowCitySuggestions(false);
-                  onExploreMore && onExploreMore();
-                }}
-                className={`
-                  mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
-                  ${theme === 'frost'
-                    ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                    : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'}
-                `}
-              >
-                View All Events
-              </button>
+              {!userActualLocation && !userLocation && (
+                <button
+                  onClick={handleCurrentLocation}
+                  className={`
+                    px-4 py-2 rounded-lg font-medium transition-all duration-200
+                    ${theme === 'frost'
+                      ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30 hover:bg-blue-400/30'
+                      : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
+                  `}
+                >
+                  <Navigation className="w-4 h-4 inline mr-2" />
+                  Get Location
+                </button>
+              )}
             </div>
           )}
         </div>

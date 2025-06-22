@@ -5,7 +5,7 @@
   <!-- Homepage - Primary landing page -->
   <url>
     <loc>https://todo-events.com/</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -17,13 +17,13 @@
   <!-- Main navigation pages -->
   <url>
     <loc>https://todo-events.com/hosts</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/creators</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -31,151 +31,151 @@
   <!-- Category pages -->
   <url>
     <loc>https://todo-events.com/events/food-drink</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/music</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/arts</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/sports</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/automotive</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/airshows</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/vehicle-sports</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/community</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/religious</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/education</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/veteran</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/cookout</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/networking</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/fair-festival</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/diving</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/shopping</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/health</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/outdoors</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/photography</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/family</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/gaming</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/real-estate</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/adventure</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/seasonal</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/other</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -272,164 +272,56 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025-st-francis-of-assisi-festival-car-show-1749072651</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/2025-st-francis-of-assisi-festival-car-show-1749072651</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/05/2025-st-francis-of-assisi-festival-car-show-1749072651</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071895</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071895</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/05/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071895</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025-st-francis-of-assisi-festival-car-show-1749072072</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/2025-st-francis-of-assisi-festival-car-show-1749072072</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/05/2025-st-francis-of-assisi-festival-car-show-1749072072</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/dont-forget-to-laugh-comedy-show-alzheimers-associationthe-longest-day-1749072072</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/dont-forget-to-laugh-comedy-show-alzheimers-associationthe-longest-day-1749072072</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/05/dont-forget-to-laugh-comedy-show-alzheimers-associationthe-longest-day-1749072072</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/kelsey-hart-fan-party-nashville-tn-1749071375</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/kelsey-hart-fan-party-nashville-tn-1749071375</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/05/kelsey-hart-fan-party-nashville-tn-1749071375</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025-st-francis-of-assisi-festival-car-show-1749072445</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/2025-st-francis-of-assisi-festival-car-show-1749072445</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/05/2025-st-francis-of-assisi-festival-car-show-1749072445</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071380</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071380</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/05/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071380</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/selwyn-birchwood-family-concert-1749072656</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/selwyn-birchwood-family-concert-1749072656</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/05/selwyn-birchwood-family-concert-1749072656</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/kelsey-hart-fan-party-nashville-tn-1749071890</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/kelsey-hart-fan-party-nashville-tn-1749071890</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/05/kelsey-hart-fan-party-nashville-tn-1749071890</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/selwyn-birchwood-1749070390</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/selwyn-birchwood-1749070390</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/05/selwyn-birchwood-1749070390</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -452,20 +344,128 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/selwyn-birchwood-1749070390</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071380</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/selwyn-birchwood-1749070390</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071380</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/05/selwyn-birchwood-1749070390</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/05/maggie-stiefvater-author-of-the-listeners-a-boswell-event-1749071380</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/kelsey-hart-fan-party-nashville-tn-1749071375</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/kelsey-hart-fan-party-nashville-tn-1749071375</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/05/kelsey-hart-fan-party-nashville-tn-1749071375</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/dont-forget-to-laugh-comedy-show-alzheimers-associationthe-longest-day-1749072072</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/dont-forget-to-laugh-comedy-show-alzheimers-associationthe-longest-day-1749072072</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/05/dont-forget-to-laugh-comedy-show-alzheimers-associationthe-longest-day-1749072072</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025-st-francis-of-assisi-festival-car-show-1749072072</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/2025-st-francis-of-assisi-festival-car-show-1749072072</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/05/2025-st-francis-of-assisi-festival-car-show-1749072072</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025-st-francis-of-assisi-festival-car-show-1749072651</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/2025-st-francis-of-assisi-festival-car-show-1749072651</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/05/2025-st-francis-of-assisi-festival-car-show-1749072651</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/selwyn-birchwood-family-concert-1749072656</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/selwyn-birchwood-family-concert-1749072656</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/05/selwyn-birchwood-family-concert-1749072656</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025-st-francis-of-assisi-festival-car-show-1749072445</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/2025-st-francis-of-assisi-festival-car-show-1749072445</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/05/2025-st-francis-of-assisi-festival-car-show-1749072445</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -578,6 +578,24 @@
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>https://todo-events.com/events/fly-geyser-exploration-214178</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/fly-geyser-exploration-214178</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/06/fly-geyser-exploration-214178</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
     <loc>https://todo-events.com/events/adrenaline-junkie-jamboree</loc>
     <lastmod>2025-06-05</lastmod>
     <changefreq>monthly</changefreq>
@@ -609,24 +627,6 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/06/pensacola-shipwreck-trail-diving-212598</loc>
-    <lastmod>2025-06-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/fly-geyser-exploration-214178</loc>
-    <lastmod>2025-06-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/fly-geyser-exploration-214178</loc>
-    <lastmod>2025-06-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/06/fly-geyser-exploration-214178</loc>
     <lastmod>2025-06-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
@@ -758,24 +758,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/cavalcade-of-planes-bolingbrook</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/cavalcade-of-planes-bolingbrook</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/07/cavalcade-of-planes-bolingbrook</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/beale-afb-air-space-expo-131077</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -848,19 +830,19 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/summer-showdown-drag-boat-races-eustis</loc>
+    <loc>https://todo-events.com/events/cavalcade-of-planes-bolingbrook</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/summer-showdown-drag-boat-races-eustis</loc>
+    <loc>https://todo-events.com/e/cavalcade-of-planes-bolingbrook</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/07/summer-showdown-drag-boat-races-eustis</loc>
+    <loc>https://todo-events.com/events/2025/06/07/cavalcade-of-planes-bolingbrook</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
@@ -879,6 +861,24 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/07/greenwich-police-benefit-car-show-greenwich</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/summer-showdown-drag-boat-races-eustis</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/summer-showdown-drag-boat-races-eustis</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/07/summer-showdown-drag-boat-races-eustis</loc>
     <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
@@ -993,19 +993,19 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/carolyn-wonderland-music-experience-1749072655</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/carolyn-wonderland-music-experience-1749072655</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/10/carolyn-wonderland-music-experience-1749072655</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1029,37 +1029,19 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/summer-mind-candy-dialogue-1749070644</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/summer-mind-candy-dialogue-1749070644</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/12/summer-mind-candy-dialogue-1749070644</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/pfl-5-professional-fighters-league-nashville</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/pfl-5-professional-fighters-league-nashville</loc>
-    <lastmod>2025-06-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/12/pfl-5-professional-fighters-league-nashville</loc>
-    <lastmod>2025-06-01</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1082,38 +1064,56 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/trinitas-spring-concert-1749071893</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/pfl-5-professional-fighters-league-nashville</loc>
+    <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/trinitas-spring-concert-1749071893</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/pfl-5-professional-fighters-league-nashville</loc>
+    <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/13/trinitas-spring-concert-1749071893</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/12/pfl-5-professional-fighters-league-nashville</loc>
+    <lastmod>2025-06-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/skip-castro-band-family-concert-1749072657</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/skip-castro-band-family-concert-1749072657</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/13/skip-castro-band-family-concert-1749072657</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/trinitas-spring-concert-1749071893</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/trinitas-spring-concert-1749071893</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/13/trinitas-spring-concert-1749071893</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1209,19 +1209,19 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/kidslinked-columbus-childrens-festival-event-registration-8am-4pm-1749071841</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/kidslinked-columbus-childrens-festival-event-registration-8am-4pm-1749071841</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/14/kidslinked-columbus-childrens-festival-event-registration-8am-4pm-1749071841</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1262,92 +1262,56 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/blk-brier-creek-family-reunion-1749071893</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/nic-juneteenth-2025-in-soulard-1749072074</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/blk-brier-creek-family-reunion-1749071893</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/nic-juneteenth-2025-in-soulard-1749072074</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/14/blk-brier-creek-family-reunion-1749071893</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/14/nic-juneteenth-2025-in-soulard-1749072074</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/icons-2025-concert-12pm-show-ages-2-7-1749071379</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749071839</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/icons-2025-concert-12pm-show-ages-2-7-1749071379</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749071839</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/14/icons-2025-concert-12pm-show-ages-2-7-1749071379</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/14/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749071839</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/fanwing-fest-1749070591</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/nic-juneteenth-2025-in-soulard-1749072653</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/fanwing-fest-1749070591</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/nic-juneteenth-2025-in-soulard-1749072653</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/14/fanwing-fest-1749070591</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/central-florida-juneteenth-black-history-bus-tour-1749071891</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/central-florida-juneteenth-black-history-bus-tour-1749071891</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/central-florida-juneteenth-black-history-bus-tour-1749071891</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/heal-your-house-2nd-annual-outdoor-festival-1749072653</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/heal-your-house-2nd-annual-outdoor-festival-1749072653</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/heal-your-house-2nd-annual-outdoor-festival-1749072653</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/14/nic-juneteenth-2025-in-soulard-1749072653</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1370,200 +1334,20 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/green-jelly-des-moines</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/green-jelly-des-moines</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/green-jelly-des-moines</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
     <loc>https://todo-events.com/events/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749070393</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749070393</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/14/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749070393</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/heal-your-house-2nd-annual-outdoor-festival-atl-1749072447</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/heal-your-house-2nd-annual-outdoor-festival-atl-1749072447</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/heal-your-house-2nd-annual-outdoor-festival-atl-1749072447</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/princess-diaries-rrdt-sp25-recital-matinee-1749071376</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/princess-diaries-rrdt-sp25-recital-matinee-1749071376</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/princess-diaries-rrdt-sp25-recital-matinee-1749071376</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/nic-juneteenth-2025-in-soulard-1749072074</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/nic-juneteenth-2025-in-soulard-1749072074</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/nic-juneteenth-2025-in-soulard-1749072074</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/heal-your-house-2nd-annual-outdoor-festival-atl-1749072074</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/heal-your-house-2nd-annual-outdoor-festival-atl-1749072074</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/heal-your-house-2nd-annual-outdoor-festival-atl-1749072074</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/fanwing-fest-1749070645</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/fanwing-fest-1749070645</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/fanwing-fest-1749070645</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/cajun-fest-boil-brew-2025-des-moines</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/cajun-fest-boil-brew-2025-des-moines</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/cajun-fest-boil-brew-2025-des-moines</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/blk-brier-creek-family-reunion-1749071379</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/blk-brier-creek-family-reunion-1749071379</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/blk-brier-creek-family-reunion-1749071379</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/nic-juneteenth-2025-in-soulard-1749072653</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/nic-juneteenth-2025-in-soulard-1749072653</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/nic-juneteenth-2025-in-soulard-1749072653</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749071839</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749071839</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/14/omaha-freedom-festival-a-celebration-of-juneteenth-feat-rb-group-silk-1749071839</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1586,56 +1370,110 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/central-florida-juneteenth-black-history-bus-tour-1749071377</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/blk-brier-creek-family-reunion-1749071893</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/central-florida-juneteenth-black-history-bus-tour-1749071377</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/blk-brier-creek-family-reunion-1749071893</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/14/central-florida-juneteenth-black-history-bus-tour-1749071377</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/14/blk-brier-creek-family-reunion-1749071893</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/icons-2025-concert-12pm-show-ages-2-7-1749071894</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/icons-2025-concert-12pm-show-ages-2-7-1749071894</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/icons-2025-concert-12pm-show-ages-2-7-1749071894</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/princess-diaries-rrdt-sp25-recital-matinee-1749071891</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/princess-diaries-rrdt-sp25-recital-matinee-1749071891</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/14/princess-diaries-rrdt-sp25-recital-matinee-1749071891</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/red-bull-soapbox-race-utah-212493</loc>
-    <lastmod>2025-06-06</lastmod>
+    <loc>https://todo-events.com/events/fanwing-fest-1749070591</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/red-bull-soapbox-race-utah-212493</loc>
-    <lastmod>2025-06-06</lastmod>
+    <loc>https://todo-events.com/e/fanwing-fest-1749070591</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/14/red-bull-soapbox-race-utah-212493</loc>
-    <lastmod>2025-06-06</lastmod>
+    <loc>https://todo-events.com/events/2025/06/14/fanwing-fest-1749070591</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/central-florida-juneteenth-black-history-bus-tour-1749071891</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/central-florida-juneteenth-black-history-bus-tour-1749071891</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/central-florida-juneteenth-black-history-bus-tour-1749071891</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/cajun-fest-boil-brew-2025-des-moines</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/cajun-fest-boil-brew-2025-des-moines</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/cajun-fest-boil-brew-2025-des-moines</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1658,20 +1496,182 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/icons-2025-concert-12pm-show-ages-2-7-1749071894</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/central-florida-juneteenth-black-history-bus-tour-1749071377</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/icons-2025-concert-12pm-show-ages-2-7-1749071894</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/central-florida-juneteenth-black-history-bus-tour-1749071377</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/14/icons-2025-concert-12pm-show-ages-2-7-1749071894</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/14/central-florida-juneteenth-black-history-bus-tour-1749071377</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/princess-diaries-rrdt-sp25-recital-matinee-1749071376</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/princess-diaries-rrdt-sp25-recital-matinee-1749071376</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/princess-diaries-rrdt-sp25-recital-matinee-1749071376</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/blk-brier-creek-family-reunion-1749071379</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/blk-brier-creek-family-reunion-1749071379</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/blk-brier-creek-family-reunion-1749071379</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/icons-2025-concert-12pm-show-ages-2-7-1749071379</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/icons-2025-concert-12pm-show-ages-2-7-1749071379</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/icons-2025-concert-12pm-show-ages-2-7-1749071379</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/green-jelly-des-moines</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/green-jelly-des-moines</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/green-jelly-des-moines</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/heal-your-house-2nd-annual-outdoor-festival-atl-1749072074</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/heal-your-house-2nd-annual-outdoor-festival-atl-1749072074</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/heal-your-house-2nd-annual-outdoor-festival-atl-1749072074</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/fanwing-fest-1749070645</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/fanwing-fest-1749070645</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/fanwing-fest-1749070645</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/heal-your-house-2nd-annual-outdoor-festival-1749072653</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/heal-your-house-2nd-annual-outdoor-festival-1749072653</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/heal-your-house-2nd-annual-outdoor-festival-1749072653</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/red-bull-soapbox-race-utah-212493</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/red-bull-soapbox-race-utah-212493</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/red-bull-soapbox-race-utah-212493</loc>
+    <lastmod>2025-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/heal-your-house-2nd-annual-outdoor-festival-atl-1749072447</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/heal-your-house-2nd-annual-outdoor-festival-atl-1749072447</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/14/heal-your-house-2nd-annual-outdoor-festival-atl-1749072447</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1821,19 +1821,19 @@
   </url>
   <url>
     <loc>https://todo-events.com/events/summer-color-party-1749072652</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/summer-color-party-1749072652</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/15/summer-color-party-1749072652</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1910,56 +1910,56 @@
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>https://todo-events.com/events/can-you-dig-it-grades-2-3-1749071381</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/e/can-you-dig-it-grades-2-3-1749071381</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://todo-events.com/events/2025/06/16/can-you-dig-it-grades-2-3-1749071381</loc>
+    <lastmod>2025-06-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
     <loc>https://todo-events.com/events/althoff-girls-boys-summer-volleyball-camp-1749072076</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://todo-events.com/e/althoff-girls-boys-summer-volleyball-camp-1749072076</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events/2025/06/16/althoff-girls-boys-summer-volleyball-camp-1749072076</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/summer-volleyball-camp-1749072655</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/e/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/e/summer-volleyball-camp-1749072655</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://todo-events.com/events/2025/06/16/althoff-girls-boys-summer-volleyball-camp-1749072449</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749070642</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/e/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749070642</loc>
-    <lastmod>2025-06-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://todo-events.com/events/2025/06/16/fairy-tales-gone-stem-where-stories-meet-science-grades-k-1-1749070642</loc>
-    <lastmod>2025-06-20</lastmod>
+    <loc>https://todo-events.com/events/2025/06/16/summer-volleyball-camp-1749072655</loc>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -1967,31 +1967,31 @@
   <!-- Time-based Event Discovery -->
   <url>
     <loc>https://todo-events.com/events-today</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events-tonight</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events-this-weekend</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events-tomorrow</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/events-this-week</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
@@ -1999,151 +1999,151 @@
   <!-- "This Weekend in [City]" Pages -->
   <url>
     <loc>https://todo-events.com/this-weekend-in-new-york</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-los-angeles</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-chicago</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-houston</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-phoenix</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-philadelphia</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-san-antonio</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-san-diego</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-dallas</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-san-jose</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-austin</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-jacksonville</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-fort-worth</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-columbus</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-charlotte</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-san-francisco</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-indianapolis</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-seattle</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-denver</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-washington</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-boston</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-nashville</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-detroit</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-portland</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/this-weekend-in-memphis</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
@@ -2151,151 +2151,151 @@
   <!-- "Free Events in [City]" Pages -->
   <url>
     <loc>https://todo-events.com/free-events-in-new-york</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-los-angeles</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-chicago</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-houston</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-phoenix</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-philadelphia</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-san-antonio</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-san-diego</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-dallas</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-san-jose</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-austin</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-jacksonville</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-fort-worth</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-columbus</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-charlotte</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-san-francisco</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-indianapolis</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-seattle</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-denver</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-washington</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-boston</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-nashville</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-detroit</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-portland</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-in-memphis</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
@@ -2303,91 +2303,91 @@
   <!-- "Today in [City]" Pages -->
   <url>
     <loc>https://todo-events.com/today-in-new-york</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-los-angeles</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-chicago</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-houston</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-phoenix</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-philadelphia</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-san-antonio</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-san-diego</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-dallas</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-san-jose</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-austin</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-jacksonville</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-fort-worth</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-columbus</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/today-in-charlotte</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -2395,91 +2395,91 @@
   <!-- "Tonight in [City]" Pages -->
   <url>
     <loc>https://todo-events.com/tonight-in-new-york</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-los-angeles</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-chicago</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-houston</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-phoenix</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-philadelphia</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-san-antonio</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-san-diego</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-dallas</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-san-jose</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-austin</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-jacksonville</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-fort-worth</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-columbus</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://todo-events.com/tonight-in-charlotte</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.75</priority>
   </url>
@@ -2487,55 +2487,55 @@
   <!-- General Discovery Pages -->
   <url>
     <loc>https://todo-events.com/local-events-near-me</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://todo-events.com/near-me</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/free-events-near-me</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://todo-events.com/live-music-near-me</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/food-festivals-near-me</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/art-events-near-me</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/outdoor-events</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/family-friendly-events</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/discover</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -2543,40 +2543,40 @@
   <!-- Static Pages -->
   <url>
     <loc>https://todo-events.com/about</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://todo-events.com/how-it-works</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://todo-events.com/create-event</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://todo-events.com/contact</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://todo-events.com/privacy</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://todo-events.com/terms</loc>
-    <lastmod>2025-06-20</lastmod>
+    <lastmod>2025-06-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
 </urlset>
-<!-- Note: This sitemap was automatically generated on 2025-06-20 -->
+<!-- Note: This sitemap was automatically generated on 2025-06-21 -->
 <!-- Contains 943 individual events and comprehensive SEO URLs -->

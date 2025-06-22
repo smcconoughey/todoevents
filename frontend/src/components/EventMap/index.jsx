@@ -846,7 +846,6 @@ const EventMap = ({
 
   const handleResetView = () => {
     setSelectedLocation(null);
-    try { localStorage.removeItem('manualLocation'); } catch (_) {}
     setSearchValue('');
     setProximityRange(15);
     setSelectedDate(null);
@@ -1444,15 +1443,6 @@ const EventMap = ({
   }, [events.length, user, slug, manuallyClosed]); // Include manuallyClosed to react to close actions
 
   const handleAddressSelect = (data) => {
-    // Persist manual location so it overrides GPS until reset/refresh
-    try {
-      localStorage.setItem('manualLocation', JSON.stringify({
-        lat: data.lat,
-        lng: data.lng,
-        city: data.address,
-      }));
-    } catch (_) {}
-
     setSelectedLocation({ lat: data.lat, lng: data.lng, address: data.address });
     setSearchValue(data.address);
 
@@ -2470,9 +2460,6 @@ const EventMap = ({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-
-        // Clear manual location override
-        try { localStorage.removeItem('manualLocation'); } catch (_) {}
 
         setSelectedLocation({ lat: latitude, lng: longitude, address: 'Your location' });
         setMapCenter({ lat: latitude, lng: longitude });
