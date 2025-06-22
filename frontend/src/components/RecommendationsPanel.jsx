@@ -889,7 +889,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           </div>
 
           {/* Content Area */}
-          <div className={`flex-1 overflow-y-auto ${embedded ? 'p-4' : 'p-3 lg:p-4'}`}>
+          <div className={`
+            flex-1 overflow-y-auto 
+            ${embedded ? 'p-4 min-h-0' : 'p-3 lg:p-4'}
+          `}>
             {/* Show recommendations for embedded mode or when activeMode is recommendations */}
             {(embedded || activeMode === 'recommendations') ? (
               loading ? (
@@ -974,7 +977,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             relative max-w-sm lg:max-w-md w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in
             ${theme === 'frost'
               ? 'bg-white/20 border border-white/30'
-              : 'bg-neutral-900/90 border border-white/20'
+              : theme === 'light'
+                ? 'bg-white/95 border border-gray-200 shadow-xl'
+                : 'bg-neutral-900/90 border border-white/20'
             }
           `}>
             <button
@@ -983,9 +988,11 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 setLocationPermissionAsked(true);
                 localStorage.setItem('locationPermissionAsked', 'true');
               }}
-              className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
+              className={`absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full transition-colors
+                ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}
+              `}
             >
-              <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
+              <X className={`w-4 h-4 lg:w-5 lg:h-5 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
             </button>
             
             <div className="text-center space-y-3 lg:space-y-4">
@@ -993,17 +1000,19 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
                 ${theme === 'frost' 
                   ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
-                  : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
+                  : theme === 'light'
+                    ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
+                    : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
                 }
               `}>
-                <Navigation className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
+                <Navigation className={`w-6 h-6 lg:w-8 lg:h-8 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
               </div>
               
               <div>
-                <h3 className="text-lg lg:text-xl font-bold text-white mb-2">
+                <h3 className={`text-lg lg:text-xl font-bold mb-2 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                   Find Events Near You
                 </h3>
-                <p className="text-white/70 text-sm leading-relaxed">
+                <p className={`text-sm leading-relaxed ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
                   Share your location to discover amazing events happening right around you. 
                   We'll show you the most relevant local experiences based on your exact location.
                 </p>
@@ -1017,7 +1026,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     hover:scale-[1.02] flex items-center justify-center gap-2 text-sm lg:text-base
                     ${theme === 'frost'
                       ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 text-white border border-white/40 hover:from-blue-400/50 hover:to-purple-400/50'
-                      : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
+                      : theme === 'light'
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-transparent hover:from-blue-600 hover:to-indigo-600 shadow-md'
+                        : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
                     }
                   `}
                 >
@@ -1031,13 +1042,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     setLocationPermissionAsked(true);
                     localStorage.setItem('locationPermissionAsked', 'true');
                   }}
-                  className="w-full py-3 px-4 rounded-xl font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm lg:text-base"
+                  className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 text-sm lg:text-base
+                    ${theme === 'light' 
+                      ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' 
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }
+                  `}
                 >
                   Maybe Later
                 </button>
               </div>
               
-              <p className="text-xs text-white/50 mt-4">
+              <p className={`text-xs mt-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/50'}`}>
                 Your location is only used to find nearby events and is never stored on our servers.
               </p>
             </div>
@@ -1052,14 +1068,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             relative max-w-lg w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in max-h-[80vh] overflow-y-auto
             ${theme === 'frost'
               ? 'bg-white/20 border border-white/30'
-              : 'bg-neutral-900/90 border border-white/20'
+              : theme === 'light'
+                ? 'bg-white/95 border border-gray-200 shadow-xl'
+                : 'bg-neutral-900/90 border border-white/20'
             }
           `}>
             <button
               onClick={() => setShowCitySuggestions(false)}
-              className="absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
+              className={`absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full transition-colors
+                ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}
+              `}
             >
-              <X className="w-4 h-4 lg:w-5 lg:h-5 text-white/70" />
+              <X className={`w-4 h-4 lg:w-5 lg:h-5 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
             </button>
             
             <div className="space-y-4">
@@ -1068,17 +1088,19 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
                   ${theme === 'frost' 
                     ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
-                    : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
+                    : theme === 'light'
+                      ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
+                      : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
                   }
                 `}>
-                  <Globe className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
+                  <Globe className={`w-6 h-6 lg:w-8 lg:h-8 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
                 </div>
                 
                 <div>
-                  <h3 className="text-lg lg:text-xl font-bold text-white mb-1">
+                  <h3 className={`text-lg lg:text-xl font-bold mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                     Explore Other Cities
                   </h3>
-                  <p className="text-white/70 text-sm">
+                  <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
                     Discover events in nearby cities with active communities
                   </p>
                 </div>
@@ -1091,7 +1113,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       key={i}
                       className={`
                         h-16 rounded-xl animate-pulse
-                        ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                        ${theme === 'frost' 
+                          ? 'bg-white/20' 
+                          : theme === 'light'
+                            ? 'bg-gray-200'
+                            : 'bg-white/10'
+                        }
                       `}
                     />
                   ))}
@@ -1107,16 +1134,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                         hover:scale-[1.02] border
                         ${theme === 'frost'
                           ? 'bg-white/10 border-white/20 hover:bg-white/20'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                          : theme === 'light'
+                            ? 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                            : 'bg-white/5 border-white/10 hover:bg-white/10'
                         }
                       `}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-white truncate">
+                          <h4 className={`font-semibold truncate ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                             {city.city}, {city.state}
                           </h4>
-                          <div className="flex items-center gap-3 mt-1 text-sm text-white/70">
+                          <div className={`flex items-center gap-3 mt-1 text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
                               {city.event_count} events
@@ -1129,7 +1158,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                             )}
                           </div>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" />
+                        <ArrowRight className={`w-4 h-4 flex-shrink-0 ml-2 ${theme === 'light' ? 'text-gray-400' : 'text-white/40'}`} />
                       </div>
                     </button>
                   ))}
@@ -1138,15 +1167,20 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 <div className="text-center py-6 space-y-2">
                   <div className={`
                     w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                    ${theme === 'frost' 
+                      ? 'bg-white/20' 
+                      : theme === 'light'
+                        ? 'bg-gray-200'
+                        : 'bg-white/10'
+                    }
                   `}>
-                    <Lightbulb className="w-6 h-6 text-white/60" />
+                    <Lightbulb className={`w-6 h-6 ${theme === 'light' ? 'text-gray-500' : 'text-white/60'}`} />
                   </div>
                   <div>
-                    <h4 className="font-medium text-white mb-1">
+                    <h4 className={`font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                       No nearby cities found
                     </h4>
-                    <p className="text-white/60 text-sm">
+                    <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
                       Try exploring the map to discover more areas
                     </p>
                   </div>
@@ -1159,7 +1193,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
                       ${theme === 'frost'
                         ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'}
+                        : theme === 'light'
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
+                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'}
                     `}
                   >
                     View All Events

@@ -48,9 +48,19 @@ const RoutePlanner = ({
   useEffect(() => {
     const initServices = async () => {
       try {
+        if (!apiKey) {
+          console.warn('No Google Maps API key provided to RoutePlanner');
+          return;
+        }
+        
         await initGoogleMaps(apiKey);
+        
         if (isMapsReady() && window.google?.maps?.DirectionsService) {
+          // Only initialize the DirectionsService, don't set any map
           directionsServiceRef.current = new window.google.maps.DirectionsService();
+          console.log('✅ DirectionsService initialized successfully');
+        } else {
+          console.warn('Google Maps not ready for DirectionsService initialization');
         }
       } catch (error) {
         console.error('Failed to initialize Google Maps services:', error);
@@ -194,123 +204,88 @@ const RoutePlanner = ({
     return points;
   };
 
-  // Fetch events along the route using efficient batch endpoint
+  // Simplified and reliable method to fetch events along route
   const fetchEventsAlongRoute = async (samplePoints, timingContext = null) => {
-    try {
-      // Convert sample points to coordinate format for batch API
-      const coordinates = samplePoints.map(point => ({
-        lat: point.lat,
-        lng: point.lng
-      }));
-
-      // Use the new batch endpoint for efficient event retrieval
-      const requestBody = {
-        coordinates: coordinates,
-        radius: searchRadius
-      };
-
-      // Add timing parameters if provided
-      if (timingContext && timingContext.eventTimeFlexibility > 0) {
-        const startDate = new Date(timingContext.departureDateTime);
-        startDate.setDate(startDate.getDate() - timingContext.eventTimeFlexibility);
-        
-        const endDate = new Date(timingContext.arrivalDateTime);
-        endDate.setDate(endDate.getDate() + timingContext.eventTimeFlexibility);
-        
-        requestBody.dateRange = {
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0]
-        };
-      }
-
-      const response = await fetchWithTimeout(`${API_URL}/events/route-batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      }, 15000); // Increased timeout for batch request
-
-      if (!response.ok) {
-        throw new Error(`Batch API request failed: ${response.status} ${response.statusText}`);
-      }
-
-      const events = await response.json();
-      
-      if (!Array.isArray(events)) {
-        throw new Error(`Invalid response format: expected array, got ${typeof events}`);
-      }
-      
-      // Add route context to events
-      const eventsWithContext = events.map(event => ({
-        ...event,
-        routeContext: {
-          estimatedArrivalTime: null // Will be calculated later
-        }
-      }));
-
-      console.log(`✅ Batch API returned ${eventsWithContext.length} events for ${coordinates.length} route points`);
-      return eventsWithContext;
-      
-    } catch (error) {
-      console.error('❌ Error fetching events along route via batch API:', error);
-      
-      // Fallback to original method if batch API fails
-      console.log('🔄 Falling back to individual requests...');
-      return await fetchEventsAlongRouteFallback(samplePoints, timingContext);
-    }
-  };
-
-  // Fallback method using individual requests (kept for reliability)
-  const fetchEventsAlongRouteFallback = async (samplePoints, timingContext = null) => {
+    console.log(`🎯 Fetching events for ${samplePoints.length} route points with ${searchRadius} mile radius`);
+    
     const allEvents = [];
     const seenEventIds = new Set();
     
     try {
-      // Reduced batch size and increased delay for fallback
-      const batchSize = 2;
-      for (let i = 0; i < samplePoints.length; i += batchSize) {
-        const batch = samplePoints.slice(i, i + batchSize);
+      // Process points sequentially to avoid overwhelming the server
+      for (let i = 0; i < samplePoints.length; i++) {
+        const point = samplePoints[i];
         
-        const promises = batch.map(point => 
-          fetchWithTimeout(`${API_URL}/events?lat=${point.lat}&lng=${point.lng}&radius=${searchRadius}&limit=10`, {
+        try {
+          // Build query parameters
+          const params = new URLSearchParams({
+            lat: point.lat.toString(),
+            lng: point.lng.toString(),
+            radius: searchRadius.toString(),
+            limit: '15' // Get more events per point
+          });
+
+          // Add date filter if timing context provided
+          if (timingContext && timingContext.eventTimeFlexibility > 0) {
+            const startDate = new Date(timingContext.departureDateTime);
+            startDate.setDate(startDate.getDate() - timingContext.eventTimeFlexibility);
+            
+            const endDate = new Date(timingContext.arrivalDateTime);
+            endDate.setDate(endDate.getDate() + timingContext.eventTimeFlexibility);
+            
+            params.append('date_start', startDate.toISOString().split('T')[0]);
+            params.append('date_end', endDate.toISOString().split('T')[0]);
+          }
+
+          const url = `${API_URL}/events?${params.toString()}`;
+          console.log(`🔍 Fetching events from point ${i+1}/${samplePoints.length}: ${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}`);
+          
+          const response = await fetchWithTimeout(url, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
-          }, 8000)
-        );
-        
-        const responses = await Promise.allSettled(promises);
-        
-        for (const response of responses) {
-          if (response.status === 'fulfilled' && response.value.ok) {
-            const events = await response.value.json();
+          }, 10000);
+
+          if (response.ok) {
+            const events = await response.json();
+            console.log(`✅ Point ${i+1} returned ${events.length} events`);
             
-            // Add unique events with route context
+            // Add unique events
             events.forEach(event => {
-              if (!seenEventIds.has(event.id) && event.lat && event.lng) {
+              if (event && event.id && event.lat && event.lng && !seenEventIds.has(event.id)) {
                 seenEventIds.add(event.id);
                 allEvents.push({
                   ...event,
                   routeContext: {
                     pointIndex: i,
-                    estimatedArrivalTime: null
+                    estimatedArrivalTime: null // Will be calculated later
                   }
                 });
               }
             });
+          } else {
+            console.warn(`⚠️ Point ${i+1} request failed:`, response.status, response.statusText);
           }
+          
+        } catch (pointError) {
+          console.warn(`⚠️ Error fetching events for point ${i+1}:`, pointError.message);
+          continue; // Continue with next point
         }
         
-        // Longer delay between batches for fallback
-        if (i + batchSize < samplePoints.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+        // Small delay between requests to be server-friendly
+        if (i < samplePoints.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
       
-      // Sort by interest count and date
+      console.log(`🎉 Route planning found ${allEvents.length} unique events from ${samplePoints.length} points`);
+      
+      // Sort events by interest and proximity to route
       return allEvents.sort((a, b) => {
-        const interestScore = (b.interest_count || 0) - (a.interest_count || 0);
-        if (interestScore !== 0) return interestScore;
+        // Primary sort: interest count
+        const interestDiff = (b.interest_count || 0) - (a.interest_count || 0);
+        if (interestDiff !== 0) return interestDiff;
         
-        // Secondary sort by date (upcoming events first)
+        // Secondary sort: date (upcoming events first)
         const today = new Date();
         const aDate = new Date(a.date);
         const bDate = new Date(b.date);
@@ -318,7 +293,7 @@ const RoutePlanner = ({
       });
       
     } catch (error) {
-      console.error('❌ Fallback event fetching also failed:', error);
+      console.error('❌ Error in route event fetching:', error);
       return [];
     }
   };
