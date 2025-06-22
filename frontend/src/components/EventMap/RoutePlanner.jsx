@@ -379,8 +379,73 @@ const RoutePlanner = ({
 
   // Simplified and reliable method to fetch events along route
   const fetchEventsAlongRoute = async (samplePoints, timingContext = null) => {
-    console.log(`🎯 Simplified route point extraction - no API calls needed`);
-    return []; // Return empty array since we're using extractRouteEvents instead
+    if (!samplePoints || samplePoints.length === 0) {
+      console.log('❌ No sample points provided for event search');
+      return [];
+    }
+
+    console.log(`🎯 Searching for events along ${samplePoints.length} route points...`);
+    
+    try {
+      // Build the API URL for batch event search
+      const API_URL = import.meta.env.VITE_API_URL || 'https://todoevents-1.onrender.com';
+      const params = new URLSearchParams();
+      
+      // Add all sample points as location parameters
+      samplePoints.forEach((point, index) => {
+        params.append('locations', `${point.lat},${point.lng}`);
+      });
+      
+      // Add search radius
+      params.append('radius', searchRadius.toString());
+      
+      // Add timing context if provided
+      if (timingContext && enableEventTimeFilter) {
+        const flexibility = eventTimeFlexibility;
+        const startDate = new Date(timingContext.departureDate);
+        const endDate = new Date(timingContext.arrivalDate);
+        
+        // Extend search window based on flexibility
+        startDate.setDate(startDate.getDate() - flexibility);
+        endDate.setDate(endDate.getDate() + flexibility);
+        
+        params.append('dateRange', `${startDate.toISOString().split('T')[0]},${endDate.toISOString().split('T')[0]}`);
+      }
+      
+      const searchUrl = `${API_URL}/events/batch-search?${params.toString()}`;
+      console.log('🔍 Event search URL:', searchUrl);
+      
+      const response = await fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 45000 // 45 second timeout for route searches
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const events = data.events || [];
+      
+      console.log(`✅ Found ${events.length} events along route`);
+      
+      // Add route context to events
+      const eventsWithRouteContext = events.map(event => ({
+        ...event,
+        isRouteEvent: true,
+        routeContext: 'Found along your planned route'
+      }));
+      
+      return eventsWithRouteContext;
+      
+    } catch (error) {
+      console.error('❌ Error fetching events along route:', error);
+      // Don't fail the entire route calculation if event search fails
+      return [];
+    }
   };
 
   const calculateRoute = async () => {
@@ -518,13 +583,36 @@ const RoutePlanner = ({
 
           setRouteSteps(steps);
 
-          // Extract route points directly from Google Directions response
-          const routeEventsFromDirections = extractRouteEvents(result);
-          setRouteEvents(routeEventsFromDirections);
+          // Extract route waypoints from Google Directions response
+          const routeWaypoints = extractRouteEvents(result);
+          
+          // Sample points along the route for event discovery
+          const samplePoints = sampleRoutePoints(route, searchRadius);
+          console.log(`🎯 Sampling ${samplePoints.length} points along route for event search`);
+          
+          // Search for actual events along the route
+          const timingContext = {
+            departureDate,
+            arrivalDate,
+            departureTime,
+            arrivalTime
+          };
+          
+          const actualEvents = await fetchEventsAlongRoute(samplePoints, timingContext);
+          
+          // Combine route waypoints with actual events
+          const combinedEvents = [
+            ...routeWaypoints,
+            ...actualEvents
+          ];
+          
+          console.log(`✅ Combined results: ${routeWaypoints.length} waypoints + ${actualEvents.length} events = ${combinedEvents.length} total`);
+          
+          setRouteEvents(combinedEvents);
 
           // Pass data back to parent components
           onRouteCalculated?.(result, steps);
-          onEventsDiscovered?.(routeEventsFromDirections);
+          onEventsDiscovered?.(combinedEvents);
 
         } else {
           console.error('Directions request failed due to ' + status);
@@ -799,36 +887,45 @@ const RoutePlanner = ({
                 total + leg.distance.value, 0) / 1609.34)} miles</div>
               <div>Duration: {Math.round(routeData.current.routes[0].legs.reduce((total, leg) => 
                 total + leg.duration.value, 0) / 60)} minutes</div>
-              <div>Route waypoints: {routeEvents.length}</div>
+              <div>Route waypoints: {routeEvents.filter(e => e.isRouteWaypoint).length}</div>
+              <div>Events discovered: {routeEvents.filter(e => !e.isRouteWaypoint).length}</div>
+              <div>Total items: {routeEvents.length}</div>
             </div>
             
             {routeEvents.length > 0 && (
               <div className="mt-3">
-                <h5 className="font-medium text-sm mb-2">Route Waypoints</h5>
+                <h5 className="font-medium text-sm mb-2">Route Items</h5>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {routeEvents.slice(0, 5).map(waypoint => (
+                  {routeEvents.slice(0, 8).map(item => (
                     <div 
-                      key={waypoint.id} 
+                      key={item.id} 
                       className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded"
-                      onClick={() => onEventsDiscovered && onEventsDiscovered([waypoint])}
+                      onClick={() => onEventsDiscovered && onEventsDiscovered([item])}
                       title="Click to view on map"
                     >
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        waypoint.waypointType === 'start' ? 'bg-green-500' :
-                        waypoint.waypointType === 'destination' ? 'bg-red-500' :
-                        'bg-blue-500'
+                        item.isRouteWaypoint ? (
+                          item.waypointType === 'start' ? 'bg-green-500' :
+                          item.waypointType === 'destination' ? 'bg-red-500' :
+                          'bg-blue-500'
+                        ) : 'bg-purple-500'
                       }`}></div>
                       <div className="flex-1 truncate">
-                        <div className="font-medium truncate">{waypoint.title}</div>
+                        <div className="font-medium truncate">
+                          {item.isRouteWaypoint ? '🗺️' : '🎉'} {item.title}
+                        </div>
                         <div className="text-gray-500 dark:text-gray-400 truncate">
-                          {waypoint.waypointType === 'highway' ? waypoint.description : waypoint.address}
+                          {item.isRouteWaypoint 
+                            ? (item.waypointType === 'highway' ? item.description : item.address)
+                            : `${item.city || 'Event'} • ${item.category || 'other'}`
+                          }
                         </div>
                       </div>
                     </div>
                   ))}
-                  {routeEvents.length > 5 && (
+                  {routeEvents.length > 8 && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                      +{routeEvents.length - 5} more waypoints
+                      +{routeEvents.length - 8} more items
                     </div>
                   )}
                 </div>
