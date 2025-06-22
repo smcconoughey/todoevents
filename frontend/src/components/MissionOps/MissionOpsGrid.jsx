@@ -233,7 +233,7 @@ const MissionOpsGrid = () => {
 
   if (isLoading) {
     return (
-      <div className={`h-screen ${theme === 'light' ? 'bg-white'  'bg-neutral-950'} flex items-center justify-center`}>
+      <div className={`h-screen ${theme === 'light' ? 'light' : 'bg-neutral-950'} flex items-center justify-center`}>
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-2 border-pin-blue border-t-transparent rounded-full animate-spin"></div>
           <p className={`${theme === 'light' ? 'text-neutral-900' : 'text-white'}`}>Loading MissionOps...</p>
@@ -243,9 +243,9 @@ const MissionOpsGrid = () => {
   }
 
   return (
-    <div className={`h-screen ${theme === 'light' ? 'bg-white text-neutral-900'  'bg-neutral-950 text-white'} relative overflow-hidden`}>
+    <div className={`h-screen ${theme === 'light' ? 'light' : 'bg-neutral-950 text-white'} relative overflow-hidden`}>
       {/* Header */}
-      <div className={`absolute top-0 left-0 right-0 z-50 ${theme === 'light' ? 'bg-white/80 border-neutral-200'  'bg-neutral-900/80 border-neutral-700'} backdrop-blur-sm border-b`}>
+      <div className={`absolute top-0 left-0 right-0 z-50 ${theme === 'light' ? 'light' : 'bg-neutral-900/80 border-neutral-700'} backdrop-blur-sm border-b`}>
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -404,7 +404,7 @@ const MissionOpsGrid = () => {
       </div>
 
       {/* Legend */}
-      <div className={`absolute bottom-4 left-4 ${theme === 'light' ? 'bg-white/90 border border-neutral-200'  'bg-neutral-900/90'} backdrop-blur-sm rounded-lg p-4 text-sm pointer-events-auto`}>
+      <div className={`absolute bottom-4 left-4 ${theme === 'light' ? 'light' : 'bg-neutral-900/90'} backdrop-blur-sm rounded-lg p-4 text-sm pointer-events-auto`}>
         <h3 className="font-semibold mb-2">Timeline Legend</h3>
         <div className="space-y-1 text-xs">
           <div className="flex items-center gap-2">
