@@ -44,7 +44,7 @@ const debounce = (func, delay) => {
   };
 };
 
-const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRouteCalculated, onRouteEventsDiscovered, mapInstance }) => {
+const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRouteCalculated, onRouteEventsDiscovered, mapInstance, embedded = false }) => {
   const { theme } = useTheme();
   const [activeMode, setActiveMode] = useState('recommendations'); // 'recommendations' or 'route'
   const [loading, setLoading] = useState(false);
@@ -52,7 +52,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(embedded ? true : false);
 
   // City suggestions state
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
@@ -63,7 +64,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   const [gpsLocation, setGpsLocation] = useState(null); // User's GPS coordinates
   const [manualLocation, setManualLocation] = useState(null); // User selected location (search/city)
   const [useGPS, setUseGPS] = useState(true); // Toggle between GPS and manual
-  const [lastFetchedLocation, setLastFetchedLocation] = useState(null); // Track last fetched location to prevent duplicates
+  const [isLoadingGPS, setIsLoadingGPS] = useState(false);
+  const [lastFetchedLocation, setLastFetchedLocation] = useState('no-location');
 
   // Use refs to store current state for immediate access
   const gpsLocationRef = useRef(null);
@@ -585,28 +587,30 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   return (
     <div
       className={`
-        fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500
-        flex flex-col
-        ${theme === 'frost'
-          ? 'bg-white/10 border border-white/20'
-          : theme === 'light'
-            ? 'bg-white/95 border border-gray-200 shadow-xl'
-            : 'bg-neutral-900/80 border border-white/10'
+        ${embedded 
+          ? 'w-full h-full flex flex-col' 
+          : `fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500 flex flex-col
+            ${theme === 'frost'
+              ? 'bg-white/10 border border-white/20'
+              : theme === 'light'
+                ? 'bg-white/95 border border-gray-200 shadow-xl'
+                : 'bg-neutral-900/80 border border-white/10'
+            }
+            /* Desktop: Right panel - full height, always partially visible */
+            lg:right-4 lg:top-4 lg:bottom-4 lg:w-96
+            ${isExpanded ? 'lg:translate-x-0' : 'lg:translate-x-72'} /* Leave 6rem visible when collapsed */
+            
+            /* Mobile: Bottom sheet */
+            ${isExpanded 
+              ? 'bottom-0 right-0 left-0 max-h-[85vh]' 
+              : 'bottom-4 right-4 left-auto w-16 h-16 rounded-full'
+            }
+            lg:left-auto lg:max-h-none`
         }
-        /* Desktop: Right panel - full height, always partially visible */
-        lg:right-4 lg:top-4 lg:bottom-4 lg:w-96
-        ${isExpanded ? 'lg:translate-x-0' : 'lg:translate-x-72'} /* Leave 6rem visible when collapsed */
-        
-        /* Mobile: Bottom sheet */
-        ${isExpanded 
-          ? 'bottom-0 right-0 left-0 max-h-[85vh]' 
-          : 'bottom-4 right-4 left-auto w-16 h-16 rounded-full'
-        }
-        lg:left-auto lg:max-h-none
       `}
     >
       {/* Desktop collapsed state - show expand tab */}
-      {!isExpanded && (
+      {!embedded && !isExpanded && (
         <div className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full">
           <button
             onClick={() => setIsExpanded(true)}
@@ -627,7 +631,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
       )}
 
       {/* Mobile collapsed state - floating action button */}
-      {!isExpanded && (
+      {!embedded && !isExpanded && (
         <div className="lg:hidden flex items-center justify-center w-full h-full">
           <button
             onClick={() => setIsExpanded(true)}
@@ -647,16 +651,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         </div>
       )}
 
-      {/* Main content - only show when expanded */}
-      {isExpanded && (
+      {/* Main content - only show when expanded or embedded */}
+      {(isExpanded || embedded) && (
         <>
           {/* Mobile Handle Bar - only show on mobile when expanded */}
-          <div className={`lg:hidden flex justify-center p-2 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
-            <div className={`w-12 h-1 rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/30'}`} />
-          </div>
+          {!embedded && (
+            <div className={`lg:hidden flex justify-center p-2 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+              <div className={`w-12 h-1 rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/30'}`} />
+            </div>
+          )}
 
           {/* Header */}
-          <div className={`p-4 lg:p-5 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+          <div className={`p-4 lg:p-5 ${!embedded ? 'border-b' : ''} ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`
@@ -704,21 +710,23 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsExpanded(false)}
-                className={`
-                  p-2 rounded-lg transition-colors duration-200 hover:scale-105
-                  ${theme === 'frost'
-                    ? 'hover:bg-white/20'
-                    : theme === 'light'
-                      ? 'hover:bg-gray-100'
-                      : 'hover:bg-white/10'
-                  }
-                `}
-                title="Hide recommendations"
-              >
-                <X className={`w-4 h-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
-              </button>
+              {!embedded && (
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className={`
+                    p-2 rounded-lg transition-colors duration-200 hover:scale-105
+                    ${theme === 'frost'
+                      ? 'hover:bg-white/20'
+                      : theme === 'light'
+                        ? 'hover:bg-gray-100'
+                        : 'hover:bg-white/10'
+                    }
+                  `}
+                  title="Hide recommendations"
+                >
+                  <X className={`w-4 h-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
+                </button>
+              )}
             </div>
 
             {/* Emotional message */}
@@ -737,69 +745,71 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             </div>
 
             {/* Mode Toggle Slider - Desktop Only */}
-            <div className="hidden lg:block mb-4">
-              <div className={`
-                relative p-1 rounded-xl border
-                ${theme === 'frost'
-                  ? 'bg-white/10 border-white/20'
-                  : theme === 'light'
-                    ? 'bg-gray-100 border-gray-200'
-                    : 'bg-white/5 border-white/10'
-                }
-              `}>
-                <div className="grid grid-cols-2 relative">
-                  {/* Sliding background */}
-                  <div
-                    className={`
-                      absolute top-1 bottom-1 w-1/2 rounded-lg transition-all duration-300 ease-out
-                      ${theme === 'frost'
-                        ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 border border-white/30'
-                        : theme === 'light'
-                          ? 'bg-white border border-gray-300 shadow-sm'
-                          : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 border border-spark-yellow/40'
-                      }
-                    `}
-                    style={{
-                      transform: activeMode === 'route' ? 'translateX(100%)' : 'translateX(0%)'
-                    }}
-                  />
-                  
-                  {/* Buttons */}
-                  <button
-                    onClick={() => setActiveMode('recommendations')}
-                    className={`
-                      relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
-                      text-sm font-medium transition-all duration-200
-                      ${activeMode === 'recommendations'
-                        ? theme === 'light' ? 'text-gray-900' : 'text-white'
-                        : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
-                      }
-                    `}
-                  >
-                    <Compass className="w-4 h-4" />
-                    <span>Discover</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => setActiveMode('route')}
-                    className={`
-                      relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
-                      text-sm font-medium transition-all duration-200
-                      ${activeMode === 'route'
-                        ? theme === 'light' ? 'text-gray-900' : 'text-white'
-                        : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
-                      }
-                    `}
-                  >
-                    <Navigation className="w-4 h-4" />
-                    <span>Plan Route</span>
-                  </button>
+            {!embedded && (
+              <div className="hidden lg:block mb-4">
+                <div className={`
+                  relative p-1 rounded-xl border
+                  ${theme === 'frost'
+                    ? 'bg-white/10 border-white/20'
+                    : theme === 'light'
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white/5 border-white/10'
+                  }
+                `}>
+                  <div className="grid grid-cols-2 relative">
+                    {/* Sliding background */}
+                    <div
+                      className={`
+                        absolute top-1 bottom-1 w-1/2 rounded-lg transition-all duration-300 ease-out
+                        ${theme === 'frost'
+                          ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 border border-white/30'
+                          : theme === 'light'
+                            ? 'bg-white border border-gray-300 shadow-sm'
+                            : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 border border-spark-yellow/40'
+                        }
+                      `}
+                      style={{
+                        transform: activeMode === 'route' ? 'translateX(100%)' : 'translateX(0%)'
+                      }}
+                    />
+                    
+                    {/* Buttons */}
+                    <button
+                      onClick={() => setActiveMode('recommendations')}
+                      className={`
+                        relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
+                        text-sm font-medium transition-all duration-200
+                        ${activeMode === 'recommendations'
+                          ? theme === 'light' ? 'text-gray-900' : 'text-white'
+                          : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
+                        }
+                      `}
+                    >
+                      <Compass className="w-4 h-4" />
+                      <span>Discover</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveMode('route')}
+                      className={`
+                        relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
+                        text-sm font-medium transition-all duration-200
+                        ${activeMode === 'route'
+                          ? theme === 'light' ? 'text-gray-900' : 'text-white'
+                          : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
+                        }
+                      `}
+                    >
+                      <Navigation className="w-4 h-4" />
+                      <span>Plan Route</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Location Control Buttons - Only show in recommendations mode */}
-            {activeMode === 'recommendations' && (
+            {(embedded || activeMode === 'recommendations') && (
               <>
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   <button
@@ -878,10 +888,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             )}
           </div>
 
-          {/* Content - Full height with scroll */}
-          <div className="flex-1 overflow-y-auto p-3 lg:p-4">
-            {activeMode === 'recommendations' ? (
-              // Recommendations Content
+          {/* Content Area */}
+          <div className={`flex-1 overflow-y-auto ${embedded ? 'p-4' : 'p-3 lg:p-4'}`}>
+            {/* Show recommendations for embedded mode or when activeMode is recommendations */}
+            {(embedded || activeMode === 'recommendations') ? (
               loading ? (
                 <div className="space-y-3 lg:space-y-4">
                   {[...Array(3)].map((_, i) => (
@@ -909,13 +919,13 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     <MapPin className="w-6 h-6 text-white/60" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-white mb-1">
+                    <h4 className={`font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                       {getActiveLocation() 
                         ? 'No events found nearby' 
                         : 'Share your location to find events'
                       }
                     </h4>
-                    <p className="text-white/60 text-sm">
+                    <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
                       {getActiveLocation() 
                         ? 'Try adjusting your filters or exploring other areas'
                         : 'Get your current location to discover amazing events near you'
@@ -929,7 +939,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                         px-4 py-2 rounded-lg font-medium transition-all duration-200
                         ${theme === 'frost'
                           ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30 hover:bg-blue-400/30'
-                          : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
+                          : theme === 'light'
+                            ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200'
+                            : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
                       `}
                     >
                       <Navigation className="w-4 h-4 inline mr-2" />
@@ -939,7 +951,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 </div>
               )
             ) : (
-              // Route Planner Content
+              // Route Planner Content (Desktop only, non-embedded)
               <div className="h-full">
                 <RoutePlanner
                   onRouteCalculated={onRouteCalculated}

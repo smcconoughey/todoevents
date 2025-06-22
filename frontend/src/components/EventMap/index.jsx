@@ -2521,14 +2521,6 @@ const EventMap = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
-              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
-            >
-              {activeView === 'map' ? <Filter className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
               onClick={() => setIsMobileRecommendationsOpen(true)}
               className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
               title="Recommendations"
@@ -4341,6 +4333,7 @@ const EventMap = ({
                 onRouteCalculated={handleRouteCalculated}
                 onRouteEventsDiscovered={handleRouteEventsDiscovered}
                 mapInstance={mapRef.current}
+                embedded={true}
               />
             </div>
           </div>
