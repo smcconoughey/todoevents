@@ -259,7 +259,7 @@ const RoutePlanner = ({
       return routeEvents;
     }
     
-    console.log('🎯 Extracting notable points from route...');
+    console.log('�� Extracting notable waypoints from route...');
     
     // Extract key points from the route
     route.legs.forEach((leg, legIndex) => {
@@ -267,15 +267,18 @@ const RoutePlanner = ({
       if (leg.start_address && leg.start_location) {
         routeEvents.push({
           id: `start-${legIndex}`,
-          title: `Route Start: ${leg.start_address}`,
-          description: `Beginning of route segment ${legIndex + 1}`,
+          title: `🚗 ${leg.start_address}`,
+          description: `Starting point for route segment ${legIndex + 1}`,
           address: leg.start_address,
           lat: leg.start_location.lat(),
           lng: leg.start_location.lng(),
-          category: 'transportation',
-          isRoutePoint: true,
+          category: 'navigation',
+          isRouteWaypoint: true,
+          waypointType: 'start',
           distance: leg.distance?.text || 'N/A',
-          duration: leg.duration?.text || 'N/A'
+          duration: leg.duration?.text || 'N/A',
+          city: leg.start_address.split(',')[0],
+          state: leg.start_address.split(',')[1]?.trim() || ''
         });
       }
       
@@ -291,17 +294,24 @@ const RoutePlanner = ({
           instructions.toLowerCase().includes('exit');
           
         if (isSignificant && step.start_location) {
+          const shortInstruction = instructions.length > 60 
+            ? instructions.substring(0, 60) + '...' 
+            : instructions;
+            
           routeEvents.push({
             id: `step-${legIndex}-${stepIndex}`,
-            title: `Route Milestone: ${instructions.substring(0, 50)}...`,
+            title: `🛣️ ${shortInstruction}`,
             description: instructions,
-            address: `${step.start_location.lat().toFixed(4)}, ${step.start_location.lng().toFixed(4)}`,
+            address: `Highway waypoint: ${step.start_location.lat().toFixed(4)}, ${step.start_location.lng().toFixed(4)}`,
             lat: step.start_location.lat(),
             lng: step.start_location.lng(),
-            category: 'transportation',
-            isRoutePoint: true,
+            category: 'navigation',
+            isRouteWaypoint: true,
+            waypointType: 'highway',
             distance: step.distance?.text || 'N/A',
-            duration: step.duration?.text || 'N/A'
+            duration: step.duration?.text || 'N/A',
+            city: 'Highway Junction',
+            state: ''
           });
         }
       });
@@ -310,20 +320,23 @@ const RoutePlanner = ({
       if (leg.end_address && leg.end_location) {
         routeEvents.push({
           id: `end-${legIndex}`,
-          title: `Route ${legIndex === route.legs.length - 1 ? 'Destination' : 'Waypoint'}: ${leg.end_address}`,
+          title: `🏁 ${leg.end_address}`,
           description: `${legIndex === route.legs.length - 1 ? 'Final destination' : 'Intermediate waypoint'}`,
           address: leg.end_address,
           lat: leg.end_location.lat(),
           lng: leg.end_location.lng(),
-          category: 'transportation',
-          isRoutePoint: true,
+          category: 'navigation',
+          isRouteWaypoint: true,
+          waypointType: legIndex === route.legs.length - 1 ? 'destination' : 'waypoint',
           distance: leg.distance?.text || 'N/A',
-          duration: leg.duration?.text || 'N/A'
+          duration: leg.duration?.text || 'N/A',
+          city: leg.end_address.split(',')[0],
+          state: leg.end_address.split(',')[1]?.trim() || ''
         });
       }
     });
     
-    console.log(`✅ Extracted ${routeEvents.length} notable route points`);
+    console.log(`✅ Extracted ${routeEvents.length} route waypoints`);
     return routeEvents;
   };
 
@@ -749,24 +762,38 @@ const RoutePlanner = ({
                 total + leg.distance.value, 0) / 1609.34)} miles</div>
               <div>Duration: {Math.round(routeData.current.routes[0].legs.reduce((total, leg) => 
                 total + leg.duration.value, 0) / 60)} minutes</div>
-              <div>Events discovered: {routeEvents.length}</div>
+              <div>Route waypoints: {routeEvents.length}</div>
             </div>
             
             {routeEvents.length > 0 && (
               <div className="mt-3">
-                <h5 className="font-medium text-sm mb-2">Top Events Along Route</h5>
+                <h5 className="font-medium text-sm mb-2">Route Waypoints</h5>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {routeEvents.slice(0, 5).map(event => (
-                    <div key={event.id} className="flex items-center gap-2 text-xs">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                  {routeEvents.slice(0, 5).map(waypoint => (
+                    <div 
+                      key={waypoint.id} 
+                      className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded"
+                      onClick={() => onEventsDiscovered && onEventsDiscovered([waypoint])}
+                      title="Click to view on map"
+                    >
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        waypoint.waypointType === 'start' ? 'bg-green-500' :
+                        waypoint.waypointType === 'destination' ? 'bg-red-500' :
+                        'bg-blue-500'
+                      }`}></div>
                       <div className="flex-1 truncate">
-                        <div className="font-medium truncate">{event.title}</div>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          {event.city}, {event.state} • {event.interest_count || 0} interested
+                        <div className="font-medium truncate">{waypoint.title}</div>
+                        <div className="text-gray-500 dark:text-gray-400 truncate">
+                          {waypoint.waypointType === 'highway' ? waypoint.description : waypoint.address}
                         </div>
                       </div>
                     </div>
                   ))}
+                  {routeEvents.length > 5 && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                      +{routeEvents.length - 5} more waypoints
+                    </div>
+                  )}
                 </div>
               </div>
             )}

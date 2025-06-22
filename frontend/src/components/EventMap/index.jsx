@@ -3923,14 +3923,20 @@ const EventMap = ({
               <MapContainer
                 ref={mapRef}
                 events={
-                  // Always show all events unless filters are active
-                  selectedDate || 
-                  selectedTime !== 'all' || 
-                  !selectedCategory.includes('all') || 
-                  mapCenter ||
-                  miscFilters.feeFilter !== 'all'
-                    ? filteredEvents
-                    : events
+                  // Combine regular events with route waypoints
+                  [
+                    ...((
+                      // Always show all events unless filters are active
+                      selectedDate || 
+                      selectedTime !== 'all' || 
+                      !selectedCategory.includes('all') || 
+                      mapCenter ||
+                      miscFilters.feeFilter !== 'all'
+                        ? filteredEvents
+                        : events
+                    ) || []),
+                    ...(routeEvents || [])
+                  ]
                 }
                 onEventClick={handleEventClick}
                 selectedCategory={selectedCategory}
@@ -4040,14 +4046,20 @@ const EventMap = ({
         ) : (
           <div className="h-full overflow-y-auto" style={{backgroundColor: 'var(--bg-main)'}}>
             {renderEventList(
-              // Always show all events unless filters are active
-              selectedDate || 
-              selectedTime !== 'all' || 
-              !selectedCategory.includes('all') || 
-              effectiveMapCenter ||
-              miscFilters.feeFilter !== 'all'
-                ? filteredEvents
-                : events,
+              // Combine regular events with route waypoints for list view
+              [
+                ...((
+                  // Always show all events unless filters are active
+                  selectedDate || 
+                  selectedTime !== 'all' || 
+                  !selectedCategory.includes('all') || 
+                  effectiveMapCenter ||
+                  miscFilters.feeFilter !== 'all'
+                    ? filteredEvents
+                    : events
+                ) || []),
+                ...(routeEvents || [])
+              ],
               selectedEvent,
               handleEventClick,
               user,
