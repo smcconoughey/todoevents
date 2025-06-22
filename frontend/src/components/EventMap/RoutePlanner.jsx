@@ -259,7 +259,11 @@ const RoutePlanner = ({
       return routeEvents;
     }
     
-    console.log('�� Extracting notable waypoints from route...');
+    console.log('🎯 Extracting notable waypoints from route...');
+    
+    // Get current date for route waypoints
+    const currentDate = new Date().toISOString().split('T')[0];
+    const currentTime = new Date().toTimeString().slice(0, 5);
     
     // Extract key points from the route
     route.legs.forEach((leg, legIndex) => {
@@ -268,7 +272,7 @@ const RoutePlanner = ({
         routeEvents.push({
           id: `start-${legIndex}`,
           title: `🚗 ${leg.start_address}`,
-          description: `Starting point for route segment ${legIndex + 1}`,
+          description: `Starting point for route segment ${legIndex + 1}. This is an automatically generated route waypoint to help you navigate your journey.`,
           address: leg.start_address,
           lat: leg.start_location.lat(),
           lng: leg.start_location.lng(),
@@ -278,7 +282,18 @@ const RoutePlanner = ({
           distance: leg.distance?.text || 'N/A',
           duration: leg.duration?.text || 'N/A',
           city: leg.start_address.split(',')[0],
-          state: leg.start_address.split(',')[1]?.trim() || ''
+          state: leg.start_address.split(',')[1]?.trim() || '',
+          date: currentDate,
+          start_time: currentTime,
+          end_time: null,
+          end_date: null,
+          created_by: 'system',
+          host_name: 'Route Planner',
+          event_url: null,
+          fee_required: null,
+          is_verified: false,
+          interest_count: 0,
+          view_count: 0
         });
       }
       
@@ -301,7 +316,7 @@ const RoutePlanner = ({
           routeEvents.push({
             id: `step-${legIndex}-${stepIndex}`,
             title: `🛣️ ${shortInstruction}`,
-            description: instructions,
+            description: `${instructions}. This is an automatically generated route waypoint marking a significant navigation point along your journey.`,
             address: `Highway waypoint: ${step.start_location.lat().toFixed(4)}, ${step.start_location.lng().toFixed(4)}`,
             lat: step.start_location.lat(),
             lng: step.start_location.lng(),
@@ -311,7 +326,18 @@ const RoutePlanner = ({
             distance: step.distance?.text || 'N/A',
             duration: step.duration?.text || 'N/A',
             city: 'Highway Junction',
-            state: ''
+            state: '',
+            date: currentDate,
+            start_time: currentTime,
+            end_time: null,
+            end_date: null,
+            created_by: 'system',
+            host_name: 'Route Planner',
+            event_url: null,
+            fee_required: null,
+            is_verified: false,
+            interest_count: 0,
+            view_count: 0
           });
         }
       });
@@ -321,7 +347,7 @@ const RoutePlanner = ({
         routeEvents.push({
           id: `end-${legIndex}`,
           title: `🏁 ${leg.end_address}`,
-          description: `${legIndex === route.legs.length - 1 ? 'Final destination' : 'Intermediate waypoint'}`,
+          description: `${legIndex === route.legs.length - 1 ? 'Final destination' : 'Intermediate waypoint'} for your planned route. This is an automatically generated route waypoint.`,
           address: leg.end_address,
           lat: leg.end_location.lat(),
           lng: leg.end_location.lng(),
@@ -331,7 +357,18 @@ const RoutePlanner = ({
           distance: leg.distance?.text || 'N/A',
           duration: leg.duration?.text || 'N/A',
           city: leg.end_address.split(',')[0],
-          state: leg.end_address.split(',')[1]?.trim() || ''
+          state: leg.end_address.split(',')[1]?.trim() || '',
+          date: currentDate,
+          start_time: currentTime,
+          end_time: null,
+          end_date: null,
+          created_by: 'system',
+          host_name: 'Route Planner',
+          event_url: null,
+          fee_required: null,
+          is_verified: false,
+          interest_count: 0,
+          view_count: 0
         });
       }
     });

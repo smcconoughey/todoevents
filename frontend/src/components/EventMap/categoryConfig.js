@@ -29,7 +29,8 @@ import {
   Mountain,
   Snowflake,
   Tent,
-  Wheat
+  Wheat,
+  Navigation
 } from 'lucide-react';
 
 // Helper function to create SVG marker with icon path
@@ -117,7 +118,10 @@ const iconPaths = {
   Wheat: '<path d="M2 22L22 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 4L8 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 4L16 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 6L6 16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 6L18 16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="4" r="1" fill="white"/><circle cx="12" cy="2" r="1" fill="white"/><circle cx="16" cy="4" r="1" fill="white"/>',
 
   // Custom Cow icon for livestock
-  Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>'
+  Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>',
+
+  // Navigation/Route icon
+  Navigation: '<polygon points="3,11 22,2 13,21 11,13 3,11" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/>'
 };
 
 const categories = [
@@ -330,6 +334,14 @@ const categories = [
     color: 'text-pin-blue-300',
     markerColor: '#64B5F6',
     markerSVG: createCategoryMarkerSVG('#64B5F6', iconPaths.Snowflake)
+  },
+  {
+    id: 'navigation',
+    name: 'Route Waypoint',
+    icon: Navigation,
+    color: 'text-orange-500',
+    markerColor: '#FF9500',
+    markerSVG: createCategoryMarkerSVG('#FF9500', iconPaths.Navigation)
   },
   {
     id: 'other',
