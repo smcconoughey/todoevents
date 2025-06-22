@@ -299,8 +299,22 @@ const RoutePlanner = ({
   };
 
   const calculateRoute = async () => {
-    if (!startLocation || !endLocation || !directionsServiceRef.current) {
+    // Debug the current values
+    console.log('🎯 Route calculation attempt:', {
+      startLocation: startLocation,
+      endLocation: endLocation,
+      startLocationEmpty: !startLocation || startLocation.trim() === '',
+      endLocationEmpty: !endLocation || endLocation.trim() === '',
+      directionsServiceReady: !!directionsServiceRef.current
+    });
+    
+    if (!startLocation || startLocation.trim() === '' || !endLocation || endLocation.trim() === '') {
       alert('Please enter both start and end locations');
+      return;
+    }
+    
+    if (!directionsServiceRef.current) {
+      alert('Google Maps service not ready. Please wait a moment and try again.');
       return;
     }
 
@@ -321,6 +335,8 @@ const RoutePlanner = ({
         travelMode: window.google.maps.TravelMode[travelMode],
         unitSystem: window.google.maps.UnitSystem.IMPERIAL
       };
+
+      console.log('📍 Route request:', request);
 
       directionsServiceRef.current.route(request, async (result, status) => {
         if (status === window.google.maps.DirectionsStatus.OK) {
