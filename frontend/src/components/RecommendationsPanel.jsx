@@ -174,11 +174,13 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     debouncedFetchRecommendations();
   }, [userLocation, selectedFilter, userActualLocation]);
 
+  const [manualOverride, setManualOverride] = useState(null);
+
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
       // Priority: 1) Manual search selection (userLocation), 2) GPS location (userActualLocation), 3) Default
-      let locationToUse = userLocation || userActualLocation;
+      let locationToUse = manualOverride || userLocation || userActualLocation;
       // Normalize possible google LatLng objects (functions instead of numbers)
       if (locationToUse && typeof locationToUse.lat === 'function') {
         locationToUse = {
@@ -243,7 +245,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     setLoadingCities(true);
     try {
       // Priority: 1) Manually selected location (userLocation), 2) GPS location (userActualLocation), 3) Default
-      let locationToUse = userLocation || userActualLocation;
+      let locationToUse = manualOverride || userLocation || userActualLocation;
       // Normalize possible google LatLng objects (functions instead of numbers)
       if (locationToUse && typeof locationToUse.lat === 'function') {
         locationToUse = {
@@ -292,6 +294,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   const handleCitySelect = (city) => {
     // Set the map center to the selected city and close the suggestions
+    setManualOverride({ lat: city.lat, lng: city.lng, city: city.city + ', ' + city.state });
     if (onExploreMore) {
       onExploreMore(city);
     }
