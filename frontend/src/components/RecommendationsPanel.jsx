@@ -162,9 +162,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
-      // Priority: 1) Manually selected location (userLocation), 2) GPS location (userActualLocation), 3) Default
-      // When user manually selects a location, it should override GPS location until reset
-      const locationToUse = userLocation || userActualLocation;
+      let manualLocation = null;
+      try {
+        manualLocation = JSON.parse(localStorage.getItem('manualLocation')) || null;
+      } catch (_) {}
+
+      const locationToUse = manualLocation || userLocation || userActualLocation;
       
       const requestBody = {
         lat: locationToUse?.lat || null,
@@ -174,16 +177,16 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         limit: 8
       };
       
-      // If using default center (no specific location), try a known active area
-      if (requestBody.lat === 39.8283 && requestBody.lng === -98.5795) {
-        // Use Daytona Beach as fallback since it's known to have events
+      // If still default centre and no manual/GPS, fall back to Daytona once
+      if (!manualLocation && !userActualLocation && requestBody.lat === 39.8283 && requestBody.lng === -98.5795) {
         requestBody.lat = 29.2108;
         requestBody.lng = -81.0228;
-        requestBody.city = "Daytona Beach";
+        requestBody.city = 'Daytona Beach';
       }
       
       // Debug: Check what location we're actually using
       console.log('🔍 Final request location:');
+      console.log('  manualLocation:', manualLocation);
       console.log('  received_userLocation:', userLocation);
       console.log('  userActualLocation:', userActualLocation);
       console.log('  locationToUse:', locationToUse);
@@ -794,42 +797,3 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               ) : (
                 <div className="text-center py-6 space-y-2">
                   <div className={`
-                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
-                  `}>
-                    <Lightbulb className="w-6 h-6 text-white/60" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-white mb-1">
-                      No nearby cities found
-                    </h4>
-                    <p className="text-white/60 text-sm">
-                      Try exploring the main map for events in other areas
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowCitySuggestions(false);
-                      onExploreMore && onExploreMore();
-                    }}
-                    className={`
-                      mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
-                      ${theme === 'frost'
-                        ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'
-                      }
-                    `}
-                  >
-                    View All Events
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default RecommendationsPanel;
