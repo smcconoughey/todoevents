@@ -178,7 +178,15 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     setLoading(true);
     try {
       // Priority: 1) Manual search selection (userLocation), 2) GPS location (userActualLocation), 3) Default
-      const locationToUse = userLocation || userActualLocation;
+      let locationToUse = userLocation || userActualLocation;
+      // Normalize possible google LatLng objects (functions instead of numbers)
+      if (locationToUse && typeof locationToUse.lat === 'function') {
+        locationToUse = {
+          ...locationToUse,
+          lat: locationToUse.lat(),
+          lng: typeof locationToUse.lng === 'function' ? locationToUse.lng() : locationToUse.lng
+        };
+      }
       
       // Debug: Check what we received as props and what we're using
       console.log('🔍 RecommendationsPanel received:', {
@@ -235,7 +243,15 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     setLoadingCities(true);
     try {
       // Priority: 1) Manually selected location (userLocation), 2) GPS location (userActualLocation), 3) Default
-      const locationToUse = userLocation || userActualLocation;
+      let locationToUse = userLocation || userActualLocation;
+      // Normalize possible google LatLng objects (functions instead of numbers)
+      if (locationToUse && typeof locationToUse.lat === 'function') {
+        locationToUse = {
+          ...locationToUse,
+          lat: locationToUse.lat(),
+          lng: typeof locationToUse.lng === 'function' ? locationToUse.lng() : locationToUse.lng
+        };
+      }
       
       const params = new URLSearchParams();
       if (locationToUse?.lat && locationToUse?.lng) {

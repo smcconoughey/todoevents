@@ -833,8 +833,24 @@ const EventMap = ({
     lng: selectedLocation.lng
   } : null);
   
-  // Compute effective location for recommendations (includes all location data)
-  const effectiveLocationForRecommendations = selectedLocation || (mapCenter ? mapCenter : null);
+  // Compute effective location for recommendations (manual selection first, then map center)
+  const effectiveLocationForRecommendations = (() => {
+    if (selectedLocation && typeof selectedLocation.lat === 'number' && typeof selectedLocation.lng === 'number') {
+      return {
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng,
+        city: selectedLocation.city || selectedLocation.address || null
+      };
+    }
+    if (mapCenter && typeof mapCenter.lat === 'number' && typeof mapCenter.lng === 'number') {
+      return {
+        lat: mapCenter.lat,
+        lng: mapCenter.lng,
+        city: null
+      };
+    }
+    return null;
+  })();
   
   // Debug: Check what we're passing to RecommendationsPanel
   console.log('🎯 EventMap passing to RecommendationsPanel:', {
@@ -1210,7 +1226,9 @@ const EventMap = ({
           (position) => {
             setSelectedLocation({
               lat: position.coords.latitude,
-              lng: position.coords.longitude
+              lng: position.coords.longitude,
+              address: 'Your location',
+              city: 'Your location'
             });
             setProximityRange(25); // Set a reasonable radius
           },
@@ -1445,7 +1463,7 @@ const EventMap = ({
   }, [events.length, user, slug, manuallyClosed]); // Include manuallyClosed to react to close actions
 
   const handleAddressSelect = (data) => {
-    setSelectedLocation({ lat: data.lat, lng: data.lng, address: data.address });
+    setSelectedLocation({ lat: data.lat, lng: data.lng, address: data.address, city: data.address });
     setSearchValue(data.address);
 
     // Center map on the chosen location
@@ -2463,7 +2481,7 @@ const EventMap = ({
       (pos) => {
         const { latitude, longitude } = pos.coords;
 
-        setSelectedLocation({ lat: latitude, lng: longitude, address: 'Your location' });
+        setSelectedLocation({ lat: latitude, lng: longitude, address: 'Your location', city: 'Your location' });
         setMapCenter({ lat: latitude, lng: longitude });
       },
       () => {
