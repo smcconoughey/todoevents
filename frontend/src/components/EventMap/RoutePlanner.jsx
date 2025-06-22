@@ -11,7 +11,8 @@ const RoutePlanner = ({
   mapInstance,
   apiKey,
   onClose,
-  theme = 'light'
+  theme = 'light',
+  embedded = false
 }) => {
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
@@ -463,7 +464,7 @@ const RoutePlanner = ({
   const isFrost = theme === 'frost';
 
   return (
-    <div className={`p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-96 overflow-y-auto ${isFrost ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
+    <div className={`${embedded ? 'p-2 h-full overflow-y-auto' : 'p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-96 overflow-y-auto'} ${isFrost && !embedded ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
       <style jsx>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
@@ -491,18 +492,20 @@ const RoutePlanner = ({
           background: #60a5fa;
         }
       `}</style>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Navigation className="w-5 h-5" />
-          Route Planner
-        </h3>
-        <button
-          onClick={onClose}
-          className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Navigation className="w-5 h-5" />
+            Route Planner
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>

@@ -19,12 +19,19 @@ import {
   Gift,
   Navigation,
   X,
-  ChevronLeft
+  ChevronLeft,
+  Search,
+  Users,
+  Filter,
+  ChevronRight
 } from 'lucide-react';
 import { WebIcon } from './EventMap/WebIcons';
 import { CategoryIcon } from './EventMap/CategoryIcons';
 import categories, { getCategory } from './EventMap/categoryConfig';
 import { API_URL } from '../config';
+
+// Import route planner component
+import RoutePlanner from './EventMap/RoutePlanner';
 
 // Debounce helper function
 const debounce = (func, delay) => {
@@ -37,10 +44,11 @@ const debounce = (func, delay) => {
   };
 };
 
-const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => {
+const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRouteCalculated, onRouteEventsDiscovered, mapInstance }) => {
   const { theme } = useTheme();
-  const [recommendations, setRecommendations] = useState([]);
+  const [activeMode, setActiveMode] = useState('recommendations'); // 'recommendations' or 'route'
   const [loading, setLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
@@ -437,7 +445,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           transition-all duration-300 hover:scale-[1.02] cursor-pointer
           ${theme === 'frost' 
             ? 'bg-white/15 border border-white/20 hover:bg-white/25' 
-            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+            : theme === 'light'
+              ? 'bg-white/80 border border-gray-200 hover:bg-white/90 shadow-sm'
+              : 'bg-white/5 border border-white/10 hover:bg-white/10'
           }
         `}
         onClick={() => onEventClick && onEventClick(event)}
@@ -447,7 +457,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300
           ${theme === 'frost' 
             ? 'bg-gradient-to-br from-blue-400/10 to-purple-400/10' 
-            : 'bg-gradient-to-br from-spark-yellow/5 to-pin-blue/5'
+            : theme === 'light'
+              ? 'bg-gradient-to-br from-blue-50/50 to-indigo-50/50'
+              : 'bg-gradient-to-br from-spark-yellow/5 to-pin-blue/5'
           }
         `} />
 
@@ -460,7 +472,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                 p-1.5 lg:p-2 rounded-xl transition-colors duration-200
                 ${theme === 'frost' 
                   ? 'bg-white/20 group-hover:bg-white/30' 
-                  : 'bg-spark-yellow/10 group-hover:bg-spark-yellow/20'
+                  : theme === 'light'
+                    ? 'bg-blue-50 group-hover:bg-blue-100'
+                    : 'bg-spark-yellow/10 group-hover:bg-spark-yellow/20'
                 }
               `}>
                 <Icon className={`w-3 h-3 lg:w-4 lg:h-4 ${category.color}`} />
@@ -473,7 +487,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                       px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs font-medium rounded-full
                       ${theme === 'frost'
                         ? 'bg-blue-400/20 text-blue-100 border border-blue-300/30'
-                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30'
+                        : theme === 'light'
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30'
                       }
                     `}
                   >
@@ -485,19 +501,32 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           </div>
 
           {/* Event title */}
-          <h3 className="font-display font-semibold text-white text-base lg:text-lg leading-tight line-clamp-2 group-hover:text-spark-yellow transition-colors duration-200">
+          <h3 className={`
+            font-display font-semibold text-base lg:text-lg leading-tight line-clamp-2 
+            transition-colors duration-200
+            ${theme === 'light'
+              ? 'text-gray-900 group-hover:text-blue-600'
+              : 'text-white group-hover:text-spark-yellow'
+            }
+          `}>
             {event.title}
           </h3>
 
           {/* Event details */}
-          <div className="space-y-1.5 lg:space-y-2 text-xs lg:text-sm text-white/70">
+          <div className={`
+            space-y-1.5 lg:space-y-2 text-xs lg:text-sm
+            ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}
+          `}>
             <div className="flex items-center gap-1.5 lg:gap-2">
-              <Calendar className="w-3 h-3 lg:w-4 lg:h-4 text-pin-blue" />
+              <Calendar className={`
+                w-3 h-3 lg:w-4 lg:h-4
+                ${theme === 'light' ? 'text-blue-500' : 'text-pin-blue'}
+              `} />
               <span className="font-medium">
                 {formatEventDate(event)}
                 {formatEventTime(event) && (
                   <>
-                    <span className="text-white/50 mx-1">•</span>
+                    <span className={`mx-1 ${theme === 'light' ? 'text-gray-400' : 'text-white/50'}`}>•</span>
                     {formatEventTime(event)}
                   </>
                 )}
@@ -505,12 +534,15 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
             </div>
             
             <div className="flex items-center gap-1.5 lg:gap-2">
-              <MapPin className="w-3 h-3 lg:w-4 lg:h-4 text-fresh-teal" />
+              <MapPin className={`
+                w-3 h-3 lg:w-4 lg:h-4
+                ${theme === 'light' ? 'text-emerald-500' : 'text-fresh-teal'}
+              `} />
               <span className="truncate flex-1">
                 {event.address?.split(',')[0] || 'Location TBD'}
               </span>
               {event.distance && (
-                <span className="text-xs text-white/50">
+                <span className={`text-xs ${theme === 'light' ? 'text-gray-400' : 'text-white/50'}`}>
                   {getDistanceText(event.distance)}
                 </span>
               )}
@@ -519,19 +551,31 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
           {/* Description preview - hide on very small screens */}
           {event.description && (
-            <p className="hidden sm:block text-xs lg:text-sm text-white/60 line-clamp-2 leading-relaxed">
+            <p className={`
+              hidden sm:block text-xs lg:text-sm line-clamp-2 leading-relaxed
+              ${theme === 'light' ? 'text-gray-500' : 'text-white/60'}
+            `}>
               {event.description}
             </p>
           )}
 
           {/* Action hint */}
           <div className="flex items-center justify-between pt-1.5 lg:pt-2">
-            <div className="flex items-center gap-1 text-xs text-white/50">
+            <div className={`
+              flex items-center gap-1 text-xs
+              ${theme === 'light' ? 'text-gray-400' : 'text-white/50'}
+            `}>
               <Zap className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
               <span className="hidden sm:inline">Click to explore</span>
               <span className="sm:hidden">Tap</span>
             </div>
-            <ArrowRight className="w-3 h-3 lg:w-4 lg:h-4 text-white/30 group-hover:text-white/60 transition-colors duration-200" />
+            <ArrowRight className={`
+              w-3 h-3 lg:w-4 lg:h-4 transition-colors duration-200
+              ${theme === 'light' 
+                ? 'text-gray-300 group-hover:text-gray-500' 
+                : 'text-white/30 group-hover:text-white/60'
+              }
+            `} />
           </div>
         </div>
       </div>
@@ -545,7 +589,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         flex flex-col
         ${theme === 'frost'
           ? 'bg-white/10 border border-white/20'
-          : 'bg-neutral-900/80 border border-white/10'
+          : theme === 'light'
+            ? 'bg-white/95 border border-gray-200 shadow-xl'
+            : 'bg-neutral-900/80 border border-white/10'
         }
         /* Desktop: Right panel - full height, always partially visible */
         lg:right-4 lg:top-4 lg:bottom-4 lg:w-96
@@ -568,12 +614,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               p-3 rounded-l-xl transition-all duration-200 shadow-lg
               ${theme === 'frost'
                 ? 'bg-white/15 border border-white/25 hover:bg-white/25'
-                : 'bg-neutral-900/90 border border-white/15 hover:bg-neutral-800/90'
+                : theme === 'light'
+                  ? 'bg-white/95 border border-gray-200 hover:bg-white shadow-lg'
+                  : 'bg-neutral-900/90 border border-white/15 hover:bg-neutral-800/90'
               }
             `}
             title="Show recommendations"
           >
-            <ChevronLeft className="w-5 h-5 text-white" />
+            <ChevronLeft className={`w-5 h-5 ${theme === 'light' ? 'text-gray-600' : 'text-white'}`} />
           </button>
         </div>
       )}
@@ -587,12 +635,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               w-full h-full rounded-full flex items-center justify-center transition-all duration-200
               ${theme === 'frost'
                 ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30 hover:from-blue-400/40 hover:to-purple-400/40'
-                : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30 hover:from-spark-yellow/40 hover:to-pin-blue/40'
+                : theme === 'light'
+                  ? 'bg-gradient-to-br from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 shadow-lg'
+                  : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30 hover:from-spark-yellow/40 hover:to-pin-blue/40'
               }
             `}
             title="Show recommendations"
           >
-            <Compass className="w-6 h-6 text-white" />
+            <Compass className={`w-6 h-6 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
           </button>
         </div>
       )}
@@ -601,25 +651,30 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       {isExpanded && (
         <>
           {/* Mobile Handle Bar - only show on mobile when expanded */}
-          <div className="lg:hidden flex justify-center p-2 border-b border-white/10">
-            <div className="w-12 h-1 bg-white/30 rounded-full" />
+          <div className={`lg:hidden flex justify-center p-2 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+            <div className={`w-12 h-1 rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/30'}`} />
           </div>
 
           {/* Header */}
-          <div className="p-4 lg:p-5 border-b border-white/10">
+          <div className={`p-4 lg:p-5 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`
                   p-2 rounded-xl
                   ${theme === 'frost' 
                     ? 'bg-gradient-to-br from-blue-400/20 to-purple-400/20' 
-                    : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
+                    : theme === 'light'
+                      ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
+                      : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
                   }
                 `}>
-                  <Compass className="w-5 h-5 text-white" />
+                  <Compass className={`w-5 h-5 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
                 </div>
                 <div>
-                  <h2 className="text-lg lg:text-xl font-display font-bold text-white flex items-center gap-2 flex-wrap">
+                  <h2 className={`
+                    text-lg lg:text-xl font-display font-bold flex items-center gap-2 flex-wrap
+                    ${theme === 'light' ? 'text-gray-900' : 'text-white'}
+                  `}>
                     Discover
                     {gpsLocation && useGPS && (
                       <div className="flex items-center gap-1">
@@ -638,7 +693,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                       </div>
                     )}
                   </h2>
-                  <p className="text-xs lg:text-sm text-white/60">
+                  <p className={`text-xs lg:text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
                     {(() => {
                       const activeLocation = getActiveLocation();
                       if (activeLocation?.city) {
@@ -655,148 +710,245 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                   p-2 rounded-lg transition-colors duration-200 hover:scale-105
                   ${theme === 'frost'
                     ? 'hover:bg-white/20'
-                    : 'hover:bg-white/10'
+                    : theme === 'light'
+                      ? 'hover:bg-gray-100'
+                      : 'hover:bg-white/10'
                   }
                 `}
                 title="Hide recommendations"
               >
-                <X className="w-4 h-4 text-white/70" />
+                <X className={`w-4 h-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
               </button>
             </div>
 
             {/* Emotional message */}
             <div className="text-center py-2 lg:py-3">
               <p 
-                className="text-sm lg:text-base font-medium text-white bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent"
+                className={`
+                  text-sm lg:text-base font-medium
+                  ${theme === 'light' 
+                    ? 'text-gray-800 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent'
+                    : 'text-white bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent'
+                  }
+                `}
               >
                 {emotionalMessages[currentMessage]}
               </p>
             </div>
 
-            {/* Location Control Buttons - Improved spacing and consistency */}
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              <button
-                onClick={switchToGPS}
-                className={`
-                  flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                  text-sm font-medium transition-all duration-200 hover:scale-[1.02]
-                  ${useGPS && gpsLocation
-                    ? 'bg-green-400/20 text-green-400 border border-green-400/40'
-                    : theme === 'frost'
-                      ? 'bg-blue-400/20 text-blue-400 border border-blue-400/40 hover:bg-blue-400/30'
-                      : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 hover:bg-pin-blue/30'
-                  }
-                `}
-                title={gpsLocation ? (useGPS ? 'Using GPS location' : 'Switch to GPS location') : 'Get GPS location'}
-              >
-                <Navigation className="w-4 h-4" />
-                <span className="text-xs lg:text-sm">
-                  {gpsLocation ? (useGPS ? 'GPS Active' : 'Use GPS') : 'Get GPS'}
-                </span>
-              </button>
-              
-              <button
-                onClick={handleExploreCities}
-                className={`
-                  flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                  text-sm font-medium transition-all duration-200 hover:scale-[1.02]
-                  ${theme === 'frost'
-                    ? 'bg-purple-400/20 text-purple-400 border border-purple-400/40 hover:bg-purple-400/30'
-                    : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40 hover:bg-spark-yellow/30'
-                  }
-                `}
-                title="Explore nearby cities"
-              >
-                <Globe className="w-4 h-4" />
-                <span className="text-xs lg:text-sm">Cities</span>
-              </button>
+            {/* Mode Toggle Slider - Desktop Only */}
+            <div className="hidden lg:block mb-4">
+              <div className={`
+                relative p-1 rounded-xl border
+                ${theme === 'frost'
+                  ? 'bg-white/10 border-white/20'
+                  : theme === 'light'
+                    ? 'bg-gray-100 border-gray-200'
+                    : 'bg-white/5 border-white/10'
+                }
+              `}>
+                <div className="grid grid-cols-2 relative">
+                  {/* Sliding background */}
+                  <div
+                    className={`
+                      absolute top-1 bottom-1 w-1/2 rounded-lg transition-all duration-300 ease-out
+                      ${theme === 'frost'
+                        ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 border border-white/30'
+                        : theme === 'light'
+                          ? 'bg-white border border-gray-300 shadow-sm'
+                          : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 border border-spark-yellow/40'
+                      }
+                    `}
+                    style={{
+                      transform: activeMode === 'route' ? 'translateX(100%)' : 'translateX(0%)'
+                    }}
+                  />
+                  
+                  {/* Buttons */}
+                  <button
+                    onClick={() => setActiveMode('recommendations')}
+                    className={`
+                      relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
+                      text-sm font-medium transition-all duration-200
+                      ${activeMode === 'recommendations'
+                        ? theme === 'light' ? 'text-gray-900' : 'text-white'
+                        : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
+                      }
+                    `}
+                  >
+                    <Compass className="w-4 h-4" />
+                    <span>Discover</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setActiveMode('route')}
+                    className={`
+                      relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
+                      text-sm font-medium transition-all duration-200
+                      ${activeMode === 'route'
+                        ? theme === 'light' ? 'text-gray-900' : 'text-white'
+                        : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
+                      }
+                    `}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>Plan Route</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Filter tabs - Grid layout for better consistency */}
-            <div className="grid grid-cols-4 gap-1 mt-4">
-              {[
-                { key: 'all', label: 'All', icon: Clock },
-                { key: 'upcoming', label: 'Soon', icon: Clock },
-                { key: 'this_weekend', label: 'Weekend', icon: Calendar },
-                { key: 'next_2_weeks', label: '2 Weeks', icon: Calendar }
-              ].map(({ key, label, icon: Icon }, index) => (
-                <button
-                  key={`${key}-${index}`} // Use index to allow duplicate keys
-                  onClick={() => setSelectedFilter(key)}
-                  className={`
-                    flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg
-                    text-xs font-medium transition-all duration-200 hover:scale-[1.02]
-                    ${selectedFilter === key
-                      ? theme === 'frost'
-                        ? 'bg-white/30 text-white border border-white/40'
-                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
-                      : 'text-white/60 hover:bg-white/10 border border-transparent'
-                    }
-                  `}
-                >
-                  <Icon className="w-3 h-3" />
-                  <span className="leading-none">{label}</span>
-                </button>
-              ))}
-            </div>
+            {/* Location Control Buttons - Only show in recommendations mode */}
+            {activeMode === 'recommendations' && (
+              <>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <button
+                    onClick={switchToGPS}
+                    className={`
+                      flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
+                      text-sm font-medium transition-all duration-200 hover:scale-[1.02]
+                      ${useGPS && gpsLocation
+                        ? 'bg-green-400/20 text-green-400 border border-green-400/40'
+                        : theme === 'frost'
+                          ? 'bg-blue-400/20 text-blue-400 border border-blue-400/40 hover:bg-blue-400/30'
+                          : theme === 'light'
+                            ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
+                            : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 hover:bg-pin-blue/30'
+                      }
+                    `}
+                    title={gpsLocation ? (useGPS ? 'Using GPS location' : 'Switch to GPS location') : 'Get GPS location'}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span className="text-xs lg:text-sm">
+                      {gpsLocation ? (useGPS ? 'GPS Active' : 'Use GPS') : 'Get GPS'}
+                    </span>
+                  </button>
+                  
+                  <button
+                    onClick={handleExploreCities}
+                    className={`
+                      flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
+                      text-sm font-medium transition-all duration-200 hover:scale-[1.02]
+                      ${theme === 'frost'
+                        ? 'bg-purple-400/20 text-purple-400 border border-purple-400/40 hover:bg-purple-400/30'
+                        : theme === 'light'
+                          ? 'bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100'
+                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40 hover:bg-spark-yellow/30'
+                      }
+                    `}
+                    title="Explore nearby cities"
+                  >
+                    <Globe className="w-4 h-4" />
+                    <span className="text-xs lg:text-sm">Cities</span>
+                  </button>
+                </div>
+
+                {/* Filter tabs - Grid layout for better consistency */}
+                <div className="grid grid-cols-4 gap-1 mt-4">
+                  {[
+                    { key: 'all', label: 'All', icon: Clock },
+                    { key: 'upcoming', label: 'Soon', icon: Clock },
+                    { key: 'this_weekend', label: 'Weekend', icon: Calendar },
+                    { key: 'next_2_weeks', label: '2 Weeks', icon: Calendar }
+                  ].map(({ key, label, icon: Icon }, index) => (
+                    <button
+                      key={`${key}-${index}`} // Use index to allow duplicate keys
+                      onClick={() => setSelectedFilter(key)}
+                      className={`
+                        flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg
+                        text-xs font-medium transition-all duration-200 hover:scale-[1.02]
+                        ${selectedFilter === key
+                          ? theme === 'frost'
+                            ? 'bg-white/30 text-white border border-white/40'
+                            : theme === 'light'
+                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                              : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
+                          : theme === 'light'
+                            ? 'text-gray-500 hover:bg-gray-100 border border-transparent'
+                            : 'text-white/60 hover:bg-white/10 border border-transparent'
+                        }
+                      `}
+                    >
+                      <Icon className="w-3 h-3" />
+                      <span className="leading-none">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Content - Full height with scroll */}
           <div className="flex-1 overflow-y-auto p-3 lg:p-4">
-            {loading ? (
-              <div className="space-y-3 lg:space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`
-                      h-24 lg:h-32 rounded-2xl animate-pulse
-                      ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
-                    `}
-                  />
-                ))}
-              </div>
-            ) : recommendations.length > 0 ? (
-              <div className="space-y-3 lg:space-y-4">
-                {recommendations.map((event, index) => (
-                  <EventCard key={event.id} event={event} index={index} />
-                ))}
-              </div>
+            {activeMode === 'recommendations' ? (
+              // Recommendations Content
+              loading ? (
+                <div className="space-y-3 lg:space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`
+                        h-24 lg:h-32 rounded-2xl animate-pulse
+                        ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                      `}
+                    />
+                  ))}
+                </div>
+              ) : recommendations.length > 0 ? (
+                <div className="space-y-3 lg:space-y-4">
+                  {recommendations.map((event, index) => (
+                    <EventCard key={event.id} event={event} index={index} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 space-y-3">
+                  <div className={`
+                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
+                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                  `}>
+                    <MapPin className="w-6 h-6 text-white/60" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-white mb-1">
+                      {getActiveLocation() 
+                        ? 'No events found nearby' 
+                        : 'Share your location to find events'
+                      }
+                    </h4>
+                    <p className="text-white/60 text-sm">
+                      {getActiveLocation() 
+                        ? 'Try adjusting your filters or exploring other areas'
+                        : 'Get your current location to discover amazing events near you'
+                      }
+                    </p>
+                  </div>
+                  {!getActiveLocation() && (
+                    <button
+                      onClick={switchToGPS}
+                      className={`
+                        px-4 py-2 rounded-lg font-medium transition-all duration-200
+                        ${theme === 'frost'
+                          ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30 hover:bg-blue-400/30'
+                          : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
+                      `}
+                    >
+                      <Navigation className="w-4 h-4 inline mr-2" />
+                      Get Location
+                    </button>
+                  )}
+                </div>
+              )
             ) : (
-              <div className="text-center py-6 space-y-3">
-                <div className={`
-                  w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                  ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
-                `}>
-                  <MapPin className="w-6 h-6 text-white/60" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-white mb-1">
-                    {getActiveLocation() 
-                      ? 'No events found nearby' 
-                      : 'Share your location to find events'
-                    }
-                  </h4>
-                  <p className="text-white/60 text-sm">
-                    {getActiveLocation() 
-                      ? 'Try adjusting your filters or exploring other areas'
-                      : 'Get your current location to discover amazing events near you'
-                    }
-                  </p>
-                </div>
-                {!getActiveLocation() && (
-                  <button
-                    onClick={switchToGPS}
-                    className={`
-                      px-4 py-2 rounded-lg font-medium transition-all duration-200
-                      ${theme === 'frost'
-                        ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30 hover:bg-blue-400/30'
-                        : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
-                    `}
-                  >
-                    <Navigation className="w-4 h-4 inline mr-2" />
-                    Get Location
-                  </button>
-                )}
+              // Route Planner Content
+              <div className="h-full">
+                <RoutePlanner
+                  onRouteCalculated={onRouteCalculated}
+                  onEventsDiscovered={onRouteEventsDiscovered}
+                  mapInstance={mapInstance}
+                  apiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
+                  theme={theme}
+                  embedded={true} // Add embedded prop to adjust styling
+                />
               </div>
             )}
           </div>

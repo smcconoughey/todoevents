@@ -58,7 +58,8 @@ import {
   Sun,
   Moon,
   Cog,
-  CheckCircle
+  CheckCircle,
+  Compass
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -819,6 +820,7 @@ const EventMap = ({
   const [routeEvents, setRouteEvents] = useState([]);
   const [showRouteTimeline, setShowRouteTimeline] = useState(false);
   const [routeDirectionsRenderer, setRouteDirectionsRenderer] = useState(null);
+  const [isMobileRecommendationsOpen, setIsMobileRecommendationsOpen] = useState(false);
 
 
   const mapRef = useRef(null);
@@ -2519,19 +2521,19 @@ const EventMap = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleToggleRoutePlanner}
-              className={`text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px] ${showRoutePlanner ? 'bg-white/20' : ''}`}
-              title="Route Planner"
-            >
-              <Navigation className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
               onClick={() => setActiveView(activeView === 'map' ? 'list' : 'map')}
               className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
             >
               {activeView === 'map' ? <Filter className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileRecommendationsOpen(true)}
+              className="text-white hover:bg-white/10 transition-colors duration-200 min-h-[36px] min-w-[36px]"
+              title="Recommendations"
+            >
+              <Compass className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -3951,17 +3953,7 @@ const EventMap = ({
                 </div>
               )}
 
-              {/* Route Planning Button */}
-              <div className="absolute bottom-4 left-4 z-30">
-                <Button
-                  onClick={handleToggleRoutePlanner}
-                  className={`bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-all duration-200 ${showRoutePlanner ? 'bg-blue-600' : ''}`}
-                  size="sm"
-                >
-                  <Navigation className="w-4 h-4 mr-2" />
-                  {showRoutePlanner ? 'Close Route Planner' : 'Plan Route'}
-                </Button>
-              </div>
+
 
               {/* Marker Style Toggle - Top Right Corner */}
 
@@ -4017,6 +4009,9 @@ const EventMap = ({
                         setMiscFilters({ feeFilter: 'all' });
                       }
                     }}
+                    onRouteCalculated={handleRouteCalculated}
+                    onRouteEventsDiscovered={handleRouteEventsDiscovered}
+                    mapInstance={mapRef.current}
                   />
                 </div>
               )}
@@ -4292,6 +4287,63 @@ const EventMap = ({
           </div>
             </PanelSlideAnimation>
         </div>
+        </>
+      )}
+
+      {/* Mobile Recommendations Bottom Sheet */}
+      {isMobileRecommendationsOpen && (
+        <>
+          {/* Backdrop overlay for mobile */}
+          <div 
+            className="fixed inset-0 bg-black/30 sm:hidden z-40"
+            onClick={() => setIsMobileRecommendationsOpen(false)}
+          />
+          
+          <div className={`
+            fixed bottom-0 left-0 right-0 
+            dialog-themed backdrop-blur-sm
+            border-t border-themed
+            rounded-t-lg z-50
+            sm:hidden
+            max-h-[85vh] overflow-hidden shadow-2xl
+            flex flex-col
+            `}>
+            {/* Drag handle for mobile */}
+            <div 
+              className="flex justify-center pt-2 pb-1 cursor-pointer"
+              onClick={() => setIsMobileRecommendationsOpen(false)}
+            >
+              <div className="w-8 h-1 bg-white/20 rounded-full"></div>
+            </div>
+            
+            {/* Mobile Recommendations Panel */}
+            <div className="flex-1 overflow-hidden">
+              <RecommendationsPanel
+                userLocation={selectedLocation}
+                onEventClick={(event) => {
+                  handleEventClick(event);
+                  setIsMobileRecommendationsOpen(false);
+                }}
+                onExploreMore={(city) => {
+                  if (city && city.lat && city.lng) {
+                    setMapCenter({ lat: city.lat, lng: city.lng });
+                    setSelectedLocation({ lat: city.lat, lng: city.lng, city: city.city + ', ' + city.state });
+                    setSearchValue(city.city + ', ' + city.state);
+                  } else {
+                    setSelectedDate(null);
+                    setSelectedTime('all');
+                    setSelectedCategory(['all']);
+                    setMapCenter(null);
+                    setMiscFilters({ feeFilter: 'all' });
+                  }
+                  setIsMobileRecommendationsOpen(false);
+                }}
+                onRouteCalculated={handleRouteCalculated}
+                onRouteEventsDiscovered={handleRouteEventsDiscovered}
+                mapInstance={mapRef.current}
+              />
+            </div>
+          </div>
         </>
       )}
 
