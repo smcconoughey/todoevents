@@ -132,6 +132,61 @@ const isEventPast = (event) => {
   }
 };
 
+// Function to add slight random offsets to events at the same location
+const addPositionOffsets = (events) => {
+  // Group events by their exact coordinates
+  const locationGroups = {};
+  
+  events.forEach(event => {
+    if (event.lat && event.lng) {
+      const locationKey = `${event.lat.toFixed(6)}_${event.lng.toFixed(6)}`;
+      if (!locationGroups[locationKey]) {
+        locationGroups[locationKey] = [];
+      }
+      locationGroups[locationKey].push(event);
+    }
+  });
+  
+  // Add offsets to events that share the same location
+  return events.map(event => {
+    if (!event.lat || !event.lng) return event;
+    
+    const locationKey = `${event.lat.toFixed(6)}_${event.lng.toFixed(6)}`;
+    const eventsAtLocation = locationGroups[locationKey];
+    
+    // If only one event at this location, no offset needed
+    if (eventsAtLocation.length === 1) {
+      return event;
+    }
+    
+    // Find this event's index in the group
+    const eventIndex = eventsAtLocation.findIndex(e => e.id === event.id);
+    
+    // Create a deterministic but seemingly random offset based on event ID
+    // This ensures the same event always gets the same offset
+    const seed = event.id || 0;
+    const pseudoRandom1 = ((seed * 9301 + 49297) % 233280) / 233280;
+    const pseudoRandom2 = ((seed * 9301 + 49297 + 1) % 233280) / 233280;
+    
+    // Create small offsets in a circle pattern around the original location
+    // Use very small values to keep events visually grouped but individually clickable
+    const offsetRadius = 0.0001; // About 10-15 meters at most latitudes
+    const angle = (eventIndex / eventsAtLocation.length) * 2 * Math.PI + (pseudoRandom1 * 0.5);
+    const distance = offsetRadius * (0.3 + pseudoRandom2 * 0.7); // Vary distance slightly
+    
+    const latOffset = distance * Math.cos(angle);
+    const lngOffset = distance * Math.sin(angle);
+    
+    return {
+      ...event,
+      lat: event.lat + latOffset,
+      lng: event.lng + lngOffset,
+      originalLat: event.lat, // Keep original coordinates for reference
+      originalLng: event.lng
+    };
+  });
+};
+
 const MapContainer = React.forwardRef(({
   events = [],
   onEventClick,
@@ -325,7 +380,10 @@ const MapContainer = React.forwardRef(({
       return categoryMatch && dateMatch && hasValidLocation;
     });
 
-    const markers = validEvents.map(event => {
+    // Add position offsets to prevent stacking of events at the same location
+    const eventsWithOffsets = addPositionOffsets(validEvents);
+
+    const markers = eventsWithOffsets.map(event => {
       // Find the category for this event
       const eventCategory = categories.find(cat => cat.id === event.category) || categories[0];
       

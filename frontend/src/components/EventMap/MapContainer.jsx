@@ -109,27 +109,65 @@ const isDateInRange = (dateStr, range) => {
 
 // Add function to check if an event has passed
 const isEventPast = (event) => {
-  if (!event || !event.date) return false;
+  if (!event.date) return false;
+  const today = new Date();
+  const eventDate = new Date(event.date);
+  return eventDate < today && eventDate.toDateString() !== today.toDateString();
+};
+
+// Function to add slight random offsets to events at the same location
+const addPositionOffsets = (events) => {
+  // Group events by their exact coordinates
+  const locationGroups = {};
   
-  try {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0); // Start of today
+  events.forEach(event => {
+    if (event.lat && event.lng) {
+      const locationKey = `${event.lat.toFixed(6)}_${event.lng.toFixed(6)}`;
+      if (!locationGroups[locationKey]) {
+        locationGroups[locationKey] = [];
+      }
+      locationGroups[locationKey].push(event);
+    }
+  });
+  
+  // Add offsets to events that share the same location
+  return events.map(event => {
+    if (!event.lat || !event.lng) return event;
     
-    // If the event has an end date, use that for comparison
-    if (event.end_date) {
-      const endDate = new Date(event.end_date);
-      endDate.setHours(23, 59, 59, 999); // End of the end date
-      return endDate < now;
+    const locationKey = `${event.lat.toFixed(6)}_${event.lng.toFixed(6)}`;
+    const eventsAtLocation = locationGroups[locationKey];
+    
+    // If only one event at this location, no offset needed
+    if (eventsAtLocation.length === 1) {
+      return event;
     }
     
-    // If no end date, check if the event date has passed
-    const eventDate = new Date(event.date);
-    eventDate.setHours(23, 59, 59, 999); // End of the event date
-    return eventDate < now;
-  } catch (error) {
-    console.warn('Error checking if event is past:', error);
-    return false; // Don't filter out events if we can't determine
-  }
+    // Find this event's index in the group
+    const eventIndex = eventsAtLocation.findIndex(e => e.id === event.id);
+    
+    // Create a deterministic but seemingly random offset based on event ID
+    // This ensures the same event always gets the same offset
+    const seed = event.id || 0;
+    const pseudoRandom1 = ((seed * 9301 + 49297) % 233280) / 233280;
+    const pseudoRandom2 = ((seed * 9301 + 49297 + 1) % 233280) / 233280;
+    
+    // Create small offsets in a circle pattern around the original location
+    // Use very small values to keep events visually grouped but individually clickable
+    const offsetRadius = 0.0001; // About 10-15 meters at most latitudes
+    const angle = (eventIndex / eventsAtLocation.length) * 2 * Math.PI + (pseudoRandom1 * 0.5);
+    const distance = offsetRadius * (0.3 + pseudoRandom2 * 0.7); // Vary distance slightly
+    
+    const latOffset = distance * Math.cos(angle);
+    const lngOffset = distance * Math.sin(angle);
+    
+    return {
+      ...event,
+      lat: event.lat + latOffset,
+      lng: event.lng + lngOffset,
+      originalLat: event.lat, // Keep original coordinates for reference
+      originalLng: event.lng
+    };
+  });
 };
 
 const MapContainer = React.forwardRef(({
@@ -393,10 +431,13 @@ const MapContainer = React.forwardRef(({
     }
 
     const validEvents = getOptimizedEvents(events, currentZoom, mapBounds);
+    
+    // Add position offsets to prevent stacking of events at the same location
+    const eventsWithOffsets = addPositionOffsets(validEvents);
 
     console.log(`Map performance: Zoom ${currentZoom}, rendering ${validEvents.length}/${events.length} events`);
 
-    const markers = validEvents.map(event => {
+    const markers = eventsWithOffsets.map(event => {
       // Find the category for this event
       const eventCategory = categories.find(cat => cat.id === event.category) || categories[0];
       
