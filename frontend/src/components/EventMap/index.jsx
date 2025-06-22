@@ -4315,7 +4315,7 @@ const EventMap = ({
             border-t border-themed
             rounded-t-lg z-50
             sm:hidden
-            max-h-[85vh] overflow-hidden shadow-2xl
+            max-h-[85vh] shadow-2xl
             flex flex-col
             `}>
             {/* Drag handle for mobile */}

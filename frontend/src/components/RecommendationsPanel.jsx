@@ -60,7 +60,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(embedded ? true : false);
+  const [isExpanded, setIsExpanded] = useState(true); // Always open by default
 
   // City suggestions state
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
@@ -818,6 +818,28 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             {/* Location Control Buttons - Only show in recommendations mode */}
             {(embedded || activeMode === 'recommendations') && (
               <>
+                {/* Mobile Route Planning Button */}
+                {embedded && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => setActiveMode('route')}
+                      className={`
+                        w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
+                        text-sm font-medium transition-all duration-200 hover:scale-[1.02]
+                        ${theme === 'frost'
+                          ? 'bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border border-white/30'
+                          : theme === 'light'
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-transparent'
+                            : 'bg-gradient-to-r from-pin-blue/30 to-spark-yellow/30 text-white border border-pin-blue/40'
+                        }
+                      `}
+                    >
+                      <Navigation className="w-5 h-5" />
+                      <span>Plan Route & Find Events</span>
+                    </button>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   <button
                     onClick={switchToGPS}
@@ -906,6 +928,19 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 {/* Route Results Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
+                    {/* Back button for mobile */}
+                    {embedded && (
+                      <button
+                        onClick={() => setActiveMode('recommendations')}
+                        className={`
+                          p-1.5 rounded-lg transition-colors duration-200
+                          ${theme === 'light' ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-white/10 text-white/70'}
+                        `}
+                        title="Back to discover"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    )}
                     <Navigation className={`w-5 h-5 ${theme === 'light' ? 'text-blue-600' : 'text-green-400'}`} />
                     <h3 className={`font-semibold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                       Route Events
@@ -1018,9 +1053,27 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   )}
                 </div>
               )
-            ) : (
-              // Route Planner Content (Desktop only, non-embedded)
+            ) : activeMode === 'route' ? (
+              // Route Planner Content (when in route mode but no route events yet)
               <div className="h-full">
+                {/* Mobile back button for route planner */}
+                {embedded && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <button
+                      onClick={() => setActiveMode('recommendations')}
+                      className={`
+                        p-1.5 rounded-lg transition-colors duration-200
+                        ${theme === 'light' ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-white/10 text-white/70'}
+                      `}
+                      title="Back to discover"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <h3 className={`font-semibold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                      Plan Route
+                    </h3>
+                  </div>
+                )}
                 <RoutePlanner
                   onRouteCalculated={onRouteCalculated}
                   onEventsDiscovered={onRouteEventsDiscovered}
@@ -1030,7 +1083,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   embedded={true} // Add embedded prop to adjust styling
                 />
               </div>
-            )}
+            ) : null}
           </div>
         </>
       )}
