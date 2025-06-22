@@ -169,18 +169,30 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   // Stable fetch function with useCallback
   const fetchRecommendations = useCallback(async () => {
-    const activeLocation = getActiveLocation();
-    const locationKey = getLocationKey(activeLocation);
+    // Get current state directly instead of relying on closure
+    const currentGpsLocation = gpsLocation;
+    const currentManualLocation = manualLocation;
+    const currentUseGPS = useGPS;
+    const currentUserLocation = userLocation;
+    
+    let activeLocation = null;
+    if (currentUseGPS && currentGpsLocation) {
+      activeLocation = currentGpsLocation;
+    } else if (currentManualLocation) {
+      activeLocation = currentManualLocation;
+    } else if (currentUserLocation) {
+      activeLocation = currentUserLocation;
+    }
     
     console.log('🔍 fetchRecommendations state check:', {
-      gpsLocation,
-      manualLocation,
-      useGPS,
-      userLocation,
-      activeLocation,
-      locationKey,
-      lastFetchedLocation
+      currentGpsLocation,
+      currentManualLocation,
+      currentUseGPS,
+      currentUserLocation,
+      activeLocation
     });
+    
+    const locationKey = getLocationKey(activeLocation);
     
     // Prevent duplicate API calls for the same location and filter
     if (locationKey === lastFetchedLocation) {
@@ -231,14 +243,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     } finally {
       setLoading(false);
     }
-  }, [gpsLocation, manualLocation, useGPS, selectedFilter, userLocation, lastFetchedLocation]);
+  }, []); // Remove all dependencies to prevent stale closures
 
-  // Debounced version of the fetch function
-  const debouncedFetchRecommendations = useRef(
-    debounce(() => {
-      fetchRecommendations();
-    }, 500) // Increased to 500ms to prevent rapid calls
-  ).current;
+  // Use a ref to track when we need to fetch
+  const shouldFetchRef = useRef(false);
 
   // Sync with EventMap location selections - but don't trigger immediate fetch
   useEffect(() => {
@@ -266,9 +274,16 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
     // Only fetch if location or filter actually changed
     if (locationKey !== lastFetchedLocation) {
-      debouncedFetchRecommendations();
+      shouldFetchRef.current = true;
+      // Use setTimeout to ensure state has settled
+      setTimeout(() => {
+        if (shouldFetchRef.current) {
+          shouldFetchRef.current = false;
+          fetchRecommendations();
+        }
+      }, 100);
     }
-  }, [gpsLocation, manualLocation, useGPS, selectedFilter]);
+  }, [gpsLocation, manualLocation, useGPS, selectedFilter, userLocation]);
 
   // Initial fetch when component mounts
   useEffect(() => {
