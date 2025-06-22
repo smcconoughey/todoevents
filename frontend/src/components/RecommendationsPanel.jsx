@@ -56,6 +56,29 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [useGPS, setUseGPS] = useState(true); // Toggle between GPS and manual
   const [lastFetchedLocation, setLastFetchedLocation] = useState(null); // Track last fetched location to prevent duplicates
 
+  // Use refs to store current state for immediate access
+  const gpsLocationRef = useRef(null);
+  const manualLocationRef = useRef(null);
+  const useGPSRef = useRef(true);
+  const userLocationRef = useRef(null);
+
+  // Update refs whenever state changes
+  useEffect(() => {
+    gpsLocationRef.current = gpsLocation;
+  }, [gpsLocation]);
+
+  useEffect(() => {
+    manualLocationRef.current = manualLocation;
+  }, [manualLocation]);
+
+  useEffect(() => {
+    useGPSRef.current = useGPS;
+  }, [useGPS]);
+
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
+
   // Get the active location based on user preference
   const getActiveLocation = () => {
     console.log('🎯 getActiveLocation called with state:', {
@@ -79,6 +102,28 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     }
     console.log('❌ No location available');
     return null;
+  };
+
+  // Get active location using refs (always current)
+  const getActiveLocationFromRefs = () => {
+    let activeLocation = null;
+    if (useGPSRef.current && gpsLocationRef.current) {
+      activeLocation = gpsLocationRef.current;
+    } else if (manualLocationRef.current) {
+      activeLocation = manualLocationRef.current;
+    } else if (userLocationRef.current) {
+      activeLocation = userLocationRef.current;
+    }
+    
+    console.log('🎯 getActiveLocationFromRefs called with refs:', {
+      useGPSRef: useGPSRef.current,
+      gpsLocationRef: gpsLocationRef.current,
+      manualLocationRef: manualLocationRef.current,
+      userLocationRef: userLocationRef.current,
+      activeLocation
+    });
+    
+    return activeLocation;
   };
 
   // Create a stable key for location comparison
@@ -132,10 +177,15 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           };
           setGpsLocation(location);
           setUseGPS(true); // Switch to GPS mode
+          
+          // Update refs immediately
+          gpsLocationRef.current = location;
+          useGPSRef.current = true;
         },
         (error) => {
           console.log('GPS access denied or failed:', error);
           setUseGPS(false); // Fall back to manual mode
+          useGPSRef.current = false;
         },
         {
           enableHighAccuracy: true,
@@ -149,50 +199,41 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   // Handle manual location selection (from search or city)
   const selectManualLocation = (location) => {
     console.log('📍 Selecting manual location:', location);
-    setManualLocation({
+    const newLocation = {
       lat: location.lat,
       lng: location.lng,
       city: location.city || location.address || 'Selected location'
-    });
+    };
+    setManualLocation(newLocation);
     setUseGPS(false); // Switch to manual mode
+    
+    // Update refs immediately
+    manualLocationRef.current = newLocation;
+    useGPSRef.current = false;
   };
 
   // Toggle back to GPS
   const switchToGPS = () => {
     if (gpsLocation) {
       setUseGPS(true);
+      useGPSRef.current = true;
     } else {
       // Request GPS if we don't have it
       requestGPSLocation();
     }
   };
 
-  // Stable fetch function with useCallback
+  // Stable fetch function that uses refs
   const fetchRecommendations = useCallback(async () => {
-    // Get current state directly instead of relying on closure
-    const currentGpsLocation = gpsLocation;
-    const currentManualLocation = manualLocation;
-    const currentUseGPS = useGPS;
-    const currentUserLocation = userLocation;
-    
-    let activeLocation = null;
-    if (currentUseGPS && currentGpsLocation) {
-      activeLocation = currentGpsLocation;
-    } else if (currentManualLocation) {
-      activeLocation = currentManualLocation;
-    } else if (currentUserLocation) {
-      activeLocation = currentUserLocation;
-    }
-    
-    console.log('🔍 fetchRecommendations state check:', {
-      currentGpsLocation,
-      currentManualLocation,
-      currentUseGPS,
-      currentUserLocation,
-      activeLocation
-    });
-    
+    // Get current location from refs to avoid stale state
+    const activeLocation = getActiveLocationFromRefs();
     const locationKey = getLocationKey(activeLocation);
+    
+    console.log('🔍 fetchRecommendations using refs:', {
+      activeLocation,
+      locationKey,
+      lastFetchedLocation
+    });
     
     // Prevent duplicate API calls for the same location and filter
     if (locationKey === lastFetchedLocation) {
@@ -243,7 +284,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     } finally {
       setLoading(false);
     }
-  }, []); // Remove all dependencies to prevent stale closures
+  }, [selectedFilter]); // Only depend on selectedFilter
 
   // Use a ref to track when we need to fetch
   const shouldFetchRef = useRef(false);
