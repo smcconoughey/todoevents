@@ -75,29 +75,65 @@ const RoutePlanner = ({
     setWaypoints(newWaypoints);
   };
 
-  // Sample points along the route for event discovery (optimized for batch API)
-  const sampleRoutePoints = (route, sampleDistance = 15000) => {
+  // Sample points along the route for event discovery (optimized based on route distance and search radius)
+  const sampleRoutePoints = (route, searchRadiusMiles) => {
     const points = [];
     const legs = route.legs;
     
-    // Always include start and end points
+    // Calculate total route distance in miles
+    const totalDistanceMiles = legs.reduce((total, leg) => total + leg.distance.value, 0) / 1609.34;
+    
+    // Calculate optimal point spacing based on search radius
+    // For a 50 mile radius, sample every 100 miles (50 * 2) to ensure coverage with minimal overlap
+    // For smaller radii, adjust proportionally
+    const optimalSpacingMiles = Math.max(searchRadiusMiles * 2, 25); // Minimum 25 miles between points
+    const calculatedPointCount = Math.ceil(totalDistanceMiles / optimalSpacingMiles);
+    
+    // Apply reasonable limits: minimum 2 points (start/end), maximum 20 for very long routes
+    const optimalPointCount = Math.max(2, Math.min(calculatedPointCount, 20));
+    
+    console.log(`🔄 Route optimization: ${totalDistanceMiles.toFixed(0)} miles, ${searchRadiusMiles} mile radius → ${optimalPointCount} points (${optimalSpacingMiles.toFixed(0)} mile spacing)`);
+    
+    // Always include start point
     if (legs.length > 0) {
-      // Add route start point
       points.push({
         lat: legs[0].start_location.lat(),
         lng: legs[0].start_location.lng(),
         legIndex: 0,
         stepIndex: -1,
         stepStart: true,
-        isWaypoint: true
+        isWaypoint: true,
+        routeProgress: 0
       });
     }
+    
+    // If we only need start and end points, skip intermediate sampling
+    if (optimalPointCount <= 2) {
+      // Add final destination
+      const lastLeg = legs[legs.length - 1];
+      points.push({
+        lat: lastLeg.end_location.lat(),
+        lng: lastLeg.end_location.lng(),
+        legIndex: legs.length - 1,
+        stepIndex: 999,
+        stepStart: false,
+        isWaypoint: true,
+        isDestination: true,
+        routeProgress: 1
+      });
+      return points;
+    }
+    
+    // Calculate intermediate points with even distribution
+    const spacingMeters = optimalSpacingMiles * 1609.34; // Convert to meters
+    let accumulatedDistance = 0;
+    let targetDistance = spacingMeters; // First intermediate point target
     
     for (let legIndex = 0; legIndex < legs.length; legIndex++) {
       const leg = legs[legIndex];
       const steps = leg.steps;
       
-      // Add waypoint at the end of each leg (except the last one, handled separately)
+      // Add waypoint at the end of each leg (except the last one)
       if (legIndex < legs.length - 1) {
         points.push({
           lat: leg.end_location.lat(),
@@ -105,53 +141,37 @@ const RoutePlanner = ({
           legIndex,
           stepIndex: 999,
           stepStart: false,
-          isWaypoint: true
+          isWaypoint: true,
+          routeProgress: accumulatedDistance / (totalDistanceMiles * 1609.34)
         });
       }
       
-      // Sample points along major steps only (to reduce API calls)
+      // Sample points along steps based on target distances
       for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
         const step = steps[stepIndex];
+        const stepDistanceMeters = step.distance.value;
         
-        // Only sample from longer steps (> 10 miles) to reduce coordinate count
-        if (step.distance.value > 16000) {
-          const path = step.path || step.overview_path;
-          
-          if (!path || path.length === 0) continue;
-          
-          // Sample fewer points along the step path for efficiency
-          let accumulatedDistance = 0;
-          for (let i = 1; i < path.length; i++) {
-            const prev = path[i - 1];
-            const curr = path[i];
+        // If we haven't reached enough intermediate points yet
+        if (points.filter(p => !p.isWaypoint).length < optimalPointCount - 2) {
+          // Check if this step crosses our target distance
+          if (accumulatedDistance + stepDistanceMeters >= targetDistance) {
+            // Add a point at the step location (good approximation)
+            points.push({
+              lat: step.start_location.lat(),
+              lng: step.start_location.lng(),
+              legIndex,
+              stepIndex,
+              stepStart: true,
+              isWaypoint: false,
+              routeProgress: accumulatedDistance / (totalDistanceMiles * 1609.34)
+            });
             
-            // Calculate distance between consecutive points using Haversine formula
-            const lat1 = prev.lat() * Math.PI / 180;
-            const lat2 = curr.lat() * Math.PI / 180;
-            const deltaLat = (curr.lat() - prev.lat()) * Math.PI / 180;
-            const deltaLng = (curr.lng() - prev.lng()) * Math.PI / 180;
-            
-            const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-                      Math.cos(lat1) * Math.cos(lat2) *
-                      Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            const segmentDistance = 6371000 * c; // Earth radius in meters
-            
-            accumulatedDistance += segmentDistance;
-            
-            // Add sample point every sampleDistance meters (increased from 8km to 15km)
-            if (accumulatedDistance >= sampleDistance) {
-              points.push({
-                lat: curr.lat(),
-                lng: curr.lng(),
-                legIndex,
-                stepIndex,
-                stepStart: false
-              });
-              accumulatedDistance = 0;
-            }
+            // Set next target distance
+            targetDistance += spacingMeters;
           }
         }
+        
+        accumulatedDistance += stepDistanceMeters;
       }
     }
     
@@ -165,26 +185,12 @@ const RoutePlanner = ({
         stepIndex: 999,
         stepStart: false,
         isWaypoint: true,
-        isDestination: true
+        isDestination: true,
+        routeProgress: 1
       });
     }
     
-    // Limit total points to prevent API overload
-    const maxPoints = 30;
-    if (points.length > maxPoints) {
-      console.log(`🔄 Reducing route sample points from ${points.length} to ${maxPoints} for efficiency`);
-      
-      // Keep waypoints and distribute remaining points evenly
-      const waypoints = points.filter(p => p.isWaypoint);
-      const nonWaypoints = points.filter(p => !p.isWaypoint);
-      
-      const remainingSlots = maxPoints - waypoints.length;
-      const step = Math.max(1, Math.floor(nonWaypoints.length / remainingSlots));
-      const sampledNonWaypoints = nonWaypoints.filter((_, index) => index % step === 0);
-      
-      return [...waypoints, ...sampledNonWaypoints.slice(0, remainingSlots)];
-    }
-    
+    console.log(`✅ Final route sampling: ${points.length} points for ${totalDistanceMiles.toFixed(0)} mile route`);
     return points;
   };
 
@@ -224,10 +230,14 @@ const RoutePlanner = ({
       }, 15000); // Increased timeout for batch request
 
       if (!response.ok) {
-        throw new Error(`Batch API request failed: ${response.status}`);
+        throw new Error(`Batch API request failed: ${response.status} ${response.statusText}`);
       }
 
       const events = await response.json();
+      
+      if (!Array.isArray(events)) {
+        throw new Error(`Invalid response format: expected array, got ${typeof events}`);
+      }
       
       // Add route context to events
       const eventsWithContext = events.map(event => ({
@@ -419,7 +429,7 @@ const RoutePlanner = ({
           setRouteSteps(steps);
 
           // Sample points along the route for event discovery
-          const samplePoints = sampleRoutePoints(route);
+          const samplePoints = sampleRoutePoints(route, searchRadius);
           
           // Fetch events along the route with timing context
           const routeTimingContext = {
