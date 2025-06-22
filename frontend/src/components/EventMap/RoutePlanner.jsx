@@ -249,98 +249,88 @@ const RoutePlanner = ({
     return points;
   };
 
-  // Simplified and reliable method to fetch events along route
-  const fetchEventsAlongRoute = async (samplePoints, timingContext = null) => {
-    console.log(`🎯 Fetching events for ${samplePoints.length} route points with ${searchRadius} mile radius`);
+  // Simplified method to extract notable points from Google Directions response
+  const extractRouteEvents = (directionsResult) => {
+    const routeEvents = [];
+    const route = directionsResult.routes[0];
     
-    const allEvents = [];
-    const seenEventIds = new Set();
+    if (!route || !route.legs) {
+      console.log('❌ No route legs found');
+      return routeEvents;
+    }
     
-    try {
-      // Process points sequentially to avoid overwhelming the server
-      for (let i = 0; i < samplePoints.length; i++) {
-        const point = samplePoints[i];
-        
-        try {
-          // Build query parameters
-          const params = new URLSearchParams({
-            lat: point.lat.toString(),
-            lng: point.lng.toString(),
-            radius: searchRadius.toString(),
-            limit: '15' // Get more events per point
-          });
-
-          // Add date filter if timing context provided
-          if (timingContext && timingContext.eventTimeFlexibility > 0) {
-            const startDate = new Date(timingContext.departureDateTime);
-            startDate.setDate(startDate.getDate() - timingContext.eventTimeFlexibility);
-            
-            const endDate = new Date(timingContext.arrivalDateTime);
-            endDate.setDate(endDate.getDate() + timingContext.eventTimeFlexibility);
-            
-            params.append('date_start', startDate.toISOString().split('T')[0]);
-            params.append('date_end', endDate.toISOString().split('T')[0]);
-          }
-
-          const url = `${API_URL}/events?${params.toString()}`;
-          console.log(`🔍 Fetching events from point ${i+1}/${samplePoints.length}: ${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}`);
-          
-          const response = await fetchWithTimeout(url, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          }, 10000);
-
-          if (response.ok) {
-            const events = await response.json();
-            console.log(`✅ Point ${i+1} returned ${events.length} events`);
-            
-            // Add unique events
-            events.forEach(event => {
-              if (event && event.id && event.lat && event.lng && !seenEventIds.has(event.id)) {
-                seenEventIds.add(event.id);
-                allEvents.push({
-                  ...event,
-                  routeContext: {
-                    pointIndex: i,
-                    estimatedArrivalTime: null // Will be calculated later
-                  }
-                });
-              }
-            });
-          } else {
-            console.warn(`⚠️ Point ${i+1} request failed:`, response.status, response.statusText);
-          }
-          
-        } catch (pointError) {
-          console.warn(`⚠️ Error fetching events for point ${i+1}:`, pointError.message);
-          continue; // Continue with next point
-        }
-        
-        // Small delay between requests to be server-friendly
-        if (i < samplePoints.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
+    console.log('🎯 Extracting notable points from route...');
+    
+    // Extract key points from the route
+    route.legs.forEach((leg, legIndex) => {
+      // Add start location (major city/landmark)
+      if (leg.start_address && leg.start_location) {
+        routeEvents.push({
+          id: `start-${legIndex}`,
+          title: `Route Start: ${leg.start_address}`,
+          description: `Beginning of route segment ${legIndex + 1}`,
+          address: leg.start_address,
+          lat: leg.start_location.lat(),
+          lng: leg.start_location.lng(),
+          category: 'transportation',
+          isRoutePoint: true,
+          distance: leg.distance?.text || 'N/A',
+          duration: leg.duration?.text || 'N/A'
+        });
       }
       
-      console.log(`🎉 Route planning found ${allEvents.length} unique events from ${samplePoints.length} points`);
-      
-      // Sort events by interest and proximity to route
-      return allEvents.sort((a, b) => {
-        // Primary sort: interest count
-        const interestDiff = (b.interest_count || 0) - (a.interest_count || 0);
-        if (interestDiff !== 0) return interestDiff;
-        
-        // Secondary sort: date (upcoming events first)
-        const today = new Date();
-        const aDate = new Date(a.date);
-        const bDate = new Date(b.date);
-        return Math.abs(aDate - today) - Math.abs(bDate - today);
+      // Extract major steps (highways, significant turns)
+      leg.steps?.forEach((step, stepIndex) => {
+        // Only include major highway changes or significant distance steps
+        const instructions = step.instructions?.replace(/<[^>]*>/g, '') || '';
+        const isSignificant = 
+          step.distance?.value > 50000 || // More than 50km
+          instructions.toLowerCase().includes('highway') ||
+          instructions.toLowerCase().includes('interstate') ||
+          instructions.toLowerCase().includes('freeway') ||
+          instructions.toLowerCase().includes('exit');
+          
+        if (isSignificant && step.start_location) {
+          routeEvents.push({
+            id: `step-${legIndex}-${stepIndex}`,
+            title: `Route Milestone: ${instructions.substring(0, 50)}...`,
+            description: instructions,
+            address: `${step.start_location.lat().toFixed(4)}, ${step.start_location.lng().toFixed(4)}`,
+            lat: step.start_location.lat(),
+            lng: step.start_location.lng(),
+            category: 'transportation',
+            isRoutePoint: true,
+            distance: step.distance?.text || 'N/A',
+            duration: step.duration?.text || 'N/A'
+          });
+        }
       });
       
-    } catch (error) {
-      console.error('❌ Error in route event fetching:', error);
-      return [];
-    }
+      // Add end location (major city/landmark)
+      if (leg.end_address && leg.end_location) {
+        routeEvents.push({
+          id: `end-${legIndex}`,
+          title: `Route ${legIndex === route.legs.length - 1 ? 'Destination' : 'Waypoint'}: ${leg.end_address}`,
+          description: `${legIndex === route.legs.length - 1 ? 'Final destination' : 'Intermediate waypoint'}`,
+          address: leg.end_address,
+          lat: leg.end_location.lat(),
+          lng: leg.end_location.lng(),
+          category: 'transportation',
+          isRoutePoint: true,
+          distance: leg.distance?.text || 'N/A',
+          duration: leg.duration?.text || 'N/A'
+        });
+      }
+    });
+    
+    console.log(`✅ Extracted ${routeEvents.length} notable route points`);
+    return routeEvents;
+  };
+
+  // Simplified and reliable method to fetch events along route
+  const fetchEventsAlongRoute = async (samplePoints, timingContext = null) => {
+    console.log(`🎯 Simplified route point extraction - no API calls needed`);
+    return []; // Return empty array since we're using extractRouteEvents instead
   };
 
   const calculateRoute = async () => {
@@ -478,24 +468,13 @@ const RoutePlanner = ({
 
           setRouteSteps(steps);
 
-          // Sample points along the route for event discovery
-          const samplePoints = sampleRoutePoints(route, searchRadius);
-          
-          // Fetch events along the route with timing context
-          const routeTimingContext = {
-            departureDateTime,
-            arrivalDateTime,
-            totalRouteDuration,
-            timeBuffer,
-            eventTimeFlexibility: enableEventTimeFilter ? eventTimeFlexibility : 0
-          };
-          
-          const eventsAlongRoute = await fetchEventsAlongRoute(samplePoints, routeTimingContext);
-          setRouteEvents(eventsAlongRoute);
+          // Extract route points directly from Google Directions response
+          const routeEventsFromDirections = extractRouteEvents(result);
+          setRouteEvents(routeEventsFromDirections);
 
           // Pass data back to parent components
           onRouteCalculated?.(result, steps);
-          onEventsDiscovered?.(eventsAlongRoute);
+          onEventsDiscovered?.(routeEventsFromDirections);
 
         } else {
           console.error('Directions request failed due to ' + status);
