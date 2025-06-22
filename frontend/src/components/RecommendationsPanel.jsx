@@ -44,9 +44,16 @@ const debounce = (func, delay) => {
   };
 };
 
-const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRouteCalculated, onRouteEventsDiscovered, mapInstance, embedded = false }) => {
+const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRouteCalculated, onRouteEventsDiscovered, mapInstance, embedded = false, routeEvents = [], onClearRoute }) => {
   const { theme } = useTheme();
   const [activeMode, setActiveMode] = useState('recommendations'); // 'recommendations' or 'route'
+  
+  // Auto-switch to route mode when route events are available
+  useEffect(() => {
+    if (routeEvents && routeEvents.length > 0) {
+      setActiveMode('route');
+    }
+  }, [routeEvents]);
   const [loading, setLoading] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -893,8 +900,66 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             flex-1 overflow-y-auto 
             ${embedded ? 'p-4 min-h-0' : 'p-3 lg:p-4'}
           `}>
-            {/* Show recommendations for embedded mode or when activeMode is recommendations */}
-            {(embedded || activeMode === 'recommendations') ? (
+            {/* Show route results when in route mode and have route events */}
+            {activeMode === 'route' && routeEvents && routeEvents.length > 0 ? (
+              <div className="space-y-4">
+                {/* Route Results Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Navigation className={`w-5 h-5 ${theme === 'light' ? 'text-blue-600' : 'text-green-400'}`} />
+                    <h3 className={`font-semibold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                      Route Events
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
+                      {routeEvents.filter(e => !e.isRouteWaypoint).length} events found
+                    </span>
+                    <button
+                      onClick={() => {
+                        setActiveMode('recommendations');
+                        onClearRoute?.();
+                      }}
+                      className={`
+                        p-1.5 rounded-lg transition-colors
+                        ${theme === 'light' ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-white/10 text-white/70'}
+                      `}
+                      title="Clear route"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Route Events List */}
+                <div className="space-y-3">
+                  {routeEvents
+                    .filter(event => !event.isRouteWaypoint) // Show only actual events, not waypoints
+                    .map((event, index) => (
+                      <EventCard key={event.id || `route-event-${index}`} event={event} index={index} />
+                    ))}
+                </div>
+                
+                {routeEvents.filter(e => !e.isRouteWaypoint).length === 0 && (
+                  <div className="text-center py-6 space-y-3">
+                    <div className={`
+                      w-12 h-12 rounded-full mx-auto flex items-center justify-center
+                      ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                    `}>
+                      <Navigation className="w-6 h-6 text-white/60" />
+                    </div>
+                    <div>
+                      <h4 className={`font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                        Route calculated successfully
+                      </h4>
+                      <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
+                        No events found along this route. Try adjusting your search radius or travel dates.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (embedded || activeMode === 'recommendations') ? (
               loading ? (
                 <div className="space-y-3 lg:space-y-4">
                   {[...Array(3)].map((_, i) => (

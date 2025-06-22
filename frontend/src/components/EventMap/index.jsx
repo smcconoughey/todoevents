@@ -3925,7 +3925,18 @@ const EventMap = ({
               <MapContainer
                 ref={mapRef}
                 events={(() => {
-                  // Combine regular events with route waypoints
+                  // If we have route events, show only actual events from the route (not waypoints)
+                  if (routeEvents && routeEvents.length > 0) {
+                    const actualRouteEvents = routeEvents.filter(event => !event.isRouteWaypoint);
+                    console.log('🗺️ Route mode - showing only route events:', {
+                      totalRouteEvents: routeEvents.length,
+                      actualEvents: actualRouteEvents.length,
+                      waypoints: routeEvents.length - actualRouteEvents.length
+                    });
+                    return actualRouteEvents;
+                  }
+                  
+                  // Normal mode - show regular events based on filters
                   const regularEvents = (
                     // Always show all events unless filters are active
                     selectedDate || 
@@ -3937,18 +3948,8 @@ const EventMap = ({
                       : events
                   ) || [];
                   
-                  const combinedMapEvents = [
-                    ...regularEvents,
-                    ...(routeEvents || [])
-                  ];
-                  
-                  console.log('🗺️ MapContainer events:', {
-                    regularEvents: regularEvents.length,
-                    routeEvents: routeEvents?.length || 0,
-                    total: combinedMapEvents.length
-                  });
-                  
-                  return combinedMapEvents;
+                  console.log('🗺️ Normal mode - showing regular events:', regularEvents.length);
+                  return regularEvents;
                 })()}
                 onEventClick={handleEventClick}
                 selectedCategory={selectedCategory}
@@ -3976,20 +3977,7 @@ const EventMap = ({
                 </div>
               )}
 
-              {/* Route Timeline Overlay - Below Route Planner */}
-              {showRouteTimeline && routeSteps.length > 0 && (
-                <div className="absolute top-4 right-4 z-30 max-w-md sm:max-w-sm" style={{ 
-                  marginTop: showRoutePlanner ? '420px' : '0px',
-                  maxHeight: showRoutePlanner ? 'calc(100vh - 440px)' : 'calc(100vh - 20px)'
-                }}>
-                  <RouteTimeline
-                    routeSteps={routeSteps}
-                    routeEvents={routeEvents}
-                    onEventClick={handleEventClick}
-                    theme={theme}
-                  />
-                </div>
-              )}
+
 
 
 
@@ -4050,6 +4038,8 @@ const EventMap = ({
                     onRouteCalculated={handleRouteCalculated}
                     onRouteEventsDiscovered={handleRouteEventsDiscovered}
                     mapInstance={mapRef.current}
+                    routeEvents={routeEvents}
+                    onClearRoute={handleCloseRoutePlanner}
                   />
                 </div>
               )}
@@ -4058,9 +4048,14 @@ const EventMap = ({
         ) : (
           <div className="h-full overflow-y-auto" style={{backgroundColor: 'var(--bg-main)'}}>
             {renderEventList(
-              // Combine regular events with route waypoints for list view
-              [
-                ...((
+              (() => {
+                // If we have route events, show only actual events from the route (not waypoints)
+                if (routeEvents && routeEvents.length > 0) {
+                  return routeEvents.filter(event => !event.isRouteWaypoint);
+                }
+                
+                // Normal mode - show regular events based on filters
+                return (
                   // Always show all events unless filters are active
                   selectedDate || 
                   selectedTime !== 'all' || 
@@ -4069,9 +4064,8 @@ const EventMap = ({
                   miscFilters.feeFilter !== 'all'
                     ? filteredEvents
                     : events
-                ) || []),
-                ...(routeEvents || [])
-              ],
+                ) || [];
+              })(),
               selectedEvent,
               handleEventClick,
               user,

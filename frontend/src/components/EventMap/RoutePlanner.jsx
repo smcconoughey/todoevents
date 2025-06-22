@@ -612,11 +612,14 @@ const RoutePlanner = ({
           ];
           
           console.log(`✅ Combined results: ${routeWaypoints.length} waypoints + ${actualEvents.length} events = ${combinedEvents.length} total`);
+          console.log(`🎯 Actual events found: ${actualEvents.length}`);
           
           // Debug: Log the first few events to see their structure
-          console.log('🔍 Sample combined events:', combinedEvents.slice(0, 3));
-          console.log('🔍 Sample actual events:', actualEvents.slice(0, 2));
-          console.log('🔍 Sample route waypoints:', routeWaypoints.slice(0, 2));
+          if (actualEvents.length > 0) {
+            console.log('🔍 Sample actual events:', actualEvents.slice(0, 2));
+          } else {
+            console.log('❌ No actual events found along route');
+          }
           
           setRouteEvents(combinedEvents);
 
