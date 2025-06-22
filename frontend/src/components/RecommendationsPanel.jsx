@@ -172,7 +172,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     });
     
     debouncedFetchRecommendations();
-  }, [userLocation, selectedFilter, userActualLocation]);
+  }, [userLocation, selectedFilter, userActualLocation, manualOverride]);
 
   const [manualOverride, setManualOverride] = useState(null);
 

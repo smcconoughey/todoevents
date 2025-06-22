@@ -4000,7 +4000,7 @@ const EventMap = ({
               {!selectedEvent && (
                 <div className="hidden sm:block">
                   <RecommendationsPanel
-                    userLocation={effectiveLocationForRecommendations}
+                    userLocation={selectedLocation}
                     onEventClick={handleEventClick}
                     onExploreMore={(city) => {
                       if (city && city.lat && city.lng) {
