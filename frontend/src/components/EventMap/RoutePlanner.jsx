@@ -41,6 +41,7 @@ const RoutePlanner = ({
   const [arrivalTime, setArrivalTime] = useState('18:00');
   const [eventTimeFlexibility, setEventTimeFlexibility] = useState(1); // Days before/after
   const [enableEventTimeFilter, setEnableEventTimeFilter] = useState(false);
+  const [isGoogleMapsLoading, setIsGoogleMapsLoading] = useState(true);
   
   const directionsServiceRef = useRef(null);
   const routeData = useRef(null);
@@ -53,15 +54,38 @@ const RoutePlanner = ({
           return;
         }
         
+        console.log('🔄 Initializing Google Maps services...');
         await initGoogleMaps(apiKey);
         
-        if (isMapsReady() && window.google?.maps?.DirectionsService) {
-          // Only initialize the DirectionsService, don't set any map
-          directionsServiceRef.current = new window.google.maps.DirectionsService();
-          console.log('✅ DirectionsService initialized successfully');
-        } else {
-          console.warn('Google Maps not ready for DirectionsService initialization');
-        }
+        // Wait a bit for Google Maps to fully load
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const checkAndInit = () => {
+          attempts++;
+          console.log(`🔍 Checking Google Maps readiness (attempt ${attempts}/${maxAttempts})`);
+          
+          if (isMapsReady() && window.google?.maps?.DirectionsService) {
+            // Only initialize the DirectionsService, don't set any map
+            directionsServiceRef.current = new window.google.maps.DirectionsService();
+            console.log('✅ DirectionsService initialized successfully');
+            setIsGoogleMapsLoading(false);
+            return true;
+          } else {
+            console.log(`⏳ Google Maps not ready yet (attempt ${attempts}/${maxAttempts})`);
+            if (attempts < maxAttempts) {
+              setTimeout(checkAndInit, 1000); // Wait 1 second and try again
+            } else {
+              console.error('❌ Failed to initialize Google Maps after maximum attempts');
+              setIsGoogleMapsLoading(false); // Stop showing loading even if failed
+            }
+            return false;
+          }
+        };
+        
+        // Start checking
+        checkAndInit();
+        
       } catch (error) {
         console.error('Failed to initialize Google Maps services:', error);
       }
@@ -313,9 +337,23 @@ const RoutePlanner = ({
       return;
     }
     
+    // If DirectionsService isn't ready, try to initialize it
     if (!directionsServiceRef.current) {
-      alert('Google Maps service not ready. Please wait a moment and try again.');
-      return;
+      console.log('🔄 DirectionsService not ready, attempting to initialize...');
+      
+      if (isMapsReady() && window.google?.maps?.DirectionsService) {
+        try {
+          directionsServiceRef.current = new window.google.maps.DirectionsService();
+          console.log('✅ DirectionsService initialized on demand');
+        } catch (error) {
+          console.error('❌ Failed to initialize DirectionsService on demand:', error);
+          alert('Google Maps service not ready. Please wait a moment and try again.');
+          return;
+        }
+      } else {
+        alert('Google Maps is still loading. Please wait a moment and try again.');
+        return;
+      }
     }
 
     setIsCalculating(true);
@@ -672,13 +710,18 @@ const RoutePlanner = ({
         <div className="flex gap-2">
           <button
             onClick={calculateRoute}
-            disabled={isCalculating || !startLocation || !endLocation}
+            disabled={isCalculating || !startLocation || !endLocation || isGoogleMapsLoading}
             className="flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isCalculating ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Calculating...
+              </>
+            ) : isGoogleMapsLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Loading Maps...
               </>
             ) : (
               <>
