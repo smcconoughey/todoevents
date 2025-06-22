@@ -846,6 +846,7 @@ const EventMap = ({
 
   const handleResetView = () => {
     setSelectedLocation(null);
+    try { localStorage.removeItem('manualLocation'); } catch (_) {}
     setSearchValue('');
     setProximityRange(15);
     setSelectedDate(null);
@@ -1443,27 +1444,21 @@ const EventMap = ({
   }, [events.length, user, slug, manuallyClosed]); // Include manuallyClosed to react to close actions
 
   const handleAddressSelect = (data) => {
-    console.log('🏠 handleAddressSelect called with:', data);
-    
-    setSelectedLocation({
-      lat: data.lat,
-      lng: data.lng,
-      address: data.address
-    });
+    // Persist manual location so it overrides GPS until reset/refresh
+    try {
+      localStorage.setItem('manualLocation', JSON.stringify({
+        lat: data.lat,
+        lng: data.lng,
+        city: data.address,
+      }));
+    } catch (_) {}
+
+    setSelectedLocation({ lat: data.lat, lng: data.lng, address: data.address });
     setSearchValue(data.address);
-    
-    // Set map center to zoom to the selected location
-    setMapCenter({
-      lat: data.lat,
-      lng: data.lng
-    });
-    
-    console.log('🏠 Set selectedLocation and mapCenter to:', {
-      selectedLocation: { lat: data.lat, lng: data.lng, address: data.address },
-      mapCenter: { lat: data.lat, lng: data.lng }
-    });
-    
-    // Close mobile menu if open
+
+    // Center map on the chosen location
+    setMapCenter({ lat: data.lat, lng: data.lng });
+
     if (isMobileMenuOpen) {
       setIsMobileMenuOpen(false);
     }

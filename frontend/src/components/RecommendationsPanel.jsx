@@ -177,20 +177,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         limit: 8
       };
       
-      // If still default centre and no manual/GPS, fall back to Daytona once
-      if (!manualLocation && !userActualLocation && requestBody.lat === 39.8283 && requestBody.lng === -98.5795) {
-        requestBody.lat = 29.2108;
-        requestBody.lng = -81.0228;
-        requestBody.city = 'Daytona Beach';
-      }
-      
       // Debug: Check what location we're actually using
-      console.log('🔍 Final request location:');
-      console.log('  manualLocation:', manualLocation);
-      console.log('  received_userLocation:', userLocation);
-      console.log('  userActualLocation:', userActualLocation);
-      console.log('  locationToUse:', locationToUse);
-      console.log('  final_requestBody:', requestBody);
+      console.log('📍 Recommendations fetch using:', locationToUse || { lat: requestBody.lat, lng: requestBody.lng});
 
       console.log('Fetching recommendations with simple fetch...', requestBody);
 
