@@ -585,35 +585,35 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               </button>
             </div>
           ) : (
-            <div className="text-center py-6 lg:py-8 space-y-4">
+            <div className="text-center py-6 space-y-2">
               <div className={`
-                w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
+                w-12 h-12 rounded-full mx-auto flex items-center justify-center
                 ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
               `}>
-                <Lightbulb className="w-6 h-6 lg:w-8 lg:h-8 text-white/60" />
+                <Lightbulb className="w-6 h-6 text-white/60" />
               </div>
               <div>
-                <h3 className="text-base lg:text-lg font-medium text-white mb-2">
-                  Nothing nearby right now
-                </h3>
-                <p className="text-white/60 text-sm mb-4">
-                  But there's a whole world of events to discover!
+                <h4 className="font-medium text-white mb-1">
+                  No nearby cities found
+                </h4>
+                <p className="text-white/60 text-sm">
+                  Try exploring the map to discover more areas
                 </p>
-                <button
-                  onClick={handleExploreCities}
-                  className={`
-                    px-4 lg:px-6 py-2 lg:py-3 rounded-xl font-medium transition-all duration-200
-                    hover:scale-[1.02] flex items-center gap-2 mx-auto text-sm lg:text-base
-                    ${theme === 'frost'
-                      ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                      : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'
-                    }
-                  `}
-                >
-                  <Target className="w-3 h-3 lg:w-4 lg:h-4" />
-                  Explore other cities
-                </button>
               </div>
+              <button
+                onClick={() => {
+                  setShowCitySuggestions(false);
+                  onExploreMore && onExploreMore();
+                }}
+                className={`
+                  mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
+                  ${theme === 'frost'
+                    ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                    : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'}
+                `}
+              >
+                View All Events
+              </button>
             </div>
           )}
         </div>
@@ -797,3 +797,41 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               ) : (
                 <div className="text-center py-6 space-y-2">
                   <div className={`
+                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
+                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                  `}>
+                    <Lightbulb className="w-6 h-6 text-white/60" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-white mb-1">
+                      No nearby cities found
+                    </h4>
+                    <p className="text-white/60 text-sm">
+                      Try exploring the map to discover more areas
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowCitySuggestions(false);
+                      onExploreMore && onExploreMore();
+                    }}
+                    className={`
+                      mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
+                      ${theme === 'frost'
+                        ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'}
+                    `}
+                  >
+                    View All Events
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RecommendationsPanel;
