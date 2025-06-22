@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTheme } from './ThemeContext';
 import { 
   Calendar,
@@ -54,6 +54,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [gpsLocation, setGpsLocation] = useState(null); // User's GPS coordinates
   const [manualLocation, setManualLocation] = useState(null); // User selected location (search/city)
   const [useGPS, setUseGPS] = useState(true); // Toggle between GPS and manual
+  const [lastFetchedLocation, setLastFetchedLocation] = useState(null); // Track last fetched location to prevent duplicates
 
   // Get the active location based on user preference
   const getActiveLocation = () => {
@@ -67,6 +68,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       return userLocation; // Fallback to prop from EventMap
     }
     return null;
+  };
+
+  // Create a stable key for location comparison
+  const getLocationKey = (location) => {
+    if (!location || !location.lat || !location.lng) return 'no-location';
+    return `${location.lat.toFixed(6)},${location.lng.toFixed(6)},${selectedFilter}`;
   };
 
   const emotionalMessages = [
@@ -130,6 +137,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   // Handle manual location selection (from search or city)
   const selectManualLocation = (location) => {
+    console.log('📍 Selecting manual location:', location);
     setManualLocation({
       lat: location.lat,
       lng: location.lng,
@@ -148,44 +156,22 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     }
   };
 
-  // Debounced fetch function
-  const debouncedFetchRecommendations = useRef(
-    debounce(() => {
-      fetchRecommendations();
-    }, 300)
-  ).current;
-
-  // Sync with EventMap location selections
-  useEffect(() => {
-    if (userLocation && userLocation.lat && userLocation.lng) {
-      // EventMap has selected a location via search
-      selectManualLocation({
-        lat: userLocation.lat,
-        lng: userLocation.lng,
-        city: userLocation.city || userLocation.address || 'Selected location'
-      });
+  // Stable fetch function with useCallback
+  const fetchRecommendations = useCallback(async () => {
+    const activeLocation = getActiveLocation();
+    const locationKey = getLocationKey(activeLocation);
+    
+    // Prevent duplicate API calls for the same location and filter
+    if (locationKey === lastFetchedLocation) {
+      console.log('🚫 Skipping API call - same location and filter');
+      return;
     }
-  }, [userLocation]);
 
-  // Fetch recommendations when location or filter changes
-  useEffect(() => {
-    debouncedFetchRecommendations();
-  }, [gpsLocation, manualLocation, useGPS, selectedFilter]);
-
-  const fetchRecommendations = async () => {
+    console.log('📡 Making API call for location:', activeLocation);
     setLoading(true);
+    setLastFetchedLocation(locationKey);
+
     try {
-      const activeLocation = getActiveLocation();
-      
-      // Debug logging
-      console.log('🔍 RecommendationsPanel state:', {
-        gpsLocation,
-        manualLocation,
-        useGPS,
-        activeLocation,
-        userLocationProp: userLocation
-      });
-      
       const requestBody = {
         lat: activeLocation?.lat || null,
         lng: activeLocation?.lng || null,
@@ -212,17 +198,64 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Recommendations fetched successfully:', data);
+        console.log('✅ Recommendations fetched successfully:', data.events?.length || 0, 'events');
         setRecommendations(data.events || []);
       } else {
-        console.error('Failed to fetch recommendations - HTTP status:', response.status);
+        console.error('❌ Failed to fetch recommendations - HTTP status:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching recommendations:', error);
+      if (error.name !== 'AbortError') {
+        console.error('❌ Error fetching recommendations:', error);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [gpsLocation, manualLocation, useGPS, selectedFilter, userLocation, lastFetchedLocation]);
+
+  // Debounced version of the fetch function
+  const debouncedFetchRecommendations = useRef(
+    debounce(() => {
+      fetchRecommendations();
+    }, 500) // Increased to 500ms to prevent rapid calls
+  ).current;
+
+  // Sync with EventMap location selections - but don't trigger immediate fetch
+  useEffect(() => {
+    if (userLocation && userLocation.lat && userLocation.lng) {
+      // EventMap has selected a location via search
+      console.log('🔄 Syncing with EventMap location:', userLocation);
+      selectManualLocation({
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        city: userLocation.city || userLocation.address || 'Selected location'
+      });
+    }
+  }, [userLocation?.lat, userLocation?.lng]); // Only trigger on coordinate changes
+
+  // Single effect to handle all location and filter changes
+  useEffect(() => {
+    const activeLocation = getActiveLocation();
+    const locationKey = getLocationKey(activeLocation);
+    
+    console.log('🔍 Location or filter changed:', {
+      activeLocation,
+      locationKey,
+      lastFetchedLocation
+    });
+
+    // Only fetch if location or filter actually changed
+    if (locationKey !== lastFetchedLocation) {
+      debouncedFetchRecommendations();
+    }
+  }, [gpsLocation, manualLocation, useGPS, selectedFilter]);
+
+  // Initial fetch when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchRecommendations();
+    }, 1000); // Delay initial fetch slightly
+    return () => clearTimeout(timer);
+  }, []); // Only run once on mount
 
   const fetchCitySuggestions = async () => {
     setLoadingCities(true);
