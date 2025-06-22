@@ -820,7 +820,7 @@ const EventMap = ({
   const [routeEvents, setRouteEvents] = useState([]);
   const [showRouteTimeline, setShowRouteTimeline] = useState(false);
   const [routeDirectionsRenderer, setRouteDirectionsRenderer] = useState(null);
-  const [isMobileRecommendationsOpen, setIsMobileRecommendationsOpen] = useState(false);
+  const [isMobileRecommendationsOpen, setIsMobileRecommendationsOpen] = useState(true);
 
 
   const mapRef = useRef(null);
@@ -3124,20 +3124,6 @@ const EventMap = ({
                   </div>
                 </div>
 
-                {/* Route Planning Button */}
-                <div className="space-y-2">
-                  <button
-                    className="w-full p-3 rounded-lg bg-gradient-to-r from-pin-blue/20 to-spark-yellow/20 border border-pin-blue/40 text-white font-medium transition-all duration-200 hover:from-pin-blue/30 hover:to-spark-yellow/30 hover:scale-[1.02] flex items-center justify-center gap-2"
-                    onClick={() => {
-                      setShowRoutePlanner(true);
-                      setIsMobileMenuOpen(false);
-                    }}
-                  >
-                    <Target className="w-4 h-4" />
-                    Plan Route & Find Events
-                  </button>
-                </div>
-
                 {/* Event List */}
                 <div className="flex-1 overflow-y-auto">
                   <div className="space-y-2">
@@ -3808,20 +3794,6 @@ const EventMap = ({
                   </div>
                 </div>
 
-                {/* Route Planning Button */}
-                <div className="space-y-2">
-                  <button
-                    className="w-full p-3 rounded-lg bg-gradient-to-r from-pin-blue/20 to-spark-yellow/20 border border-pin-blue/40 text-white font-medium transition-all duration-200 hover:from-pin-blue/30 hover:to-spark-yellow/30 hover:scale-[1.02] flex items-center justify-center gap-2"
-                    onClick={() => {
-                      setShowRoutePlanner(true);
-                      setIsMobileMenuOpen(false);
-                    }}
-                  >
-                    <Target className="w-4 h-4" />
-                    Plan Route & Find Events
-                  </button>
-                </div>
-
                 {/* Event List */}
                 <div className="flex-1 overflow-y-auto">
                   <div className="space-y-2">
@@ -4355,7 +4327,7 @@ const EventMap = ({
             </div>
             
             {/* Mobile Recommendations Panel */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0">
               <RecommendationsPanel
                 userLocation={selectedLocation}
                 onEventClick={(event) => {
@@ -4380,6 +4352,8 @@ const EventMap = ({
                 onRouteEventsDiscovered={handleRouteEventsDiscovered}
                 mapInstance={mapRef.current}
                 embedded={true}
+                routeEvents={routeEvents}
+                onClearRoute={handleCloseRoutePlanner}
               />
             </div>
           </div>
