@@ -48,6 +48,11 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   const { theme } = useTheme();
   const [activeMode, setActiveMode] = useState('recommendations'); // 'recommendations' or 'route'
   
+  // Debug activeMode changes
+  useEffect(() => {
+    console.log('🎯 activeMode changed to:', activeMode);
+  }, [activeMode]);
+  
   // Auto-switch to route mode when route events are available
   useEffect(() => {
     if (routeEvents && routeEvents.length > 0) {
@@ -822,15 +827,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 {embedded && (
                   <div className="mt-4">
                     <button
-                      onClick={() => setActiveMode('route')}
+                      onClick={() => {
+                        console.log('🎯 Plan Route button clicked, switching to route mode');
+                        setActiveMode('route');
+                      }}
                       className={`
                         w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
-                        text-sm font-medium transition-all duration-200 hover:scale-[1.02]
+                        text-sm font-medium transition-all duration-200 active:scale-95
                         ${theme === 'frost'
-                          ? 'bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border border-white/30'
+                          ? 'bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border border-white/30 active:from-blue-400/40 active:to-purple-400/40'
                           : theme === 'light'
-                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-transparent'
-                            : 'bg-gradient-to-r from-pin-blue/30 to-spark-yellow/30 text-white border border-pin-blue/40'
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-transparent active:from-blue-600 active:to-indigo-600'
+                            : 'bg-gradient-to-r from-pin-blue/30 to-spark-yellow/30 text-white border border-pin-blue/40 active:from-pin-blue/40 active:to-spark-yellow/40'
                         }
                       `}
                     >
@@ -845,14 +853,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     onClick={switchToGPS}
                     className={`
                       flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                      text-sm font-medium transition-all duration-200 hover:scale-[1.02]
+                      text-sm font-medium transition-all duration-200 active:scale-95
                       ${useGPS && gpsLocation
                         ? 'bg-green-400/20 text-green-400 border border-green-400/40'
                         : theme === 'frost'
-                          ? 'bg-blue-400/20 text-blue-400 border border-blue-400/40 hover:bg-blue-400/30'
+                          ? 'bg-blue-400/20 text-blue-400 border border-blue-400/40 active:bg-blue-400/30'
                           : theme === 'light'
-                            ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
-                            : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 hover:bg-pin-blue/30'
+                            ? 'bg-blue-50 text-blue-600 border border-blue-200 active:bg-blue-100'
+                            : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 active:bg-pin-blue/30'
                       }
                     `}
                     title={gpsLocation ? (useGPS ? 'Using GPS location' : 'Switch to GPS location') : 'Get GPS location'}
@@ -867,12 +875,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     onClick={handleExploreCities}
                     className={`
                       flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                      text-sm font-medium transition-all duration-200 hover:scale-[1.02]
+                      text-sm font-medium transition-all duration-200 active:scale-95
                       ${theme === 'frost'
-                        ? 'bg-purple-400/20 text-purple-400 border border-purple-400/40 hover:bg-purple-400/30'
+                        ? 'bg-purple-400/20 text-purple-400 border border-purple-400/40 active:bg-purple-400/30'
                         : theme === 'light'
-                          ? 'bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100'
-                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40 hover:bg-spark-yellow/30'
+                          ? 'bg-amber-50 text-amber-600 border border-amber-200 active:bg-amber-100'
+                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40 active:bg-spark-yellow/30'
                       }
                     `}
                     title="Explore nearby cities"
@@ -895,7 +903,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       onClick={() => setSelectedFilter(key)}
                       className={`
                         flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg
-                        text-xs font-medium transition-all duration-200 hover:scale-[1.02]
+                        text-xs font-medium transition-all duration-200 active:scale-95
                         ${selectedFilter === key
                           ? theme === 'frost'
                             ? 'bg-white/30 text-white border border-white/40'
@@ -903,8 +911,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                               ? 'bg-blue-100 text-blue-700 border border-blue-300'
                               : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
                           : theme === 'light'
-                            ? 'text-gray-500 hover:bg-gray-100 border border-transparent'
-                            : 'text-white/60 hover:bg-white/10 border border-transparent'
+                            ? 'text-gray-500 active:bg-gray-100 border border-transparent'
+                            : 'text-white/60 active:bg-white/10 border border-transparent'
                         }
                       `}
                     >
