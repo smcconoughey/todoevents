@@ -230,12 +230,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     const activeLocation = getActiveLocationFromRefs();
     const locationKey = getLocationKey(activeLocation);
     
-    console.log('🔍 fetchRecommendations using refs:', {
-      activeLocation,
-      locationKey,
-      lastFetchedLocation
-    });
-    
     // Prevent duplicate API calls for the same location and filter
     if (locationKey === lastFetchedLocation) {
       console.log('🚫 Skipping API call - same location and filter');
@@ -247,12 +241,21 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     setLastFetchedLocation(locationKey);
 
     try {
+      // Map frontend filter to backend filter
+      let backendFilter = selectedFilter;
+      let eventLimit = 8;
+      
+      if (selectedFilter === 'all') {
+        backendFilter = 'upcoming';
+        eventLimit = 20; // Show more events for 'all' filter
+      }
+
       const requestBody = {
         lat: activeLocation?.lat || null,
         lng: activeLocation?.lng || null,
         city: activeLocation?.city || null,
-        time_filter: selectedFilter,
-        limit: 8
+        time_filter: backendFilter,
+        limit: eventLimit
       };
       
       console.log('📍 Recommendations fetch using:', requestBody);
@@ -289,6 +292,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   // Use a ref to track when we need to fetch
   const shouldFetchRef = useRef(false);
+  const lastLocationKeyRef = useRef('no-location');
 
   // Sync with EventMap location selections - but don't trigger immediate fetch
   useEffect(() => {
@@ -303,42 +307,31 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     }
   }, [userLocation?.lat, userLocation?.lng]); // Only trigger on coordinate changes
 
-  // Single effect to handle all location and filter changes
+  // Single consolidated effect to handle all location and filter changes
   useEffect(() => {
-    const activeLocation = getActiveLocation();
+    const activeLocation = getActiveLocationFromRefs();
     const locationKey = getLocationKey(activeLocation);
     
-    console.log('🔍 Location or filter changed:', {
-      activeLocation,
-      locationKey,
-      lastFetchedLocation
-    });
-
     // Only fetch if location or filter actually changed
-    if (locationKey !== lastFetchedLocation) {
-      shouldFetchRef.current = true;
-      // Use setTimeout to ensure state has settled
-      setTimeout(() => {
-        if (shouldFetchRef.current) {
-          shouldFetchRef.current = false;
-          fetchRecommendations();
-        }
-      }, 100);
+    if (locationKey !== lastLocationKeyRef.current) {
+      console.log('🔍 Location or filter changed:', {
+        activeLocation,
+        locationKey,
+        lastLocationKey: lastLocationKeyRef.current
+      });
+      
+      lastLocationKeyRef.current = locationKey;
+      setLastFetchedLocation(locationKey);
+      
+      // Immediate fetch without setTimeout to prevent excessive delays
+      fetchRecommendations();
     }
   }, [gpsLocation, manualLocation, useGPS, selectedFilter, userLocation]);
-
-  // Initial fetch when component mounts
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchRecommendations();
-    }, 1000); // Delay initial fetch slightly
-    return () => clearTimeout(timer);
-  }, []); // Only run once on mount
 
   const fetchCitySuggestions = async () => {
     setLoadingCities(true);
     try {
-      const activeLocation = getActiveLocation();
+      const activeLocation = getActiveLocationFromRefs();
       
       const params = new URLSearchParams();
       if (activeLocation?.lat && activeLocation?.lng) {
@@ -441,17 +434,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       <div
         className={`
           group relative overflow-hidden rounded-2xl backdrop-blur-sm
-          transition-all duration-500 hover:scale-[1.02] cursor-pointer
-          animate-slide-in-up
+          transition-all duration-300 hover:scale-[1.02] cursor-pointer
           ${theme === 'frost' 
             ? 'bg-white/15 border border-white/20 hover:bg-white/25' 
             : 'bg-white/5 border border-white/10 hover:bg-white/10'
           }
         `}
-        style={{
-          animationDelay: `${index * 100}ms`,
-          animationFillMode: 'both'
-        }}
         onClick={() => onEventClick && onEventClick(event)}
       >
         {/* Gradient overlay */}
@@ -731,9 +719,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                 { key: 'upcoming', label: 'Soon', icon: Clock },
                 { key: 'this_weekend', label: 'Weekend', icon: Calendar },
                 { key: 'next_2_weeks', label: '2 Weeks', icon: Calendar }
-              ].map(({ key, label, icon: Icon }) => (
+              ].map(({ key, label, icon: Icon }, index) => (
                 <button
-                  key={key}
+                  key={`${key}-${index}`} // Use index to allow duplicate keys
                   onClick={() => setSelectedFilter(key)}
                   className={`
                     flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg
