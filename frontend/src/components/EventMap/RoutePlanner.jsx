@@ -49,8 +49,23 @@ const RoutePlanner = ({
   useEffect(() => {
     const initServices = async () => {
       try {
+        console.log('🔍 RoutePlanner initialization check:', {
+          hasApiKey: !!apiKey,
+          apiKeyType: typeof apiKey,
+          apiKeyLength: apiKey?.length,
+          apiKeyStart: apiKey?.substring(0, 10) + '...',
+          isProduction: process.env.NODE_ENV === 'production'
+        });
+        
         if (!apiKey) {
-          console.warn('No Google Maps API key provided to RoutePlanner');
+          console.warn('❌ No Google Maps API key provided to RoutePlanner');
+          setIsGoogleMapsLoading(false);
+          return;
+        }
+        
+        if (apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE' || apiKey.length < 10) {
+          console.warn('❌ Invalid Google Maps API key provided to RoutePlanner');
+          setIsGoogleMapsLoading(false);
           return;
         }
         
@@ -63,7 +78,12 @@ const RoutePlanner = ({
         
         const checkAndInit = () => {
           attempts++;
-          console.log(`🔍 Checking Google Maps readiness (attempt ${attempts}/${maxAttempts})`);
+          console.log(`🔍 Checking Google Maps readiness (attempt ${attempts}/${maxAttempts})`, {
+            isMapsReady: isMapsReady(),
+            hasWindowGoogle: !!window.google,
+            hasGoogleMaps: !!window.google?.maps,
+            hasDirectionsService: !!window.google?.maps?.DirectionsService
+          });
           
           if (isMapsReady() && window.google?.maps?.DirectionsService) {
             // Only initialize the DirectionsService, don't set any map
@@ -87,7 +107,8 @@ const RoutePlanner = ({
         checkAndInit();
         
       } catch (error) {
-        console.error('Failed to initialize Google Maps services:', error);
+        console.error('❌ Failed to initialize Google Maps services:', error);
+        setIsGoogleMapsLoading(false);
       }
     };
     

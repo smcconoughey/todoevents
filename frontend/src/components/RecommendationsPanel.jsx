@@ -960,7 +960,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   onRouteCalculated={onRouteCalculated}
                   onEventsDiscovered={onRouteEventsDiscovered}
                   mapInstance={mapInstance}
-                  apiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
+                  apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
                   theme={theme}
                   embedded={true} // Add embedded prop to adjust styling
                 />
