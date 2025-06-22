@@ -802,7 +802,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     </button>
                     
                     <button
-                      onClick={() => setActiveMode('route')}
+                      onClick={() => {
+                        console.log('🎯 Plan Route tab clicked, switching to route mode');
+                        setActiveMode('route');
+                      }}
                       className={`
                         relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
                         font-medium transition-all duration-200
@@ -908,6 +911,15 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             ${embedded ? 'px-4 pt-2 pb-4 min-h-0' : 'p-3 lg:p-4'}
           `}>
             {/* Show route results when in route mode and have route events */}
+            {(() => {
+              console.log('🔍 Content area conditions:', {
+                activeMode,
+                embedded,
+                routeEventsLength: routeEvents?.length,
+                hasRouteEvents: routeEvents && routeEvents.length > 0
+              });
+              return null;
+            })()}
             {activeMode === 'route' && routeEvents && routeEvents.length > 0 ? (
               <div className="space-y-4">
                 {/* Route Results Header */}
@@ -966,7 +978,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   </div>
                 )}
               </div>
-            ) : (embedded || activeMode === 'recommendations') ? (
+            ) : activeMode === 'recommendations' ? (
               loading ? (
                 <div className="space-y-3 lg:space-y-4">
                   {[...Array(3)].map((_, i) => (
