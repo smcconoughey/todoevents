@@ -43,9 +43,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [locationPermissionAsked, setLocationPermissionAsked] = useState(false);
-  const [userActualLocation, setUserActualLocation] = useState(null);
-  const [animationKey, setAnimationKey] = useState(0);
-  const [currentMessage, setCurrentMessage] = useState(0);
   const [isExpanded, setIsExpanded] = useState(true);
 
   // City suggestions state
@@ -53,8 +50,24 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [citySuggestions, setCitySuggestions] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
-  // Holds city or manual override location
-  const [manualOverride, setManualOverride] = useState(null);
+  // LOCATION SYSTEM - Clear and Simple
+  const [gpsLocation, setGpsLocation] = useState(null); // User's GPS coordinates
+  const [manualLocation, setManualLocation] = useState(null); // User selected location (search/city)
+  const [useGPS, setUseGPS] = useState(true); // Toggle between GPS and manual
+
+  // Get the active location based on user preference
+  const getActiveLocation = () => {
+    if (useGPS && gpsLocation) {
+      return gpsLocation;
+    }
+    if (manualLocation) {
+      return manualLocation;
+    }
+    if (userLocation) {
+      return userLocation; // Fallback to prop from EventMap
+    }
+    return null;
+  };
 
   const emotionalMessages = [
     "Discover amazing events near you",
@@ -64,6 +77,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     "Create lasting memories"
   ];
 
+  const [currentMessage, setCurrentMessage] = useState(0);
+
   // Rotate emotional messages
   useEffect(() => {
     const interval = setInterval(() => {
@@ -72,23 +87,19 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     return () => clearInterval(interval);
   }, []);
 
-  // Check if we should ask for location on first load - BUT don't auto-load saved location
+  // Check if we should ask for location on first load
   useEffect(() => {
     const hasAskedBefore = localStorage.getItem('locationPermissionAsked');
     if (!hasAskedBefore && !locationPermissionAsked) {
-      // Show popup after a short delay for better UX
       const timeoutId = setTimeout(() => {
         setShowLocationPopup(true);
       }, 1500);
-      
-      return () => {
-        clearTimeout(timeoutId);
-      };
+      return () => clearTimeout(timeoutId);
     }
   }, []);
 
-  // Request user's actual location
-  const requestUserLocation = () => {
+  // Request user's GPS location
+  const requestGPSLocation = () => {
     setLocationPermissionAsked(true);
     localStorage.setItem('locationPermissionAsked', 'true');
     setShowLocationPopup(false);
@@ -99,14 +110,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-            city: 'Your location'
+            city: 'Your current location'
           };
-          setUserActualLocation(location);
-          // Remove persistent caching - let it work fresh each time
+          setGpsLocation(location);
+          setUseGPS(true); // Switch to GPS mode
         },
         (error) => {
-          console.log('Location access denied or failed:', error);
-          // Continue with fallback location
+          console.log('GPS access denied or failed:', error);
+          setUseGPS(false); // Fall back to manual mode
         },
         {
           enableHighAccuracy: true,
@@ -117,103 +128,76 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     }
   };
 
-  // Handle Current Location button click
-  const handleCurrentLocation = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            city: 'Your location'
-          };
-          setUserActualLocation(location);
-        },
-        (error) => {
-          console.log('Location access failed:', error);
-          // Show a user-friendly message
-          alert('Unable to access your location. Please check your browser settings and try again.');
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000 // 1 minute cache for manual requests
-        }
-      );
+  // Handle manual location selection (from search or city)
+  const selectManualLocation = (location) => {
+    setManualLocation({
+      lat: location.lat,
+      lng: location.lng,
+      city: location.city || location.address || 'Selected location'
+    });
+    setUseGPS(false); // Switch to manual mode
+  };
+
+  // Toggle back to GPS
+  const switchToGPS = () => {
+    if (gpsLocation) {
+      setUseGPS(true);
     } else {
-      alert('Geolocation is not supported by your browser.');
+      // Request GPS if we don't have it
+      requestGPSLocation();
     }
   };
 
-  // Remove auto-loading of saved location - let users manually request location each time
-
-  // Debounced fetch function to prevent excessive API calls
+  // Debounced fetch function
   const debouncedFetchRecommendations = useRef(
     debounce(() => {
       fetchRecommendations();
-    }, 300) // 300ms debounce
+    }, 300)
   ).current;
 
-  // Track previous location to trigger animation only when location changes
-  const [previousLocation, setPreviousLocation] = useState(null);
-
-  // Fetch recommendations with actual user location if available
+  // Sync with EventMap location selections
   useEffect(() => {
-    const currentLocationKey = `${userLocation?.lat}-${userLocation?.lng}-${userActualLocation?.lat}-${userActualLocation?.lng}`;
-    const prevLocationKey = `${previousLocation?.userLat}-${previousLocation?.userLng}-${previousLocation?.gpsLat}-${previousLocation?.gpsLng}`;
-    
-    // Only trigger animation if location actually changed
-    if (currentLocationKey !== prevLocationKey && previousLocation !== null) {
-      setAnimationKey(prev => prev + 1);
+    if (userLocation && userLocation.lat && userLocation.lng) {
+      // EventMap has selected a location via search
+      selectManualLocation({
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        city: userLocation.city || userLocation.address || 'Selected location'
+      });
     }
-    
-    setPreviousLocation({
-      userLat: userLocation?.lat,
-      userLng: userLocation?.lng,
-      gpsLat: userActualLocation?.lat,
-      gpsLng: userActualLocation?.lng
-    });
-    
+  }, [userLocation]);
+
+  // Fetch recommendations when location or filter changes
+  useEffect(() => {
     debouncedFetchRecommendations();
-  }, [userLocation, selectedFilter, userActualLocation, manualOverride]);
+  }, [gpsLocation, manualLocation, useGPS, selectedFilter]);
 
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
-      // Priority: 1) Manual search selection (userLocation), 2) GPS location (userActualLocation), 3) Default
-      let locationToUse = manualOverride || userLocation || userActualLocation;
-      // Normalize possible google LatLng objects (functions instead of numbers)
-      if (locationToUse && typeof locationToUse.lat === 'function') {
-        locationToUse = {
-          ...locationToUse,
-          lat: locationToUse.lat(),
-          lng: typeof locationToUse.lng === 'function' ? locationToUse.lng() : locationToUse.lng
-        };
-      }
+      const activeLocation = getActiveLocation();
       
-      // Debug: Check what we received as props and what we're using
-      console.log('🔍 RecommendationsPanel received:', {
-        userLocationProp: userLocation,
-        userActualLocationState: userActualLocation,
-        locationToUse: locationToUse
+      // Debug logging
+      console.log('🔍 RecommendationsPanel state:', {
+        gpsLocation,
+        manualLocation,
+        useGPS,
+        activeLocation,
+        userLocationProp: userLocation
       });
       
       const requestBody = {
-        lat: locationToUse?.lat || null,
-        lng: locationToUse?.lng || null,
-        city: locationToUse?.city || locationToUse?.address || null,
+        lat: activeLocation?.lat || null,
+        lng: activeLocation?.lng || null,
+        city: activeLocation?.city || null,
         time_filter: selectedFilter,
         limit: 8
       };
       
-      // Debug: Check what location we're actually using
-      console.log('📍 Recommendations fetch using:', locationToUse || { lat: requestBody.lat, lng: requestBody.lng});
+      console.log('📍 Recommendations fetch using:', requestBody);
 
-      console.log('Fetching recommendations with simple fetch...', requestBody);
-
-      // Use simple fetch instead of fetchWithTimeout to bypass health check issues
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(`${API_URL}/api/recommendations`, {
         method: 'POST',
@@ -230,8 +214,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
         const data = await response.json();
         console.log('Recommendations fetched successfully:', data);
         setRecommendations(data.events || []);
-        // Only animate on significant changes, not every fetch
-        // setAnimationKey(prev => prev + 1);
       } else {
         console.error('Failed to fetch recommendations - HTTP status:', response.status);
       }
@@ -245,21 +227,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const fetchCitySuggestions = async () => {
     setLoadingCities(true);
     try {
-      // Priority: 1) Manually selected location (userLocation), 2) GPS location (userActualLocation), 3) Default
-      let locationToUse = manualOverride || userLocation || userActualLocation;
-      // Normalize possible google LatLng objects (functions instead of numbers)
-      if (locationToUse && typeof locationToUse.lat === 'function') {
-        locationToUse = {
-          ...locationToUse,
-          lat: locationToUse.lat(),
-          lng: typeof locationToUse.lng === 'function' ? locationToUse.lng() : locationToUse.lng
-        };
-      }
+      const activeLocation = getActiveLocation();
       
       const params = new URLSearchParams();
-      if (locationToUse?.lat && locationToUse?.lng) {
-        params.append('lat', locationToUse.lat.toString());
-        params.append('lng', locationToUse.lng.toString());
+      if (activeLocation?.lat && activeLocation?.lng) {
+        params.append('lat', activeLocation.lat.toString());
+        params.append('lng', activeLocation.lng.toString());
       }
       params.append('limit', '8');
       params.append('max_distance', '500');
@@ -294,8 +267,11 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   };
 
   const handleCitySelect = (city) => {
-    // Set the map center to the selected city and close the suggestions
-    setManualOverride({ lat: city.lat, lng: city.lng, city: city.city + ', ' + city.state });
+    selectManualLocation({
+      lat: city.lat,
+      lng: city.lng,
+      city: `${city.city}, ${city.state}`
+    });
     if (onExploreMore) {
       onExploreMore(city);
     }
@@ -501,17 +477,31 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
             <div>
               <h2 className="text-lg lg:text-xl font-display font-bold text-white flex items-center gap-2 flex-wrap">
                 Discover
-                {userActualLocation && (
+                {gpsLocation && useGPS && (
                   <div className="flex items-center gap-1">
                     <Navigation className="w-4 h-4 text-green-400" />
                     <span className="text-xs bg-green-400/20 text-green-400 px-2 py-1 rounded-full border border-green-400/30">
-                      Precise
+                      GPS
+                    </span>
+                  </div>
+                )}
+                {manualLocation && !useGPS && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4 text-blue-400" />
+                    <span className="text-xs bg-blue-400/20 text-blue-400 px-2 py-1 rounded-full border border-blue-400/30">
+                      Manual
                     </span>
                   </div>
                 )}
               </h2>
               <p className="text-xs lg:text-sm text-white/60">
-                {userActualLocation ? 'Events near your location' : 'Events near you'}
+                {(() => {
+                  const activeLocation = getActiveLocation();
+                  if (activeLocation?.city) {
+                    return `Events near ${activeLocation.city}`;
+                  }
+                  return 'Events near you';
+                })()}
               </p>
             </div>
           </div>
@@ -542,14 +532,14 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
           </p>
         </div>
 
-        {/* Current Location Button */}
+        {/* Location Control Buttons */}
         <div className="flex gap-2 mt-4">
           <button
-            onClick={handleCurrentLocation}
+            onClick={switchToGPS}
             className={`
               flex items-center justify-center gap-2 py-2 px-3 rounded-lg
               text-sm font-medium transition-all duration-200 min-w-0 flex-shrink-0
-              ${userActualLocation
+              ${useGPS && gpsLocation
                 ? theme === 'frost'
                   ? 'bg-green-400/20 text-green-400 border border-green-400/40'
                   : 'bg-green-400/20 text-green-400 border border-green-400/40'
@@ -558,11 +548,11 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
                   : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 hover:bg-pin-blue/30'
               }
             `}
-            title={userActualLocation ? 'Using your location' : 'Get your current location'}
+            title={gpsLocation ? (useGPS ? 'Using GPS location' : 'Switch to GPS location') : 'Get GPS location'}
           >
             <Navigation className="w-4 h-4" />
             <span className="hidden sm:inline">
-              {userActualLocation ? 'Current' : 'Get Location'}
+              {gpsLocation ? (useGPS ? 'GPS Active' : 'Use GPS') : 'Get GPS'}
             </span>
           </button>
           
@@ -643,21 +633,21 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               </div>
               <div>
                 <h4 className="font-medium text-white mb-1">
-                  {userActualLocation || userLocation 
+                  {getActiveLocation() 
                     ? 'No events found nearby' 
                     : 'Share your location to find events'
                   }
                 </h4>
                 <p className="text-white/60 text-sm">
-                  {userActualLocation || userLocation 
+                  {getActiveLocation() 
                     ? 'Try adjusting your filters or exploring other areas'
                     : 'Get your current location to discover amazing events near you'
                   }
                 </p>
               </div>
-              {!userActualLocation && !userLocation && (
+              {!getActiveLocation() && (
                 <button
-                  onClick={handleCurrentLocation}
+                  onClick={switchToGPS}
                   className={`
                     px-4 py-2 rounded-lg font-medium transition-all duration-200
                     ${theme === 'frost'
@@ -726,7 +716,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               
               <div className="space-y-3 pt-2">
                 <button
-                  onClick={requestUserLocation}
+                  onClick={requestGPSLocation}
                   className={`
                     w-full py-3 px-4 rounded-xl font-medium transition-all duration-200
                     hover:scale-[1.02] flex items-center justify-center gap-2 text-sm lg:text-base
