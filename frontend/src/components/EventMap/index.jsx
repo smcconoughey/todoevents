@@ -841,6 +841,8 @@ const EventMap = ({
     selectedLocation,
     mapCenter,
     effectiveLocationForRecommendations,
+    selectedLocationCheck: !!selectedLocation,
+    mapCenterCheck: !!mapCenter,
     finalUserLocation: effectiveLocationForRecommendations || DEFAULT_CENTER
   });
 

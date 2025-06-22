@@ -180,6 +180,13 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
       // Priority: 1) Manual search selection (userLocation), 2) GPS location (userActualLocation), 3) Default
       const locationToUse = userLocation || userActualLocation;
       
+      // Debug: Check what we received as props and what we're using
+      console.log('🔍 RecommendationsPanel received:', {
+        userLocationProp: userLocation,
+        userActualLocationState: userActualLocation,
+        locationToUse: locationToUse
+      });
+      
       const requestBody = {
         lat: locationToUse?.lat || null,
         lng: locationToUse?.lng || null,
