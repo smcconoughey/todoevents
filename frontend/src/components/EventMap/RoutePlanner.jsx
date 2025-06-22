@@ -387,17 +387,17 @@ const RoutePlanner = ({
     console.log(`🎯 Searching for events along ${samplePoints.length} route points...`);
     
     try {
-      // Build the API URL for batch event search
-      const API_URL = import.meta.env.VITE_API_URL || 'https://todoevents-1.onrender.com';
-      const params = new URLSearchParams();
+      // Build the API URL for route events
+      const API_URL = import.meta.env.VITE_API_URL || 'https://todoevents-backend.onrender.com';
       
-      // Add all sample points as location parameters
-      samplePoints.forEach((point, index) => {
-        params.append('locations', `${point.lat},${point.lng}`);
-      });
-      
-      // Add search radius
-      params.append('radius', searchRadius.toString());
+      // Prepare the request payload for the backend
+      const requestPayload = {
+        coordinates: samplePoints.map(point => ({
+          lat: point.lat,
+          lng: point.lng
+        })),
+        radius: searchRadius
+      };
       
       // Add timing context if provided
       if (timingContext && enableEventTimeFilter) {
@@ -409,26 +409,31 @@ const RoutePlanner = ({
         startDate.setDate(startDate.getDate() - flexibility);
         endDate.setDate(endDate.getDate() + flexibility);
         
-        params.append('dateRange', `${startDate.toISOString().split('T')[0]},${endDate.toISOString().split('T')[0]}`);
+        requestPayload.dateRange = {
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0]
+        };
       }
       
-      const searchUrl = `${API_URL}/events/batch-search?${params.toString()}`;
+      const searchUrl = `${API_URL}/events/route-batch`;
       console.log('🔍 Event search URL:', searchUrl);
+      console.log('📦 Request payload:', requestPayload);
       
       const response = await fetch(searchUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(requestPayload),
         timeout: 45000 // 45 second timeout for route searches
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
-      const events = data.events || [];
+      const events = await response.json();
       
       console.log(`✅ Found ${events.length} events along route`);
       
