@@ -58,8 +58,6 @@ const MissionOpsOverview = () => {
       p-6 rounded-xl border transition-all duration-200 hover:scale-105
       ${theme === 'light' 
         ? 'border-neutral-200 bg-white hover:shadow-lg' 
-        : theme === 'frost'
-        ? 'border-white/20 bg-white/10 hover:bg-white/15'
         : 'border-neutral-700/50 bg-neutral-800/30 hover:bg-neutral-700/30'
       }
     `}>
@@ -95,8 +93,6 @@ const MissionOpsOverview = () => {
       p-4 rounded-lg border transition-all duration-200 hover:scale-102
       ${theme === 'light' 
         ? 'border-neutral-200 bg-neutral-50 hover:bg-white' 
-        : theme === 'frost'
-        ? 'border-white/20 bg-white/5 hover:bg-white/10'
         : 'border-neutral-700/50 bg-neutral-800/20 hover:bg-neutral-700/30'
       }
       ${comingSoon ? 'opacity-60' : ''}
@@ -132,7 +128,7 @@ const MissionOpsOverview = () => {
 
   if (isLoading) {
     return (
-      <div className={`h-screen ${theme === 'light' ? 'bg-white' : theme === 'frost' ? 'bg-frost-bg' : 'bg-neutral-950'} flex items-center justify-center`}>
+      <div className={`h-screen ${theme === 'light' ? 'bg-white' : 'bg-neutral-950'} flex items-center justify-center`}>
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-2 border-pin-blue border-t-transparent rounded-full animate-spin"></div>
           <p className={`${theme === 'light' ? 'text-neutral-900' : 'text-white'}`}>Loading MissionOps Overview...</p>
@@ -143,7 +139,7 @@ const MissionOpsOverview = () => {
 
   return (
     <div className={`min-h-screen p-6 ${
-      theme === 'light' ? 'bg-neutral-50' : theme === 'frost' ? 'bg-frost-bg' : 'bg-neutral-950'
+      theme === 'light' ? 'bg-neutral-50' : 'bg-neutral-950'
     }`}>
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
@@ -162,8 +158,6 @@ const MissionOpsOverview = () => {
               className={`p-2 rounded-lg transition-colors ${
                 theme === 'light' 
                   ? 'hover:bg-neutral-100' 
-                  : theme === 'frost'
-                  ? 'hover:bg-white/10'
                   : 'hover:bg-neutral-800'
               }`}
             >
@@ -172,8 +166,6 @@ const MissionOpsOverview = () => {
             <button className={`p-2 rounded-lg transition-colors ${
               theme === 'light' 
                 ? 'hover:bg-neutral-100' 
-                : theme === 'frost'
-                ? 'hover:bg-white/10'
                 : 'hover:bg-neutral-800'
             }`}>
               <Settings className="w-5 h-5" />
@@ -315,10 +307,6 @@ const MissionOpsOverview = () => {
               p-4 rounded-lg border transition-all duration-200 hover:scale-105
               ${theme === 'light' 
                 ? 'border-neutral-200 bg-white hover:shadow-lg text-neutral-900' 
-                : theme === 'frost'
-                ? 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
-                : 'border-neutral-700/50 bg-neutral-800/30 hover:bg-neutral-700/30 text-white'
-              }
             `}>
               <Plus className="w-8 h-8 mx-auto mb-2 text-pin-blue" />
               <h3 className="font-medium">New Mission</h3>
@@ -333,10 +321,6 @@ const MissionOpsOverview = () => {
               p-4 rounded-lg border transition-all duration-200 hover:scale-105
               ${theme === 'light' 
                 ? 'border-neutral-200 bg-white hover:shadow-lg text-neutral-900' 
-                : theme === 'frost'
-                ? 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
-                : 'border-neutral-700/50 bg-neutral-800/30 hover:bg-neutral-700/30 text-white'
-              }
             `}>
               <Brain className="w-8 h-8 mx-auto mb-2 text-purple-500" />
               <h3 className="font-medium">Generate Insights</h3>
@@ -351,10 +335,6 @@ const MissionOpsOverview = () => {
               p-4 rounded-lg border transition-all duration-200 hover:scale-105
               ${theme === 'light' 
                 ? 'border-neutral-200 bg-white hover:shadow-lg text-neutral-900' 
-                : theme === 'frost'
-                ? 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
-                : 'border-neutral-700/50 bg-neutral-800/30 hover:bg-neutral-700/30 text-white'
-              }
             `}>
               <Network className="w-8 h-8 mx-auto mb-2 text-orange-500" />
               <h3 className="font-medium">Network View</h3>
@@ -369,10 +349,6 @@ const MissionOpsOverview = () => {
               p-4 rounded-lg border transition-all duration-200 hover:scale-105
               ${theme === 'light' 
                 ? 'border-neutral-200 bg-white hover:shadow-lg text-neutral-900' 
-                : theme === 'frost'
-                ? 'border-white/20 bg-white/10 hover:bg-white/15 text-white'
-                : 'border-neutral-700/50 bg-neutral-800/30 hover:bg-neutral-700/30 text-white'
-              }
             `}>
               <BarChart3 className="w-8 h-8 mx-auto mb-2 text-green-500" />
               <h3 className="font-medium">Analytics</h3>
@@ -391,10 +367,6 @@ const MissionOpsOverview = () => {
             p-8 rounded-xl border-2 border-dashed text-center
             ${theme === 'light' 
               ? 'border-neutral-300 bg-neutral-50' 
-              : theme === 'frost'
-              ? 'border-white/20 bg-white/5'
-              : 'border-neutral-600 bg-neutral-800/20'
-            }
           `}>
             <Target className="w-12 h-12 mx-auto mb-4 text-pin-blue" />
             <h3 className={`text-xl font-semibold mb-2 ${

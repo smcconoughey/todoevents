@@ -651,7 +651,7 @@ const RoutePlanner = ({
   };
 
   const isDark = theme === 'dark';
-  const isFrost = theme === 'frost';
+  const isFrost = false;
 
   return (
     <div className={`${embedded ? 'p-2 h-full overflow-y-auto' : 'p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-96 overflow-y-auto'} ${isFrost && !embedded ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
@@ -707,6 +707,7 @@ const RoutePlanner = ({
             value={startLocation}
             onChange={setStartLocation}
             onSelect={(data) => setStartLocation(data.address)}
+            theme={theme}
           />
         </div>
 
@@ -720,6 +721,7 @@ const RoutePlanner = ({
                 value={waypoint}
                 onChange={(value) => updateWaypoint(index, value)}
                 onSelect={(data) => updateWaypoint(index, data.address)}
+                theme={theme}
               />
             </div>
             <button
@@ -748,6 +750,7 @@ const RoutePlanner = ({
             value={endLocation}
             onChange={setEndLocation}
             onSelect={(data) => setEndLocation(data.address)}
+            theme={theme}
           />
         </div>
 

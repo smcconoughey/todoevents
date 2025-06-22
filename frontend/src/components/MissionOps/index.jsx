@@ -11,7 +11,7 @@ const MissionOpsAuthGuard = () => {
 
   if (isLoading) {
     return (
-      <div className={`h-screen ${theme === 'light' ? 'bg-white' : theme === 'frost' ? 'bg-frost-bg' : 'bg-neutral-950'} flex items-center justify-center`}>
+      <div className={`h-screen ${theme === 'light' ? 'bg-white'  'bg-neutral-950'} flex items-center justify-center`}>
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-2 border-pin-blue border-t-transparent rounded-full animate-spin"></div>
           <p className={`${theme === 'light' ? 'text-neutral-900' : 'text-white'}`}>Initializing MissionOps...</p>
@@ -22,7 +22,7 @@ const MissionOpsAuthGuard = () => {
 
   if (!user || !token) {
     return (
-      <div className={`h-screen ${theme === 'light' ? 'bg-white' : theme === 'frost' ? 'bg-frost-bg' : 'bg-neutral-950'} flex items-center justify-center p-4`}>
+      <div className={`h-screen ${theme === 'light' ? 'bg-white'  'bg-neutral-950'} flex items-center justify-center p-4`}>
         <div className="max-w-md text-center space-y-6">
           <div className="flex justify-center">
             <div className={`p-4 ${theme === 'light' ? 'bg-pin-blue/10' : 'bg-blue-600/20'} rounded-full`}>
@@ -39,7 +39,7 @@ const MissionOpsAuthGuard = () => {
             </p>
           </div>
 
-          <div className={`p-4 ${theme === 'light' ? 'bg-neutral-50 border-neutral-200' : theme === 'frost' ? 'bg-white/10 border-white/20' : 'bg-neutral-900/50 border-neutral-700'} border rounded-lg`}>
+          <div className={`p-4 ${theme === 'light' ? 'bg-neutral-50 border-neutral-200'  'bg-neutral-900/50 border-neutral-700'} border rounded-lg`}>
             <div className="flex items-start gap-3">
               <Target className="w-5 h-5 text-pin-blue flex-shrink-0 mt-0.5" />
               <div className="text-left space-y-2">

@@ -3,7 +3,6 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 // Theme options
 export const THEME_DARK = 'dark';
 export const THEME_LIGHT = 'light';
-export const THEME_GLASS = 'glass';
 
 // Create the Theme Context
 export const ThemeContext = createContext({
@@ -27,7 +26,7 @@ export const ThemeProvider = ({ children }) => {
     const savedTheme = localStorage.getItem('theme');
     console.log('Initial theme from localStorage:', savedTheme);
     
-    if (savedTheme && [THEME_DARK, THEME_LIGHT, THEME_GLASS].includes(savedTheme)) {
+    if (savedTheme && [THEME_DARK, THEME_LIGHT].includes(savedTheme)) {
       return savedTheme;
     }
     
@@ -45,7 +44,7 @@ export const ThemeProvider = ({ children }) => {
     document.documentElement.setAttribute('data-theme', theme);
     
     // Apply additional classes to body for more styling options
-    document.body.classList.remove('dark-mode', 'light-mode', 'glass-mode');
+    document.body.classList.remove('dark-mode', 'light-mode');
     document.body.classList.add(`${theme}-mode`);
     
     // Update mobile theme meta tags
@@ -61,11 +60,7 @@ export const ThemeProvider = ({ children }) => {
           background: '#0f0f0f',     // Dark background
           statusBar: 'light-content' // Light text on dark background
         },
-        [THEME_GLASS]: {
-          themeColor: '#60A5FA',     // Softer blue for frost theme
-          background: '#D6F3FF',     // Light blue background
-          statusBar: 'default'       // Dark text on light background
-        }
+
       };
 
       const currentTheme = themeColors[theme] || themeColors[THEME_LIGHT];
@@ -101,24 +96,11 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Cycle through light, dark, and glass themes
+  // Toggle between light and dark themes
   const toggleTheme = () => {
     console.log('Toggle theme called, current theme:', theme);
     setTheme(prevTheme => {
-      let newTheme;
-      switch (prevTheme) {
-        case THEME_LIGHT:
-          newTheme = THEME_DARK;
-          break;
-        case THEME_DARK:
-          newTheme = THEME_GLASS;
-          break;
-        case THEME_GLASS:
-          newTheme = THEME_LIGHT;
-          break;
-        default:
-          newTheme = THEME_LIGHT;
-      }
+      const newTheme = prevTheme === THEME_LIGHT ? THEME_DARK : THEME_LIGHT;
       console.log('Setting new theme to:', newTheme);
       return newTheme;
     });

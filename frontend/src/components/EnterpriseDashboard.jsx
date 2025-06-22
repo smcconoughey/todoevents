@@ -29,7 +29,6 @@ import {
   Lightbulb,
   Sun,
   Moon,
-  Snowflake,
   ArrowLeft,
   Shield
 } from 'lucide-react';
@@ -70,8 +69,6 @@ const ThemeIcon = ({ theme, size = 20 }) => {
       return <Sun size={size} />;
     case 'dark':
       return <Moon size={size} />;
-    case 'glass':
-      return <Snowflake size={size} />;
     default:
       return <Sun size={size} />;
   }
@@ -243,7 +240,7 @@ const EnterpriseDashboard = () => {
             <button
               onClick={toggleTheme}
               className="w-full flex items-center p-3 rounded-lg text-themed-secondary hover:bg-themed-surface-hover hover:text-themed-primary transition-all duration-200 mt-2"
-              title={`Switch to ${theme === 'light' ? 'dark' : theme === 'dark' ? 'glass' : 'light'} theme`}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
             >
               <ThemeIcon theme={theme} size={18} />
               <span className="ml-2 capitalize">{theme} Theme</span>

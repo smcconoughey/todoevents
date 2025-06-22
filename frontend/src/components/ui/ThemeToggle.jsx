@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Sun, Moon, Snowflake } from 'lucide-react';
-import { ThemeContext, THEME_LIGHT, THEME_DARK, THEME_GLASS } from '../../components/ThemeContext';
+import { Sun, Moon } from 'lucide-react';
+import { ThemeContext, THEME_LIGHT, THEME_DARK } from '../../components/ThemeContext';
 import { Button } from './button';
 
 const ThemeToggle = () => {
@@ -20,21 +20,8 @@ const ThemeToggle = () => {
     // Show visual feedback during toggle
     setIsToggling(true);
     
-    // Determine the new theme
-    let newTheme;
-    switch (theme) {
-      case THEME_LIGHT:
-        newTheme = THEME_DARK;
-        break;
-      case THEME_DARK:
-        newTheme = THEME_GLASS;
-        break;
-      case THEME_GLASS:
-        newTheme = THEME_LIGHT;
-        break;
-      default:
-        newTheme = THEME_LIGHT;
-    }
+    // Determine the new theme - only toggle between light and dark
+    const newTheme = theme === THEME_LIGHT ? THEME_DARK : THEME_LIGHT;
     
     console.log('ThemeToggle: switching to new theme:', newTheme);
     
@@ -42,9 +29,9 @@ const ThemeToggle = () => {
     document.documentElement.setAttribute('data-theme', newTheme);
     
     // Add/remove the theme classes
-    document.documentElement.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+    document.documentElement.classList.remove('light-mode', 'dark-mode');
     document.documentElement.classList.add(`${newTheme}-mode`);
-    document.body.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+    document.body.classList.remove('light-mode', 'dark-mode');
     document.body.classList.add(`${newTheme}-mode`);
     
     // Persist the setting in localStorage for a more consistent experience
@@ -72,16 +59,9 @@ const ThemeToggle = () => {
       case THEME_DARK:
         return {
           icon: Moon,
-          label: 'Switch to frost mode',
+          label: 'Switch to light mode',
           iconClass: 'text-indigo-400',
           bgClass: 'hover:bg-indigo-50 dark:hover:bg-indigo-950'
-        };
-      case THEME_GLASS:
-        return {
-          icon: Snowflake,
-          label: 'Switch to light mode',
-          iconClass: 'text-cyan-400',
-          bgClass: 'hover:bg-cyan-50 dark:hover:bg-cyan-950'
         };
       default:
         return {

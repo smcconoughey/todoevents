@@ -175,21 +175,21 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
 
           {/* Legal Links - Show on privacy step */}
           {currentStepData.showLegalLinks && (
-            <div className="bg-blue-50 dark:bg-blue-900/30 frost:bg-blue-50/70 p-3 sm:p-4 rounded-lg border border-blue-200 dark:border-blue-700 frost:border-blue-200/50">
+            <div className="bg-blue-50 dark:bg-blue-900/30 bg-blue-50/70 p-3 sm:p-4 rounded-lg border border-blue-200 dark:border-blue-700 border-blue-200/50">
               <div className="space-y-2">
-                <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 frost:text-blue-800 font-medium">
+                <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 text-blue-800 font-medium">
                   📋 Important Information
                 </p>
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => window.open('/legal', '_blank')}
-                    className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 frost:text-blue-700 hover:underline flex items-center gap-1 w-fit"
+                    className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 text-blue-700 hover:underline flex items-center gap-1 w-fit"
                   >
                     View Privacy Policy & Terms <ExternalLink className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => window.open('mailto:support@todo-events.com', '_blank')}
-                    className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 frost:text-blue-700 hover:underline flex items-center gap-1 w-fit"
+                    className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 text-blue-700 hover:underline flex items-center gap-1 w-fit"
                   >
                     Contact Support <ExternalLink className="w-3 h-3" />
                   </button>
@@ -218,12 +218,12 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
           <div className="space-y-3 pt-2 sm:pt-4">
             {/* First-time acknowledgment requirement */}
             {isFirstTimeUser && isLastStep && !hasAcknowledged && (
-              <div className="bg-amber-50 dark:bg-amber-900/30 frost:bg-amber-50/70 p-3 sm:p-4 rounded-lg border border-amber-200 dark:border-amber-700 frost:border-amber-200/50">
+              <div className="bg-amber-50 dark:bg-amber-900/30 bg-amber-50/70 p-3 sm:p-4 rounded-lg border border-amber-200 dark:border-amber-700 border-amber-200/50">
                 <div className="space-y-3">
-                  <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200 frost:text-amber-800 font-medium">
+                  <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200 text-amber-800 font-medium">
                     🤝 Welcome to the Community!
                   </p>
-                  <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300 frost:text-amber-700">
+                  <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300 text-amber-700">
                     By continuing, you acknowledge that you've reviewed our privacy practices and agree to use Todo Events respectfully to discover and share local community events.
                   </p>
                   <Button
@@ -243,8 +243,8 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
                 <p className="text-center text-xs sm:text-sm text-themed-tertiary">
                   What brings you to Todo Events today?
                 </p>
-                <div className="bg-blue-50 dark:bg-blue-900/30 frost:bg-blue-50/70 p-4 rounded-lg border border-blue-200 dark:border-blue-700 frost:border-blue-200/50">
-                  <p className="text-sm text-blue-800 dark:text-blue-200 frost:text-blue-800">
+                <div className="bg-blue-50 dark:bg-blue-900/30 bg-blue-50/70 p-4 rounded-lg border border-blue-200 dark:border-blue-700 border-blue-200/50">
+                  <p className="text-sm text-blue-800 dark:text-blue-200 text-blue-800">
                     <WebIcon emoji="💡" size={16} className="mr-2 inline" />
                     <strong>Tip:</strong> You can access this guide anytime by clicking the <strong>?</strong> button in the top left corner of the main page.
                   </p>

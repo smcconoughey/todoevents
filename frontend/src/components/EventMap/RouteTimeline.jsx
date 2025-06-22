@@ -122,7 +122,7 @@ const RouteTimeline = ({
   };
 
   const isDark = theme === 'dark';
-  const isFrost = theme === 'frost';
+  const isFrost = false;
 
   if (routeSteps.length === 0) {
     return (
@@ -134,7 +134,7 @@ const RouteTimeline = ({
   }
 
   return (
-    <div className={`route-timeline bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 ${isFrost ? 'bg-opacity-25 backdrop-blur-md' : ''} ${isDark ? 'dark' : isFrost ? 'frost' : 'light'}`}>
+    <div className={`route-timeline bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 ${isDark ? 'dark' : 'light'}`}>
       <div className="timeline-header">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -378,10 +378,6 @@ const RouteTimeline = ({
           color: white;
         }
         
-        .route-timeline.frost {
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-        }
       `}</style>
     </div>
   );

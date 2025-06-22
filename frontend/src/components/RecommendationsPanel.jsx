@@ -457,9 +457,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         className={`
           group relative overflow-hidden rounded-2xl backdrop-blur-sm
           transition-all duration-300 hover:scale-[1.02] cursor-pointer
-          ${theme === 'frost' 
-            ? 'bg-white/15 border border-white/20 hover:bg-white/25' 
-            : theme === 'light'
+          ${theme === 'light'
               ? 'bg-white/80 border border-gray-200 hover:bg-white/90 shadow-sm'
               : 'bg-white/5 border border-white/10 hover:bg-white/10'
           }
@@ -469,9 +467,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         {/* Gradient overlay */}
         <div className={`
           absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300
-          ${theme === 'frost' 
-            ? 'bg-gradient-to-br from-blue-400/10 to-purple-400/10' 
-            : theme === 'light'
+          ${theme === 'light'
               ? 'bg-gradient-to-br from-blue-50/50 to-indigo-50/50'
               : 'bg-gradient-to-br from-spark-yellow/5 to-pin-blue/5'
           }
@@ -484,9 +480,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             <div className="flex items-center gap-2">
               <div className={`
                 p-1.5 lg:p-2 rounded-xl transition-colors duration-200
-                ${theme === 'frost' 
-                  ? 'bg-white/20 group-hover:bg-white/30' 
-                  : theme === 'light'
+                ${theme === 'light'
                     ? 'bg-blue-50 group-hover:bg-blue-100'
                     : 'bg-spark-yellow/10 group-hover:bg-spark-yellow/20'
                 }
@@ -499,9 +493,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     key={i}
                     className={`
                       px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs font-medium rounded-full
-                      ${theme === 'frost'
-                        ? 'bg-blue-400/20 text-blue-100 border border-blue-300/30'
-                        : theme === 'light'
+                      ${theme === 'light'
                           ? 'bg-blue-100 text-blue-700 border border-blue-200'
                           : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30'
                       }
@@ -602,9 +594,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         ${embedded 
           ? 'w-full h-full flex flex-col' 
           : `fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500 flex flex-col
-            ${theme === 'frost'
-              ? 'bg-white/10 border border-white/20'
-              : theme === 'light'
+            ${theme === 'light'
                 ? 'bg-white/95 border border-gray-200 shadow-xl'
                 : 'bg-neutral-900/80 border border-white/10'
             }
@@ -628,9 +618,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             onClick={() => setIsExpanded(true)}
             className={`
               p-3 rounded-l-xl transition-all duration-200 shadow-lg
-              ${theme === 'frost'
-                ? 'bg-white/15 border border-white/25 hover:bg-white/25'
-                : theme === 'light'
+              ${theme === 'light'
                   ? 'bg-white/95 border border-gray-200 hover:bg-white shadow-lg'
                   : 'bg-neutral-900/90 border border-white/15 hover:bg-neutral-800/90'
               }
@@ -649,9 +637,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             onClick={() => setIsExpanded(true)}
             className={`
               w-full h-full rounded-full flex items-center justify-center transition-all duration-200
-              ${theme === 'frost'
-                ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30 hover:from-blue-400/40 hover:to-purple-400/40'
-                : theme === 'light'
+              ${theme === 'light'
                   ? 'bg-gradient-to-br from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 shadow-lg'
                   : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30 hover:from-spark-yellow/40 hover:to-pin-blue/40'
               }
@@ -679,9 +665,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
               <div className="flex items-center gap-3">
                 <div className={`
                   p-2 rounded-xl
-                  ${theme === 'frost' 
-                    ? 'bg-gradient-to-br from-blue-400/20 to-purple-400/20' 
-                    : theme === 'light'
+                  ${theme === 'light'
                       ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
                       : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
                   }
@@ -727,9 +711,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   onClick={() => setIsExpanded(false)}
                   className={`
                     p-2 rounded-lg transition-colors duration-200 hover:scale-105
-                    ${theme === 'frost'
-                      ? 'hover:bg-white/20'
-                      : theme === 'light'
+                    ${theme === 'light'
                         ? 'hover:bg-gray-100'
                         : 'hover:bg-white/10'
                     }
@@ -760,9 +742,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             <div className="mb-3">
                 <div className={`
                   relative p-1 rounded-xl border
-                  ${theme === 'frost'
-                    ? 'bg-white/10 border-white/20'
-                    : theme === 'light'
+                  ${theme === 'light'
                       ? 'bg-gray-100 border-gray-200'
                       : 'bg-white/5 border-white/10'
                   }
@@ -772,9 +752,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     <div
                       className={`
                         absolute top-1 bottom-1 w-1/2 rounded-lg transition-all duration-300 ease-out
-                        ${theme === 'frost'
-                          ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 border border-white/30'
-                          : theme === 'light'
+                        ${theme === 'light'
                             ? 'bg-white border border-gray-300 shadow-sm'
                             : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 border border-spark-yellow/40'
                         }
@@ -835,9 +813,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       text-sm font-medium transition-all duration-200 active:scale-95
                       ${useGPS && gpsLocation
                         ? 'bg-green-400/20 text-green-400 border border-green-400/40'
-                        : theme === 'frost'
-                          ? 'bg-blue-400/20 text-blue-400 border border-blue-400/40 active:bg-blue-400/30'
-                          : theme === 'light'
+                        : theme === 'light'
                             ? 'bg-blue-50 text-blue-600 border border-blue-200 active:bg-blue-100'
                             : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 active:bg-pin-blue/30'
                       }
@@ -855,9 +831,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     className={`
                       flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
                       text-sm font-medium transition-all duration-200 active:scale-95
-                      ${theme === 'frost'
-                        ? 'bg-purple-400/20 text-purple-400 border border-purple-400/40 active:bg-purple-400/30'
-                        : theme === 'light'
+                      ${theme === 'light'
                           ? 'bg-amber-50 text-amber-600 border border-amber-200 active:bg-amber-100'
                           : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40 active:bg-spark-yellow/30'
                       }
@@ -885,9 +859,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                         text-xs font-medium transition-all duration-200 active:scale-95
                         ${embedded ? 'py-1.5 px-1' : 'py-2 px-1'}
                         ${selectedFilter === key
-                          ? theme === 'frost'
-                            ? 'bg-white/30 text-white border border-white/40'
-                            : theme === 'light'
+                          ? theme === 'light'
                               ? 'bg-blue-100 text-blue-700 border border-blue-300'
                               : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40'
                           : theme === 'light'
@@ -963,7 +935,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   <div className="text-center py-6 space-y-3">
                     <div className={`
                       w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                      ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                      ${'bg-white/10'}
                     `}>
                       <Navigation className="w-6 h-6 text-white/60" />
                     </div>
@@ -986,7 +958,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       key={i}
                       className={`
                         h-24 lg:h-32 rounded-2xl animate-pulse
-                        ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                        ${'bg-white/10'}
                       `}
                     />
                   ))}
@@ -1001,7 +973,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 <div className="text-center py-6 space-y-3">
                   <div className={`
                     w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                    ${theme === 'frost' ? 'bg-white/20' : 'bg-white/10'}
+                    ${'bg-white/10'}
                   `}>
                     <MapPin className="w-6 h-6 text-white/60" />
                   </div>
@@ -1024,9 +996,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       onClick={switchToGPS}
                       className={`
                         px-4 py-2 rounded-lg font-medium transition-all duration-200
-                        ${theme === 'frost'
-                          ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30 hover:bg-blue-400/30'
-                          : theme === 'light'
+                        ${theme === 'light'
                             ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200'
                             : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
                       `}
@@ -1059,9 +1029,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className={`
             relative max-w-sm lg:max-w-md w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in
-            ${theme === 'frost'
-              ? 'bg-white/20 border border-white/30'
-              : theme === 'light'
+            ${theme === 'light'
                 ? 'bg-white/95 border border-gray-200 shadow-xl'
                 : 'bg-neutral-900/90 border border-white/20'
             }
@@ -1082,9 +1050,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             <div className="text-center space-y-3 lg:space-y-4">
               <div className={`
                 w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
-                ${theme === 'frost' 
-                  ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
-                  : theme === 'light'
+                ${theme === 'light'
                     ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
                     : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
                 }
@@ -1108,9 +1074,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   className={`
                     w-full py-3 px-4 rounded-xl font-medium transition-all duration-200
                     hover:scale-[1.02] flex items-center justify-center gap-2 text-sm lg:text-base
-                    ${theme === 'frost'
-                      ? 'bg-gradient-to-r from-blue-400/40 to-purple-400/40 text-white border border-white/40 hover:from-blue-400/50 hover:to-purple-400/50'
-                      : theme === 'light'
+                    ${theme === 'light'
                         ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-transparent hover:from-blue-600 hover:to-indigo-600 shadow-md'
                         : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
                     }
@@ -1150,9 +1114,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className={`
             relative max-w-lg w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in max-h-[80vh] overflow-y-auto
-            ${theme === 'frost'
-              ? 'bg-white/20 border border-white/30'
-              : theme === 'light'
+            ${theme === 'light'
                 ? 'bg-white/95 border border-gray-200 shadow-xl'
                 : 'bg-neutral-900/90 border border-white/20'
             }
@@ -1170,9 +1132,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
               <div className="text-center space-y-2">
                 <div className={`
                   w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
-                  ${theme === 'frost' 
-                    ? 'bg-gradient-to-br from-blue-400/30 to-purple-400/30' 
-                    : theme === 'light'
+                  ${theme === 'light'
                       ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
                       : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
                   }
@@ -1197,9 +1157,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       key={i}
                       className={`
                         h-16 rounded-xl animate-pulse
-                        ${theme === 'frost' 
-                          ? 'bg-white/20' 
-                          : theme === 'light'
+                        ${theme === 'light'
                             ? 'bg-gray-200'
                             : 'bg-white/10'
                         }
@@ -1216,9 +1174,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       className={`
                         w-full p-3 lg:p-4 rounded-xl text-left transition-all duration-200
                         hover:scale-[1.02] border
-                        ${theme === 'frost'
-                          ? 'bg-white/10 border-white/20 hover:bg-white/20'
-                          : theme === 'light'
+                        ${theme === 'light'
                             ? 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                             : 'bg-white/5 border-white/10 hover:bg-white/10'
                         }
@@ -1251,9 +1207,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 <div className="text-center py-6 space-y-2">
                   <div className={`
                     w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                    ${theme === 'frost' 
-                      ? 'bg-white/20' 
-                      : theme === 'light'
+                    ${theme === 'light'
                         ? 'bg-gray-200'
                         : 'bg-white/10'
                     }
@@ -1275,9 +1229,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     }}
                     className={`
                       mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
-                      ${theme === 'frost'
-                        ? 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                        : theme === 'light'
+                      ${theme === 'light'
                           ? 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
                           : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'}
                     `}

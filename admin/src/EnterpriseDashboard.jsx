@@ -26,8 +26,7 @@ import {
   LogOut,
   Lightbulb,
   Sun,
-  Moon,
-  Snowflake
+  Moon
 } from 'lucide-react';
 import { Line, Bar, Pie, Bubble } from 'react-chartjs-2';
 import {
@@ -70,23 +69,10 @@ const useTheme = () => {
 
   const toggleTheme = () => {
     setTheme(prevTheme => {
-      let newTheme;
-      switch (prevTheme) {
-        case 'light':
-          newTheme = 'dark';
-          break;
-        case 'dark':
-          newTheme = 'glass';
-          break;
-        case 'glass':
-          newTheme = 'light';
-          break;
-        default:
-          newTheme = 'light';
-      }
+      const newTheme = prevTheme === 'light' ? 'dark' : 'light';
       localStorage.setItem('admin-theme', newTheme);
       document.documentElement.setAttribute('data-theme', newTheme);
-      document.body.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+      document.body.classList.remove('light-mode', 'dark-mode');
       document.body.classList.add(`${newTheme}-mode`);
       return newTheme;
     });
@@ -94,7 +80,7 @@ const useTheme = () => {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    document.body.classList.remove('light-mode', 'dark-mode', 'glass-mode');
+    document.body.classList.remove('light-mode', 'dark-mode');
     document.body.classList.add(`${theme}-mode`);
   }, [theme]);
 
@@ -108,8 +94,6 @@ const ThemeIcon = ({ theme, size = 20 }) => {
       return <Sun size={size} />;
     case 'dark':
       return <Moon size={size} />;
-    case 'glass':
-      return <Snowflake size={size} />;
     default:
       return <Sun size={size} />;
   }
@@ -702,7 +686,7 @@ const EnterpriseDashboard = () => {
             <button
               onClick={toggleTheme}
               className="w-full flex items-center p-3 rounded-lg text-themed-secondary hover:bg-themed-surface-hover hover:text-themed-primary transition-all duration-200"
-              title={`Switch to ${theme === 'light' ? 'dark' : theme === 'dark' ? 'glass' : 'light'} theme`}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
             >
               <ThemeIcon theme={theme} size={18} />
               <span className="ml-2 capitalize">{theme} Theme</span>

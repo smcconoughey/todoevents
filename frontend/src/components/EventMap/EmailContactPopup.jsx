@@ -111,8 +111,8 @@ const EmailContactPopup = ({ isOpen, onClose }) => {
           
           {/* Footer note */}
           <div className="text-center">
-            <div className="bg-blue-50 dark:bg-blue-900/20 frost:bg-blue-50/70 p-3 rounded-lg border border-blue-200 dark:border-blue-700 frost:border-blue-200/50 mb-4">
-              <p className="text-sm text-blue-800 dark:text-blue-200 frost:text-blue-800 flex items-center">
+            <div className="bg-blue-50 dark:bg-blue-900/20 bg-blue-50/70 p-3 rounded-lg border border-blue-200 dark:border-blue-700 border-blue-200/50 mb-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200 text-blue-800 flex items-center">
                 <WebIcon emoji="💡" size={16} className="mr-2" />
                 This form sends your message directly to the event organizer. Your email is not stored on our servers.
               </p>
