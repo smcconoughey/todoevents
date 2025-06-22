@@ -613,6 +613,11 @@ const RoutePlanner = ({
           
           console.log(`✅ Combined results: ${routeWaypoints.length} waypoints + ${actualEvents.length} events = ${combinedEvents.length} total`);
           
+          // Debug: Log the first few events to see their structure
+          console.log('🔍 Sample combined events:', combinedEvents.slice(0, 3));
+          console.log('🔍 Sample actual events:', actualEvents.slice(0, 2));
+          console.log('🔍 Sample route waypoints:', routeWaypoints.slice(0, 2));
+          
           setRouteEvents(combinedEvents);
 
           // Pass data back to parent components

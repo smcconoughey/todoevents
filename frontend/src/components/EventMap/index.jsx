@@ -1622,6 +1622,8 @@ const EventMap = ({
   };
 
   const handleRouteEventsDiscovered = (events) => {
+    console.log('🎯 handleRouteEventsDiscovered called with:', events?.length, 'events');
+    console.log('🔍 First few route events:', events?.slice(0, 3));
     setRouteEvents(events || []);
   };
 
@@ -3922,22 +3924,32 @@ const EventMap = ({
             <div className="relative flex-1 transition-all duration-300">
               <MapContainer
                 ref={mapRef}
-                events={
+                events={(() => {
                   // Combine regular events with route waypoints
-                  [
-                    ...((
-                      // Always show all events unless filters are active
-                      selectedDate || 
-                      selectedTime !== 'all' || 
-                      !selectedCategory.includes('all') || 
-                      mapCenter ||
-                      miscFilters.feeFilter !== 'all'
-                        ? filteredEvents
-                        : events
-                    ) || []),
+                  const regularEvents = (
+                    // Always show all events unless filters are active
+                    selectedDate || 
+                    selectedTime !== 'all' || 
+                    !selectedCategory.includes('all') || 
+                    mapCenter ||
+                    miscFilters.feeFilter !== 'all'
+                      ? filteredEvents
+                      : events
+                  ) || [];
+                  
+                  const combinedMapEvents = [
+                    ...regularEvents,
                     ...(routeEvents || [])
-                  ]
-                }
+                  ];
+                  
+                  console.log('🗺️ MapContainer events:', {
+                    regularEvents: regularEvents.length,
+                    routeEvents: routeEvents?.length || 0,
+                    total: combinedMapEvents.length
+                  });
+                  
+                  return combinedMapEvents;
+                })()}
                 onEventClick={handleEventClick}
                 selectedCategory={selectedCategory}
                 mapCenter={mapCenter}
