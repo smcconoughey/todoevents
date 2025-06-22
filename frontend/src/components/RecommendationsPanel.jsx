@@ -53,6 +53,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const [citySuggestions, setCitySuggestions] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
+  // Holds city or manual override location
+  const [manualOverride, setManualOverride] = useState(null);
+
   const emotionalMessages = [
     "Discover amazing events near you",
     "Connect with your community",
@@ -173,8 +176,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
     
     debouncedFetchRecommendations();
   }, [userLocation, selectedFilter, userActualLocation, manualOverride]);
-
-  const [manualOverride, setManualOverride] = useState(null);
 
   const fetchRecommendations = async () => {
     setLoading(true);
