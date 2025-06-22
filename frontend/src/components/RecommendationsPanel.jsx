@@ -549,7 +549,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
               ))}
             </div>
           ) : recommendations.length > 0 ? (
-            <div key={animationKey} className="space-y-3 lg:space-y-4">
+            <div className="space-y-3 lg:space-y-4">
               {recommendations.map((event, index) => (
                 <EventCard key={event.id} event={event} index={index} />
               ))}

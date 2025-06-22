@@ -2463,6 +2463,27 @@ const EventMap = ({
     );
   }
 
+  // Handle explicit current-location request
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+
+        // Clear manual location override
+        try { localStorage.removeItem('manualLocation'); } catch (_) {}
+
+        setSelectedLocation({ lat: latitude, lng: longitude, address: 'Your location' });
+        setMapCenter({ lat: latitude, lng: longitude });
+      },
+      () => {
+        // silently ignore errors
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   return (
     <div className="h-screen w-full relative" style={{backgroundColor: 'var(--bg-main)'}}>
       {/* Mobile Header */}
@@ -2604,6 +2625,13 @@ const EventMap = ({
                     onSelect={handleAddressSelect}
                     className="w-full"
                   />
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    className="mt-1 text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    Use Current Location
+                  </button>
                   
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
@@ -3267,6 +3295,13 @@ const EventMap = ({
                     onSelect={handleAddressSelect}
                     className="w-full"
                   />
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    className="mt-1 text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    Use Current Location
+                  </button>
                   
                   {/* Compact Search Radius */}
                   <div className="space-y-2">
