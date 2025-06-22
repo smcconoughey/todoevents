@@ -756,9 +756,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
               </p>
             </div>
 
-            {/* Mode Toggle Slider - Desktop Only */}
-            {!embedded && (
-              <div className="hidden lg:block mb-4">
+            {/* Mode Toggle Slider - Desktop and Mobile */}
+            <div className="mb-3">
                 <div className={`
                   relative p-1 rounded-xl border
                   ${theme === 'frost'
@@ -790,7 +789,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       onClick={() => setActiveMode('recommendations')}
                       className={`
                         relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
-                        text-sm font-medium transition-all duration-200
+                        font-medium transition-all duration-200
+                        ${embedded ? 'text-xs' : 'text-sm'}
                         ${activeMode === 'recommendations'
                           ? theme === 'light' ? 'text-gray-900' : 'text-white'
                           : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
@@ -805,7 +805,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       onClick={() => setActiveMode('route')}
                       className={`
                         relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
-                        text-sm font-medium transition-all duration-200
+                        font-medium transition-all duration-200
+                        ${embedded ? 'text-xs' : 'text-sm'}
                         ${activeMode === 'route'
                           ? theme === 'light' ? 'text-gray-900' : 'text-white'
                           : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
@@ -818,37 +819,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   </div>
                 </div>
               </div>
-            )}
 
             {/* Location Control Buttons - Only show in recommendations mode */}
-            {(embedded || activeMode === 'recommendations') && (
+            {activeMode === 'recommendations' && (
               <>
-                {/* Mobile Route Planning Button */}
-                {embedded && (
-                  <div className="mt-4">
-                    <button
-                      onClick={() => {
-                        console.log('🎯 Plan Route button clicked, switching to route mode');
-                        setActiveMode('route');
-                      }}
-                      className={`
-                        w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
-                        text-sm font-medium transition-all duration-200 active:scale-95
-                        ${theme === 'frost'
-                          ? 'bg-gradient-to-r from-blue-400/30 to-purple-400/30 text-white border border-white/30 active:from-blue-400/40 active:to-purple-400/40'
-                          : theme === 'light'
-                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-transparent active:from-blue-600 active:to-indigo-600'
-                            : 'bg-gradient-to-r from-pin-blue/30 to-spark-yellow/30 text-white border border-pin-blue/40 active:from-pin-blue/40 active:to-spark-yellow/40'
-                        }
-                      `}
-                    >
-                      <Navigation className="w-5 h-5" />
-                      <span>Plan Route & Find Events</span>
-                    </button>
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-2 gap-2 mt-4">
+                {/* Compact Location Controls */}
+                <div className={`grid grid-cols-2 gap-2 ${embedded ? 'mt-2' : 'mt-4'}`}>
                   <button
                     onClick={switchToGPS}
                     className={`
@@ -890,8 +866,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   </button>
                 </div>
 
-                {/* Filter tabs - Grid layout for better consistency */}
-                <div className="grid grid-cols-4 gap-1 mt-4">
+                {/* Compact Filter tabs */}
+                <div className={`grid grid-cols-4 gap-1 ${embedded ? 'mt-2' : 'mt-4'}`}>
                   {[
                     { key: 'all', label: 'All', icon: Clock },
                     { key: 'upcoming', label: 'Soon', icon: Clock },
@@ -902,8 +878,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       key={`${key}-${index}`} // Use index to allow duplicate keys
                       onClick={() => setSelectedFilter(key)}
                       className={`
-                        flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg
+                        flex flex-col items-center justify-center gap-1 rounded-lg
                         text-xs font-medium transition-all duration-200 active:scale-95
+                        ${embedded ? 'py-1.5 px-1' : 'py-2 px-1'}
                         ${selectedFilter === key
                           ? theme === 'frost'
                             ? 'bg-white/30 text-white border border-white/40'
@@ -928,7 +905,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           {/* Content Area */}
           <div className={`
             flex-1 overflow-y-auto 
-            ${embedded ? 'p-4 min-h-0' : 'p-3 lg:p-4'}
+            ${embedded ? 'px-4 pt-2 pb-4 min-h-0' : 'p-3 lg:p-4'}
           `}>
             {/* Show route results when in route mode and have route events */}
             {activeMode === 'route' && routeEvents && routeEvents.length > 0 ? (
@@ -936,19 +913,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 {/* Route Results Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {/* Back button for mobile */}
-                    {embedded && (
-                      <button
-                        onClick={() => setActiveMode('recommendations')}
-                        className={`
-                          p-1.5 rounded-lg transition-colors duration-200
-                          ${theme === 'light' ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-white/10 text-white/70'}
-                        `}
-                        title="Back to discover"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                    )}
                     <Navigation className={`w-5 h-5 ${theme === 'light' ? 'text-blue-600' : 'text-green-400'}`} />
                     <h3 className={`font-semibold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                       Route Events
@@ -1064,24 +1028,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             ) : activeMode === 'route' ? (
               // Route Planner Content (when in route mode but no route events yet)
               <div className="h-full">
-                {/* Mobile back button for route planner */}
-                {embedded && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <button
-                      onClick={() => setActiveMode('recommendations')}
-                      className={`
-                        p-1.5 rounded-lg transition-colors duration-200
-                        ${theme === 'light' ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-white/10 text-white/70'}
-                      `}
-                      title="Back to discover"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <h3 className={`font-semibold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                      Plan Route
-                    </h3>
-                  </div>
-                )}
                 <RoutePlanner
                   onRouteCalculated={onRouteCalculated}
                   onEventsDiscovered={onRouteEventsDiscovered}
