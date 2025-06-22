@@ -80,11 +80,11 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
   // Adjust timeout for mobile or slow connections
   let adjustedTimeout = timeout;
   if (isMobileOrSlowConnection()) {
-    adjustedTimeout = Math.max(timeout * 1.5, 25000);
+    adjustedTimeout = Math.max(timeout * 2, 35000); // At least 35 seconds for mobile, double timeout
   }
 
   const attempt = options._retryCount || 1;
-  const maxAttempts = 3;
+  const maxAttempts = 5;
   
   // Pre-flight connection health check for critical endpoints
   const isCriticalEndpoint = url.includes('/events') || url.includes('/auth');
@@ -155,7 +155,7 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
     if ((isTimeoutError || isNetworkError) && attempt < maxAttempts) {
       console.log(`Request to ${url} failed (${error.message}), retrying...`);
       
-      const baseWaitTime = isMobileOrSlowConnection() ? 3000 : 2000;
+      const baseWaitTime = isMobileOrSlowConnection() ? 4000 : 2000;
       const waitTime = baseWaitTime * Math.pow(1.5, attempt - 1);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       

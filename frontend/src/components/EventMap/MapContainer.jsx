@@ -153,7 +153,7 @@ const addPositionOffsets = (events) => {
     
     // Create small offsets in a circle pattern around the original location
     // Use very small values to keep events visually grouped but individually clickable
-    const offsetRadius = 0.0003; // About 30-45 meters at most latitudes
+    const offsetRadius = 0.0004; // About 40-60 meters at most latitudes
     const angle = (eventIndex / eventsAtLocation.length) * 2 * Math.PI + (pseudoRandom1 * 0.5);
     const distance = offsetRadius * (0.3 + pseudoRandom2 * 0.7); // Vary distance slightly
     
