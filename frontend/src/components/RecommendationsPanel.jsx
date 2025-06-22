@@ -58,15 +58,26 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
 
   // Get the active location based on user preference
   const getActiveLocation = () => {
+    console.log('🎯 getActiveLocation called with state:', {
+      useGPS,
+      gpsLocation,
+      manualLocation,
+      userLocation
+    });
+
     if (useGPS && gpsLocation) {
+      console.log('✅ Using GPS location:', gpsLocation);
       return gpsLocation;
     }
     if (manualLocation) {
+      console.log('✅ Using manual location:', manualLocation);
       return manualLocation;
     }
     if (userLocation) {
+      console.log('✅ Using userLocation prop:', userLocation);
       return userLocation; // Fallback to prop from EventMap
     }
+    console.log('❌ No location available');
     return null;
   };
 
@@ -160,6 +171,16 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore }) => 
   const fetchRecommendations = useCallback(async () => {
     const activeLocation = getActiveLocation();
     const locationKey = getLocationKey(activeLocation);
+    
+    console.log('🔍 fetchRecommendations state check:', {
+      gpsLocation,
+      manualLocation,
+      useGPS,
+      userLocation,
+      activeLocation,
+      locationKey,
+      lastFetchedLocation
+    });
     
     // Prevent duplicate API calls for the same location and filter
     if (locationKey === lastFetchedLocation) {
