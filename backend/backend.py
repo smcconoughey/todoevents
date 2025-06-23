@@ -1624,6 +1624,15 @@ class AutomatedTaskManager:
                     loop.run_until_complete(self.sync_with_ai_tools())
                 except Exception as e:
                     logger.error(f"Error in AI sync wrapper: {str(e)}")
+
+            def run_seo_population():
+                """Populate missing SEO fields on a schedule"""
+                try:
+                    from populate_production_seo_fields import populate_seo_data
+                    populate_seo_data()
+                    logger.info("✅ Scheduled SEO population completed")
+                except Exception as e:
+                    logger.error(f"Scheduled SEO population failed: {e}")
             
             # Sitemap generation - every 6 hours
             self.scheduler.add_job(
@@ -1667,6 +1676,15 @@ class AutomatedTaskManager:
                 trigger=IntervalTrigger(hours=6, start_date=datetime.utcnow() + timedelta(hours=3)),
                 id='event_cleanup',
                 name='Event Cleanup (32-day Archive)',
+                replace_existing=True
+            )
+
+            # SEO field population - every 24 hours (offset by 5 hours)
+            self.scheduler.add_job(
+                func=run_seo_population,
+                trigger=IntervalTrigger(hours=24, start_date=datetime.utcnow() + timedelta(hours=5)),
+                id='seo_population',
+                name='SEO Field Population',
                 replace_existing=True
             )
             
