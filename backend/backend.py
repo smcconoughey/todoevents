@@ -401,6 +401,36 @@ def validate_recurring_event(event_data, user_role):
     # For now, just return the event data unchanged
     # Can be enhanced later with actual validation logic
     return event_data
+
+def is_postgresql_db():
+    """Check if we're using PostgreSQL"""
+    return os.environ.get('DATABASE_URL') is not None
+
+def get_db_compatible_query_parts():
+    """Get database-compatible SQL functions and syntax"""
+    if is_postgresql_db():
+        return {
+            'string_agg': 'STRING_AGG',
+            'like_op': 'ILIKE',
+            'now_func': 'NOW()',
+            'interval_90_days': "NOW() - INTERVAL '90 days'",
+            'interval_30_days': "NOW() - INTERVAL '30 days'",
+            'interval_60_days': "NOW() - INTERVAL '60 days'",
+            'date_sub_30': "NOW() - INTERVAL '30 days'",
+            'date_sub_60': "NOW() - INTERVAL '60 days'"
+        }
+    else:
+        # SQLite compatible
+        return {
+            'string_agg': 'GROUP_CONCAT',
+            'like_op': 'LIKE',
+            'now_func': "datetime('now')",
+            'interval_90_days': "datetime('now', '-90 days')",
+            'interval_30_days': "datetime('now', '-30 days')",
+            'interval_60_days': "datetime('now', '-60 days')",
+            'date_sub_30': "datetime('now', '-30 days')",
+            'date_sub_60': "datetime('now', '-60 days')"
+        }
 # Database initialization
 # Force production database migration for interest/view tracking - v2.1
 def init_db():
@@ -7836,11 +7866,13 @@ async def get_enterprise_stats(
             total_users = c.fetchone()[0]
             
             # Get active users (users with events in last 30 days)
-            c.execute("""
-                SELECT COUNT(DISTINCT user_id) 
+            db_parts = get_db_compatible_query_parts()
+            query = f"""
+                SELECT COUNT(DISTINCT created_by) 
                 FROM events 
-                WHERE created_at >= NOW() - INTERVAL '30 days'
-            """)
+                WHERE created_at >= {db_parts['interval_30_days']}
+            """
+            c.execute(query)
             active_users = c.fetchone()[0]
             
             # Calculate completion rate (events with descriptions vs without)
@@ -7877,20 +7909,20 @@ async def export_enterprise_data(
         with get_db() as conn:
             c = conn.cursor()
             
-            # Get events data
+            # Get events data with correct column names
             c.execute("""
                 SELECT 
                     e.id,
                     e.title,
                     e.description,
-                    e.date_time,
-                    e.location,
+                    e.date || ' ' || e.start_time as date_time,
+                    e.address as location,
                     e.category,
-                    e.is_free,
+                    CASE WHEN e.fee_required IS NULL OR e.fee_required = '' THEN 'Yes' ELSE 'No' END as is_free,
                     u.email as creator_email,
                     e.created_at
                 FROM events e
-                JOIN users u ON e.user_id = u.id
+                JOIN users u ON e.created_by = u.id
                 ORDER BY e.created_at DESC
             """)
             
@@ -7938,6 +7970,8 @@ async def get_enterprise_overview(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     placeholder = get_placeholder()
+    db_parts = get_db_compatible_query_parts()
+    
     try:
         with get_db() as conn:
             c = conn.cursor()
@@ -7958,17 +7992,16 @@ async def get_enterprise_overview(
                 # For enterprise users, total_users is just 1 (themselves)
                 total_users = 1
                 
-                # Get monthly growth for this user's events  
-                # Use proper PostgreSQL date math
-                growth_query = f"""
-                    SELECT 
-                        COUNT(*) as this_month,
-                        (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
-                    FROM events 
-                    WHERE created_by = {placeholder} AND created_at >= NOW() - INTERVAL '30 days'
-                """
-                logger.info(f"Executing growth query: {growth_query}")
+                # Get monthly growth for this user's events using database-compatible syntax
                 try:
+                    growth_query = f"""
+                        SELECT 
+                            COUNT(*) as this_month,
+                            (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= {db_parts['date_sub_60']} AND created_at < {db_parts['date_sub_30']}) as last_month
+                        FROM events 
+                        WHERE created_by = {placeholder} AND created_at >= {db_parts['date_sub_30']}
+                    """
+                    logger.info(f"Executing growth query: {growth_query}")
                     c.execute(growth_query, (current_user['id'], current_user['id']))
                 except Exception as e:
                     logger.error(f"Growth query failed, using fallback: {e}")
@@ -7982,18 +8015,20 @@ async def get_enterprise_overview(
                 c.execute("SELECT COUNT(*) FROM users")
                 total_users = get_count_from_result(c.fetchone())
                 
-                # Get monthly growth for all events
+                # Get monthly growth for all events using database-compatible syntax
                 try:
-                    c.execute("""
+                    growth_query = f"""
                         SELECT 
                             COUNT(*) as this_month,
-                            (SELECT COUNT(*) FROM events WHERE created_at >= NOW() - INTERVAL '60 days' AND created_at < NOW() - INTERVAL '30 days') as last_month
+                            (SELECT COUNT(*) FROM events WHERE created_at >= {db_parts['date_sub_60']} AND created_at < {db_parts['date_sub_30']}) as last_month
                         FROM events 
-                        WHERE created_at >= NOW() - INTERVAL '30 days'
-                    """)
+                        WHERE created_at >= {db_parts['date_sub_30']}
+                    """
+                    c.execute(growth_query)
                 except Exception as e:
                     logger.error(f"Admin growth query failed, using fallback: {e}")
                     c.execute("SELECT COUNT(*) as this_month, 0 as last_month FROM events")
+            
             growth_data = c.fetchone()
             
             # Handle PostgreSQL RealDictRow vs SQLite tuple
@@ -8052,10 +8087,12 @@ async def get_enterprise_clients(
             c = conn.cursor()
             
             # Get clients with their event counts and categories
+            db_parts = get_db_compatible_query_parts()
+            
             if current_user['role'] == UserRole.ENTERPRISE:
                 # For enterprise users, show all platform users as potential clients
                 # This gives them insights into the user base they could potentially serve
-                c.execute("""
+                query = f"""
                     SELECT 
                         u.id,
                         u.email,
@@ -8063,17 +8100,18 @@ async def get_enterprise_clients(
                         u.created_at,
                         u.premium_expires_at,
                         COUNT(e.id) as event_count,
-                        STRING_AGG(DISTINCT e.category, ', ') as categories,
+                        {db_parts['string_agg']}(DISTINCT e.category, ', ') as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
                     LEFT JOIN events e ON u.id = e.created_by
                     WHERE u.role IN ('user', 'premium')
                     GROUP BY u.id, u.email, u.role, u.created_at, u.premium_expires_at
                     ORDER BY event_count DESC, u.created_at DESC
-                """)
+                """
+                c.execute(query)
             else:
                 # Admin sees all users including enterprise
-                c.execute("""
+                query = f"""
                     SELECT 
                         u.id,
                         u.email,
@@ -8081,14 +8119,15 @@ async def get_enterprise_clients(
                         u.created_at,
                         u.premium_expires_at,
                         COUNT(e.id) as event_count,
-                        STRING_AGG(DISTINCT e.category, ', ') as categories,
+                        {db_parts['string_agg']}(DISTINCT e.category, ', ') as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
                     LEFT JOIN events e ON u.id = e.created_by
                     WHERE u.role IN ('user', 'premium', 'enterprise')
                     GROUP BY u.id, u.email, u.role, u.created_at, u.premium_expires_at
                     ORDER BY event_count DESC, u.created_at DESC
-                """)
+                """
+                c.execute(query)
             
             clients = []
             for row in c.fetchall():
@@ -8138,12 +8177,14 @@ async def get_enterprise_events(
                 where_conditions.append(f"e.created_by = {placeholder}")
                 params.append(current_user['id'])
             
+            db_parts = get_db_compatible_query_parts()
+            
             if client_filter:
-                where_conditions.append(f"u.email ILIKE {placeholder}")
+                where_conditions.append(f"u.email {db_parts['like_op']} {placeholder}")
                 params.append(f"%{client_filter}%")
             
             if search:
-                where_conditions.append(f"(e.title ILIKE {placeholder} OR e.description ILIKE {placeholder})")
+                where_conditions.append(f"(e.title {db_parts['like_op']} {placeholder} OR e.description {db_parts['like_op']} {placeholder})")
                 params.extend([f"%{search}%", f"%{search}%"])
             
             where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
@@ -8260,35 +8301,39 @@ async def get_enterprise_client_analytics(
             c = conn.cursor()
             
             # Client performance data
+            db_parts = get_db_compatible_query_parts()
+            
             if current_user['role'] == UserRole.ENTERPRISE:
                 # For enterprise users, only show their own events
-                c.execute(f"""
+                query = f"""
                     SELECT 
                         COALESCE(u.email, 'None') as client,
                         COUNT(e.id) as event_count,
                         u.role as client_role
                     FROM events e
                     LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_at >= NOW() - INTERVAL '90 days' 
+                    WHERE e.created_at >= {db_parts['interval_90_days']} 
                     AND e.created_by = {placeholder}
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
                     LIMIT 20
-                """, (current_user['id'],))
+                """
+                c.execute(query, (current_user['id'],))
             else:
                 # Admin sees all events
-                c.execute("""
+                query = f"""
                     SELECT 
                         COALESCE(u.email, 'None') as client,
                         COUNT(e.id) as event_count,
                         u.role as client_role
                     FROM events e
                     LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                    WHERE e.created_at >= {db_parts['interval_90_days']}
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
                     LIMIT 20
-                """)
+                """
+                c.execute(query)
             
             client_performance = []
             for row in c.fetchall():
@@ -8301,27 +8346,29 @@ async def get_enterprise_client_analytics(
             # Category distribution
             if current_user['role'] == UserRole.ENTERPRISE:
                 # For enterprise users, only show their own events
-                c.execute(f"""
+                query = f"""
                     SELECT 
                         COALESCE(e.category, 'uncategorized') as category,
                         COUNT(*) as count
                     FROM events e
-                    WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                    WHERE e.created_at >= {db_parts['interval_90_days']}
                     AND e.created_by = {placeholder}
                     GROUP BY e.category
                     ORDER BY count DESC
-                """, (current_user['id'],))
+                """
+                c.execute(query, (current_user['id'],))
             else:
                 # Admin sees all events
-                c.execute("""
+                query = f"""
                     SELECT 
                         COALESCE(e.category, 'uncategorized') as category,
                         COUNT(*) as count
                     FROM events e
-                    WHERE e.created_at >= NOW() - INTERVAL '90 days'
+                    WHERE e.created_at >= {db_parts['interval_90_days']}
                     GROUP BY e.category
                     ORDER BY count DESC
-                """)
+                """
+                c.execute(query)
             
             category_distribution = []
             for row in c.fetchall():
