@@ -78,6 +78,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   const [useGPS, setUseGPS] = useState(true); // Toggle between GPS and manual
   const [isLoadingGPS, setIsLoadingGPS] = useState(false);
   const [lastFetchedLocation, setLastFetchedLocation] = useState('no-location');
+  const [gpsRequestedThisSession, setGpsRequestedThisSession] = useState(false); // Track if GPS was already requested
 
   // Use refs to store current state for immediate access
   const gpsLocationRef = useRef(null);
@@ -189,6 +190,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
     setLocationPermissionAsked(true);
     localStorage.setItem('locationPermissionAsked', 'true');
     setShowLocationPopup(false);
+    setIsLoadingGPS(true);
 
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -200,20 +202,25 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           };
           setGpsLocation(location);
           setUseGPS(true); // Switch to GPS mode
+          setGpsRequestedThisSession(true); // Mark as requested this session
+          setIsLoadingGPS(false);
           
           // Update refs immediately
           gpsLocationRef.current = location;
           useGPSRef.current = true;
+          
+          console.log('📍 GPS location obtained:', location);
         },
         (error) => {
           console.log('GPS access denied or failed:', error);
           setUseGPS(false); // Fall back to manual mode
           useGPSRef.current = false;
+          setIsLoadingGPS(false);
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
+          timeout: 15000, // Increased timeout for better reliability
+          maximumAge: 1800000 // 30 minutes instead of 5 minutes to reduce frequent requests
         }
       );
     }
@@ -238,11 +245,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   // Toggle back to GPS
   const switchToGPS = () => {
     if (gpsLocation) {
+      // If we already have GPS location, just switch to using it
       setUseGPS(true);
       useGPSRef.current = true;
-    } else {
-      // Request GPS if we don't have it
+      console.log('📍 Switched to existing GPS location:', gpsLocation);
+    } else if (!gpsRequestedThisSession) {
+      // Only request GPS if we haven't already requested it this session
       requestGPSLocation();
+    } else if (gpsRequestedThisSession && !gpsLocation) {
+      // GPS was requested but failed, ask user if they want to try again
+      if (confirm('GPS location was not available earlier. Would you like to try again?')) {
+        requestGPSLocation();
+      }
     }
   };
 
@@ -808,21 +822,35 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 <div className={`grid grid-cols-2 gap-2 ${embedded ? 'mt-2' : 'mt-4'}`}>
                   <button
                     onClick={switchToGPS}
+                    disabled={isLoadingGPS}
                     className={`
                       flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
                       text-sm font-medium transition-all duration-200 active:scale-95
-                      ${useGPS && gpsLocation
-                        ? 'bg-green-400/20 text-green-400 border border-green-400/40'
-                        : theme === 'light'
-                            ? 'bg-blue-50 text-blue-600 border border-blue-200 active:bg-blue-100'
-                            : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 active:bg-pin-blue/30'
+                      ${isLoadingGPS 
+                        ? 'bg-gray-400/20 text-gray-400 border border-gray-400/40 cursor-not-allowed'
+                        : useGPS && gpsLocation
+                          ? 'bg-green-400/20 text-green-400 border border-green-400/40'
+                          : theme === 'light'
+                              ? 'bg-blue-50 text-blue-600 border border-blue-200 active:bg-blue-100'
+                              : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/40 active:bg-pin-blue/30'
                       }
                     `}
-                    title={gpsLocation ? (useGPS ? 'Using GPS location' : 'Switch to GPS location') : 'Get GPS location'}
+                    title={
+                      isLoadingGPS 
+                        ? 'Getting GPS location...' 
+                        : gpsLocation 
+                          ? (useGPS ? 'Using GPS location' : 'Switch to GPS location') 
+                          : 'Get GPS location'
+                    }
                   >
-                    <Navigation className="w-4 h-4" />
+                    <Navigation className={`w-4 h-4 ${isLoadingGPS ? 'animate-spin' : ''}`} />
                     <span className="text-xs lg:text-sm">
-                      {gpsLocation ? (useGPS ? 'GPS Active' : 'Use GPS') : 'Get GPS'}
+                      {isLoadingGPS 
+                        ? 'Loading...' 
+                        : gpsLocation 
+                          ? (useGPS ? 'GPS Active' : 'Use GPS') 
+                          : 'Get GPS'
+                      }
                     </span>
                   </button>
                   
@@ -994,15 +1022,18 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   {!getActiveLocation() && (
                     <button
                       onClick={switchToGPS}
+                      disabled={isLoadingGPS}
                       className={`
                         px-4 py-2 rounded-lg font-medium transition-all duration-200
-                        ${theme === 'light'
-                            ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200'
-                            : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
+                        ${isLoadingGPS
+                            ? 'bg-gray-400/20 text-gray-400 border border-gray-400/40 cursor-not-allowed'
+                            : theme === 'light'
+                                ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200'
+                                : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
                       `}
                     >
-                      <Navigation className="w-4 h-4 inline mr-2" />
-                      Get Location
+                      <Navigation className={`w-4 h-4 inline mr-2 ${isLoadingGPS ? 'animate-spin' : ''}`} />
+                      {isLoadingGPS ? 'Getting Location...' : 'Get Location'}
                     </button>
                   )}
                 </div>

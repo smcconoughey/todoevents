@@ -1236,6 +1236,11 @@ const EventMap = ({
           },
           (error) => {
             console.warn('Could not get user location for "near me" filter:', error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000, // Increased timeout for better reliability
+            maximumAge: 1800000 // 30 minutes to reduce frequent GPS requests
           }
         );
       }
@@ -2491,7 +2496,11 @@ const EventMap = ({
       () => {
         // silently ignore errors
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { 
+        enableHighAccuracy: true, 
+        timeout: 15000, // Increased timeout for better reliability
+        maximumAge: 1800000 // 30 minutes to reduce frequent GPS requests
+      }
     );
   };
 
