@@ -1068,28 +1068,23 @@ class AutomatedTaskManager:
             return []
     
     async def build_sitemap_content(self, events):
-        """Build sitemap XML content with current events"""
+        """Build complete sitemap XML content - ONLY future events"""
         current_date = datetime.utcnow().strftime('%Y-%m-%d')
         domain = "https://todo-events.com"
         
-        # Start with static sitemap structure
+        # Clear and rebuild sitemap with only future events
         sitemap = f'''<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-  <!-- Homepage - Primary landing page -->
+  <!-- Homepage -->
   <url>
     <loc>{domain}/</loc>
     <lastmod>{current_date}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-    <image:image>
-      <image:loc>{domain}/images/pin-logo.svg</image:loc>
-      <image:caption>todo-events logo - Local event discovery platform</image:caption>
-    </image:image>
   </url>
 
-  <!-- Main navigation pages -->
+  <!-- Main pages -->
   <url>
     <loc>{domain}/hosts</loc>
     <lastmod>{current_date}</lastmod>
@@ -1101,142 +1096,85 @@ class AutomatedTaskManager:
     <lastmod>{current_date}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>'''
-        
-        # Add category pages - both query param and SEO-friendly formats
-        categories = [
-    'food-drink', 'music', 'arts', 'sports', 'automotive', 'airshows', 'vehicle-sports', 
-    'community', 'religious', 'education', 'veteran', 'cookout', 'networking',
-    'fair-festival', 'diving', 'shopping', 'health', 'outdoors', 'photography', 'family', 
-    'gaming', 'real-estate', 'adventure', 'seasonal', 'other'
-]
-        sitemap += f'''
+  </url>
 
-  <!-- Category pages -->'''
+  <!-- FUTURE EVENTS ONLY - Complete Regeneration -->'''
         
-        for category in categories:
-            sitemap += f'''
-  <url>
-    <loc>{domain}/events/{category}</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>'''
+        event_count = 0
+        url_count = 3  # Static pages counted above
         
-        # Add individual event pages with multiple URL formats
-        sitemap += f'''
-
-  <!-- Individual Event Pages -->'''
-        
-        for event in events:  # Include all events (up to 50k sitemap limit)
-            # Get dynamic lastmod date from event
-            event_lastmod = current_date
-            if event.get('updated_at'):
-                try:
-                    parsed_date = datetime.fromisoformat(str(event['updated_at']).replace('Z', '+00:00'))
-                    event_lastmod = parsed_date.strftime('%Y-%m-%d')
-                except:
-                    pass
-            elif event.get('created_at'):
-                try:
-                    parsed_date = datetime.fromisoformat(str(event['created_at']).replace('Z', '+00:00'))
-                    event_lastmod = parsed_date.strftime('%Y-%m-%d')
-                except:
-                    pass
-            
-            # Use existing slug or generate a fallback one if missing
+        for event in events:
+            # Generate slug if missing
             if event.get('slug'):
                 event_slug = event['slug']
             else:
-                # Fallback: slugify title and append id to guarantee uniqueness
                 raw_slug = slugify(event.get('title', 'event'))
                 event_slug = f"{raw_slug}-{event.get('id', '')}"
+                # Update database with new slug
+                try:
+                    with get_db() as conn:
+                        c = conn.cursor()
+                        c.execute("UPDATE events SET slug = ? WHERE id = ?", (event_slug, event['id']))
+                        conn.commit()
+                except:
+                    pass
 
-            # Proceed only if we have a non-empty slug
             if not event_slug:
                 continue
-                
-                # Generate canonical URL based on location data
-                if event.get('city') and event.get('state'):
-                    # Location-based URL: /us/state/city/events/slug
-                    state_lower = event.get('state', '').lower()
 
-                    city_slug = slugify(event.get('city', ''))
-                    canonical_url = f"{domain}/us/{state_lower}/{city_slug}/events/{event_slug}"
-                    priority = "0.9"  # Higher priority for geo-specific URLs
-                else:
-                    # Fallback URL: /events/slug
-                    canonical_url = f"{domain}/events/{event_slug}"
-                    priority = "0.85"
+            event_count += 1
                 
-                sitemap += f'''
-  <url>
-    <loc>{canonical_url}</loc>
-    <lastmod>{event_lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>{priority}</priority>
-  </url>'''
-                
-                # Add short URL for compatibility
-                sitemap += f'''
+            # Get lastmod date
+            event_lastmod = current_date
+            for date_field in ['updated_at', 'created_at']:
+                if event.get(date_field):
+                    try:
+                        parsed_date = datetime.fromisoformat(str(event[date_field]).replace('Z', '+00:00'))
+                        event_lastmod = parsed_date.strftime('%Y-%m-%d')
+                        break
+                    except:
+                        continue
+
+            # 1. Short URL: /e/{slug}
+            sitemap += f'''
   <url>
     <loc>{domain}/e/{event_slug}</loc>
     <lastmod>{event_lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
   </url>'''
-                
-                # Add date-indexed URL if we have event date
-                try:
-                    event_date_obj = datetime.fromisoformat(str(event.get('date', current_date)))
-                    year = event_date_obj.strftime('%Y')
-                    month = event_date_obj.strftime('%m')
-                    day = event_date_obj.strftime('%d')
-                    
-                    sitemap += f'''
+            url_count += 1
+
+            # 2. Geographic URL: /us/{state}/{city}/events/{slug}
+            if event.get('city') and event.get('state'):
+                state_slug = slugify(event['state'].lower())
+                city_slug = slugify(event['city'])
+                sitemap += f'''
   <url>
-    <loc>{domain}/events/{year}/{month}/{day}/{event_slug}</loc>
+    <loc>{domain}/us/{state_slug}/{city_slug}/events/{event_slug}</loc>
     <lastmod>{event_lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
+    <priority>0.9</priority>
   </url>'''
-                except:
-                    pass  # Skip date-indexed URL if date parsing fails
-        
-        # Add time-based event discovery pages
+                url_count += 1
+
+                         # 3. Simple events URL: /events/{slug}
+             sitemap += f'''
+  <url>
+    <loc>{domain}/events/{event_slug}</loc>
+    <lastmod>{event_lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>'''
+            url_count += 1
+
+        # Close sitemap
         sitemap += f'''
 
-  <!-- Time-based Event Discovery -->
-  <url>
-    <loc>{domain}/events-today</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>hourly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>{domain}/events-tonight</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>hourly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>{domain}/events-this-weekend</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>{domain}/events-tomorrow</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>{domain}/events-this-week</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>'''
+</urlset>'''
+        
+        logger.info(f"Generated sitemap with {url_count} URLs from {event_count} future events")
+        return sitemap
 
         # Add location-based discovery pages for major cities
         major_cities = [
