@@ -2626,6 +2626,7 @@ const EventMap = ({
                     value={searchValue}
                     onChange={setSearchValue}
                     onSelect={handleAddressSelect}
+                    theme={theme}
                     className="w-full"
                   />
                   <button
@@ -3296,6 +3297,7 @@ const EventMap = ({
                     value={searchValue}
                     onChange={setSearchValue}
                     onSelect={handleAddressSelect}
+                    theme={theme}
                     className="w-full"
                   />
                   <button
