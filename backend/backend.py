@@ -548,6 +548,12 @@ def init_db():
                         c.execute('ALTER TABLE events ADD COLUMN logo_image TEXT')
                         logger.info("✅ Added 'logo_image' column")
                         conn.commit()
+                    
+                    # Add is_premium_event column if it doesn't exist
+                    if not column_exists('events', 'is_premium_event'):
+                        c.execute('ALTER TABLE events ADD COLUMN is_premium_event BOOLEAN DEFAULT FALSE')
+                        logger.info("✅ Added 'is_premium_event' column")
+                        conn.commit()
                         
                 except Exception as migration_error:
                     logger.error(f"❌ Schema fix error: {migration_error}")
@@ -740,6 +746,11 @@ def init_db():
                     if 'logo_image' not in columns:
                         c.execute('''ALTER TABLE events ADD COLUMN logo_image TEXT''')
                         logger.info("Added logo_image column")
+                    
+                    # Add is_premium_event column if it doesn't exist
+                    if 'is_premium_event' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN is_premium_event BOOLEAN DEFAULT FALSE''')
+                        logger.info("Added is_premium_event column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1807,6 +1818,7 @@ class EventBase(BaseModel):
     organizer_url: Optional[str] = None # Organizer website
     # Premium features
     verified: Optional[bool] = False    # Event verification status
+    is_premium_event: Optional[bool] = False  # Whether this is a premium event
     # Premium image uploads (600x200 banner, 200x200 logo)
     banner_image: Optional[str] = None  # Banner image filename for premium users
     logo_image: Optional[str] = None    # Logo image filename for premium users

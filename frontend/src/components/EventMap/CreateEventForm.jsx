@@ -80,6 +80,7 @@ const CreateEventForm = ({
   useEffect(() => {
     if (isOpen) {
       if (initialEvent && typeof initialEvent === 'object') {
+
         setFormData({
           title: initialEvent.title || '',
           description: initialEvent.description || '',
@@ -1051,8 +1052,8 @@ const CreateEventForm = ({
                           <AlertTriangle className="w-4 h-4" />
                           <span className="text-sm font-medium">You're running low on premium events this month!</span>
                         </div>
-                  </div>
-                )}
+                      </div>
+                    )}
                     
                     {premiumStatus.events_remaining === 0 && (
                       <div className="mt-4 p-3 bg-red-100/50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
@@ -1063,10 +1064,10 @@ const CreateEventForm = ({
                       </div>
                     )}
                   </div>
-                    </div>
-                  </div>
                 </div>
-              )}
+              </div>
+            </div>
+          )}
               
           {/* Recurring Events Section - Only show when premium event is selected */}
           {isPremiumUser && formData.is_premium_event && (
