@@ -203,15 +203,15 @@ export const PremiumWelcomeAnimation = ({ tier = 'premium', userName = '', onCom
       color: 'pin-blue',
       gradient: 'from-pin-blue to-pin-blue/60',
       title: 'Welcome to Premium!',
-      subtitle: 'You now have access to all premium features',
-      features: ['Verified Events', 'Event Analytics', 'Recurring Events', 'Priority Support']
+      subtitle: 'You now have access to verified events and premium features',
+      features: ['⭐ Auto-Verified Events', 'Recurring Events', 'Banner/Logo Uploads', 'Basic Analytics']
     },
     enterprise: {
       color: 'vibrant-magenta',
       gradient: 'from-vibrant-magenta to-vibrant-magenta/60',
       title: 'Welcome to Enterprise!',
-      subtitle: 'You now have access to enterprise-grade features',
-      features: ['Enterprise Dashboard', 'Client Organization', 'Bulk Operations', 'Priority Support']
+      subtitle: 'You now have enterprise features (some in beta development)',
+      features: ['⭐ Auto-Verified Events', '250 Events/Month', 'Enterprise Dashboard (Beta)', 'Priority Support']
     }
   };
 

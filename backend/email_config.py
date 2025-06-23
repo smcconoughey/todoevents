@@ -527,13 +527,14 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     <div class="features">
                         <h3>Premium Features Include:</h3>
                         <ul>
-                            <li><strong>Auto-Verified Events:</strong> Your events get instant verification badges for increased credibility</li>
-                            <li><strong>Event Analytics Dashboard:</strong> Detailed insights into your event performance and engagement metrics</li>
+                            <li><strong>Auto-Verified Events ⭐:</strong> Your events get instant verification badges and DOUBLE priority in search results for maximum visibility</li>
                             <li><strong>10 Premium Events/Month:</strong> Create up to 10 verified events monthly with premium features</li>
                             <li><strong>Recurring Events:</strong> Create series and repeating events with flexible scheduling options</li>
-                            <li><strong>Priority Showcasing:</strong> Verified events get enhanced visibility and better placement in search results</li>
-                            <li><strong>Priority Support:</strong> Get faster assistance through our dedicated support email</li>
+                            <li><strong>Banner & Logo Uploads:</strong> Professional branding with custom banners and logos for your events</li>
+                            <li><strong>Basic Event Analytics:</strong> Track performance with view counts, interest levels, and engagement metrics</li>
+                            <li><strong>Priority Support:</strong> Get faster assistance through our dedicated support at support@todo-events.com</li>
                         </ul>
+                        <p><em>Note: This is early access beta pricing (50% off). Advanced analytics and other features coming soon!</em></p>
                     </div>
                     
                     <a href="https://todo-events.com/register?premium_invite=true" class="button">Accept Invitation & Sign Up</a>
@@ -571,12 +572,12 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         {f'Personal Message: {message}' if message else ''}
         
         Premium Features Include:
-        - Auto-Verified Events: Your events get instant verification badges for increased credibility
-        - Event Analytics Dashboard: Detailed insights into your event performance and engagement metrics
+        - Auto-Verified Events ⭐: Your events get instant verification badges and DOUBLE priority in search results for maximum visibility
         - 10 Premium Events/Month: Create up to 10 verified events monthly with premium features
         - Recurring Events: Create series and repeating events with flexible scheduling options
-        - Priority Showcasing: Verified events get enhanced visibility and better placement in search results
-        - Priority Support: Get faster assistance through our dedicated support email
+        - Banner & Logo Uploads: Professional branding with custom banners and logos for your events
+        - Basic Event Analytics: Track performance with view counts, interest levels, and engagement metrics
+        - Priority Support: Get faster assistance through our dedicated support at support@todo-events.com
         
         How to get started:
         1. Visit: https://todo-events.com/register?premium_invite=true
@@ -643,16 +644,17 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     <div class="features">
                         <h3>Enterprise Features Include:</h3>
                         <ul>
-                            <li><strong>Enterprise Dashboard:</strong> Advanced client management and analytics for professional event organizers</li>
-                            <li><strong>Client Organization:</strong> Organize events by client with dedicated analytics and performance tracking</li>
-                            <li><strong>Bulk Import/Export:</strong> Upload hundreds of events with CSV/JSON support for efficient management</li>
-                            <li><strong>Advanced Filtering:</strong> Powerful search and filtering tools for large event datasets</li>
-                            <li><strong>Auto-Verified Events:</strong> Your events get instant verification badges for maximum credibility</li>
-                            <li><strong>Event Analytics:</strong> Access comprehensive performance insights and engagement metrics</li>
-                            <li><strong>250 Events/Month:</strong> High-volume event management capacity for enterprise needs</li>
+                            <li><strong>Auto-Verified Events ⭐:</strong> Your events get instant verification badges and DOUBLE priority visibility for maximum credibility</li>
+                            <li><strong>250 Premium Events/Month:</strong> High-volume event management capacity for enterprise needs</li>
                             <li><strong>Recurring Events:</strong> Create series and repeating events with flexible scheduling options</li>
+                            <li><strong>Banner & Logo Uploads:</strong> Professional branding with custom banners and logos</li>
+                            <li><strong>Basic Event Analytics:</strong> Track performance with view counts and engagement metrics</li>
                             <li><strong>Priority Support:</strong> Dedicated assistance through our priority support at support@todo-events.com</li>
+                            <li><strong>Enterprise Dashboard (Beta):</strong> Advanced client management and analytics currently in development</li>
+                            <li><strong>Client Organization (Beta):</strong> Organize events by client with dedicated analytics (in development)</li>
+                            <li><strong>Bulk Import/Export (Beta):</strong> Upload hundreds of events with CSV/JSON support (basic functionality available)</li>
                         </ul>
+                        <p><em>Note: This is early access beta pricing (50% off). Some enterprise features are in active development.</em></p>
                     </div>
                     
                     <a href="https://todo-events.com/register?enterprise_invite=true" class="button">Accept Invitation & Sign Up</a>
@@ -690,15 +692,17 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         {f'Personal Message: {message}' if message else ''}
         
         Enterprise Features Include:
-        - Enterprise Dashboard: Advanced client management and analytics for professional event organizers
-        - Client Organization: Organize events by client with dedicated analytics and performance tracking
-        - Bulk Import/Export: Upload hundreds of events with CSV/JSON support for efficient management
-        - Advanced Filtering: Powerful search and filtering tools for large event datasets
-        - Auto-Verified Events: Your events get instant verification badges for maximum credibility
-        - Event Analytics: Access comprehensive performance insights and engagement metrics
-        - 250 Events/Month: High-volume event management capacity for enterprise needs
+        - Auto-Verified Events ⭐: Your events get instant verification badges and DOUBLE priority visibility for maximum credibility
+        - 250 Premium Events/Month: High-volume event management capacity for enterprise needs
         - Recurring Events: Create series and repeating events with flexible scheduling options
+        - Banner & Logo Uploads: Professional branding with custom banners and logos
+        - Basic Event Analytics: Track performance with view counts and engagement metrics
         - Priority Support: Dedicated assistance through our priority support at support@todo-events.com
+        - Enterprise Dashboard (Beta): Advanced client management and analytics currently in development
+        - Client Organization (Beta): Organize events by client with dedicated analytics (in development)
+        - Bulk Import/Export (Beta): Upload hundreds of events with CSV/JSON support (basic functionality available)
+        
+        Note: This is early access beta pricing (50% off). Some enterprise features are in active development.
         
         How to get started:
         1. Visit: https://todo-events.com/register?enterprise_invite=true
@@ -778,13 +782,14 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     <div class="features">
                         <h3>Your Premium Features:</h3>
                         <ul>
-                            <li><strong>Auto-Verified Events:</strong> Your events now get instant verification badges for increased credibility</li>
-                            <li><strong>Event Analytics Dashboard:</strong> Access detailed insights into your event performance and engagement metrics</li>
+                            <li><strong>Auto-Verified Events ⭐:</strong> Your events now get instant verification badges and DOUBLE priority in search results for maximum visibility</li>
                             <li><strong>10 Premium Events/Month:</strong> Create up to 10 verified events monthly with premium features</li>
                             <li><strong>Recurring Events:</strong> Create series and repeating events with flexible scheduling options</li>
-                            <li><strong>Priority Showcasing:</strong> Verified events get enhanced visibility and better placement in search results</li>
+                            <li><strong>Banner & Logo Uploads:</strong> Professional branding with custom banners and logos for your events</li>
+                            <li><strong>Basic Event Analytics:</strong> Track performance with view counts, interest levels, and engagement metrics</li>
                             <li><strong>Priority Support:</strong> Get faster assistance through our dedicated support at support@todo-events.com</li>
                         </ul>
+                        <p><em>Note: You have early access beta pricing (50% off). Advanced analytics and other features coming soon!</em></p>
                     </div>
                     
                     <a href="https://todo-events.com/dashboard" class="button">Explore Premium Features</a>
@@ -822,11 +827,11 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         {expiry_text if expiry_text else ''}
         
         Your Premium Features:
-        - Auto-Verified Events: Your events now get instant verification badges for increased credibility
-        - Event Analytics Dashboard: Access detailed insights into your event performance and engagement
+        - Auto-Verified Events ⭐: Your events now get instant verification badges and DOUBLE priority in search results for maximum visibility
         - 10 Premium Events/Month: Create up to 10 verified events monthly with premium features
         - Recurring Events: Create series and repeating events with flexible scheduling options
-        - Priority Showcasing: Verified events get enhanced visibility and better placement in search results
+        - Banner & Logo Uploads: Professional branding with custom banners and logos for your events
+        - Basic Event Analytics: Track performance with view counts, interest levels, and engagement metrics
         - Priority Support: Get faster assistance through our dedicated support at support@todo-events.com
         
         What's next?

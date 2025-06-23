@@ -42,49 +42,70 @@ const HostsPage = () => {
 
   const premiumFeatures = [
     {
-      title: 'Event Analytics Dashboard',
-      description: 'Comprehensive analytics with detailed insights on event views, interests, attendance trends, and audience demographics.',
-      status: 'Coming Soon'
-    },
-    {
-      title: 'Enterprise Dashboard',
-      description: 'Advanced client management, bulk operations, and performance analytics for high-volume event organizers.',
-      status: 'Available'
-    },
-    {
-      title: 'Client Organization',
-      description: 'Organize and track events by client with dedicated analytics, performance metrics, and engagement insights.',
-      status: 'Available'
-    },
-    {
-      title: 'Bulk Import & Export',
-      description: 'Upload hundreds of events at once with CSV/JSON import and export functionality for offline editing.',
-      status: 'Available'
-    },
-    {
-      title: 'Advanced Filtering',
-      description: 'Powerful search and filtering tools to manage large event datasets with client-specific views and status filtering.',
-      status: 'Available'
+      title: 'Auto-Verified Events ⭐',
+      description: 'VERIFIED badge with gold star icon on maps and DOUBLE priority in search results. The #1 reason to upgrade - your events get maximum visibility and credibility.',
+      status: 'Available',
+      tier: 'premium'
     },
     {
       title: 'Recurring Events',
       description: 'Create and manage recurring events with flexible scheduling options - weekly, monthly, or custom patterns.',
-      status: 'Coming Soon'
+      status: 'Available',
+      tier: 'premium'
+    },
+    {
+      title: 'Event Banner & Logo Uploads',
+      description: 'Upload custom banners and logos to create beautifully branded event pages that stand out.',
+      status: 'Available',
+      tier: 'premium'
+    },
+    {
+      title: 'Basic Event Analytics',
+      description: 'Track view counts, interest levels, and basic engagement metrics for your events.',
+      status: 'Available',
+      tier: 'premium'
+    },
+    {
+      title: 'Enterprise Dashboard',
+      description: 'Advanced client management and bulk operations for high-volume event organizers. Currently in beta development.',
+      status: 'In Development',
+      tier: 'enterprise'
+    },
+    {
+      title: 'Client Organization',
+      description: 'Organize events by client with dedicated analytics and performance tracking. Beta development phase.',
+      status: 'In Development',
+      tier: 'enterprise'
+    },
+    {
+      title: 'Bulk Import & Export',
+      description: 'Upload hundreds of events with CSV/JSON support. Basic functionality working, advanced features in development.',
+      status: 'In Development',
+      tier: 'enterprise'
+    },
+    {
+      title: 'Advanced Event Analytics',
+      description: 'Comprehensive analytics with detailed insights on event views, interests, attendance trends, and audience demographics.',
+      status: 'Coming Soon',
+      tier: 'premium'
     },
     {
       title: 'Priority Showcasing',
-      description: 'Featured positioning in search results, map clusters, and event lists to maximize visibility.',
-      status: 'Coming Soon'
-    },
-    {
-      title: 'Custom Event Banners',
-      description: 'Upload custom banners, logos, and create beautifully branded event pages that stand out.',
-      status: 'Coming Soon'
+      description: 'Enhanced positioning in search results and map clusters beyond standard verification benefits.',
+      status: 'Coming Soon',
+      tier: 'premium'
     },
     {
       title: 'Native Ticket Sales',
       description: 'Sell tickets directly through our platform with integrated payment processing and attendee management.',
-      status: 'Coming Soon'
+      status: 'Coming Soon',
+      tier: 'premium'
+    },
+    {
+      title: 'AI-Assisted Event Import',
+      description: 'Intelligent event creation from social media posts, websites, and other sources using AI.',
+      status: 'Coming Soon',
+      tier: 'premium'
     }
   ];
 
@@ -201,21 +222,33 @@ const HostsPage = () => {
         <section className="mb-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-semibold text-themed-primary mb-4">
-              Premium Features <span className="text-vibrant-magenta">Coming Soon</span>
+              Premium Features <span className="text-green-600">Available Now</span>
             </h2>
-            <p className="text-lg text-themed-secondary max-w-2xl mx-auto">
-              We're working on advanced tools to help you host even more successful events
+            <p className="text-lg text-themed-secondary max-w-3xl mx-auto mb-4">
+              Get verified events with DOUBLE priority visibility and professional tools for event management
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg">
+              <span className="text-amber-700 dark:text-amber-300 font-medium">🚀 Beta Phase - 50% Off Early Access Pricing</span>
+            </div>
+            <p className="text-sm text-themed-secondary mt-2 max-w-2xl mx-auto">
+              Not all features are fully implemented. Early access pricing supports development of upcoming features.
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {premiumFeatures.map((feature, index) => (
-              <div key={index} className={`p-6 bg-themed-surface rounded-xl border border-themed relative overflow-hidden group hover:bg-themed-surface-hover transition-all duration-300 ${feature.status === 'Available' ? 'border-green-500/30 bg-green-50/10' : ''}`}>
+              <div key={index} className={`p-6 bg-themed-surface rounded-xl border border-themed relative overflow-hidden group hover:bg-themed-surface-hover transition-all duration-300 ${
+                feature.status === 'Available' ? 'border-green-500/30 bg-green-50/10' : 
+                feature.status === 'In Development' ? 'border-blue-500/30 bg-blue-50/10' :
+                'border-amber-500/30 bg-amber-50/10'
+              }`}>
                 <div className="absolute top-4 right-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     feature.status === 'Available' 
                       ? 'bg-green-500/20 text-green-600' 
-                      : 'bg-spark-yellow/20 text-spark-yellow'
+                      : feature.status === 'In Development'
+                      ? 'bg-blue-500/20 text-blue-600'
+                      : 'bg-amber-500/20 text-amber-600'
                   }`}>
                     {feature.status}
                   </span>
@@ -224,7 +257,12 @@ const HostsPage = () => {
                 <p className="text-themed-secondary">{feature.description}</p>
                 {feature.status === 'Available' && (
                   <div className="mt-3 text-sm text-green-600 font-medium">
-                    ✨ Available with Enterprise plan
+                    ✨ {feature.tier === 'enterprise' ? 'Available with Enterprise plan' : 'Available with Premium plan'}
+                  </div>
+                )}
+                {feature.status === 'In Development' && (
+                  <div className="mt-3 text-sm text-blue-600 font-medium">
+                    🚧 Currently in beta development
                   </div>
                 )}
               </div>
