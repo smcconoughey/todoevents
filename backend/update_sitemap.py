@@ -1,13 +1,15 @@
 import asyncio
 import logging
 import sys
+import importlib  # noqa: E402
 
 # Ensure project root is on path when executed from Render shell
 from pathlib import Path
 root = Path(__file__).resolve().parent.parent
 sys.path.append(str(root))
 
-from backend import backend as be  # noqa: E402
+# Load backend/backend.py as a proper module object named "be"
+be = importlib.import_module("backend.backend")
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
 
