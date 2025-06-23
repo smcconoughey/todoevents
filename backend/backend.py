@@ -4023,6 +4023,16 @@ def create_forensic_tables():
                     failure_reason TEXT,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )''')
+                
+                # Activity logs table (ensure it exists for forensic queries)
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    action TEXT NOT NULL,
+                    details TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )''')
             else:
                 # SQLite versions
                 c.execute('''CREATE TABLE IF NOT EXISTS media_forensic_data (
@@ -4082,6 +4092,16 @@ def create_forensic_tables():
                     success BOOLEAN,
                     failure_reason TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )''')
+                
+                # Activity logs table (ensure it exists for forensic queries)
+                c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    action TEXT NOT NULL,
+                    details TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
                 )''')
             
             conn.commit()
@@ -8096,7 +8116,7 @@ async def get_enterprise_stats(
             query = f"""
                 SELECT COUNT(DISTINCT created_by) 
                 FROM events 
-                WHERE created_at >= {db_parts['interval_30_days']}
+                WHERE created_at >= datetime('now', '-30 days')
             """
             c.execute(query)
             active_users = c.fetchone()[0]
@@ -8223,9 +8243,9 @@ async def get_enterprise_overview(
                     growth_query = f"""
                         SELECT 
                             COUNT(*) as this_month,
-                            (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= {db_parts['date_sub_60']} AND created_at < {db_parts['date_sub_30']}) as last_month
+                            (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= datetime('now', '-60 days') AND created_at < datetime('now', '-30 days')) as last_month
                         FROM events 
-                        WHERE created_by = {placeholder} AND created_at >= {db_parts['date_sub_30']}
+                        WHERE created_by = {placeholder} AND created_at >= datetime('now', '-30 days')
                     """
                     logger.info(f"Executing growth query: {growth_query}")
                     c.execute(growth_query, (current_user['id'], current_user['id']))
@@ -8246,9 +8266,9 @@ async def get_enterprise_overview(
                     growth_query = f"""
                         SELECT 
                             COUNT(*) as this_month,
-                            (SELECT COUNT(*) FROM events WHERE created_at >= {db_parts['date_sub_60']} AND created_at < {db_parts['date_sub_30']}) as last_month
+                            (SELECT COUNT(*) FROM events WHERE created_at >= datetime('now', '-60 days') AND created_at < datetime('now', '-30 days')) as last_month
                         FROM events 
-                        WHERE created_at >= {db_parts['date_sub_30']}
+                        WHERE created_at >= datetime('now', '-30 days')
                     """
                     c.execute(growth_query)
                 except Exception as e:
@@ -8326,7 +8346,7 @@ async def get_enterprise_clients(
                         u.created_at,
                         u.premium_expires_at,
                         COUNT(e.id) as event_count,
-                        {db_parts['string_agg']}(DISTINCT e.category, ', ') as categories,
+                        GROUP_CONCAT(DISTINCT e.category) as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
                     LEFT JOIN events e ON u.id = e.created_by
@@ -8345,7 +8365,7 @@ async def get_enterprise_clients(
                         u.created_at,
                         u.premium_expires_at,
                         COUNT(e.id) as event_count,
-                        {db_parts['string_agg']}(DISTINCT e.category, ', ') as categories,
+                        GROUP_CONCAT(DISTINCT e.category) as categories,
                         MAX(e.created_at) as last_event_date
                     FROM users u
                     LEFT JOIN events e ON u.id = e.created_by
@@ -8445,8 +8465,7 @@ async def get_enterprise_events(
                     u.role as client_role,
                     e.interest_count,
                     e.view_count,
-                    e.verified,
-                    e.client_name
+                    e.verified
                 FROM events e
                 LEFT JOIN users u ON e.created_by = u.id
                 WHERE {where_clause}
@@ -8492,7 +8511,7 @@ async def get_enterprise_events(
                     "interest_count": row[12] or 0,
                     "view_count": row[13] or 0,
                     "verified": bool(row[14]),
-                    "client_name": row[15] or None,
+
                     "status": status
                 }
                 events.append(event)
@@ -8538,7 +8557,7 @@ async def get_enterprise_client_analytics(
                         u.role as client_role
                     FROM events e
                     LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_at >= {db_parts['interval_90_days']} 
+                    WHERE e.created_at >= datetime('now', '-90 days') 
                     AND e.created_by = {placeholder}
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
@@ -8554,7 +8573,7 @@ async def get_enterprise_client_analytics(
                         u.role as client_role
                     FROM events e
                     LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_at >= {db_parts['interval_90_days']}
+                    WHERE e.created_at >= datetime('now', '-90 days')
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
                     LIMIT 20
@@ -8577,7 +8596,7 @@ async def get_enterprise_client_analytics(
                         COALESCE(e.category, 'uncategorized') as category,
                         COUNT(*) as count
                     FROM events e
-                    WHERE e.created_at >= {db_parts['interval_90_days']}
+                    WHERE e.created_at >= datetime('now', '-90 days')
                     AND e.created_by = {placeholder}
                     GROUP BY e.category
                     ORDER BY count DESC
@@ -8590,7 +8609,7 @@ async def get_enterprise_client_analytics(
                         COALESCE(e.category, 'uncategorized') as category,
                         COUNT(*) as count
                     FROM events e
-                    WHERE e.created_at >= {db_parts['interval_90_days']}
+                    WHERE e.created_at >= datetime('now', '-90 days')
                     GROUP BY e.category
                     ORDER BY count DESC
                 """
@@ -11246,12 +11265,12 @@ async def get_media_overview(current_user: dict = Depends(get_current_user)):
             # Count events with banner images
             c.execute("SELECT COUNT(*) FROM events WHERE banner_image IS NOT NULL")
             result = c.fetchone()
-            banner_count = result[0] if result else 0
+            banner_count = get_count_from_result(result)
             
             # Count events with logo images
             c.execute("SELECT COUNT(*) FROM events WHERE logo_image IS NOT NULL")
             result = c.fetchone()
-            logo_count = result[0] if result else 0
+            logo_count = get_count_from_result(result)
             
             stats['total_media'] = banner_count + logo_count
             stats['by_type'] = {'banner': banner_count, 'logo': logo_count}
@@ -11490,7 +11509,7 @@ async def get_user_forensics(
             
             c.execute(count_query, count_params)
             result = c.fetchone()
-            total_count = result[0] if result else 0
+            total_count = get_count_from_result(result)
             
             return {
                 "status": "success",
