@@ -1043,22 +1043,21 @@ class AutomatedTaskManager:
                 
                 # Use proper date comparison for both PostgreSQL and SQLite
                 if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL - cast date text to date for comparison
+                    # PostgreSQL - get all published events regardless of date
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
-                               address, lat, lng, created_at, slug, is_published
+                               address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
-                        WHERE CAST(date AS DATE) >= (CURRENT_DATE - INTERVAL '30 days')::DATE 
-                        AND (is_published = true OR is_published IS NULL)
+                        WHERE (is_published = true OR is_published IS NULL)
                         ORDER BY CAST(date AS DATE), start_time
                     """)
                 else:
-                    # SQLite
+                    # SQLite - get all published events regardless of date
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
-                               address, lat, lng, created_at, slug, is_published
+                               address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
-                        WHERE date::date >= CURRENT_DATE AND (is_published = 1 OR is_published IS NULL)
+                        WHERE (is_published = 1 OR is_published IS NULL)
                         ORDER BY date, start_time
                     """)
                 return [dict(row) for row in c.fetchall()]
@@ -1127,7 +1126,7 @@ class AutomatedTaskManager:
 
   <!-- Individual Event Pages -->'''
         
-        for event in events[:100]:  # Limit to avoid huge sitemaps
+        for event in events:  # Include all events (up to 50k sitemap limit)
             # Get dynamic lastmod date from event
             event_lastmod = current_date
             if event.get('updated_at'):
@@ -1143,9 +1142,17 @@ class AutomatedTaskManager:
                 except:
                     pass
             
-            # Check if event has a slug for SEO-friendly URL
+            # Use existing slug or generate a fallback one if missing
             if event.get('slug'):
                 event_slug = event['slug']
+            else:
+                # Fallback: slugify title and append id to guarantee uniqueness
+                raw_slug = slugify(event.get('title', 'event'))
+                event_slug = f"{raw_slug}-{event.get('id', '')}"
+
+            # Proceed only if we have a non-empty slug
+            if not event_slug:
+                continue
                 
                 # Generate canonical URL based on location data
                 if event.get('city') and event.get('state'):
