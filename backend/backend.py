@@ -4191,6 +4191,57 @@ async def get_dynamic_sitemap():
     except Exception as e:
         logger.error(f"Error serving dynamic sitemap: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating sitemap")
+
+@app.get("/api/debug/database-stats")
+async def get_database_stats():
+    """Get database statistics for debugging"""
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Total events
+            c.execute("SELECT COUNT(*) FROM events")
+            total_events = c.fetchone()[0]
+            
+            # Future events
+            if IS_PRODUCTION and DB_URL:
+                c.execute("SELECT COUNT(*) FROM events WHERE CAST(date AS DATE) >= CURRENT_DATE")
+            else:
+                c.execute("SELECT COUNT(*) FROM events WHERE date >= date('now')")
+            future_events = c.fetchone()[0]
+            
+            # Events with slugs
+            c.execute("SELECT COUNT(*) FROM events WHERE slug IS NOT NULL AND slug != ''")
+            with_slugs = c.fetchone()[0]
+            
+            # Future events with slugs (sitemap eligible)
+            if IS_PRODUCTION and DB_URL:
+                c.execute("SELECT COUNT(*) FROM events WHERE CAST(date AS DATE) >= CURRENT_DATE AND slug IS NOT NULL AND slug != ''")
+            else:
+                c.execute("SELECT COUNT(*) FROM events WHERE date >= date('now') AND slug IS NOT NULL AND slug != ''")
+            sitemap_eligible = c.fetchone()[0]
+            
+            # Past events for reference
+            if IS_PRODUCTION and DB_URL:
+                c.execute("SELECT COUNT(*) FROM events WHERE CAST(date AS DATE) < CURRENT_DATE")
+            else:
+                c.execute("SELECT COUNT(*) FROM events WHERE date < date('now')")
+            past_events = c.fetchone()[0]
+            
+            return {
+                "database_type": "PostgreSQL" if (IS_PRODUCTION and DB_URL) else "SQLite",
+                "total_events": total_events,
+                "future_events": future_events,
+                "past_events": past_events,
+                "events_with_slugs": with_slugs,
+                "sitemap_eligible_events": sitemap_eligible,
+                "expected_sitemap_urls": sitemap_eligible * 3,  # 3 URL formats per event
+                "current_date": datetime.utcnow().strftime('%Y-%m-%d'),
+                "note": "Future events with slugs should match sitemap event count"
+            }
+    except Exception as e:
+        return {"error": str(e), "message": "Failed to get database statistics"}
+
 @app.put("/admin/events/{event_id}/verification")
 async def toggle_event_verification(
     event_id: int,
