@@ -278,6 +278,33 @@ const injectEventSchema = (event) => {
   document.head.appendChild(script);
 };
 
+// Create canonical URL from event data
+const generateCanonicalUrl = (event) => {
+  if (!event) return window.location.origin;
+  if (event.slug) {
+    if (event.city && event.state) {
+      const citySlug = event.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const stateSlug = event.state.toLowerCase();
+      return `${window.location.origin}/us/${stateSlug}/${citySlug}/events/${event.slug}`;
+    }
+    return `${window.location.origin}/events/${event.slug}`;
+  }
+  return `${window.location.origin}/?event=${event.id}`;
+};
+
+// Inject or update canonical link element
+const injectCanonicalLink = (url) => {
+  let link = document.querySelector('link[rel="canonical"]');
+  const previousHref = link ? link.getAttribute('href') : null;
+  if (!link) {
+    link = document.createElement('link');
+    link.setAttribute('rel', 'canonical');
+    document.head.appendChild(link);
+  }
+  link.setAttribute('href', url);
+  return { element: link, previousHref };
+};
+
 // Add this function before the EventDetailsPanel component
 const getTimePeriod = (timeString) => {
   if (!timeString) return null;
@@ -383,7 +410,10 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
   useEffect(() => {
     if (event) {
       injectEventSchema(event);
-      
+
+      const canonicalUrl = generateCanonicalUrl(event);
+      const { element: canonicalEl, previousHref: originalCanonical } = injectCanonicalLink(canonicalUrl);
+
       // Update page title and meta description for this event
       const originalTitle = document.title;
       const originalDescription = document.querySelector('meta[name="description"]')?.content;
@@ -402,6 +432,11 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
           metaDescription.content = originalDescription;
         }
         injectEventSchema(null); // Remove schema when panel closes
+        if (originalCanonical) {
+          canonicalEl.setAttribute('href', originalCanonical);
+        } else if (canonicalEl) {
+          canonicalEl.remove();
+        }
       };
     }
   }, [event]);

@@ -244,6 +244,25 @@ def generate_event_json_ld(event: Dict[str, Any], base_url: str = "https://todo-
     
     return json_ld
 
+def generate_webpage_json_ld(event: Dict[str, Any], base_url: str = "https://todo-events.com") -> Dict[str, Any]:
+    """Generate WebPage JSON-LD for the event page"""
+    canonical = generate_canonical_url(
+        base_url,
+        event.get('slug', ''),
+        event.get('city', ''),
+        event.get('state', '')
+    )
+
+    description = event.get('short_description') or generate_short_description(event.get('description', ''))
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": event.get('title', ''),
+        "url": canonical,
+        "description": description,
+    }
+
 def generate_breadcrumb_json_ld(
     event: Dict[str, Any], 
     base_url: str = "https://todo-events.com"
@@ -460,7 +479,8 @@ class SEOEventProcessor:
             "metadata": generate_seo_metadata(processed_event, self.base_url),
             "json_ld": {
                 "event": generate_event_json_ld(processed_event, self.base_url),
-                "breadcrumb": generate_breadcrumb_json_ld(processed_event, self.base_url)
+                "breadcrumb": generate_breadcrumb_json_ld(processed_event, self.base_url),
+                "webpage": generate_webpage_json_ld(processed_event, self.base_url)
             },
             "validation_issues": validate_event_data(processed_event)
-        } 
+        }
