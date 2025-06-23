@@ -19,7 +19,7 @@ services:
     name: todoevents
     env: node
     rootDir: frontend
-    buildCommand: npm ci && npm install tailwindcss-animate && npm run build
+    buildCommand: npm ci && npm install tailwindcss-animate && npm run sync-sitemap && npm run build
     staticPublishPath: ./dist
     startCommand: npm run start
     routes:

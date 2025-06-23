@@ -165,11 +165,19 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
   ];
 
   const [currentMessage, setCurrentMessage] = useState(0);
+  const [isMessageFading, setIsMessageFading] = useState(false);
 
-  // Rotate emotional messages
+  // Rotate emotional messages with smooth fade transitions
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentMessage(prev => (prev + 1) % emotionalMessages.length);
+      // Start fade out
+      setIsMessageFading(true);
+      
+      // After fade out completes, change message and fade in
+      setTimeout(() => {
+        setCurrentMessage(prev => (prev + 1) % emotionalMessages.length);
+        setIsMessageFading(false);
+      }, 350); // Half of transition duration
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -781,19 +789,23 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
 
             {/* Emotional message */}
             <div className="text-center py-2 lg:py-3">
-              <p 
-                key={currentMessage}
-                className={`
-                  text-sm lg:text-base font-medium transition-all duration-500 ease-out
-                  animate-[drop-in_0.6s_ease-out]
-                  ${theme === 'light' 
-                    ? 'text-gray-800 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent'
-                    : 'text-white bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent'
-                  }
-                `}
-              >
-                {emotionalMessages[currentMessage]}
-              </p>
+              <div className="relative h-6 lg:h-7 flex items-center justify-center">
+                <p 
+                  key={currentMessage}
+                  className={`
+                    absolute inset-0 flex items-center justify-center
+                    text-sm lg:text-base font-medium 
+                    transition-opacity duration-700 ease-in-out
+                    ${isMessageFading ? 'opacity-0' : 'opacity-100'}
+                    ${theme === 'light' 
+                      ? 'text-gray-800 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent'
+                      : 'text-white bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent'
+                    }
+                  `}
+                >
+                  {emotionalMessages[currentMessage]}
+                </p>
+              </div>
             </div>
 
             {/* Mode Toggle Slider - Desktop and Mobile */}
