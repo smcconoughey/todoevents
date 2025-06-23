@@ -1031,4 +1031,75 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       className={`
                         h-24 lg:h-32 rounded-2xl animate-pulse
                         ${'bg-white/10'}
-                      `
+                      `}
+                    />
+                  ))}
+                </div>
+              ) : recommendations.length > 0 ? (
+                <div className="space-y-3 lg:space-y-4">
+                  {recommendations.map((event, index) => (
+                    <EventCard key={event.id} event={event} index={index} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 space-y-3">
+                  <div className={`
+                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
+                    ${'bg-white/10'}
+                  `}>
+                    <MapPin className="w-6 h-6 text-white/60" />
+                  </div>
+                  <div>
+                    <h4 className={`font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                      {getActiveLocation() 
+                        ? 'No events found nearby' 
+                        : 'Share your location to find events'
+                      }
+                    </h4>
+                    <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
+                      {getActiveLocation() 
+                        ? 'Try adjusting your filters or exploring other areas'
+                        : 'Get your current location to discover amazing events near you'
+                      }
+                    </p>
+                  </div>
+                  {!getActiveLocation() && (
+                    <button
+                      onClick={switchToGPS}
+                      disabled={isLoadingGPS}
+                      className={`
+                        px-4 py-2 rounded-lg font-medium transition-all duration-200
+                        ${isLoadingGPS
+                            ? 'bg-gray-400/20 text-gray-400 border border-gray-400/40 cursor-not-allowed'
+                            : theme === 'light'
+                                ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200'
+                                : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
+                      `}
+                    >
+                      <Navigation className={`w-4 h-4 inline mr-2 ${isLoadingGPS ? 'animate-spin' : ''}`} />
+                      {isLoadingGPS ? 'Getting Location...' : 'Get Location'}
+                    </button>
+                  )}
+                </div>
+              )
+            ) : activeMode === 'route' ? (
+              // Route Planner Content (when in route mode but no route events yet)
+              <div className="h-full">
+                <RoutePlanner
+                  onRouteCalculated={onRouteCalculated}
+                  onEventsDiscovered={onRouteEventsDiscovered}
+                  mapInstance={mapInstance}
+                  apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+                  theme={theme}
+                  embedded={true} // Add embedded prop to adjust styling
+                />
+              </div>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default RecommendationsPanel;
