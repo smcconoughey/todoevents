@@ -492,11 +492,16 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         className={`
           group relative overflow-hidden rounded-2xl backdrop-blur-sm
           transition-all duration-300 hover:scale-[1.02] cursor-pointer
+          animate-[slide-in-up_0.6s_ease-out] opacity-0
           ${theme === 'light'
               ? 'bg-white/80 border border-gray-200 hover:bg-white/90 shadow-sm'
               : 'bg-white/5 border border-white/10 hover:bg-white/10'
           }
         `}
+        style={{
+          animationDelay: `${index * 100}ms`,
+          animationFillMode: 'forwards'
+        }}
         onClick={() => onEventClick && onEventClick(event)}
       >
         {/* Gradient overlay */}
@@ -705,7 +710,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
                   }
                 `}>
-                  <Compass className={`w-5 h-5 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
+                  <Compass className={`w-5 h-5 animate-[float-gentle_3s_ease-in-out_infinite] ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
                 </div>
                 <div>
                   <h2 className={`
@@ -715,8 +720,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     Discover
                     {gpsLocation && useGPS && (
                       <div className="flex items-center gap-1">
-                        <Navigation className="w-3 h-3 text-green-400" />
-                        <span className="text-xs bg-green-400/20 text-green-400 px-1.5 py-0.5 rounded-full border border-green-400/30">
+                        <Navigation className="w-3 h-3 text-green-400 animate-pulse" />
+                        <span className="text-xs bg-green-400/20 text-green-400 px-1.5 py-0.5 rounded-full border border-green-400/30 animate-pulse">
                           GPS
                         </span>
                       </div>
@@ -760,7 +765,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   <button
                     onClick={() => setIsExpanded(false)}
                     className={`
-                      p-2 rounded-lg transition-colors duration-200 hover:scale-105
+                      p-2 rounded-lg transition-all duration-200 hover:scale-105
                       ${theme === 'light'
                           ? 'hover:bg-gray-100'
                           : 'hover:bg-white/10'
@@ -777,8 +782,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             {/* Emotional message */}
             <div className="text-center py-2 lg:py-3">
               <p 
+                key={currentMessage}
                 className={`
-                  text-sm lg:text-base font-medium
+                  text-sm lg:text-base font-medium transition-all duration-500 ease-out
+                  animate-[drop-in_0.6s_ease-out]
                   ${theme === 'light' 
                     ? 'text-gray-800 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent'
                     : 'text-white bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent'
@@ -1024,294 +1031,4 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       className={`
                         h-24 lg:h-32 rounded-2xl animate-pulse
                         ${'bg-white/10'}
-                      `}
-                    />
-                  ))}
-                </div>
-              ) : recommendations.length > 0 ? (
-                <div className="space-y-3 lg:space-y-4">
-                  {recommendations.map((event, index) => (
-                    <EventCard key={event.id} event={event} index={index} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 space-y-3">
-                  <div className={`
-                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                    ${'bg-white/10'}
-                  `}>
-                    <MapPin className="w-6 h-6 text-white/60" />
-                  </div>
-                  <div>
-                    <h4 className={`font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                      {getActiveLocation() 
-                        ? 'No events found nearby' 
-                        : 'Share your location to find events'
-                      }
-                    </h4>
-                    <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
-                      {getActiveLocation() 
-                        ? 'Try adjusting your filters or exploring other areas'
-                        : 'Get your current location to discover amazing events near you'
-                      }
-                    </p>
-                  </div>
-                  {!getActiveLocation() && (
-                    <button
-                      onClick={switchToGPS}
-                      disabled={isLoadingGPS}
-                      className={`
-                        px-4 py-2 rounded-lg font-medium transition-all duration-200
-                        ${isLoadingGPS
-                            ? 'bg-gray-400/20 text-gray-400 border border-gray-400/40 cursor-not-allowed'
-                            : theme === 'light'
-                                ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200'
-                                : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
-                      `}
-                    >
-                      <Navigation className={`w-4 h-4 inline mr-2 ${isLoadingGPS ? 'animate-spin' : ''}`} />
-                      {isLoadingGPS ? 'Getting Location...' : 'Get Location'}
-                    </button>
-                  )}
-                </div>
-              )
-            ) : activeMode === 'route' ? (
-              // Route Planner Content (when in route mode but no route events yet)
-              <div className="h-full">
-                <RoutePlanner
-                  onRouteCalculated={onRouteCalculated}
-                  onEventsDiscovered={onRouteEventsDiscovered}
-                  mapInstance={mapInstance}
-                  apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-                  theme={theme}
-                  embedded={true} // Add embedded prop to adjust styling
-                />
-              </div>
-            ) : null}
-          </div>
-        </>
-      )}
-
-      {/* Location Permission Popup */}
-      {showLocationPopup && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`
-            relative max-w-sm lg:max-w-md w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in
-            ${theme === 'light'
-                ? 'bg-white/95 border border-gray-200 shadow-xl'
-                : 'bg-neutral-900/90 border border-white/20'
-            }
-          `}>
-            <button
-              onClick={() => {
-                setShowLocationPopup(false);
-                setLocationPermissionAsked(true);
-                localStorage.setItem('locationPermissionAsked', 'true');
-              }}
-              className={`absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full transition-colors
-                ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}
-              `}
-            >
-              <X className={`w-4 h-4 lg:w-5 lg:h-5 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
-            </button>
-            
-            <div className="text-center space-y-3 lg:space-y-4">
-              <div className={`
-                w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
-                ${theme === 'light'
-                    ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
-                    : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
-                }
-              `}>
-                <Navigation className={`w-6 h-6 lg:w-8 lg:h-8 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
-              </div>
-              
-              <div>
-                <h3 className={`text-lg lg:text-xl font-bold mb-2 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                  Find Events Near You
-                </h3>
-                <p className={`text-sm leading-relaxed ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
-                  Share your location to discover amazing events happening right around you. 
-                  We'll show you the most relevant local experiences based on your exact location.
-                </p>
-              </div>
-              
-              <div className="space-y-3 pt-2">
-                <button
-                  onClick={requestGPSLocation}
-                  className={`
-                    w-full py-3 px-4 rounded-xl font-medium transition-all duration-200
-                    hover:scale-[1.02] flex items-center justify-center gap-2 text-sm lg:text-base
-                    ${theme === 'light'
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-transparent hover:from-blue-600 hover:to-indigo-600 shadow-md'
-                        : 'bg-gradient-to-r from-spark-yellow/30 to-pin-blue/30 text-white border border-spark-yellow/40 hover:from-spark-yellow/40 hover:to-pin-blue/40'
-                    }
-                  `}
-                >
-                  <Navigation className="w-4 h-4 lg:w-5 lg:h-5" />
-                  Share My Location
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setShowLocationPopup(false);
-                    setLocationPermissionAsked(true);
-                    localStorage.setItem('locationPermissionAsked', 'true');
-                  }}
-                  className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 text-sm lg:text-base
-                    ${theme === 'light' 
-                      ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' 
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                    }
-                  `}
-                >
-                  Maybe Later
-                </button>
-              </div>
-              
-              <p className={`text-xs mt-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/50'}`}>
-                Your location is only used to find nearby events and is never stored on our servers.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* City Suggestions Modal */}
-      {showCitySuggestions && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`
-            relative max-w-lg w-full rounded-2xl p-4 lg:p-6 shadow-2xl animate-scale-in max-h-[80vh] overflow-y-auto
-            ${theme === 'light'
-                ? 'bg-white/95 border border-gray-200 shadow-xl'
-                : 'bg-neutral-900/90 border border-white/20'
-            }
-          `}>
-            <button
-              onClick={() => setShowCitySuggestions(false)}
-              className={`absolute top-3 right-3 lg:top-4 lg:right-4 p-1 rounded-full transition-colors
-                ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}
-              `}
-            >
-              <X className={`w-4 h-4 lg:w-5 lg:h-5 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
-            </button>
-            
-            <div className="space-y-4">
-              <div className="text-center space-y-2">
-                <div className={`
-                  w-12 h-12 lg:w-16 lg:h-16 rounded-full mx-auto flex items-center justify-center
-                  ${theme === 'light'
-                      ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
-                      : 'bg-gradient-to-br from-spark-yellow/30 to-pin-blue/30'
-                  }
-                `}>
-                  <Globe className={`w-6 h-6 lg:w-8 lg:h-8 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
-                </div>
-                
-                <div>
-                  <h3 className={`text-lg lg:text-xl font-bold mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                    Explore Other Cities
-                  </h3>
-                  <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
-                    Discover events in nearby cities with active communities
-                  </p>
-                </div>
-              </div>
-
-              {loadingCities ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`
-                        h-16 rounded-xl animate-pulse
-                        ${theme === 'light'
-                            ? 'bg-gray-200'
-                            : 'bg-white/10'
-                        }
-                      `}
-                    />
-                  ))}
-                </div>
-              ) : citySuggestions.length > 0 ? (
-                <div className="space-y-2">
-                  {citySuggestions.map((city, index) => (
-                    <button
-                      key={`${city.city}-${city.state}`}
-                      onClick={() => handleCitySelect(city)}
-                      className={`
-                        w-full p-3 lg:p-4 rounded-xl text-left transition-all duration-200
-                        hover:scale-[1.02] border
-                        ${theme === 'light'
-                            ? 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                            : 'bg-white/5 border-white/10 hover:bg-white/10'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`font-semibold truncate ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                            {city.city}, {city.state}
-                          </h4>
-                          <div className={`flex items-center gap-3 mt-1 text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {city.event_count} events
-                            </span>
-                            {city.distance > 0 && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {city.distance} miles away
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <ArrowRight className={`w-4 h-4 flex-shrink-0 ml-2 ${theme === 'light' ? 'text-gray-400' : 'text-white/40'}`} />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 space-y-2">
-                  <div className={`
-                    w-12 h-12 rounded-full mx-auto flex items-center justify-center
-                    ${theme === 'light'
-                        ? 'bg-gray-200'
-                        : 'bg-white/10'
-                    }
-                  `}>
-                    <Lightbulb className={`w-6 h-6 ${theme === 'light' ? 'text-gray-500' : 'text-white/60'}`} />
-                  </div>
-                  <div>
-                    <h4 className={`font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                      No nearby cities found
-                    </h4>
-                    <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
-                      Try exploring the map to discover more areas
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowCitySuggestions(false);
-                      onExploreMore && onExploreMore();
-                    }}
-                    className={`
-                      mt-3 px-4 py-2 rounded-lg font-medium transition-all duration-200
-                      ${theme === 'light'
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
-                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30 hover:bg-spark-yellow/30'}
-                    `}
-                  >
-                    View All Events
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default RecommendationsPanel;
+                      `
