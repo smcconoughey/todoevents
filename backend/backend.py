@@ -4242,6 +4242,36 @@ async def get_database_stats():
     except Exception as e:
         return {"error": str(e), "message": "Failed to get database statistics"}
 
+@app.post("/api/sitemap/regenerate")
+async def force_regenerate_sitemap():
+    """Force regenerate sitemap and update cache"""
+    try:
+        logger.info("🔄 Manually triggering sitemap regeneration ...")
+        
+        # Generate new sitemap content
+        events = await task_manager.get_current_events()
+        sitemap_content = await task_manager.build_sitemap_content(events)
+        
+        # Update the cache
+        await task_manager.save_sitemap(sitemap_content)
+        
+        # Ping search engines
+        await task_manager.ping_search_engines()
+        
+        # Count URLs for response
+        url_count = sitemap_content.count('<url>')
+        
+        logger.info(f"✅ Sitemap regenerated and cached in memory")
+        return {
+            "success": True,
+            "message": f"Sitemap regenerated with {url_count} URLs",
+            "url_count": url_count,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"❌ Error regenerating sitemap: {str(e)}")
+        return {"error": str(e), "success": False}
+
 @app.put("/admin/events/{event_id}/verification")
 async def toggle_event_verification(
     event_id: int,
