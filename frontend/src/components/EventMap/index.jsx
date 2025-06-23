@@ -409,12 +409,36 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
   return (
     <AnimatedModalWrapper isOpen={true} className="absolute right-4 top-4 w-96 dialog-themed backdrop-blur-sm rounded-xl overflow-hidden z-20 shadow-2xl">
       <PanelSlideAnimation isOpen={true} direction="right">
+      
+      {/* Premium Banner Image */}
+      {event.banner_image && (
+        <div className="relative h-32 w-full">
+          <img
+            src={`${API_URL}/uploads/banners/${event.banner_image}`}
+            alt="Event Banner"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        </div>
+      )}
+      
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
-              <Icon className={`w-6 h-6 ${category.color}`} />
-            </div>
+            {/* Logo Image or Category Icon */}
+            {event.logo_image ? (
+              <div className="relative">
+                <img
+                  src={`${API_URL}/uploads/logos/${event.logo_image}`}
+                  alt="Event Logo"
+                  className="w-12 h-12 object-cover rounded-lg border-2 border-white/20"
+                />
+              </div>
+            ) : (
+              <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
+                <Icon className={`w-6 h-6 ${category.color}`} />
+              </div>
+            )}
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-display font-semibold text-white">{event.title}</h2>

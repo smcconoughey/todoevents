@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Star, Crown, Repeat, Sparkles, AlertTriangle, Building2 } from 'lucide-react';
+import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Star, Crown, Repeat, Sparkles, AlertTriangle, Building2, Image, Upload } from 'lucide-react';
 import { EventLoadingAnimation, SuccessAnimation, AnimatedModalWrapper } from '../ui/loading-animations';
 import {
   Dialog,
@@ -21,6 +21,7 @@ import categories from './categoryConfig';
 import { AuthContext } from './AuthContext';
 import AddressAutocomplete from './AddressAutocomplete';
 import PrivacyNotice from '../PrivacyNotice';
+import ImageUpload from '../ImageUpload';
 import { API_URL } from '@/config';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
@@ -42,6 +43,10 @@ const CreateEventForm = ({
   const [premiumFeatures, setPremiumFeatures] = useState({});
   const [premiumStatus, setPremiumStatus] = useState(null);
   const [loadingPremiumStatus, setLoadingPremiumStatus] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [imageUploadType, setImageUploadType] = useState('banner'); // 'banner' or 'logo'
+  const [bannerImage, setBannerImage] = useState(null);
+  const [logoImage, setLogoImage] = useState(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -97,6 +102,8 @@ const CreateEventForm = ({
         setError(null);
         setConnectionError(false);
         setIsSameDay(!initialEvent.end_date || initialEvent.end_date === initialEvent.date);
+        setBannerImage(initialEvent.banner_image || null);
+        setLogoImage(initialEvent.logo_image || null);
       } else {
         // Reset to default values when no initialEvent or initialEvent is null
         setFormData({
@@ -123,6 +130,8 @@ const CreateEventForm = ({
         setError(null);
         setConnectionError(false);
         setIsSameDay(true);
+        setBannerImage(null);
+        setLogoImage(null);
       }
     }
   }, [isOpen, initialEvent]);
@@ -254,6 +263,19 @@ const CreateEventForm = ({
         ...prev,
         end_date: ''
       }));
+    }
+  };
+
+  const handleImageUpload = (type) => {
+    setImageUploadType(type);
+    setShowImageUpload(true);
+  };
+
+  const handleImageUpdate = (filename) => {
+    if (imageUploadType === 'banner') {
+      setBannerImage(filename);
+    } else {
+      setLogoImage(filename);
     }
   };
 
@@ -984,6 +1006,122 @@ const CreateEventForm = ({
                 </div>
               )}
 
+          {/* Premium Image Uploads Section */}
+          {isPremiumUser && formData.is_premium_event && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 rounded-lg flex items-center justify-center">
+                  <Image className="w-4 h-4 text-emerald-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-themed-primary">Event Images</h3>
+                <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-full">
+                  <Crown className="w-3 h-3 text-amber-600" />
+                  <span className="text-xs font-medium text-amber-700">Premium</span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Banner Image */}
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    Banner Image
+                  </label>
+                  <div className="p-4 bg-gradient-to-r from-themed-surface to-themed-surface-hover rounded-xl border border-themed/30">
+                    {bannerImage ? (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <img
+                            src={`${API_URL}/uploads/banners/${bannerImage}`}
+                            alt="Banner"
+                            className="w-full h-24 object-cover rounded-lg border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleImageUpload('banner')}
+                            className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
+                          >
+                            <Upload className="w-5 h-5 text-white" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-themed-secondary">
+                          Click image to replace • Recommended: 600x200px
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleImageUpload('banner')}
+                        className="w-full h-24 border-2 border-dashed border-themed/30 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-200"
+                      >
+                        <Upload className="w-5 h-5 text-themed-secondary" />
+                        <span className="text-sm text-themed-secondary">Upload Banner</span>
+                        <span className="text-xs text-themed-secondary">600x200px recommended</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Logo Image */}
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    Logo Image
+                  </label>
+                  <div className="p-4 bg-gradient-to-r from-themed-surface to-themed-surface-hover rounded-xl border border-themed/30">
+                    {logoImage ? (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <img
+                            src={`${API_URL}/uploads/logos/${logoImage}`}
+                            alt="Logo"
+                            className="w-16 h-16 object-cover rounded-lg border mx-auto"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleImageUpload('logo')}
+                            className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
+                          >
+                            <Upload className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-themed-secondary text-center">
+                          Click image to replace • Recommended: 200x200px
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleImageUpload('logo')}
+                        className="w-full h-24 border-2 border-dashed border-themed/30 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-200"
+                      >
+                        <Upload className="w-5 h-5 text-themed-secondary" />
+                        <span className="text-sm text-themed-secondary">Upload Logo</span>
+                        <span className="text-xs text-themed-secondary">200x200px recommended</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200/50 dark:border-emerald-700/50">
+                <div className="flex items-start gap-3">
+                  <Image className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-emerald-700 dark:text-emerald-300">
+                    <p className="font-medium mb-1">Premium Image Features:</p>
+                                         <ul className="text-xs space-y-1 text-emerald-600 dark:text-emerald-400">
+                       <li>• Banner image appears at the top of event details</li>
+                       <li>• Logo image displays next to the event title</li>
+                       <li>• Images enhance your event's professional appearance</li>
+                       <li>• Supports JPG, PNG formats up to 5MB</li>
+                       <li>• Images are automatically compressed and optimized</li>
+                     </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Location Section */}
           <div className="space-y-6">
             <div className="flex items-center gap-3 pb-3 border-b border-themed/30">
@@ -1064,6 +1202,17 @@ const CreateEventForm = ({
         </form>
         </AnimatedModalWrapper>
       </DialogContent>
+      
+      {/* Image Upload Modal */}
+      {showImageUpload && (
+        <ImageUpload
+          eventId={initialEvent?.id}
+          imageType={imageUploadType}
+          currentImage={imageUploadType === 'banner' ? bannerImage : logoImage}
+          onImageUpdate={handleImageUpdate}
+          onClose={() => setShowImageUpload(false)}
+        />
+      )}
     </Dialog>
   );
 };

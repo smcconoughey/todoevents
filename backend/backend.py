@@ -6,6 +6,8 @@ import time
 import json
 import traceback
 import math
+import uuid
+import shutil
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from contextlib import contextmanager
@@ -13,6 +15,8 @@ from enum import Enum
 import asyncio
 import threading
 import stripe
+from PIL import Image, ImageOps
+import io
 
 # Import SEO utilities
 try:
@@ -24,7 +28,8 @@ except ImportError:
 import uvicorn
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Request, Header
+from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, Request, Header, UploadFile, File
+from fastapi.responses import FileResponse
 
 # MissionOps import
 try:
@@ -532,6 +537,17 @@ def init_db():
                         c.execute('ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE')
                         logger.info("✅ Added 'verified' column")
                         conn.commit()
+                    
+                    # Add premium image upload columns if they don't exist
+                    if not column_exists('events', 'banner_image'):
+                        c.execute('ALTER TABLE events ADD COLUMN banner_image TEXT')
+                        logger.info("✅ Added 'banner_image' column")
+                        conn.commit()
+                    
+                    if not column_exists('events', 'logo_image'):
+                        c.execute('ALTER TABLE events ADD COLUMN logo_image TEXT')
+                        logger.info("✅ Added 'logo_image' column")
+                        conn.commit()
                         
                 except Exception as migration_error:
                     logger.error(f"❌ Schema fix error: {migration_error}")
@@ -715,6 +731,15 @@ def init_db():
                     if 'verified' not in columns:
                         c.execute('''ALTER TABLE events ADD COLUMN verified BOOLEAN DEFAULT FALSE''')
                         logger.info("Added verified column")
+                    
+                    # Add premium image upload columns if they don't exist
+                    if 'banner_image' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN banner_image TEXT''')
+                        logger.info("Added banner_image column")
+                    
+                    if 'logo_image' not in columns:
+                        c.execute('''ALTER TABLE events ADD COLUMN logo_image TEXT''')
+                        logger.info("Added logo_image column")
                 
                 c.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1782,6 +1807,9 @@ class EventBase(BaseModel):
     organizer_url: Optional[str] = None # Organizer website
     # Premium features
     verified: Optional[bool] = False    # Event verification status
+    # Premium image uploads (600x200 banner, 200x200 logo)
+    banner_image: Optional[str] = None  # Banner image filename for premium users
+    logo_image: Optional[str] = None    # Logo image filename for premium users
     # SEO fields
     slug: Optional[str] = None          # URL-friendly slug
     is_published: Optional[bool] = True # Publication status
@@ -4531,9 +4559,341 @@ async def get_premium_status(current_user: dict = Depends(get_current_user)):
             "analytics": is_premium or is_enterprise,
             "recurring_events": is_premium or is_enterprise,
             "priority_support": is_premium or is_enterprise,
-            "enhanced_visibility": is_premium or is_enterprise
+            "enhanced_visibility": is_premium or is_enterprise,
+            "image_uploads": is_premium or is_enterprise
         }
     }
+
+# Image Processing Utilities
+def process_image(image_bytes: bytes, target_width: int, target_height: int, max_file_size_mb: int = 5) -> bytes:
+    """
+    Process uploaded image: resize if close to target dimensions, compress if needed
+    Args:
+        image_bytes: Raw image bytes
+        target_width: Target width (e.g., 600 for banner)
+        target_height: Target height (e.g., 200 for banner)
+        max_file_size_mb: Maximum file size in MB
+    Returns:
+        Processed image bytes
+    """
+    try:
+        # Open image
+        img = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert to RGB if necessary (handles RGBA, P mode, etc.)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Get current dimensions
+        current_width, current_height = img.size
+        
+        # Check if dimensions are close to target (within 10% tolerance)
+        width_diff = abs(current_width - target_width) / target_width
+        height_diff = abs(current_height - target_height) / target_height
+        
+        # If dimensions are close to target, resize to exact dimensions
+        if width_diff <= 0.1 and height_diff <= 0.1:
+            logger.info(f"Resizing image from {current_width}x{current_height} to {target_width}x{target_height}")
+            img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        elif current_width > target_width * 2 or current_height > target_height * 2:
+            # If image is much larger, scale it down proportionally
+            img.thumbnail((target_width * 2, target_height * 2), Image.Resampling.LANCZOS)
+            logger.info(f"Scaled down large image to {img.size}")
+        
+        # Compress image if needed
+        output = io.BytesIO()
+        quality = 85  # Start with high quality
+        
+        # Try different quality levels to get under size limit
+        for attempt in range(3):
+            output.seek(0)
+            output.truncate(0)
+            
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            output_size = output.tell()
+            
+            # Check if under size limit
+            if output_size <= max_file_size_mb * 1024 * 1024:
+                break
+                
+            # Reduce quality for next attempt
+            quality -= 15
+            if quality < 50:
+                quality = 50
+                break
+        
+        output.seek(0)
+        processed_bytes = output.getvalue()
+        
+        logger.info(f"Image processed: {len(image_bytes)} bytes -> {len(processed_bytes)} bytes, quality: {quality}")
+        return processed_bytes
+        
+    except Exception as e:
+        logger.error(f"Error processing image: {str(e)}")
+        # Return original bytes if processing fails
+        return image_bytes
+
+# Premium Image Upload Endpoints
+@app.post("/events/{event_id}/upload-banner")
+async def upload_event_banner(
+    event_id: int,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload banner image for premium users (600x200px recommended)"""
+    # Check if user is premium
+    is_premium = current_user['role'] in ['premium', 'admin', 'enterprise']
+    if not is_premium:
+        raise HTTPException(status_code=403, detail="Premium subscription required for image uploads")
+    
+    # Validate file type - only JPG and PNG
+    if not file.content_type in ['image/jpeg', 'image/jpg', 'image/png']:
+        raise HTTPException(status_code=400, detail="File must be JPG or PNG format only")
+    
+    # Validate file size (5MB max)
+    if file.size > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Check if user owns the event
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Verify event ownership
+            cursor.execute(f"SELECT created_by FROM events WHERE id = {placeholder}", (event_id,))
+            event = cursor.fetchone()
+            
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            if event['created_by'] != current_user['id']:
+                raise HTTPException(status_code=403, detail="You can only upload images to your own events")
+            
+            # Read and process the image
+            image_bytes = await file.read()
+            processed_image_bytes = process_image(image_bytes, 600, 200, 5)
+            
+            # Create uploads directory if it doesn't exist
+            upload_dir = "uploads/banners"
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename - always save as JPG after processing
+            unique_filename = f"banner_{event_id}_{uuid.uuid4().hex}.jpg"
+            file_path = os.path.join(upload_dir, unique_filename)
+            
+            # Save the processed image
+            with open(file_path, "wb") as buffer:
+                buffer.write(processed_image_bytes)
+            
+            # Update event with banner image filename
+            cursor.execute(f"""
+                UPDATE events 
+                SET banner_image = {placeholder}
+                WHERE id = {placeholder}
+            """, (unique_filename, event_id))
+            
+            conn.commit()
+            
+            log_activity(current_user['id'], "upload_banner", f"Uploaded banner image for event {event_id}")
+            
+            return {
+                "detail": "Banner image uploaded successfully",
+                "filename": unique_filename,
+                "event_id": event_id,
+                "processed_size": len(processed_image_bytes)
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading banner image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to upload banner image")
+
+@app.post("/events/{event_id}/upload-logo")
+async def upload_event_logo(
+    event_id: int,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload logo image for premium users (200x200px recommended)"""
+    # Check if user is premium
+    is_premium = current_user['role'] in ['premium', 'admin', 'enterprise']
+    if not is_premium:
+        raise HTTPException(status_code=403, detail="Premium subscription required for image uploads")
+    
+    # Validate file type - only JPG and PNG
+    if not file.content_type in ['image/jpeg', 'image/jpg', 'image/png']:
+        raise HTTPException(status_code=400, detail="File must be JPG or PNG format only")
+    
+    # Validate file size (5MB max)
+    if file.size > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Check if user owns the event
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Verify event ownership
+            cursor.execute(f"SELECT created_by FROM events WHERE id = {placeholder}", (event_id,))
+            event = cursor.fetchone()
+            
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            if event['created_by'] != current_user['id']:
+                raise HTTPException(status_code=403, detail="You can only upload images to your own events")
+            
+            # Read and process the image
+            image_bytes = await file.read()
+            processed_image_bytes = process_image(image_bytes, 200, 200, 5)
+            
+            # Create uploads directory if it doesn't exist
+            upload_dir = "uploads/logos"
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename - always save as JPG after processing
+            unique_filename = f"logo_{event_id}_{uuid.uuid4().hex}.jpg"
+            file_path = os.path.join(upload_dir, unique_filename)
+            
+            # Save the processed image
+            with open(file_path, "wb") as buffer:
+                buffer.write(processed_image_bytes)
+            
+            # Update event with logo image filename
+            cursor.execute(f"""
+                UPDATE events 
+                SET logo_image = {placeholder}
+                WHERE id = {placeholder}
+            """, (unique_filename, event_id))
+            
+            conn.commit()
+            
+            log_activity(current_user['id'], "upload_logo", f"Uploaded logo image for event {event_id}")
+            
+            return {
+                "detail": "Logo image uploaded successfully",
+                "filename": unique_filename,
+                "event_id": event_id,
+                "processed_size": len(processed_image_bytes)
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading logo image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to upload logo image")
+
+@app.get("/uploads/{image_type}/{filename}")
+async def serve_uploaded_image(image_type: str, filename: str):
+    """Serve uploaded images"""
+    if image_type not in ['banners', 'logos']:
+        raise HTTPException(status_code=404, detail="Invalid image type")
+    
+    file_path = os.path.join("uploads", image_type, filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    return FileResponse(file_path)
+
+@app.delete("/events/{event_id}/banner")
+async def delete_event_banner(
+    event_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete banner image for premium users"""
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Verify event ownership and get current banner
+            cursor.execute(f"SELECT created_by, banner_image FROM events WHERE id = {placeholder}", (event_id,))
+            event = cursor.fetchone()
+            
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            if event['created_by'] != current_user['id']:
+                raise HTTPException(status_code=403, detail="You can only delete images from your own events")
+            
+            if not event['banner_image']:
+                raise HTTPException(status_code=404, detail="No banner image to delete")
+            
+            # Delete file from filesystem
+            file_path = os.path.join("uploads", "banners", event['banner_image'])
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            # Update database
+            cursor.execute(f"""
+                UPDATE events 
+                SET banner_image = NULL
+                WHERE id = {placeholder}
+            """, (event_id,))
+            
+            conn.commit()
+            
+            log_activity(current_user['id'], "delete_banner", f"Deleted banner image for event {event_id}")
+            
+            return {"detail": "Banner image deleted successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting banner image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete banner image")
+
+@app.delete("/events/{event_id}/logo")
+async def delete_event_logo(
+    event_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete logo image for premium users"""
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Verify event ownership and get current logo
+            cursor.execute(f"SELECT created_by, logo_image FROM events WHERE id = {placeholder}", (event_id,))
+            event = cursor.fetchone()
+            
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            if event['created_by'] != current_user['id']:
+                raise HTTPException(status_code=403, detail="You can only delete images from your own events")
+            
+            if not event['logo_image']:
+                raise HTTPException(status_code=404, detail="No logo image to delete")
+            
+            # Delete file from filesystem
+            file_path = os.path.join("uploads", "logos", event['logo_image'])
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            # Update database
+            cursor.execute(f"""
+                UPDATE events 
+                SET logo_image = NULL
+                WHERE id = {placeholder}
+            """, (event_id,))
+            
+            conn.commit()
+            
+            log_activity(current_user['id'], "delete_logo", f"Deleted logo image for event {event_id}")
+            
+            return {"detail": "Logo image deleted successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting logo image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete logo image")
 
 # Premium trial management endpoints
 @app.post("/premium/cancel-trial")
