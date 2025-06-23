@@ -1127,7 +1127,7 @@ class AutomatedTaskManager:
 
   <!-- Individual Event Pages -->'''
         
-        for event in events[:100]:  # Limit to avoid huge sitemaps
+        for event in events:
             # Get dynamic lastmod date from event
             event_lastmod = current_date
             if event.get('updated_at'):
@@ -1631,6 +1631,9 @@ class AutomatedTaskManager:
                     from populate_production_seo_fields import populate_seo_data
                     populate_seo_data()
                     logger.info("✅ Scheduled SEO population completed")
+
+                    # Regenerate sitemap after SEO fields updated
+                    run_sitemap_generation()
                 except Exception as e:
                     logger.error(f"Scheduled SEO population failed: {e}")
             
