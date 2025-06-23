@@ -8116,7 +8116,7 @@ async def get_enterprise_stats(
             query = f"""
                 SELECT COUNT(DISTINCT created_by) 
                 FROM events 
-                WHERE created_at >= datetime('now', '-30 days')
+                WHERE created_at >= {db_parts['interval_30_days']}
             """
             c.execute(query)
             active_users = c.fetchone()[0]
@@ -8239,13 +8239,14 @@ async def get_enterprise_overview(
                 total_users = 1
                 
                 # Get monthly growth for this user's events using database-compatible syntax
+                db_parts = get_db_compatible_query_parts()
                 try:
                     growth_query = f"""
                         SELECT 
                             COUNT(*) as this_month,
-                            (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= datetime('now', '-60 days') AND created_at < datetime('now', '-30 days')) as last_month
+                            (SELECT COUNT(*) FROM events WHERE created_by = {placeholder} AND created_at >= {db_parts['interval_60_days']} AND created_at < {db_parts['interval_30_days']}) as last_month
                         FROM events 
-                        WHERE created_by = {placeholder} AND created_at >= datetime('now', '-30 days')
+                        WHERE created_by = {placeholder} AND created_at >= {db_parts['interval_30_days']}
                     """
                     logger.info(f"Executing growth query: {growth_query}")
                     c.execute(growth_query, (current_user['id'], current_user['id']))
@@ -8262,13 +8263,14 @@ async def get_enterprise_overview(
                 total_users = get_count_from_result(c.fetchone())
                 
                 # Get monthly growth for all events using database-compatible syntax
+                db_parts = get_db_compatible_query_parts()
                 try:
                     growth_query = f"""
                         SELECT 
                             COUNT(*) as this_month,
-                            (SELECT COUNT(*) FROM events WHERE created_at >= datetime('now', '-60 days') AND created_at < datetime('now', '-30 days')) as last_month
+                            (SELECT COUNT(*) FROM events WHERE created_at >= {db_parts['interval_60_days']} AND created_at < {db_parts['interval_30_days']}) as last_month
                         FROM events 
-                        WHERE created_at >= datetime('now', '-30 days')
+                        WHERE created_at >= {db_parts['interval_30_days']}
                     """
                     c.execute(growth_query)
                 except Exception as e:
@@ -8548,6 +8550,7 @@ async def get_enterprise_client_analytics(
             # Client performance data
             db_parts = get_db_compatible_query_parts()
             
+            db_parts = get_db_compatible_query_parts()
             if current_user['role'] == UserRole.ENTERPRISE:
                 # For enterprise users, only show their own events
                 query = f"""
@@ -8557,7 +8560,7 @@ async def get_enterprise_client_analytics(
                         u.role as client_role
                     FROM events e
                     LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_at >= datetime('now', '-90 days') 
+                    WHERE e.created_at >= {db_parts['interval_90_days']} 
                     AND e.created_by = {placeholder}
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
@@ -8573,7 +8576,7 @@ async def get_enterprise_client_analytics(
                         u.role as client_role
                     FROM events e
                     LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_at >= datetime('now', '-90 days')
+                    WHERE e.created_at >= {db_parts['interval_90_days']}
                     GROUP BY u.email, u.role
                     ORDER BY event_count DESC
                     LIMIT 20
@@ -8596,7 +8599,7 @@ async def get_enterprise_client_analytics(
                         COALESCE(e.category, 'uncategorized') as category,
                         COUNT(*) as count
                     FROM events e
-                    WHERE e.created_at >= datetime('now', '-90 days')
+                    WHERE e.created_at >= {db_parts['interval_90_days']}
                     AND e.created_by = {placeholder}
                     GROUP BY e.category
                     ORDER BY count DESC
@@ -8609,7 +8612,7 @@ async def get_enterprise_client_analytics(
                         COALESCE(e.category, 'uncategorized') as category,
                         COUNT(*) as count
                     FROM events e
-                    WHERE e.created_at >= datetime('now', '-90 days')
+                    WHERE e.created_at >= {db_parts['interval_90_days']}
                     GROUP BY e.category
                     ORDER BY count DESC
                 """
@@ -11496,6 +11499,15 @@ async def get_user_forensics(
             c.execute(query, params)
             users = c.fetchall()
             
+            # Convert users to list of dicts with proper column mapping
+            column_names = ['user_id', 'email', 'role', 'account_created', 'premium_expires_at', 
+                           'events_created', 'banner_images', 'logo_images', 'activity_logs', 
+                           'last_activity', 'login_events']
+            
+            formatted_users = []
+            for user in users:
+                formatted_users.append(format_cursor_row(user, column_names))
+            
             # Get total count
             count_query = "SELECT COUNT(DISTINCT u.id) FROM users u WHERE 1=1"
             count_params = []
@@ -11513,7 +11525,7 @@ async def get_user_forensics(
             
             return {
                 "status": "success",
-                "users": [dict(user) for user in users],
+                "users": formatted_users,
                 "pagination": {
                     "page": page,
                     "limit": limit,
