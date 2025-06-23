@@ -418,6 +418,27 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
     setShowCitySuggestions(false);
   };
 
+  // Reset function similar to the left sidebar's handleResetView
+  const handleReset = () => {
+    // Reset local state
+    setSelectedFilter('all');
+    setGpsLocation(null);
+    setManualLocation(null);
+    setUseGPS(true);
+    setShowCitySuggestions(false);
+    setActiveMode('recommendations');
+    
+    // Update refs
+    gpsLocationRef.current = null;
+    manualLocationRef.current = null;
+    useGPSRef.current = true;
+    
+    // Call onExploreMore with no parameters to reset the main map view
+    if (onExploreMore) {
+      onExploreMore(); // No city parameter = reset to show all events
+    }
+  };
+
   const formatEventDate = (event) => {
     try {
       const date = new Date(event.date);
@@ -720,21 +741,37 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   </p>
                 </div>
               </div>
-              {!embedded && (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsExpanded(false)}
+                  onClick={handleReset}
                   className={`
-                    p-2 rounded-lg transition-colors duration-200 hover:scale-105
+                    px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105
+                    text-xs font-medium
                     ${theme === 'light'
-                        ? 'hover:bg-gray-100'
-                        : 'hover:bg-white/10'
+                        ? 'text-blue-600 hover:bg-blue-50 border border-blue-200'
+                        : 'text-pin-blue hover:bg-pin-blue/10 border border-pin-blue/40'
                     }
                   `}
-                  title="Hide recommendations"
+                  title="Reset all filters and location"
                 >
-                  <X className={`w-4 h-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
+                  Reset All
                 </button>
-              )}
+                {!embedded && (
+                  <button
+                    onClick={() => setIsExpanded(false)}
+                    className={`
+                      p-2 rounded-lg transition-colors duration-200 hover:scale-105
+                      ${theme === 'light'
+                          ? 'hover:bg-gray-100'
+                          : 'hover:bg-white/10'
+                      }
+                    `}
+                    title="Hide recommendations"
+                  >
+                    <X className={`w-4 h-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Emotional message */}
