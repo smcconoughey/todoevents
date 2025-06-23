@@ -47,7 +47,6 @@ class SitemapRegeneration:
                         SELECT id, title, date, slug, city, state, created_at, updated_at, is_published
                         FROM events 
                         WHERE CAST(date AS DATE) >= CURRENT_DATE 
-                        AND (is_published = true OR is_published IS NULL)
                         ORDER BY CAST(date AS DATE)
                     """)
                 else:
@@ -55,7 +54,6 @@ class SitemapRegeneration:
                         SELECT id, title, date, slug, city, state, created_at, updated_at, is_published
                         FROM events 
                         WHERE date >= date('now') 
-                        AND (is_published = 1 OR is_published IS NULL)
                         ORDER BY date
                     """)
                 

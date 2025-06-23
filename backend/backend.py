@@ -1043,23 +1043,21 @@ class AutomatedTaskManager:
                 
                 # Use proper date comparison for both PostgreSQL and SQLite
                 if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL - get all current and future events (no upper date limit)
+                    # PostgreSQL - get ALL current and future events (removed is_published filter)
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
                         WHERE CAST(date AS DATE) >= CURRENT_DATE 
-                        AND (is_published = true OR is_published IS NULL)
                         ORDER BY CAST(date AS DATE), start_time
                     """)
                 else:
-                    # SQLite - get all current and future events (no upper date limit)
+                    # SQLite - get ALL current and future events (removed is_published filter)
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
                         WHERE date >= date('now') 
-                        AND (is_published = 1 OR is_published IS NULL)
                         ORDER BY date, start_time
                     """)
                 return [dict(row) for row in c.fetchall()]
@@ -1158,8 +1156,8 @@ class AutomatedTaskManager:
   </url>'''
                 url_count += 1
 
-                         # 3. Simple events URL: /events/{slug}
-             sitemap += f'''
+            # 3. Simple events URL: /events/{slug}
+            sitemap += f'''
   <url>
     <loc>{domain}/events/{event_slug}</loc>
     <lastmod>{event_lastmod}</lastmod>
@@ -1174,170 +1172,6 @@ class AutomatedTaskManager:
 </urlset>'''
         
         logger.info(f"Generated sitemap with {url_count} URLs from {event_count} future events")
-        return sitemap
-
-        # Add location-based discovery pages for major cities
-        major_cities = [
-            'new-york', 'los-angeles', 'chicago', 'houston', 'phoenix', 'philadelphia',
-            'san-antonio', 'san-diego', 'dallas', 'san-jose', 'austin', 'jacksonville',
-            'fort-worth', 'columbus', 'charlotte', 'san-francisco', 'indianapolis',
-            'seattle', 'denver', 'washington', 'boston', 'nashville', 'detroit',
-            'portland', 'memphis', 'las-vegas', 'miami', 'atlanta', 'milwaukee'
-        ]
-
-        sitemap += f'''
-
-  <!-- "This Weekend in [City]" Pages -->'''
-        
-        for city in major_cities[:25]:  # Limit to top 25 cities
-            sitemap += f'''
-  <url>
-    <loc>{domain}/this-weekend-in-{city}</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.75</priority>
-  </url>'''
-
-        sitemap += f'''
-
-  <!-- "Free Events in [City]" Pages -->'''
-        
-        for city in major_cities[:25]:  # Limit to top 25 cities
-            sitemap += f'''
-  <url>
-    <loc>{domain}/free-events-in-{city}</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>'''
-
-        sitemap += f'''
-
-  <!-- "Today in [City]" Pages -->'''
-        
-        for city in major_cities[:15]:  # Limit to top 15 cities for today
-            sitemap += f'''
-  <url>
-    <loc>{domain}/today-in-{city}</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>hourly</changefreq>
-    <priority>0.8</priority>
-  </url>'''
-
-        sitemap += f'''
-
-  <!-- "Tonight in [City]" Pages -->'''
-        
-        for city in major_cities[:15]:  # Limit to top 15 cities for tonight
-            sitemap += f'''
-  <url>
-    <loc>{domain}/tonight-in-{city}</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>hourly</changefreq>
-    <priority>0.75</priority>
-  </url>'''
-
-        # Add general discovery and AI-optimized pages
-        sitemap += f'''
-
-  <!-- General Discovery Pages -->
-  <url>
-    <loc>{domain}/local-events-near-me</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>{domain}/near-me</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>{domain}/free-events-near-me</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>{domain}/live-music-near-me</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{domain}/food-festivals-near-me</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{domain}/art-events-near-me</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{domain}/outdoor-events</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{domain}/family-friendly-events</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{domain}/discover</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <!-- Static Pages -->
-  <url>
-    <loc>{domain}/about</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>{domain}/how-it-works</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>{domain}/create-event</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{domain}/contact</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>{domain}/privacy</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>{domain}/terms</loc>
-    <lastmod>{current_date}</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-</urlset>
-<!-- Note: This sitemap was automatically generated on {current_date} -->
-<!-- Contains {len(events)} individual events and comprehensive SEO URLs -->
-'''
-        
         return sitemap
     
     async def save_sitemap(self, content):
