@@ -288,7 +288,7 @@ const MissionContainer = ({
 
         {/* Tags */}
         {tags.length > 0 && (
-          <div className="px-4 py-2 border-b border-neutral-700/50">
+          <div className={`px-4 py-2 border-b ${theme === 'light' ? 'border-neutral-200/50' : 'border-neutral-700/50'}`}>
             <div className="flex flex-wrap gap-1">
               {tags.map((tag, index) => (
                 <span
@@ -308,7 +308,7 @@ const MissionContainer = ({
 
         {/* Expanded Content */}
         {isExpanded && (
-          <div className="border-t border-neutral-700/50">
+          <div className={`border-t ${theme === 'light' ? 'border-neutral-200/50' : 'border-neutral-700/50'}`}>
             {/* Tab Navigation */}
             <div className={`flex border-b ${theme === 'light' ? 'border-neutral-200/50' : 'border-neutral-700/50'}`}>
               {[

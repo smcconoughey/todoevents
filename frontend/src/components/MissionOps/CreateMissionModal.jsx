@@ -174,15 +174,26 @@ const CreateMissionModal = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {/* Mission Title */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-white">
+            <label className={`block text-sm font-medium ${
+              theme === 'light' ? 'text-gray-900' :
+              theme === 'glass' ? 'text-gray-900' :
+              'text-white'
+            }`}>
               Mission Title *
             </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
-              className={`w-full px-4 py-3 bg-neutral-800 border rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
-                errors.title ? 'border-red-500' : 'border-neutral-600'
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
+                theme === 'light' ? 'bg-white text-gray-900 placeholder-gray-400' :
+                theme === 'glass' ? 'bg-white/20 text-gray-900 placeholder-gray-600 backdrop-blur-sm' :
+                'bg-neutral-800 text-white placeholder-neutral-400'
+              } ${
+                errors.title ? 'border-red-500' : 
+                theme === 'light' ? 'border-gray-300' :
+                theme === 'glass' ? 'border-white/30' :
+                'border-neutral-600'
               }`}
               placeholder="Enter mission title..."
               autoFocus
@@ -197,13 +208,21 @@ const CreateMissionModal = ({
 
           {/* Mission Description */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-white">
+            <label className={`block text-sm font-medium ${
+              theme === 'light' ? 'text-gray-900' :
+              theme === 'glass' ? 'text-gray-900' :
+              'text-white'
+            }`}>
               Description
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors resize-none"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors resize-none ${
+                theme === 'light' ? 'bg-white text-gray-900 placeholder-gray-400 border-gray-300' :
+                theme === 'glass' ? 'bg-white/20 text-gray-900 placeholder-gray-600 border-white/30 backdrop-blur-sm' :
+                'bg-neutral-800 text-white placeholder-neutral-400 border-neutral-600'
+              }`}
               placeholder="Describe your mission objectives and scope..."
               rows={3}
             />
@@ -212,17 +231,32 @@ const CreateMissionModal = ({
           {/* Date Range */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">
+              <label className={`block text-sm font-medium ${
+                theme === 'light' ? 'text-gray-900' :
+                theme === 'glass' ? 'text-gray-900' :
+                'text-white'
+              }`}>
                 Start Date *
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <Calendar className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                  theme === 'light' ? 'text-gray-400' :
+                  theme === 'glass' ? 'text-gray-600' :
+                  'text-neutral-400'
+                }`} />
                 <input
                   type="date"
                   value={formData.start_date}
                   onChange={(e) => handleInputChange('start_date', e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 bg-neutral-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
-                    errors.start_date ? 'border-red-500' : 'border-neutral-600'
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
+                    theme === 'light' ? 'bg-white text-gray-900' :
+                    theme === 'glass' ? 'bg-white/20 text-gray-900 backdrop-blur-sm' :
+                    'bg-neutral-800 text-white'
+                  } ${
+                    errors.start_date ? 'border-red-500' : 
+                    theme === 'light' ? 'border-gray-300' :
+                    theme === 'glass' ? 'border-white/30' :
+                    'border-neutral-600'
                   }`}
                 />
               </div>
@@ -235,17 +269,32 @@ const CreateMissionModal = ({
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">
+              <label className={`block text-sm font-medium ${
+                theme === 'light' ? 'text-gray-900' :
+                theme === 'glass' ? 'text-gray-900' :
+                'text-white'
+              }`}>
                 End Date
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <Calendar className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                  theme === 'light' ? 'text-gray-400' :
+                  theme === 'glass' ? 'text-gray-600' :
+                  'text-neutral-400'
+                }`} />
                 <input
                   type="date"
                   value={formData.end_date}
                   onChange={(e) => handleInputChange('end_date', e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 bg-neutral-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
-                    errors.end_date ? 'border-red-500' : 'border-neutral-600'
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
+                    theme === 'light' ? 'bg-white text-gray-900' :
+                    theme === 'glass' ? 'bg-white/20 text-gray-900 backdrop-blur-sm' :
+                    'bg-neutral-800 text-white'
+                  } ${
+                    errors.end_date ? 'border-red-500' : 
+                    theme === 'light' ? 'border-gray-300' :
+                    theme === 'glass' ? 'border-white/30' :
+                    'border-neutral-600'
                   }`}
                 />
               </div>
@@ -261,13 +310,21 @@ const CreateMissionModal = ({
           {/* Priority and Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">
+              <label className={`block text-sm font-medium ${
+                theme === 'light' ? 'text-gray-900' :
+                theme === 'glass' ? 'text-gray-900' :
+                'text-white'
+              }`}>
                 Priority
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => handleInputChange('priority', e.target.value)}
-                className="w-full px-4 py-3 bg-neutral-800 border border-neutral-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
+                  theme === 'light' ? 'bg-white text-gray-900 border-gray-300' :
+                  theme === 'glass' ? 'bg-white/20 text-gray-900 border-white/30 backdrop-blur-sm' :
+                  'bg-neutral-800 text-white border-neutral-600'
+                }`}
               >
                 {priorityOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -278,13 +335,21 @@ const CreateMissionModal = ({
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">
+              <label className={`block text-sm font-medium ${
+                theme === 'light' ? 'text-gray-900' :
+                theme === 'glass' ? 'text-gray-900' :
+                'text-white'
+              }`}>
                 Status
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-4 py-3 bg-neutral-800 border border-neutral-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
+                  theme === 'light' ? 'bg-white text-gray-900 border-gray-300' :
+                  theme === 'glass' ? 'bg-white/20 text-gray-900 border-white/30 backdrop-blur-sm' :
+                  'bg-neutral-800 text-white border-neutral-600'
+                }`}
               >
                 {statusOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -297,36 +362,64 @@ const CreateMissionModal = ({
 
           {/* Tags */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-white">
+            <label className={`block text-sm font-medium ${
+              theme === 'light' ? 'text-gray-900' :
+              theme === 'glass' ? 'text-gray-900' :
+              'text-white'
+            }`}>
               Tags
             </label>
             <div className="relative">
-              <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <Tag className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                theme === 'light' ? 'text-gray-400' :
+                theme === 'glass' ? 'text-gray-600' :
+                'text-neutral-400'
+              }`} />
               <input
                 type="text"
                 value={formData.tags}
                 onChange={(e) => handleInputChange('tags', e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-neutral-800 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
+                  theme === 'light' ? 'bg-white text-gray-900 placeholder-gray-400 border-gray-300' :
+                  theme === 'glass' ? 'bg-white/20 text-gray-900 placeholder-gray-600 border-white/30 backdrop-blur-sm' :
+                  'bg-neutral-800 text-white placeholder-neutral-400 border-neutral-600'
+                }`}
                 placeholder="Enter tags separated by commas..."
               />
             </div>
-            <p className="text-xs text-neutral-400">
+            <p className={`text-xs ${
+              theme === 'light' ? 'text-gray-500' :
+              theme === 'glass' ? 'text-gray-600' :
+              'text-neutral-400'
+            }`}>
               Example: rocketry, propulsion, academic, urgent
             </p>
           </div>
 
           {/* Position Info */}
           {defaultPosition && (
-            <div className="p-4 bg-blue-600/10 border border-blue-600/20 rounded-lg">
+            <div className={`p-4 rounded-lg border ${
+              theme === 'light' ? 'bg-blue-50 border-blue-200' :
+              theme === 'glass' ? 'bg-blue-500/10 border-blue-500/20 backdrop-blur-sm' :
+              'bg-blue-600/10 border-blue-600/20'
+            }`}>
               <div className="flex items-start gap-3">
-                <div className="p-1 bg-blue-600/20 rounded">
+                <div className={`p-1 rounded ${
+                  theme === 'light' ? 'bg-blue-100' :
+                  theme === 'glass' ? 'bg-blue-500/20' :
+                  'bg-blue-600/20'
+                }`}>
                   <Target className="w-4 h-4 text-blue-400" />
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-blue-400 mb-1">
                     Grid Position
                   </h4>
-                  <p className="text-xs text-neutral-300">
+                  <p className={`text-xs ${
+                    theme === 'light' ? 'text-gray-600' :
+                    theme === 'glass' ? 'text-gray-700' :
+                    'text-neutral-300'
+                  }`}>
                     X: {Math.round(defaultPosition.x)}, Y: {Math.round(defaultPosition.y)}
                     <br />
                     This mission will be placed at your selected grid position.
@@ -338,7 +431,11 @@ const CreateMissionModal = ({
 
           {/* Submit Error */}
           {errors.submit && (
-            <div className="p-4 bg-red-600/10 border border-red-600/20 rounded-lg">
+            <div className={`p-4 rounded-lg border ${
+              theme === 'light' ? 'bg-red-50 border-red-200' :
+              theme === 'glass' ? 'bg-red-500/10 border-red-500/20 backdrop-blur-sm' :
+              'bg-red-600/10 border-red-600/20'
+            }`}>
               <div className="flex items-center gap-3">
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
                 <p className="text-red-400 text-sm">{errors.submit}</p>
@@ -347,11 +444,19 @@ const CreateMissionModal = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-700">
+          <div className={`flex items-center justify-end gap-3 pt-4 border-t ${
+            theme === 'light' ? 'border-gray-200' :
+            theme === 'glass' ? 'border-white/20' :
+            'border-neutral-700'
+          }`}>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-neutral-400 hover:text-white transition-colors"
+              className={`px-4 py-2 transition-colors ${
+                theme === 'light' ? 'text-gray-600 hover:text-gray-900' :
+                theme === 'glass' ? 'text-gray-700 hover:text-gray-900' :
+                'text-neutral-400 hover:text-white'
+              }`}
               disabled={isSubmitting}
             >
               Cancel
