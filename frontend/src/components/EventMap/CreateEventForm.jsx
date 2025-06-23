@@ -48,6 +48,12 @@ const CreateEventForm = ({
   const [bannerImage, setBannerImage] = useState(null);
   const [logoImage, setLogoImage] = useState(null);
   
+  // For new events - temporary file storage
+  const [pendingBannerFile, setPendingBannerFile] = useState(null);
+  const [pendingLogoFile, setPendingLogoFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -104,6 +110,11 @@ const CreateEventForm = ({
         setIsSameDay(!initialEvent.end_date || initialEvent.end_date === initialEvent.date);
         setBannerImage(initialEvent.banner_image || null);
         setLogoImage(initialEvent.logo_image || null);
+        // Clear previews for existing events
+        setBannerPreview(null);
+        setLogoPreview(null);
+        setPendingBannerFile(null);
+        setPendingLogoFile(null);
       } else {
         // Reset to default values when no initialEvent or initialEvent is null
         setFormData({
@@ -132,6 +143,11 @@ const CreateEventForm = ({
         setIsSameDay(true);
         setBannerImage(null);
         setLogoImage(null);
+        // Clear previews for new events
+        setBannerPreview(null);
+        setLogoPreview(null);
+        setPendingBannerFile(null);
+        setPendingLogoFile(null);
       }
     }
   }, [isOpen, initialEvent]);
@@ -231,6 +247,18 @@ const CreateEventForm = ({
     return () => clearInterval(interval);
   }, [isOpen]);
 
+  // Cleanup preview URLs when component unmounts or previews change
+  useEffect(() => {
+    return () => {
+      if (bannerPreview) {
+        URL.revokeObjectURL(bannerPreview);
+      }
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [bannerPreview, logoPreview]);
+
   const handleAddressSelect = (data) => {
     console.log('Address selected:', data);
     
@@ -267,8 +295,57 @@ const CreateEventForm = ({
   };
 
   const handleImageUpload = (type) => {
-    setImageUploadType(type);
-    setShowImageUpload(true);
+    if (initialEvent && initialEvent.id) {
+      // For existing events, use the modal upload
+      setImageUploadType(type);
+      setShowImageUpload(true);
+    } else {
+      // For new events, trigger file selection
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/jpg,image/png';
+      input.onchange = (e) => handleFileSelect(e, type);
+      input.click();
+    }
+  };
+
+  const handleFileSelect = (event, type) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please select a JPG or PNG image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image file must be smaller than 5MB');
+      return;
+    }
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+
+    if (type === 'banner') {
+      // Clean up old preview
+      if (bannerPreview) {
+        URL.revokeObjectURL(bannerPreview);
+      }
+      setPendingBannerFile(file);
+      setBannerPreview(previewUrl);
+    } else {
+      // Clean up old preview
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+      setPendingLogoFile(file);
+      setLogoPreview(previewUrl);
+    }
+
+    setError(null);
   };
 
   const handleImageUpdate = (filename) => {
@@ -276,6 +353,66 @@ const CreateEventForm = ({
       setBannerImage(filename);
     } else {
       setLogoImage(filename);
+    }
+  };
+
+  const uploadPendingImages = async (eventId) => {
+    const uploadPromises = [];
+
+    if (pendingBannerFile) {
+      const bannerFormData = new FormData();
+      bannerFormData.append('file', pendingBannerFile);
+      
+      uploadPromises.push(
+        fetchWithTimeout(`${API_URL}/events/${eventId}/upload-banner`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: bannerFormData
+        }, 15000)
+      );
+    }
+
+    if (pendingLogoFile) {
+      const logoFormData = new FormData();
+      logoFormData.append('file', pendingLogoFile);
+      
+      uploadPromises.push(
+        fetchWithTimeout(`${API_URL}/events/${eventId}/upload-logo`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: logoFormData
+        }, 15000)
+      );
+    }
+
+    if (uploadPromises.length > 0) {
+      try {
+        await Promise.all(uploadPromises);
+        console.log('Images uploaded successfully');
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        // Don't throw error - event creation should still succeed
+      }
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e, type) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      handleFileSelect({ target: { files: [file] } }, type);
     }
   };
 
@@ -452,6 +589,11 @@ const CreateEventForm = ({
       }, 20000); // 20 second timeout for event creation
 
       console.log('Event saved successfully:', savedEvent);
+
+      // For new events, upload pending images
+      if (!initialEvent && savedEvent.id) {
+        await uploadPendingImages(savedEvent.id);
+      }
 
       // Show success animation before closing
       setShowSuccessAnimation(true);
@@ -1023,16 +1165,16 @@ const CreateEventForm = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Banner Image */}
                 <div className="space-y-3">
-                  <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     Banner Image
                   </label>
-                  <div className="p-4 bg-gradient-to-r from-themed-surface to-themed-surface-hover rounded-xl border border-themed/30">
-                    {bannerImage ? (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600">
+                    {(bannerImage || bannerPreview) ? (
                       <div className="space-y-3">
                         <div className="relative">
                           <img
-                            src={`${API_URL}/uploads/banners/${bannerImage}`}
+                            src={bannerImage ? `${API_URL}/uploads/banners/${bannerImage}` : bannerPreview}
                             alt="Banner"
                             className="w-full h-24 object-cover rounded-lg border"
                           />
@@ -1044,7 +1186,7 @@ const CreateEventForm = ({
                             <Upload className="w-5 h-5 text-white" />
                           </button>
                         </div>
-                        <p className="text-xs text-themed-secondary">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           Click image to replace • Recommended: 600x200px
                         </p>
                       </div>
@@ -1052,28 +1194,30 @@ const CreateEventForm = ({
                       <button
                         type="button"
                         onClick={() => handleImageUpload('banner')}
-                        className="w-full h-24 border-2 border-dashed border-themed/30 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-200"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, 'banner')}
+                        className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all duration-200"
                       >
-                        <Upload className="w-5 h-5 text-themed-secondary" />
-                        <span className="text-sm text-themed-secondary">Upload Banner</span>
-                        <span className="text-xs text-themed-secondary">600x200px recommended</span>
+                        <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Upload Banner</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">600x200px • Drag & drop or click</span>
                       </button>
                     )}
                   </div>
                 </div>
 
                 {/* Logo Image */}
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                  <div className="space-y-3">
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     Logo Image
                   </label>
-                  <div className="p-4 bg-gradient-to-r from-themed-surface to-themed-surface-hover rounded-xl border border-themed/30">
-                    {logoImage ? (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600">
+                    {(logoImage || logoPreview) ? (
                       <div className="space-y-3">
                         <div className="relative">
                           <img
-                            src={`${API_URL}/uploads/logos/${logoImage}`}
+                            src={logoImage ? `${API_URL}/uploads/logos/${logoImage}` : logoPreview}
                             alt="Logo"
                             className="w-16 h-16 object-cover rounded-lg border mx-auto"
                           />
@@ -1085,7 +1229,7 @@ const CreateEventForm = ({
                             <Upload className="w-4 h-4 text-white" />
                           </button>
                         </div>
-                        <p className="text-xs text-themed-secondary text-center">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
                           Click image to replace • Recommended: 200x200px
                         </p>
                       </div>
@@ -1093,23 +1237,25 @@ const CreateEventForm = ({
                       <button
                         type="button"
                         onClick={() => handleImageUpload('logo')}
-                        className="w-full h-24 border-2 border-dashed border-themed/30 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-200"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, 'logo')}
+                        className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all duration-200"
                       >
-                        <Upload className="w-5 h-5 text-themed-secondary" />
-                        <span className="text-sm text-themed-secondary">Upload Logo</span>
-                        <span className="text-xs text-themed-secondary">200x200px recommended</span>
+                        <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Upload Logo</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">200x200px • Drag & drop or click</span>
                       </button>
                     )}
                   </div>
                 </div>
               </div>
               
-              <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200/50 dark:border-emerald-700/50">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-600">
                 <div className="flex items-start gap-3">
-                  <Image className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-emerald-700 dark:text-emerald-300">
+                  <Image className="w-5 h-5 text-gray-600 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
                     <p className="font-medium mb-1">Premium Image Features:</p>
-                                         <ul className="text-xs space-y-1 text-emerald-600 dark:text-emerald-400">
+                    <ul className="text-xs space-y-1 text-gray-600 dark:text-gray-400">
                        <li>• Banner image appears at the top of event details</li>
                        <li>• Logo image displays next to the event title</li>
                        <li>• Images enhance your event's professional appearance</li>
