@@ -1043,21 +1043,23 @@ class AutomatedTaskManager:
                 
                 # Use proper date comparison for both PostgreSQL and SQLite
                 if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL - get all published events regardless of date
+                    # PostgreSQL - get current and future published events only
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
-                        WHERE (is_published = true OR is_published IS NULL)
+                        WHERE CAST(date AS DATE) >= CURRENT_DATE 
+                        AND (is_published = true OR is_published IS NULL)
                         ORDER BY CAST(date AS DATE), start_time
                     """)
                 else:
-                    # SQLite - get all published events regardless of date
+                    # SQLite - get current and future published events only
                     c.execute("""
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
-                        WHERE (is_published = 1 OR is_published IS NULL)
+                        WHERE date::date >= CURRENT_DATE 
+                        AND (is_published = 1 OR is_published IS NULL)
                         ORDER BY date, start_time
                     """)
                 return [dict(row) for row in c.fetchall()]
