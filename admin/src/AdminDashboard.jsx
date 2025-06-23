@@ -5,7 +5,8 @@ import {
   Edit, X, AlertTriangle, CheckCircle, UserPlus, Lock, MessageSquare,
   TrendingUp, TrendingDown, Activity, Globe, MapPin, Clock, List,
   ChevronDown, ChevronUp, Lightbulb, FileText, UserCheck, FileX,
-  Clock3, CheckCircle2, XCircle, AlertOctagon, ExternalLink
+  Clock3, CheckCircle2, XCircle, AlertOctagon, ExternalLink, Image,
+  Flag, Monitor, HardDrive, Gavel, FileSearch
 } from 'lucide-react';
 
 import {
@@ -3672,6 +3673,470 @@ const AdminDashboard = () => {
     );
   };
 
+  // Media Moderation Component
+  const MediaModeration = () => {
+    const [mediaOverview, setMediaOverview] = useState({});
+    const [mediaFiles, setMediaFiles] = useState([]);
+    const [userForensics, setUserForensics] = useState([]);
+    const [auditLogs, setAuditLogs] = useState([]);
+    const [activeMediaTab, setActiveMediaTab] = useState('overview');
+    const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [mediaFilter, setMediaFilter] = useState('all');
+    const [selectedMedia, setSelectedMedia] = useState(null);
+    const [flaggingMedia, setFlaggingMedia] = useState(false);
+
+    // Fetch media overview
+    const fetchMediaOverview = async () => {
+      try {
+        const data = await fetchData('/admin/media/overview');
+        setMediaOverview(data.stats || {});
+      } catch (error) {
+        setError('Error fetching media overview: ' + error.message);
+      }
+    };
+
+    // Fetch media files
+    const fetchMediaFiles = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: 1,
+          limit: 50,
+          ...(mediaFilter !== 'all' && { media_type: mediaFilter }),
+          ...(searchTerm && { search: searchTerm })
+        });
+        const data = await fetchData(`/admin/media/files?${params}`);
+        setMediaFiles(data.files || []);
+      } catch (error) {
+        setError('Error fetching media files: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Fetch user forensics
+    const fetchUserForensics = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: 1,
+          limit: 50,
+          ...(searchTerm && { search: searchTerm })
+        });
+        const data = await fetchData(`/admin/forensics/users?${params}`);
+        setUserForensics(data.users || []);
+      } catch (error) {
+        setError('Error fetching user forensics: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Fetch audit logs
+    const fetchAuditLogs = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: 1,
+          limit: 100
+        });
+        const data = await fetchData(`/admin/audit/comprehensive?${params}`);
+        setAuditLogs(data.audit_logs || []);
+      } catch (error) {
+        setError('Error fetching audit logs: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Flag media
+    const handleFlagMedia = async (eventId, mediaType, action, notes = '') => {
+      setFlaggingMedia(true);
+      try {
+        await fetchData(`/admin/media/flag/${eventId}`, 'PUT', {
+          media_type: mediaType,
+          action: action,
+          notes: notes,
+          flagged: action === 'flag'
+        });
+        fetchMediaFiles();
+        setSelectedMedia(null);
+      } catch (error) {
+        setError('Error flagging media: ' + error.message);
+      } finally {
+        setFlaggingMedia(false);
+      }
+    };
+
+    // Initial load
+    useEffect(() => {
+      if (activeMediaTab === 'overview') {
+        fetchMediaOverview();
+      } else if (activeMediaTab === 'files') {
+        fetchMediaFiles();
+      } else if (activeMediaTab === 'users') {
+        fetchUserForensics();
+      } else if (activeMediaTab === 'audit') {
+        fetchAuditLogs();
+      }
+    }, [activeMediaTab, searchTerm, mediaFilter]);
+
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    const formatDate = (dateString) => {
+      return dateString ? new Date(dateString).toLocaleString() : 'N/A';
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+              <Gavel className="mr-3 text-blue-600" />
+              Media Moderation & Law Enforcement Portal
+            </h2>
+            <div className="text-sm text-gray-600">
+              <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-3 py-1 rounded">
+                <Flag className="w-4 h-4 inline mr-1" />
+                Law Enforcement Compliant Data Retention
+              </div>
+            </div>
+          </div>
+          
+          {/* Tab Navigation */}
+          <nav className="flex space-x-4 border-b">
+            {[
+              { name: 'Overview', tab: 'overview', icon: <Monitor className="w-4 h-4" /> },
+              { name: 'Media Files', tab: 'files', icon: <Image className="w-4 h-4" /> },
+              { name: 'User Forensics', tab: 'users', icon: <Users className="w-4 h-4" /> },
+              { name: 'Audit Trail', tab: 'audit', icon: <FileSearch className="w-4 h-4" /> }
+            ].map((tab) => (
+              <button
+                key={tab.tab}
+                onClick={() => setActiveMediaTab(tab.tab)}
+                className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-medium text-sm ${
+                  activeMediaTab === tab.tab
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.name}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Overview Tab */}
+        {activeMediaTab === 'overview' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center">
+                <HardDrive className="w-8 h-8 text-blue-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Media Files</p>
+                  <p className="text-2xl font-bold text-gray-900">{mediaOverview.total_media || 0}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center">
+                <Image className="w-8 h-8 text-green-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Banner Images</p>
+                  <p className="text-2xl font-bold text-gray-900">{mediaOverview.by_type?.banner || 0}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center">
+                <Image className="w-8 h-8 text-purple-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Logo Images</p>
+                  <p className="text-2xl font-bold text-gray-900">{mediaOverview.by_type?.logo || 0}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center">
+                <Flag className="w-8 h-8 text-red-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Flagged Content</p>
+                  <p className="text-2xl font-bold text-gray-900">{mediaOverview.flagged_count || 0}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Media Files Tab */}
+        {activeMediaTab === 'files' && (
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Uploaded Media Files</h3>
+                <div className="flex space-x-3">
+                  <select
+                    value={mediaFilter}
+                    onChange={(e) => setMediaFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="banner">Banner Images</option>
+                    <option value="logo">Logo Images</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Search files..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {mediaFiles.map((file) => (
+                    <tr key={`${file.event_id}-${file.media_type}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <Image className="h-10 w-10 text-gray-400" />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{file.filename}</div>
+                            <div className="text-sm text-gray-500 capitalize">{file.media_type}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{file.event_title}</div>
+                        <div className="text-sm text-gray-500">{file.event_category}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{file.user_email}</div>
+                        <div className="text-sm text-gray-500 capitalize">{file.user_role}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(file.upload_timestamp)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          file.flagged_content 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {file.flagged_content ? 'Flagged' : 'Active'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => handleFlagMedia(file.event_id, file.media_type, 'flag', 'Admin review required')}
+                          disabled={flaggingMedia}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                        >
+                          <Flag className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleFlagMedia(file.event_id, file.media_type, 'remove', 'Content removed by admin')}
+                          disabled={flaggingMedia}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleFlagMedia(file.event_id, file.media_type, 'approve', 'Content approved by admin')}
+                          disabled={flaggingMedia}
+                          className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {mediaFiles.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No media files found.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* User Forensics Tab */}
+        {activeMediaTab === 'users' && (
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">User Forensic Data (Law Enforcement)</h3>
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Created</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Events</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Media</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {userForensics.map((user) => (
+                    <tr key={user.user_id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{user.email}</div>
+                        <div className="text-sm text-gray-500 capitalize">Role: {user.role}</div>
+                        <div className="text-sm text-gray-500">ID: {user.user_id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(user.account_created)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {user.events_created || 0}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          Banners: {user.banner_images || 0}
+                        </div>
+                        <div className="text-sm text-gray-900">
+                          Logos: {user.logo_images || 0}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          Logs: {user.activity_logs || 0}
+                        </div>
+                        <div className="text-sm text-gray-900">
+                          Logins: {user.login_events || 0}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Last: {formatDate(user.last_activity)}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {userForensics.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No user forensic data found.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Audit Trail Tab */}
+        {activeMediaTab === 'audit' && (
+          <div className="bg-white rounded-lg shadow-md">
+            <div className="p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">Comprehensive Audit Trail</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Complete forensic audit trail for law enforcement investigations
+              </p>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {auditLogs.map((log) => (
+                    <tr key={`${log.log_type}-${log.id}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(log.timestamp)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{log.email || 'System'}</div>
+                        <div className="text-sm text-gray-500">ID: {log.user_id || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{log.action}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 max-w-xs truncate">
+                          {log.details || 'No details'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          log.log_type === 'media' 
+                            ? 'bg-purple-100 text-purple-800'
+                            : log.log_type === 'login'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {log.log_type}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {auditLogs.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No audit logs found.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex justify-center py-8">
+            <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Moderation Tools Component
   const ModerationTools = () => {
     return (
@@ -3755,6 +4220,7 @@ const AdminDashboard = () => {
               { name: 'Events', icon: <Calendar className="mr-2" />, tab: 'events' },
               { name: 'Privacy', icon: <FileText className="mr-2" />, tab: 'privacy' },
               { name: 'Premium', icon: <UserCheck className="mr-2" />, tab: 'premium' },
+              { name: 'Media', icon: <Image className="mr-2" />, tab: 'media' },
               { name: 'Bulk Import', icon: <Plus className="mr-2" />, tab: 'bulk' },
               { name: 'Analytics', icon: <BarChart2 className="mr-2" />, tab: 'analytics' },
               { name: 'Moderation', icon: <Shield className="mr-2" />, tab: 'moderation' }
@@ -3818,6 +4284,7 @@ const AdminDashboard = () => {
           {activeTab === 'privacy' && <PrivacyManagement />}
           {activeTab === 'premium' && <PremiumManagement />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
+          {activeTab === 'media' && <MediaModeration />}
           {activeTab === 'moderation' && <ModerationTools />}
           {activeTab === 'bulk' && <BulkOperations />}
         </div>

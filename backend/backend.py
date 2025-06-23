@@ -56,7 +56,7 @@ load_dotenv()
 # Security configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key-for-development-only")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 90))
 
 # Environment configuration 
 IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
@@ -2164,6 +2164,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 
                 if not verify_password(form_data.password, user["hashed_password"]):
                     logger.warning(f"Login failed for user: {form_data.username} - Invalid credentials")
+                    # Log failed login attempt for law enforcement compliance
+                    log_activity(user['id'], "login_failed", f"Failed login attempt for user: {form_data.username} - Invalid credentials")
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="Incorrect email or password",
@@ -2192,6 +2194,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 try:
                     logger.info(f"Generating access token for user: {form_data.username}")
                     access_token = create_access_token(data={"sub": user["email"]})
+                    
+                    # Enhanced logging for law enforcement compliance
+                    log_activity(user['id'], "login_success", f"User logged in successfully: {form_data.username}")
+                    
                     logger.info(f"Login successful for user: {form_data.username}")
                     return {"access_token": access_token, "token_type": "bearer"}
                 except Exception as e:
@@ -2325,6 +2331,9 @@ async def create_user(user: UserCreate):
                 logger.info(f"Fetching created user with ID {last_id}")
                 c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (last_id,))
                 user_data = dict(c.fetchone())
+                
+                # Enhanced logging for law enforcement compliance
+                log_activity(last_id, "registration", f"New user registered: {user.email}")
                 
                 # Return user data along with password strength
                 logger.info(f"User registration successful: {user.email}")
@@ -3888,6 +3897,199 @@ def log_activity(user_id: int, action: str, details: str = None):
     except Exception as e:
         logger.error(f"Error logging activity: {str(e)}")
 
+# Enhanced media tracking and law enforcement data retention
+def log_media_activity(user_id: int, event_id: int, media_type: str, action: str, filename: str = None, 
+                      file_size: int = None, ip_address: str = None, user_agent: str = None, details: str = None):
+    """
+    Enhanced media activity logging for law enforcement compliance
+    """
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Ensure media_audit_logs table exists
+            if IS_PRODUCTION and DB_URL:
+                c.execute('''CREATE TABLE IF NOT EXISTS media_audit_logs (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    event_id INTEGER,
+                    media_type TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    filename TEXT,
+                    file_size BIGINT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    details TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id),
+                    FOREIGN KEY(event_id) REFERENCES events(id)
+                )''')
+            else:
+                c.execute('''CREATE TABLE IF NOT EXISTS media_audit_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    event_id INTEGER,
+                    media_type TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    filename TEXT,
+                    file_size INTEGER,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    details TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id),
+                    FOREIGN KEY(event_id) REFERENCES events(id)
+                )''')
+            
+            # Insert media audit log entry
+            c.execute(f"""
+                INSERT INTO media_audit_logs 
+                (user_id, event_id, media_type, action, filename, file_size, ip_address, user_agent, details) 
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """, (user_id, event_id, media_type, action, filename, file_size, ip_address, user_agent, details))
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Error logging media activity: {str(e)}")
+
+def create_forensic_tables():
+    """
+    Create comprehensive forensic data tables for law enforcement compliance
+    """
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Media forensic data table
+            if IS_PRODUCTION and DB_URL:
+                c.execute('''CREATE TABLE IF NOT EXISTS media_forensic_data (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    event_id INTEGER,
+                    filename TEXT NOT NULL,
+                    original_filename TEXT,
+                    file_path TEXT,
+                    file_hash TEXT,
+                    file_size BIGINT,
+                    mime_type TEXT,
+                    media_type TEXT,
+                    upload_ip TEXT,
+                    upload_user_agent TEXT,
+                    upload_timestamp TIMESTAMP,
+                    last_accessed TIMESTAMP,
+                    access_count INTEGER DEFAULT 0,
+                    moderation_status TEXT DEFAULT 'pending',
+                    moderation_notes TEXT,
+                    flagged_content BOOLEAN DEFAULT FALSE,
+                    removed_timestamp TIMESTAMP,
+                    removal_reason TEXT,
+                    law_enforcement_hold BOOLEAN DEFAULT FALSE,
+                    retention_until TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id),
+                    FOREIGN KEY(event_id) REFERENCES events(id)
+                )''')
+                
+                # User forensic data table
+                c.execute('''CREATE TABLE IF NOT EXISTS user_forensic_data (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER UNIQUE,
+                    registration_ip TEXT,
+                    registration_user_agent TEXT,
+                    registration_timestamp TIMESTAMP,
+                    last_login_ip TEXT,
+                    last_login_user_agent TEXT,
+                    last_login_timestamp TIMESTAMP,
+                    login_count INTEGER DEFAULT 0,
+                    failed_login_attempts INTEGER DEFAULT 0,
+                    password_changes INTEGER DEFAULT 0,
+                    email_changes INTEGER DEFAULT 0,
+                    account_status TEXT DEFAULT 'active',
+                    suspicious_activity_flags TEXT,
+                    law_enforcement_notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )''')
+                
+                # Login attempts table
+                c.execute('''CREATE TABLE IF NOT EXISTS login_attempts (
+                    id SERIAL PRIMARY KEY,
+                    email TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    success BOOLEAN,
+                    failure_reason TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )''')
+            else:
+                # SQLite versions
+                c.execute('''CREATE TABLE IF NOT EXISTS media_forensic_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    event_id INTEGER,
+                    filename TEXT NOT NULL,
+                    original_filename TEXT,
+                    file_path TEXT,
+                    file_hash TEXT,
+                    file_size INTEGER,
+                    mime_type TEXT,
+                    media_type TEXT,
+                    upload_ip TEXT,
+                    upload_user_agent TEXT,
+                    upload_timestamp DATETIME,
+                    last_accessed DATETIME,
+                    access_count INTEGER DEFAULT 0,
+                    moderation_status TEXT DEFAULT 'pending',
+                    moderation_notes TEXT,
+                    flagged_content BOOLEAN DEFAULT FALSE,
+                    removed_timestamp DATETIME,
+                    removal_reason TEXT,
+                    law_enforcement_hold BOOLEAN DEFAULT FALSE,
+                    retention_until DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id),
+                    FOREIGN KEY(event_id) REFERENCES events(id)
+                )''')
+                
+                c.execute('''CREATE TABLE IF NOT EXISTS user_forensic_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER UNIQUE,
+                    registration_ip TEXT,
+                    registration_user_agent TEXT,
+                    registration_timestamp DATETIME,
+                    last_login_ip TEXT,
+                    last_login_user_agent TEXT,
+                    last_login_timestamp DATETIME,
+                    login_count INTEGER DEFAULT 0,
+                    failed_login_attempts INTEGER DEFAULT 0,
+                    password_changes INTEGER DEFAULT 0,
+                    email_changes INTEGER DEFAULT 0,
+                    account_status TEXT DEFAULT 'active',
+                    suspicious_activity_flags TEXT,
+                    law_enforcement_notes TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )''')
+                
+                c.execute('''CREATE TABLE IF NOT EXISTS login_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    success BOOLEAN,
+                    failure_reason TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )''')
+            
+            conn.commit()
+            logger.info("✅ Created forensic data tables for law enforcement compliance")
+            
+    except Exception as e:
+        logger.error(f"Error creating forensic tables: {str(e)}")
+
 # Helper functions for AI event processing
 def _generate_ai_summary(event_dict):
     """Generate AI-friendly summary with proper time handling"""
@@ -4737,7 +4939,19 @@ async def upload_event_banner(
             
             conn.commit()
             
+            # Enhanced logging for law enforcement compliance
             log_activity(current_user['id'], "upload_banner", f"Uploaded banner image for event {event_id}")
+            log_media_activity(
+                user_id=current_user['id'],
+                event_id=event_id,
+                media_type="banner",
+                action="upload",
+                filename=unique_filename,
+                file_size=len(processed_image_bytes),
+                ip_address=None,  # TODO: Extract from request
+                user_agent=None,  # TODO: Extract from request
+                details=f"Banner image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
+            )
             
             return {
                 "detail": "Banner image uploaded successfully",
@@ -4813,7 +5027,19 @@ async def upload_event_logo(
             
             conn.commit()
             
+            # Enhanced logging for law enforcement compliance
             log_activity(current_user['id'], "upload_logo", f"Uploaded logo image for event {event_id}")
+            log_media_activity(
+                user_id=current_user['id'],
+                event_id=event_id,
+                media_type="logo",
+                action="upload",
+                filename=unique_filename,
+                file_size=len(processed_image_bytes),
+                ip_address=None,  # TODO: Extract from request
+                user_agent=None,  # TODO: Extract from request
+                details=f"Logo image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
+            )
             
             return {
                 "detail": "Logo image uploaded successfully",
@@ -10998,6 +11224,369 @@ async def update_privacy_request_status(
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     """Get current user information"""
     return current_user
+
+# Admin Media Moderation Endpoints
+@app.get("/admin/media/overview")
+async def get_media_overview(current_user: dict = Depends(get_current_user)):
+    """Get media moderation overview for admin dashboard"""
+    if current_user['role'] not in ['admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Create tables if they don't exist
+            create_forensic_tables()
+            
+            # Get media statistics from events table for now (until migration)
+            stats = {}
+            
+            # Count events with banner images
+            c.execute("SELECT COUNT(*) FROM events WHERE banner_image IS NOT NULL")
+            result = c.fetchone()
+            banner_count = result[0] if result else 0
+            
+            # Count events with logo images
+            c.execute("SELECT COUNT(*) FROM events WHERE logo_image IS NOT NULL")
+            result = c.fetchone()
+            logo_count = result[0] if result else 0
+            
+            stats['total_media'] = banner_count + logo_count
+            stats['by_type'] = {'banner': banner_count, 'logo': logo_count}
+            stats['by_status'] = {'active': banner_count + logo_count}
+            stats['flagged_count'] = 0  # Will be updated when forensic data is migrated
+            stats['recent_uploads'] = 0  # Will be updated when forensic data is migrated
+            stats['storage_used_bytes'] = 0  # Will be calculated when forensic data is migrated
+            
+            return {"status": "success", "stats": stats}
+            
+    except Exception as e:
+        logger.error(f"Error fetching media overview: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching media overview")
+
+@app.get("/admin/media/files")
+async def get_media_files(
+    current_user: dict = Depends(get_current_user),
+    page: int = 1,
+    limit: int = 50,
+    media_type: Optional[str] = None,
+    status: Optional[str] = None,
+    flagged_only: bool = False,
+    search: Optional[str] = None
+):
+    """Get paginated list of uploaded media files with full user context"""
+    if current_user['role'] not in ['admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Create tables if they don't exist
+            create_forensic_tables()
+            
+            # Get media files from events table with user information
+            files = []
+            
+            # Get banner images
+            if not media_type or media_type == 'banner':
+                query = """
+                    SELECT 
+                        e.id as event_id,
+                        e.banner_image as filename,
+                        'banner' as media_type,
+                        e.created_at as upload_timestamp,
+                        u.id as user_id,
+                        u.email as user_email,
+                        u.role as user_role,
+                        u.created_at as user_created_at,
+                        e.title as event_title,
+                        e.category as event_category,
+                        e.date as event_date,
+                        'active' as moderation_status,
+                        FALSE as flagged_content,
+                        NULL as moderation_notes,
+                        FALSE as law_enforcement_hold
+                    FROM events e
+                    JOIN users u ON e.created_by = u.id
+                    WHERE e.banner_image IS NOT NULL
+                """
+                
+                params = []
+                if search:
+                    query += f" AND (e.banner_image LIKE {placeholder} OR u.email LIKE {placeholder} OR e.title LIKE {placeholder})"
+                    params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
+                
+                c.execute(query, params)
+                banner_files = c.fetchall()
+                files.extend([dict(file) for file in banner_files])
+            
+            # Get logo images
+            if not media_type or media_type == 'logo':
+                query = """
+                    SELECT 
+                        e.id as event_id,
+                        e.logo_image as filename,
+                        'logo' as media_type,
+                        e.created_at as upload_timestamp,
+                        u.id as user_id,
+                        u.email as user_email,
+                        u.role as user_role,
+                        u.created_at as user_created_at,
+                        e.title as event_title,
+                        e.category as event_category,
+                        e.date as event_date,
+                        'active' as moderation_status,
+                        FALSE as flagged_content,
+                        NULL as moderation_notes,
+                        FALSE as law_enforcement_hold
+                    FROM events e
+                    JOIN users u ON e.created_by = u.id
+                    WHERE e.logo_image IS NOT NULL
+                """
+                
+                params = []
+                if search:
+                    query += f" AND (e.logo_image LIKE {placeholder} OR u.email LIKE {placeholder} OR e.title LIKE {placeholder})"
+                    params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
+                
+                c.execute(query, params)
+                logo_files = c.fetchall()
+                files.extend([dict(file) for file in logo_files])
+            
+            # Sort by upload timestamp
+            files.sort(key=lambda x: x.get('upload_timestamp', ''), reverse=True)
+            
+            # Apply pagination
+            total_count = len(files)
+            start_idx = (page - 1) * limit
+            end_idx = start_idx + limit
+            paginated_files = files[start_idx:end_idx]
+            
+            return {
+                "status": "success",
+                "files": paginated_files,
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": total_count,
+                    "pages": (total_count + limit - 1) // limit
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching media files: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching media files")
+
+@app.put("/admin/media/flag/{event_id}")
+async def flag_media(
+    event_id: int,
+    flag_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Flag media content for moderation"""
+    if current_user['role'] not in ['admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            media_type = flag_data.get('media_type', 'banner')
+            flagged = flag_data.get('flagged', True)
+            notes = flag_data.get('notes', '')
+            action = flag_data.get('action', 'flag')  # flag, remove, approve
+            
+            # For now, log the action in activity logs until media_forensic_data is fully implemented
+            action_detail = f"Flagged {media_type} image for event {event_id}: action={action}, notes={notes[:100]}"
+            log_activity(current_user['id'], "media_moderation", action_detail)
+            
+            # If removing media, update the event
+            if action == 'remove':
+                if media_type == 'banner':
+                    c.execute(f"UPDATE events SET banner_image = NULL WHERE id = {placeholder}", (event_id,))
+                elif media_type == 'logo':
+                    c.execute(f"UPDATE events SET logo_image = NULL WHERE id = {placeholder}", (event_id,))
+                conn.commit()
+            
+            return {"status": "success", "message": f"Media {action} action completed"}
+            
+    except Exception as e:
+        logger.error(f"Error flagging media: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error flagging media")
+
+@app.get("/admin/forensics/users")
+async def get_user_forensics(
+    current_user: dict = Depends(get_current_user),
+    page: int = 1,
+    limit: int = 50,
+    search: Optional[str] = None,
+    flagged_only: bool = False
+):
+    """Get comprehensive user forensic data for law enforcement compliance"""
+    if current_user['role'] not in ['admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Create forensic tables if they don't exist
+            create_forensic_tables()
+            
+            # Get comprehensive user data for law enforcement
+            query = """
+                SELECT 
+                    u.id as user_id,
+                    u.email,
+                    u.role,
+                    u.created_at as account_created,
+                    u.premium_expires_at,
+                    COUNT(DISTINCT e.id) as events_created,
+                    COUNT(DISTINCT CASE WHEN e.banner_image IS NOT NULL THEN e.id END) as banner_images,
+                    COUNT(DISTINCT CASE WHEN e.logo_image IS NOT NULL THEN e.id END) as logo_images,
+                    COUNT(DISTINCT al.id) as activity_logs,
+                    MAX(al.timestamp) as last_activity,
+                    COUNT(DISTINCT CASE WHEN al.action LIKE '%login%' THEN al.id END) as login_events
+                FROM users u
+                LEFT JOIN events e ON u.id = e.created_by
+                LEFT JOIN activity_logs al ON u.id = al.user_id
+                WHERE 1=1
+            """
+            params = []
+            
+            if search:
+                if IS_PRODUCTION and DB_URL:
+                    query += f" AND (u.email LIKE {placeholder} OR u.id::text LIKE {placeholder})"
+                else:
+                    query += f" AND (u.email LIKE {placeholder} OR CAST(u.id AS TEXT) LIKE {placeholder})"
+                params.extend([f"%{search}%", f"%{search}%"])
+            
+            query += " GROUP BY u.id, u.email, u.role, u.created_at, u.premium_expires_at"
+            
+            # Add pagination
+            offset = (page - 1) * limit
+            query += f" ORDER BY u.created_at DESC LIMIT {placeholder} OFFSET {placeholder}"
+            params.extend([limit, offset])
+            
+            c.execute(query, params)
+            users = c.fetchall()
+            
+            # Get total count
+            count_query = "SELECT COUNT(DISTINCT u.id) FROM users u WHERE 1=1"
+            count_params = []
+            
+            if search:
+                if IS_PRODUCTION and DB_URL:
+                    count_query += f" AND (u.email LIKE {placeholder} OR u.id::text LIKE {placeholder})"
+                else:
+                    count_query += f" AND (u.email LIKE {placeholder} OR CAST(u.id AS TEXT) LIKE {placeholder})"
+                count_params.extend([f"%{search}%", f"%{search}%"])
+            
+            c.execute(count_query, count_params)
+            result = c.fetchone()
+            total_count = result[0] if result else 0
+            
+            return {
+                "status": "success",
+                "users": [dict(user) for user in users],
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": total_count,
+                    "pages": (total_count + limit - 1) // limit
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching user forensics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching user forensic data")
+
+@app.get("/admin/audit/comprehensive")
+async def get_comprehensive_audit_trail(
+    current_user: dict = Depends(get_current_user),
+    user_id: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    activity_type: Optional[str] = None,
+    page: int = 1,
+    limit: int = 100
+):
+    """Get comprehensive audit trail for law enforcement investigations"""
+    if current_user['role'] not in ['admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Get activity logs with user context
+            query = """
+                SELECT 
+                    'activity' as log_type,
+                    al.id,
+                    al.user_id,
+                    u.email,
+                    al.action,
+                    al.details,
+                    al.timestamp,
+                    NULL as media_type,
+                    NULL as filename,
+                    NULL as ip_address,
+                    NULL as user_agent
+                FROM activity_logs al
+                LEFT JOIN users u ON al.user_id = u.id
+                WHERE 1=1
+            """
+            params = []
+            
+            if user_id:
+                query += f" AND al.user_id = {placeholder}"
+                params.append(user_id)
+            
+            if start_date:
+                query += f" AND al.timestamp >= {placeholder}"
+                params.append(start_date)
+            
+            if end_date:
+                query += f" AND al.timestamp <= {placeholder}"
+                params.append(end_date)
+            
+            if activity_type:
+                query += f" AND al.action LIKE {placeholder}"
+                params.append(f"%{activity_type}%")
+            
+            # Order and paginate
+            offset = (page - 1) * limit
+            query += f" ORDER BY al.timestamp DESC LIMIT {placeholder} OFFSET {placeholder}"
+            params.extend([limit, offset])
+            
+            c.execute(query, params)
+            audit_logs = c.fetchall()
+            
+            return {
+                "status": "success",
+                "audit_logs": [dict(log) for log in audit_logs],
+                "pagination": {
+                    "page": page,
+                    "limit": limit
+                },
+                "metadata": {
+                    "note": "Comprehensive forensic audit trail for law enforcement compliance",
+                    "data_retention": "All user activities, media uploads, and system events are logged",
+                    "legal_contact": "support@todo-events.com"
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching comprehensive audit trail: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching audit trail")
 @app.post("/events/route-batch")
 async def get_route_events_batch(request: RouteEventRequest):
     """
