@@ -42,8 +42,8 @@ const HostsPage = () => {
 
   const premiumFeatures = [
     {
-      title: 'Auto-Verified Events ⭐',
-      description: 'VERIFIED badge with gold star icon on maps and DOUBLE priority in search results. The #1 reason to upgrade - your events get maximum visibility and credibility.',
+      title: 'Auto-Verified Events',
+      description: 'Verified badge with enhanced priority placement in search results and map displays. Professional credibility for maximum event visibility.',
       status: 'Available',
       tier: 'premium'
     },
@@ -225,13 +225,13 @@ const HostsPage = () => {
               Premium Features <span className="text-green-600">Available Now</span>
             </h2>
             <p className="text-lg text-themed-secondary max-w-3xl mx-auto mb-4">
-              Get verified events with DOUBLE priority visibility and professional tools for event management
+              Professional event management tools with verified status and enhanced visibility
             </p>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg">
-              <span className="text-amber-700 dark:text-amber-300 font-medium">🚀 Beta Phase - 50% Off Early Access Pricing</span>
+              <span className="text-amber-700 dark:text-amber-300 font-medium">Beta Phase - 50% Early Access Discount</span>
             </div>
             <p className="text-sm text-themed-secondary mt-2 max-w-2xl mx-auto">
-              Not all features are fully implemented. Early access pricing supports development of upcoming features.
+              Core features available now. Early access pricing supports development of upcoming features.
             </p>
           </div>
           
@@ -257,12 +257,12 @@ const HostsPage = () => {
                 <p className="text-themed-secondary">{feature.description}</p>
                 {feature.status === 'Available' && (
                   <div className="mt-3 text-sm text-green-600 font-medium">
-                    ✨ {feature.tier === 'enterprise' ? 'Available with Enterprise plan' : 'Available with Premium plan'}
+                    Available with {feature.tier === 'enterprise' ? 'Enterprise plan' : 'Premium plan'}
                   </div>
                 )}
                 {feature.status === 'In Development' && (
                   <div className="mt-3 text-sm text-blue-600 font-medium">
-                    🚧 Currently in beta development
+                    Currently in beta development
                   </div>
                 )}
               </div>

@@ -525,13 +525,13 @@ const AccountPage = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Crown className="w-8 h-8 text-white" />
                   </div>
-                  <h2 className="text-3xl font-bold text-themed-primary mb-2">Beta Early Access Pricing</h2>
-                  <p className="text-lg text-themed-secondary">50% off to support development - get verified events NOW</p>
+                  <h2 className="text-3xl font-bold text-themed-primary mb-2">Early Access Pricing</h2>
+                  <p className="text-lg text-themed-secondary">50% discount on professional event management features</p>
                   <div className="mt-3 px-4 py-2 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg inline-block">
-                    <span className="text-green-700 dark:text-green-300 font-medium">🚀 Beta Phase - Core Features Working</span>
+                    <span className="text-green-700 dark:text-green-300 font-medium">Beta Phase - Core Features Available</span>
                   </div>
                   <div className="mt-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg inline-block">
-                    <span className="text-amber-700 dark:text-amber-300 text-sm">⚠️ Some features still in development</span>
+                    <span className="text-amber-700 dark:text-amber-300 text-sm">Additional features in development</span>
                   </div>
                 </div>
 
@@ -554,7 +554,7 @@ const AccountPage = () => {
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-themed-primary font-medium">⭐ Auto-Verified Events (DOUBLE priority in search!)</span>
+                        <span className="text-sm text-themed-primary font-medium">Auto-Verified Events with enhanced visibility</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -628,7 +628,7 @@ const AccountPage = () => {
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-themed-primary font-medium">⭐ Auto-Verified Events (DOUBLE priority in search!)</span>
+                        <span className="text-sm text-themed-primary font-medium">Auto-Verified Events with enhanced visibility</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -706,7 +706,7 @@ const AccountPage = () => {
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-themed-primary font-medium">⭐ Auto-Verified Events (DOUBLE priority in search!)</span>
+                        <span className="text-sm text-themed-primary font-medium">Auto-Verified Events with enhanced visibility</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -778,15 +778,15 @@ const AccountPage = () => {
                 <div className="bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 dark:border-white/20">
                   <h3 className="text-lg font-semibold text-themed-primary mb-4 flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-amber-500" />
-                    Beta Early Access Benefits
+                    Early Access Benefits
                   </h3>
                   <div className="grid md:grid-cols-2 gap-4 text-sm text-themed-secondary">
                     <div>
                       <p className="mb-2">
-                        <strong className="text-themed-primary">Working Right Now:</strong> Verified events with DOUBLE priority visibility, recurring events, banner/logo uploads, and basic analytics.
+                        <strong className="text-themed-primary">Available Now:</strong> Verified events with enhanced visibility, recurring events, banner/logo uploads, and basic analytics.
                       </p>
                       <p>
-                        <strong className="text-themed-primary">50% Discount:</strong> Beta pricing helps fund development of advanced features currently in progress.
+                        <strong className="text-themed-primary">50% Discount:</strong> Early access pricing supports development of advanced features currently in progress.
                       </p>
                     </div>
                     <div>
@@ -794,13 +794,13 @@ const AccountPage = () => {
                         <strong className="text-themed-primary">In Development:</strong> Enterprise dashboard and client management tools are being actively developed and tested.
                       </p>
                       <p>
-                        <strong className="text-themed-primary">Early Access:</strong> Be first to use new features as they're completed and deployed.
+                        <strong className="text-themed-primary">Early Access:</strong> First access to new features as they're completed and deployed.
                       </p>
                     </div>
                   </div>
                   <div className="mt-4 p-3 bg-amber-100/20 border border-amber-300/30 rounded-lg">
                     <p className="text-sm text-themed-primary">
-                      <strong>Important:</strong> This is a beta phase. The #1 feature (verified events) works perfectly, but some advanced features are still being built.
+                      <strong>Beta Phase:</strong> Core features are fully functional. Additional advanced features are in active development.
                     </p>
                   </div>
                 </div>
