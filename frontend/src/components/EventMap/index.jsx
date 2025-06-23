@@ -418,7 +418,6 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
             alt="Event Banner"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
       )}
       
@@ -431,7 +430,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
                 <img
                   src={`${API_URL}/uploads/logos/${event.logo_image}`}
                   alt="Event Logo"
-                  className="w-12 h-12 object-cover rounded-lg border-2 border-white/20"
+                  className="w-12 h-12 object-cover rounded-lg"
                 />
               </div>
             ) : (
@@ -539,9 +538,11 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
               </div>
               
               {event.distance !== undefined && (
-                <div className="text-sm text-white/70 font-data">
-                  <WebIcon emoji="📍" size={14} className="mr-1" />
-                  {event.distance.toFixed(1)} miles away
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <div className="p-1.5 rounded-md bg-blue-500/10">
+                    <WebIcon emoji="📍" size={14} className="text-blue-400" />
+                  </div>
+                  <span className="font-data">{event.distance.toFixed(1)} miles away</span>
                 </div>
               )}
               
