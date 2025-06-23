@@ -20,14 +20,17 @@ async function syncSitemap() {
             'https://todo-events.com'
         );
         
+        // Post-process to ensure alternate event URL formats exist
+        const enhancedSitemap = addAlternateEventUrls(frontendSitemap);
+        
         // Write the synchronized sitemap to the frontend
-        fs.writeFileSync(FRONTEND_SITEMAP_PATH, frontendSitemap, 'utf8');
+        fs.writeFileSync(FRONTEND_SITEMAP_PATH, enhancedSitemap, 'utf8');
         
         console.log('✅ Sitemap successfully synced to frontend');
         console.log(`📍 Frontend sitemap saved to: ${FRONTEND_SITEMAP_PATH}`);
         
         // Count URLs in the sitemap
-        const urlCount = (frontendSitemap.match(/<loc>/g) || []).length;
+        const urlCount = (enhancedSitemap.match(/<loc>/g) || []).length;
         console.log(`📊 Total URLs in sitemap: ${urlCount}`);
         
     } catch (error) {
@@ -124,4 +127,62 @@ if (require.main === module) {
     main().catch(console.error);
 }
 
-module.exports = { syncSitemap }; 
+module.exports = { syncSitemap };
+
+/**
+ * Adds alternate URL patterns for each event entry so we always have:
+ *   /events/<slug-id>
+ *   /e/<slug-id>
+ *   /events/YYYY/MM/DD/<slug-id> (if original contained the date)
+ */
+function addAlternateEventUrls(xml) {
+    const urlBlocks = xml.match(/<url>[\s\S]*?<\/url>/g) || [];
+    const existingUrls = new Set();
+    urlBlocks.forEach(block => {
+        const locMatch = block.match(/<loc>(.*?)<\/loc>/);
+        if (locMatch) {
+            existingUrls.add(locMatch[1]);
+        }
+    });
+
+    let additions = '';
+
+    urlBlocks.forEach(block => {
+        const locMatch = block.match(/<loc>(.*?)<\/loc>/);
+        const lastModMatch = block.match(/<lastmod>(.*?)<\/lastmod>/);
+        if (!locMatch) return;
+        const url = locMatch[1];
+        const lastmod = lastModMatch ? lastModMatch[1] : new Date().toISOString().split('T')[0];
+
+        // Extract slug-id (last segment)
+        const slugId = url.split('/').pop();
+
+        // Determine date parts if present
+        const datePattern = /\/events\/(\d{4})\/(\d{2})\/(\d{2})\//;
+        const dateMatch = url.match(datePattern);
+        let ymdPath = '';
+        if (dateMatch) {
+            ymdPath = `/events/${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}/${slugId}`;
+        }
+
+        const basePath = `/events/${slugId}`;
+        const shortPath = `/e/${slugId}`;
+
+        [basePath, shortPath, ymdPath].forEach(p => {
+            if (p && !existingUrls.has(`https://todo-events.com${p}`)) {
+                additions += `  <url>\n` +
+                    `    <loc>https://todo-events.com${p}</loc>\n` +
+                    `    <lastmod>${lastmod}</lastmod>\n` +
+                    `    <changefreq>monthly</changefreq>\n` +
+                    `    <priority>0.75</priority>\n` +
+                    `  </url>\n`;
+                existingUrls.add(`https://todo-events.com${p}`);
+            }
+        });
+    });
+
+    if (!additions) return xml; // nothing new
+
+    // Insert before closing tag
+    return xml.replace('</urlset>', `${additions}</urlset>`);
+} 
