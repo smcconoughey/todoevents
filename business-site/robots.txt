@@ -1,11 +1,35 @@
 User-agent: *
 Allow: /
 
-# Sitemap
+# Specific rules for search engines
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+# Block common bot directories
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+
+# Sitemap location
 Sitemap: https://watchtowerab.com/sitemap.xml
 
+# Additional instructions
+# This site contains information about enterprise event management solutions
+# for marketing agencies and small businesses. Beta access available.
+
 # Block any crawling of potentially sensitive files
-Disallow: /.git/
 Disallow: /node_modules/
 Disallow: /.env
 
