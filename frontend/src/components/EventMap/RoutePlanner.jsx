@@ -654,7 +654,7 @@ const RoutePlanner = ({
   const isFrost = false;
 
   return (
-    <div className={`${embedded ? 'p-2 h-full overflow-y-auto' : 'p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-96 overflow-y-auto'} ${isFrost && !embedded ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
+    <div className={`${embedded ? 'p-2 h-full overflow-y-auto' : `p-4 ${theme === 'light' ? 'bg-white' : 'bg-gray-800'} rounded-lg shadow-lg max-h-96 overflow-y-auto`} ${isFrost && !embedded ? 'bg-opacity-25 backdrop-blur-md' : ''}`}>
       <style jsx>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
@@ -690,7 +690,7 @@ const RoutePlanner = ({
           </h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            className={`p-1 rounded-full ${theme === 'light' ? 'hover:bg-gray-200' : 'hover:bg-gray-700'}`}
           >
             <X className="w-4 h-4" />
           </button>
@@ -726,7 +726,7 @@ const RoutePlanner = ({
             </div>
             <button
               onClick={() => removeWaypoint(index)}
-              className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900 rounded"
+              className={`p-2 text-red-500 ${theme === 'light' ? 'hover:bg-red-50' : 'hover:bg-red-900'} rounded`}
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -735,7 +735,7 @@ const RoutePlanner = ({
 
         <button
           onClick={addWaypoint}
-          className="w-full py-2 px-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-gray-400 flex items-center justify-center gap-2"
+          className={`w-full py-2 px-4 border border-dashed ${theme === 'light' ? 'border-gray-300 text-gray-600' : 'border-gray-600 text-gray-400'} rounded-lg text-sm hover:border-gray-400 flex items-center justify-center gap-2`}
         >
           <Plus className="w-4 h-4" />
           Add Waypoint
@@ -756,7 +756,7 @@ const RoutePlanner = ({
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+            <label className={`block text-sm font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
               <Calendar className="w-4 h-4 inline mr-1" />
               Departure Date
             </label>
@@ -764,11 +764,11 @@ const RoutePlanner = ({
               type="date"
               value={departureDate}
               onChange={(e) => setDepartureDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className={`w-full px-3 py-2 border rounded-lg text-sm ${theme === 'light' ? 'border-gray-300 bg-white text-gray-900' : 'border-gray-600 bg-gray-800 text-gray-100'}`}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+            <label className={`block text-sm font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
               <Clock className="w-4 h-4 inline mr-1" />
               Departure Time
             </label>
@@ -776,14 +776,14 @@ const RoutePlanner = ({
               type="time"
               value={departureTime}
               onChange={(e) => setDepartureTime(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className={`w-full px-3 py-2 border rounded-lg text-sm ${theme === 'light' ? 'border-gray-300 bg-white text-gray-900' : 'border-gray-600 bg-gray-800 text-gray-100'}`}
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+            <label className={`block text-sm font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
               <Calendar className="w-4 h-4 inline mr-1" />
               Arrival Date
             </label>
@@ -791,11 +791,11 @@ const RoutePlanner = ({
               type="date"
               value={arrivalDate}
               onChange={(e) => setArrivalDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className={`w-full px-3 py-2 border rounded-lg text-sm ${theme === 'light' ? 'border-gray-300 bg-white text-gray-900' : 'border-gray-600 bg-gray-800 text-gray-100'}`}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+            <label className={`block text-sm font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
               <Clock className="w-4 h-4 inline mr-1" />
               Arrival Time
             </label>
@@ -803,7 +803,7 @@ const RoutePlanner = ({
               type="time"
               value={arrivalTime}
               onChange={(e) => setArrivalTime(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className={`w-full px-3 py-2 border rounded-lg text-sm ${theme === 'light' ? 'border-gray-300 bg-white text-gray-900' : 'border-gray-600 bg-gray-800 text-gray-100'}`}
             />
           </div>
         </div>
@@ -815,9 +815,9 @@ const RoutePlanner = ({
               id="enableEventTimeFilter"
               checked={enableEventTimeFilter}
               onChange={(e) => setEnableEventTimeFilter(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-800"
+              className={`rounded text-blue-600 focus:ring-blue-500 ${theme === 'light' ? 'border-gray-300' : 'border-gray-600 bg-gray-800 focus:ring-blue-400'}`}
             />
-            <label htmlFor="enableEventTimeFilter" className="text-sm font-medium flex items-center gap-1 text-gray-900 dark:text-gray-100">
+            <label htmlFor="enableEventTimeFilter" className={`text-sm font-medium flex items-center gap-1 ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
               <Calendar className="w-4 h-4" />
               Expand event search window
             </label>
@@ -825,7 +825,7 @@ const RoutePlanner = ({
           
           {enableEventTimeFilter && (
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+              <label className={`block text-sm font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
                 Event Time Flexibility: ±{eventTimeFlexibility} day{eventTimeFlexibility !== 1 ? 's' : ''}
               </label>
               <input
@@ -834,13 +834,13 @@ const RoutePlanner = ({
                 max="7"
                 value={eventTimeFlexibility}
                 onChange={(e) => setEventTimeFlexibility(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${theme === 'light' ? 'bg-gray-200' : 'bg-gray-700'}`}
               />
-              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div className={`flex justify-between text-xs mt-1 ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
                 <span>±1 day</span>
                 <span>±7 days</span>
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              <div className={`text-xs mt-1 ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
                 Find events {eventTimeFlexibility} day{eventTimeFlexibility !== 1 ? 's' : ''} before/after your trip dates
               </div>
             </div>
@@ -848,7 +848,7 @@ const RoutePlanner = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+          <label className={`block text-sm font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-gray-100'}`}>
             Event Search Radius: {searchRadius} miles
           </label>
           <input
@@ -857,7 +857,7 @@ const RoutePlanner = ({
             max="50"
             value={searchRadius}
             onChange={(e) => setSearchRadius(parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${theme === 'light' ? 'bg-gray-200' : 'bg-gray-700'}`}
           />
         </div>
 
@@ -888,7 +888,7 @@ const RoutePlanner = ({
           {routeSteps.length > 0 && (
             <button
               onClick={clearRoute}
-              className="py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+              className={`py-2 px-4 border rounded-lg ${theme === 'light' ? 'border-gray-300 hover:bg-gray-50' : 'border-gray-600 hover:bg-gray-800'}`}
             >
               Clear
             </button>
@@ -896,9 +896,9 @@ const RoutePlanner = ({
         </div>
 
         {routeSteps.length > 0 && routeData.current && (
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className={`mt-4 p-3 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-gray-800'}`}>
             <h4 className="font-medium mb-2">Route Summary</h4>
-            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <div className={`text-sm space-y-1 ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
               <div>Distance: {Math.round(routeData.current.routes[0].legs.reduce((total, leg) => 
                 total + leg.distance.value, 0) / 1609.34)} miles</div>
               <div>Duration: {Math.round(routeData.current.routes[0].legs.reduce((total, leg) => 
@@ -915,7 +915,7 @@ const RoutePlanner = ({
                   {routeEvents.slice(0, 8).map(item => (
                     <div 
                       key={item.id} 
-                      className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded"
+                      className={`flex items-center gap-2 text-xs cursor-pointer p-1 rounded ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-700'}`}
                       onClick={() => onEventsDiscovered && onEventsDiscovered([item])}
                       title="Click to view on map"
                     >
@@ -930,7 +930,7 @@ const RoutePlanner = ({
                         <div className="font-medium truncate">
                           {item.isRouteWaypoint ? '🗺️' : '🎉'} {item.title}
                         </div>
-                        <div className="text-gray-500 dark:text-gray-400 truncate">
+                        <div className={`truncate ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
                           {item.isRouteWaypoint 
                             ? (item.waypointType === 'highway' ? item.description : item.address)
                             : `${item.city || 'Event'} • ${item.category || 'other'}`
@@ -940,7 +940,7 @@ const RoutePlanner = ({
                     </div>
                   ))}
                   {routeEvents.length > 8 && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    <div className={`text-xs text-center ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
                       +{routeEvents.length - 8} more items
                     </div>
                   )}
