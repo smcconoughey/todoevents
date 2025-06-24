@@ -703,8 +703,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           
           {/* Mobile Handle Bar with Close Button - for embedded mobile panel */}
           {embedded && (
-            <div className={`lg:hidden flex items-center justify-between p-3 border-b ${theme === 'light' ? 'border-gray-200 bg-white/90' : 'border-white/10 bg-black/20'}`}>
-              <div className={`w-12 h-1 rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/30'}`} />
+            <div className={`lg:hidden flex items-center justify-end p-3 border-b ${theme === 'light' ? 'border-gray-200 bg-white/90' : 'border-white/10 bg-black/20'}`}>
               <button
                 onClick={() => {
                   console.log('Mobile X button clicked - embedded', { onClose, embedded });

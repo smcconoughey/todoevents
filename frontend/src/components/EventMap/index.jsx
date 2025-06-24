@@ -4389,13 +4389,7 @@ const EventMap = ({
             h-[85vh] shadow-2xl
             flex flex-col
             `}>
-            {/* Drag handle for mobile */}
-            <div 
-              className="flex justify-center pt-2 pb-1 cursor-pointer"
-              onClick={() => setIsMobileRecommendationsOpen(false)}
-            >
-              <div className="w-8 h-1 bg-white/20 rounded-full"></div>
-            </div>
+
             
             {/* Mobile Recommendations Panel */}
             <div className="flex-1 min-h-0">
