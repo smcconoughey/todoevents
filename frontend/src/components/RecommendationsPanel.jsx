@@ -678,51 +678,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
       {/* Main content - only show when expanded or embedded */}
       {(isExpanded || embedded) && (
         <>
-          {/* Mobile Handle Bar with Close Button - only show on mobile when expanded */}
-          {!embedded && (
-            <div className={`lg:hidden flex items-center justify-between p-3 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
-              <div className={`w-12 h-1 rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/30'}`} />
-              <button
-                onClick={() => {
-                  console.log('Mobile X button clicked - non-embedded');
-                  setIsExpanded(false);
-                }}
-                className={`
-                  p-2 rounded-lg transition-all duration-200 border
-                  ${theme === 'light'
-                      ? 'hover:bg-gray-100 text-gray-600 border-gray-200'
-                      : 'hover:bg-white/20 text-white border-white/20 bg-white/10'
-                  }
-                `}
-                title="Close recommendations"
-              >
-                <X className={`w-5 h-5`} />
-              </button>
-            </div>
-          )}
-          
-          {/* Mobile Handle Bar with Close Button - for embedded mobile panel */}
-          {embedded && (
-            <div className={`lg:hidden flex items-center justify-end p-3 border-b ${theme === 'light' ? 'border-gray-200 bg-white/90' : 'border-white/10 bg-black/20'}`}>
-              <button
-                onClick={() => {
-                  console.log('Mobile X button clicked - embedded', { onClose, embedded });
-                  embedded ? onClose?.() : setIsExpanded(false);
-                }}
-                className={`
-                  p-2 rounded-lg transition-all duration-200 border
-                  ${theme === 'light'
-                      ? 'hover:bg-gray-100 text-gray-600 border-gray-200 bg-white'
-                      : 'hover:bg-white/20 text-white border-white/20 bg-white/10'
-                  }
-                `}
-                title="Close recommendations"
-              >
-                <X className={`w-5 h-5`} />
-              </button>
-            </div>
-          )}
-
           {/* Header */}
           <div className={`p-4 lg:p-5 ${!embedded ? 'border-b' : ''} ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
             <div className="flex items-center justify-between mb-4">
@@ -785,7 +740,24 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 >
                   Reset All
                 </button>
-                {!embedded && (
+                {embedded ? (
+                  <button
+                    onClick={() => {
+                      console.log('Mobile X button clicked - embedded inline', { onClose, embedded });
+                      onClose?.();
+                    }}
+                    className={`
+                      p-2 rounded-lg transition-all duration-200 border
+                      ${theme === 'light'
+                          ? 'hover:bg-gray-100 text-gray-600 border-gray-200 bg-white'
+                          : 'hover:bg-white/20 text-white border-white/20 bg-white/10'
+                      }
+                    `}
+                    title="Close recommendations"
+                  >
+                    <X className={`w-5 h-5`} />
+                  </button>
+                ) : (
                   <button
                     onClick={() => setIsExpanded(false)}
                     className={`
