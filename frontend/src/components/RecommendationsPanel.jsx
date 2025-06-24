@@ -491,7 +491,16 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
     return 'Worth the trip';
   };
 
-  const EventCard = ({ event, index }) => {
+  // Memoized EventList to prevent re-renders when emotional message changes
+  const EventList = React.memo(({ events, onEventClick }) => (
+    <div className="space-y-3 lg:space-y-4">
+      {events.map((event, index) => (
+        <EventCard key={event.id} event={event} index={index} onEventClick={onEventClick} />
+      ))}
+    </div>
+  ));
+
+  const EventCard = React.memo(({ event, index, onEventClick }) => {
     const category = getCategory(event.category);
     const Icon = category.icon;
 
@@ -500,16 +509,11 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         className={`
           group relative overflow-hidden rounded-2xl backdrop-blur-sm
           transition-all duration-300 hover:scale-[1.02] cursor-pointer
-          animate-[slide-in-up_0.6s_ease-out] opacity-0
           ${theme === 'light'
               ? 'bg-white/80 border border-gray-200 hover:bg-white/90 shadow-sm'
               : 'bg-white/5 border border-white/10 hover:bg-white/10'
           }
         `}
-        style={{
-          animationDelay: `${index * 100}ms`,
-          animationFillMode: 'forwards'
-        }}
         onClick={() => onEventClick && onEventClick(event)}
       >
         {/* Gradient overlay */}
@@ -634,7 +638,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         </div>
       </div>
     );
-  };
+  });
 
   return (
     <div
@@ -1011,7 +1015,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   {routeEvents
                     .filter(event => !event.isRouteWaypoint) // Show only actual events, not waypoints
                     .map((event, index) => (
-                      <EventCard key={event.id || `route-event-${index}`} event={event} index={index} />
+                      <EventCard key={event.id || `route-event-${index}`} event={event} index={index} onEventClick={onEventClick} />
                     ))}
                 </div>
                 
@@ -1048,11 +1052,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   ))}
                 </div>
               ) : recommendations.length > 0 ? (
-                <div className="space-y-3 lg:space-y-4">
-                  {recommendations.map((event, index) => (
-                    <EventCard key={event.id} event={event} index={index} />
-                  ))}
-                </div>
+                <EventList events={recommendations} onEventClick={onEventClick} />
               ) : (
                 <div className="text-center py-6 space-y-3">
                   <div className={`
