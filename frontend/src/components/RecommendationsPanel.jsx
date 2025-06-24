@@ -156,32 +156,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
     return `${location.lat.toFixed(6)},${location.lng.toFixed(6)},${selectedFilter}`;
   };
 
-  const emotionalMessages = [
-    "Discover amazing events near you",
-    "Connect with your community",
-    "Find your next adventure",
-    "Explore local experiences",
-    "Create lasting memories"
-  ];
-
-  const [currentMessage, setCurrentMessage] = useState(0);
-  const [isMessageFading, setIsMessageFading] = useState(false);
-
-  // Rotate emotional messages with smooth fade transitions
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Start fade out
-      setIsMessageFading(true);
-      
-      // After fade out completes, change message and fade in
-      setTimeout(() => {
-        setCurrentMessage(prev => (prev + 1) % emotionalMessages.length);
-        setIsMessageFading(false);
-      }, 350); // Half of transition duration
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Check if we should ask for location on first load
   useEffect(() => {
     const hasAskedBefore = localStorage.getItem('locationPermissionAsked');
@@ -704,10 +678,23 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
       {/* Main content - only show when expanded or embedded */}
       {(isExpanded || embedded) && (
         <>
-          {/* Mobile Handle Bar - only show on mobile when expanded */}
+          {/* Mobile Handle Bar with Close Button - only show on mobile when expanded */}
           {!embedded && (
-            <div className={`lg:hidden flex justify-center p-2 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+            <div className={`lg:hidden flex items-center justify-between p-3 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
               <div className={`w-12 h-1 rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/30'}`} />
+              <button
+                onClick={() => setIsExpanded(false)}
+                className={`
+                  p-1.5 rounded-lg transition-all duration-200
+                  ${theme === 'light'
+                      ? 'hover:bg-gray-100 text-gray-500'
+                      : 'hover:bg-white/10 text-white/70'
+                  }
+                `}
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
 
@@ -722,7 +709,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
                   }
                 `}>
-                  <Compass className={`w-5 h-5 animate-[float-gentle_3s_ease-in-out_infinite] ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
+                  <Compass className={`w-5 h-5 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
                 </div>
                 <div>
                   <h2 className={`
@@ -732,8 +719,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     Discover
                     {gpsLocation && useGPS && (
                       <div className="flex items-center gap-1">
-                        <Navigation className="w-3 h-3 text-green-400 animate-pulse" />
-                        <span className="text-xs bg-green-400/20 text-green-400 px-1.5 py-0.5 rounded-full border border-green-400/30 animate-pulse">
+                        <Navigation className="w-3 h-3 text-green-400" />
+                        <span className="text-xs bg-green-400/20 text-green-400 px-1.5 py-0.5 rounded-full border border-green-400/30">
                           GPS
                         </span>
                       </div>
@@ -762,7 +749,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 <button
                   onClick={handleReset}
                   className={`
-                    px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105
+                    px-3 py-1.5 rounded-lg transition-all duration-200
                     text-xs font-medium
                     ${theme === 'light'
                         ? 'text-blue-600 hover:bg-blue-50 border border-blue-200'
@@ -777,7 +764,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   <button
                     onClick={() => setIsExpanded(false)}
                     className={`
-                      p-2 rounded-lg transition-all duration-200 hover:scale-105
+                      p-2 rounded-lg transition-all duration-200
                       ${theme === 'light'
                           ? 'hover:bg-gray-100'
                           : 'hover:bg-white/10'
@@ -788,27 +775,6 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     <X className={`w-4 h-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
                   </button>
                 )}
-              </div>
-            </div>
-
-            {/* Emotional message */}
-            <div className="text-center py-2 lg:py-3">
-              <div className="relative h-6 lg:h-7 flex items-center justify-center">
-                <p 
-                  key={currentMessage}
-                  className={`
-                    absolute inset-0 flex items-center justify-center
-                    text-sm lg:text-base font-medium 
-                    transition-opacity duration-700 ease-in-out
-                    ${isMessageFading ? 'opacity-0' : 'opacity-100'}
-                    ${theme === 'light' 
-                      ? 'text-gray-800 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent'
-                      : 'text-white bg-gradient-to-r from-spark-yellow to-pin-blue bg-clip-text text-transparent'
-                    }
-                  `}
-                >
-                  {emotionalMessages[currentMessage]}
-                </p>
               </div>
             </div>
 
