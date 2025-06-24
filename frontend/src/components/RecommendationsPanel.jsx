@@ -44,7 +44,7 @@ const debounce = (func, delay) => {
   };
 };
 
-const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRouteCalculated, onRouteEventsDiscovered, mapInstance, embedded = false, routeEvents = [], onClearRoute }) => {
+const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRouteCalculated, onRouteEventsDiscovered, mapInstance, embedded = false, routeEvents = [], onClearRoute, onClose }) => {
   const { theme } = useTheme();
   const [activeMode, setActiveMode] = useState('recommendations'); // 'recommendations' or 'route'
   
@@ -683,7 +683,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
             <div className={`lg:hidden flex items-center justify-between p-3 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
               <div className={`w-12 h-1 rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/30'}`} />
               <button
-                onClick={() => setIsExpanded(false)}
+                onClick={() => embedded ? onClose?.() : setIsExpanded(false)}
                 className={`
                   p-2 rounded-lg transition-all duration-200 border
                   ${theme === 'light'
@@ -691,9 +691,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       : 'hover:bg-white/20 text-white border-white/20 bg-white/10'
                   }
                 `}
-                title="Close"
+                title="Close recommendations"
               >
-                <X className="w-5 h-5" />
+                <X className={`w-5 h-5`} />
               </button>
             </div>
           )}

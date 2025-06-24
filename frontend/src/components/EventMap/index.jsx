@@ -4425,6 +4425,7 @@ const EventMap = ({
                 embedded={true}
                 routeEvents={routeEvents}
                 onClearRoute={handleCloseRoutePlanner}
+                onClose={() => setIsMobileRecommendationsOpen(false)}
               />
             </div>
           </div>
