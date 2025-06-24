@@ -98,14 +98,15 @@ const getConnectionStatus = () => {
 };
 
 export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
-  // Adjust timeout for mobile or slow connections
+  // Much more aggressive timeout adjustments for mobile
   let adjustedTimeout = timeout;
   if (isMobileOrSlowConnection()) {
-    adjustedTimeout = Math.max(timeout * 2, 35000); // At least 35 seconds for mobile, double timeout
+    // Minimum 60 seconds for mobile, triple the timeout
+    adjustedTimeout = Math.max(timeout * 3, 60000);
   }
 
   const attempt = options._retryCount || 1;
-  const maxAttempts = 5;
+  const maxAttempts = isMobileOrSlowConnection() ? 7 : 5; // More attempts for mobile
   
   // Pre-flight connection health check for critical endpoints
   // Temporarily disabled to prevent blocking recommendations - health check causing issues
@@ -132,6 +133,11 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
       headers: {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
+        // Add mobile-specific headers
+        ...(isMobileOrSlowConnection() && {
+          'Accept-Encoding': 'gzip, deflate',
+          'Connection': 'keep-alive'
+        }),
         ...options.headers
       }
     };
@@ -185,13 +191,13 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
       }
     }
     
-    // For timeout errors or network errors, try one more time
+    // For timeout errors or network errors, try more times with longer waits
     if ((isTimeoutError || isNetworkError) && attempt < maxAttempts) {
       console.log(`Request to ${url} failed (${error.message}), retrying with longer timeout...`);
       
-      // Wait a bit before retrying with exponential backoff
-      const baseWaitTime = isMobileOrSlowConnection() ? 4000 : 2000;
-      const waitTime = baseWaitTime * Math.pow(1.5, attempt - 1);
+      // Much longer wait times for mobile with exponential backoff
+      const baseWaitTime = isMobileOrSlowConnection() ? 6000 : 2000;
+      const waitTime = Math.min(baseWaitTime * Math.pow(2, attempt - 1), 30000); // Cap at 30s
       await new Promise(resolve => setTimeout(resolve, waitTime));
       
       // Create new options with retry count
@@ -200,9 +206,10 @@ export const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
         _retryCount: attempt + 1
       };
       
-      // Try once more with a significantly longer timeout
-      const retryTimeout = adjustedTimeout * (1.5 + (attempt * 0.3)); // Progressive timeout increase
-      console.log(`Retrying with timeout: ${retryTimeout}ms`);
+      // Much more aggressive timeout increases for mobile
+      const multiplier = isMobileOrSlowConnection() ? (2 + (attempt * 0.5)) : (1.5 + (attempt * 0.3));
+      const retryTimeout = Math.min(adjustedTimeout * multiplier, 120000); // Cap at 2 minutes
+      console.log(`Retrying with timeout: ${retryTimeout}ms (mobile: ${isMobileOrSlowConnection()})`);
       return fetchWithTimeout(url, retryOptions, retryTimeout);
     }
     

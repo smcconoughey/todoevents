@@ -970,9 +970,26 @@ const EventMap = ({
     try {
       setError(null);
 
-      // Fetch events with a much higher limit to support better filtering
-      // Use extra long timeout for main events fetch since it's critical
-      const response = await fetchWithTimeout(`${API_URL}/events?limit=1000`, {}, 45000);
+      // Mobile-optimized fetching: smaller initial load for mobile devices
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSlowConnection = navigator.connection && (
+        navigator.connection.effectiveType === '2g' || 
+        navigator.connection.effectiveType === 'slow-2g' ||
+        navigator.connection.saveData === true
+      );
+      
+      // Adaptive limits based on device and connection
+      let eventLimit = 1000;
+      let fetchTimeout = 45000;
+      
+      if (isMobile || isSlowConnection) {
+        eventLimit = 500; // Smaller initial load for mobile
+        fetchTimeout = 90000; // Much longer timeout for mobile (1.5 minutes)
+        console.log('📱 Mobile/slow connection detected - using reduced limit and extended timeout');
+      }
+
+      // Fetch events with adaptive parameters
+      const response = await fetchWithTimeout(`${API_URL}/events?limit=${eventLimit}`, {}, fetchTimeout);
       
       if (!response || !Array.isArray(response)) {
         console.warn('Invalid response format from events API:', response);
@@ -1026,7 +1043,7 @@ const EventMap = ({
         };
       });
 
-      console.log(`Fetched ${response.length} events, ${validEvents.length} valid events`);
+      console.log(`📊 Fetched ${response.length} events, ${validEvents.length} valid events (mobile: ${isMobile})`);
       
       // Debug: Log first few events to see their data
                       console.log('Sample events data:', validEvents.slice(0, 2).map(e => ({
@@ -1057,17 +1074,40 @@ const EventMap = ({
       setEvents(validEvents);
       setIsInitialLoading(false);
 
+      // For mobile with small initial load, optionally fetch more events in background
+      if ((isMobile || isSlowConnection) && eventLimit < 1000 && validEvents.length === eventLimit) {
+        console.log('📱 Mobile: Scheduling background fetch for remaining events');
+        setTimeout(async () => {
+          try {
+            console.log('📱 Background fetching remaining events...');
+            const backgroundResponse = await fetchWithTimeout(`${API_URL}/events?limit=1000&offset=${eventLimit}`, {}, 120000);
+            if (backgroundResponse && Array.isArray(backgroundResponse)) {
+              const additionalEvents = backgroundResponse.filter(event => 
+                event && typeof event === 'object' && 
+                event.id && event.title && event.date && event.lat && event.lng
+              );
+              if (additionalEvents.length > 0) {
+                setEvents(prev => [...prev, ...additionalEvents]);
+                console.log(`📱 Background fetch added ${additionalEvents.length} more events`);
+              }
+            }
+          } catch (error) {
+            console.log('📱 Background fetch failed (non-critical):', error.message);
+          }
+        }, 5000); // Wait 5 seconds before background fetch
+      }
+
     } catch (error) {
       console.error('Error fetching events:', error);
       
-      // Provide more specific error messages based on error type
+      // More specific error messages for mobile users
       let errorMessage = 'Failed to load events. Please try again.';
-      if (error.message === 'Request timed out') {
-        errorMessage = 'Connection is slow. Events are still loading... Please wait or refresh the page.';
+      if (error.message.includes('timed out') || error.message.includes('timeout')) {
+        errorMessage = 'Connection is taking longer than usual. Please wait a moment or try refreshing the page.';
       } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-        errorMessage = 'Network connection issue. Please check your internet and try again.';
+        errorMessage = 'Network connection issue. Please check your internet connection and try again.';
       } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
-        errorMessage = 'Server is temporarily unavailable. Please try again in a moment.';
+        errorMessage = 'Server is temporarily busy. Please try again in a moment.';
       }
       
       setError(errorMessage);
@@ -1079,13 +1119,16 @@ const EventMap = ({
   useEffect(() => {
     fetchEvents();
     
-    // Backup fetch mechanism - if events aren't loaded after 5 seconds, try again
+    // Mobile-adaptive backup fetch mechanism
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const backupDelay = isMobile ? 15000 : 5000; // 15 seconds for mobile, 5 for desktop
+    
     const backupTimer = setTimeout(() => {
       if (events.length === 0 && !error) {
-        console.log('🔄 Backup fetch triggered - no events loaded after 5 seconds');
+        console.log(`🔄 Backup fetch triggered - no events loaded after ${backupDelay/1000} seconds (mobile: ${isMobile})`);
         fetchEvents();
       }
-    }, 5000);
+    }, backupDelay);
     
     return () => clearTimeout(backupTimer);
   }, []); // Only fetch events once on component mount
