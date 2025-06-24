@@ -267,7 +267,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         backendFilter = 'upcoming';
         eventLimit = 20; // Show more events for 'all' filter
       }
-
+      
       const requestBody = {
         lat: activeLocation?.lat || null,
         lng: activeLocation?.lng || null,
@@ -275,7 +275,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
         time_filter: backendFilter,
         limit: eventLimit
       };
-      
+
       console.log('📍 Recommendations fetch using:', requestBody);
 
       const controller = new AbortController();
@@ -485,7 +485,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           transition-all duration-300 hover:scale-[1.02] cursor-pointer
           ${theme === 'light'
               ? 'bg-white/80 border border-gray-200 hover:bg-white/90 shadow-sm'
-              : 'bg-white/5 border border-white/10 hover:bg-white/10'
+            : 'bg-white/5 border border-white/10 hover:bg-white/10'
           }
         `}
         onClick={() => onEventClick && onEventClick(event)}
@@ -495,7 +495,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300
           ${theme === 'light'
               ? 'bg-gradient-to-br from-blue-50/50 to-indigo-50/50'
-              : 'bg-gradient-to-br from-spark-yellow/5 to-pin-blue/5'
+            : 'bg-gradient-to-br from-spark-yellow/5 to-pin-blue/5'
           }
         `} />
 
@@ -508,7 +508,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 p-1.5 lg:p-2 rounded-xl transition-colors duration-200
                 ${theme === 'light'
                     ? 'bg-blue-50 group-hover:bg-blue-100'
-                    : 'bg-spark-yellow/10 group-hover:bg-spark-yellow/20'
+                  : 'bg-spark-yellow/10 group-hover:bg-spark-yellow/20'
                 }
               `}>
                 <Icon className={`w-3 h-3 lg:w-4 lg:h-4 ${category.color}`} />
@@ -521,7 +521,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs font-medium rounded-full
                       ${theme === 'light'
                           ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                          : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30'
+                        : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/30'
                       }
                     `}
                   >
@@ -622,13 +622,13 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           : `fixed z-30 backdrop-blur-md rounded-2xl shadow-2xl transition-all duration-500 flex flex-col
             ${theme === 'light'
                 ? 'bg-white/95 border border-gray-200 shadow-xl'
-                : 'bg-neutral-900/80 border border-white/10'
-            }
+          : 'bg-neutral-900/80 border border-white/10'
+        }
             /* Desktop: Right panel - full height, always partially visible */
             lg:right-4 lg:top-4 lg:bottom-4 lg:w-96
             ${isExpanded ? 'lg:translate-x-0' : 'lg:translate-x-72'} /* Leave 6rem visible when collapsed */
             
-            /* Mobile: Bottom sheet */
+        /* Mobile: Bottom sheet */
             ${isExpanded 
               ? 'bottom-0 right-0 left-0 max-h-[85vh]' 
               : 'bottom-4 right-4 left-auto w-16 h-16 rounded-full'
@@ -653,7 +653,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
           >
             <ChevronLeft className={`w-5 h-5 ${theme === 'light' ? 'text-gray-600' : 'text-white'}`} />
           </button>
-        </div>
+      </div>
       )}
 
       {/* Mobile collapsed state - floating action button */}
@@ -678,27 +678,27 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
       {/* Main content - only show when expanded or embedded */}
       {(isExpanded || embedded) && (
         <>
-          {/* Header */}
+      {/* Header */}
           <div className={`p-4 lg:p-5 ${!embedded ? 'border-b' : ''} ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`
-                  p-2 rounded-xl
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`
+              p-2 rounded-xl
                   ${theme === 'light'
                       ? 'bg-gradient-to-br from-blue-100 to-indigo-100'
-                      : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
-                  }
-                `}>
+                : 'bg-gradient-to-br from-spark-yellow/20 to-pin-blue/20'
+              }
+            `}>
                   <Compass className={`w-5 h-5 ${theme === 'light' ? 'text-blue-600' : 'text-white'}`} />
-                </div>
-                <div>
+            </div>
+            <div>
                   <h2 className={`
                     text-lg lg:text-xl font-display font-bold flex items-center gap-2 flex-wrap
                     ${theme === 'light' ? 'text-gray-900' : 'text-white'}
                   `}>
-                    Discover
+                Discover
                     {gpsLocation && useGPS && (
-                      <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                         <Navigation className="w-3 h-3 text-green-400" />
                         <span className="text-xs bg-green-400/20 text-green-400 px-1.5 py-0.5 rounded-full border border-green-400/30">
                           GPS
@@ -710,10 +710,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                         <MapPin className="w-3 h-3 text-blue-400" />
                         <span className="text-xs bg-blue-400/20 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-400/30">
                           Manual
-                        </span>
-                      </div>
-                    )}
-                  </h2>
+                    </span>
+                  </div>
+                )}
+              </h2>
                   <p className={`text-xs lg:text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
                     {(() => {
                       const activeLocation = getActiveLocation();
@@ -722,24 +722,24 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       }
                       return 'Events near you';
                     })()}
-                  </p>
-                </div>
-              </div>
+              </p>
+            </div>
+          </div>
               <div className="flex items-center gap-2">
-                <button
+          <button
                   onClick={handleReset}
-                  className={`
+            className={`
                     px-3 py-1.5 rounded-lg transition-all duration-200
                     text-xs font-medium
                     ${theme === 'light'
                         ? 'text-blue-600 hover:bg-blue-50 border border-blue-200'
                         : 'text-pin-blue hover:bg-pin-blue/10 border border-pin-blue/40'
-                    }
-                  `}
+              }
+            `}
                   title="Reset all filters and location"
                 >
                   Reset All
-                </button>
+          </button>
                 {embedded ? (
                   <button
                     onClick={() => {
@@ -758,9 +758,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     <X className={`w-5 h-5`} />
                   </button>
                 ) : (
-                  <button
+            <button
                     onClick={() => setIsExpanded(false)}
-                    className={`
+              className={`
                       hidden lg:block p-2 rounded-lg transition-all duration-200
                       ${theme === 'light'
                           ? 'hover:bg-gray-100'
@@ -768,12 +768,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       }
                     `}
                     title="Hide recommendations"
-                  >
+            >
                     <X className={`w-4 h-4 ${theme === 'light' ? 'text-gray-500' : 'text-white/70'}`} />
-                  </button>
+            </button>
                 )}
-              </div>
-            </div>
+        </div>
+      </div>
 
             {/* Mode Toggle Slider - Desktop and Mobile */}
             <div className="mb-3">
@@ -786,8 +786,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                 `}>
                   <div className="grid grid-cols-2 relative">
                     {/* Sliding background */}
-                    <div
-                      className={`
+                <div
+                  className={`
                         absolute top-1 bottom-1 w-1/2 rounded-lg transition-all duration-300 ease-out
                         ${theme === 'light'
                             ? 'bg-white border border-gray-300 shadow-sm'
@@ -800,50 +800,50 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     />
                     
                     {/* Buttons */}
-                    <button
+              <button
                       onClick={() => setActiveMode('recommendations')}
-                      className={`
+                className={`
                         relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
                         font-medium transition-all duration-200
                         ${embedded ? 'text-xs' : 'text-sm'}
                         ${activeMode === 'recommendations'
                           ? theme === 'light' ? 'text-gray-900' : 'text-white'
                           : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
-                        }
-                      `}
-                    >
+                  }
+                `}
+              >
                       <Compass className="w-4 h-4" />
                       <span>Discover</span>
-                    </button>
+              </button>
                     
-                    <button
+                <button
                       onClick={() => {
                         console.log('🎯 Plan Route tab clicked, switching to route mode');
                         setActiveMode('route');
                       }}
-                      className={`
+                  className={`
                         relative z-10 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg
                         font-medium transition-all duration-200
                         ${embedded ? 'text-xs' : 'text-sm'}
                         ${activeMode === 'route'
                           ? theme === 'light' ? 'text-gray-900' : 'text-white'
                           : theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-white/60 hover:text-white/80'
-                        }
-                      `}
-                    >
+                    }
+                  `}
+                >
                       <Navigation className="w-4 h-4" />
                       <span>Plan Route</span>
-                    </button>
-                  </div>
-                </div>
+                </button>
               </div>
+            </div>
+        </div>
 
             {/* Location Control Buttons - Only show in recommendations mode */}
             {activeMode === 'recommendations' && (
               <>
                 {/* Compact Location Controls */}
                 <div className={`grid grid-cols-2 gap-2 ${embedded ? 'mt-2' : 'mt-4'}`}>
-                  <button
+            <button
                     onClick={switchToGPS}
                     disabled={isLoadingGPS}
                     className={`
@@ -865,7 +865,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                           ? (useGPS ? 'Using GPS location' : 'Switch to GPS location') 
                           : 'Get GPS location'
                     }
-                  >
+            >
                     <Navigation className={`w-4 h-4 ${isLoadingGPS ? 'animate-spin' : ''}`} />
                     <span className="text-xs lg:text-sm">
                       {isLoadingGPS 
@@ -875,8 +875,8 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                           : 'Get GPS'
                       }
                     </span>
-                  </button>
-                  
+            </button>
+            
                   <button
                     onClick={handleExploreCities}
                     className={`
@@ -885,15 +885,15 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       ${theme === 'light'
                           ? 'bg-amber-50 text-amber-600 border border-amber-200 active:bg-amber-100'
                           : 'bg-spark-yellow/20 text-spark-yellow border border-spark-yellow/40 active:bg-spark-yellow/30'
-                      }
+                }
                     `}
                     title="Explore nearby cities"
                   >
                     <Globe className="w-4 h-4" />
                     <span className="text-xs lg:text-sm">Cities</span>
                   </button>
-                </div>
-
+              </div>
+              
                 {/* Compact Filter tabs */}
                 <div className={`grid grid-cols-4 gap-1 ${embedded ? 'mt-2' : 'mt-4'}`}>
                   {[
@@ -902,10 +902,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     { key: 'this_weekend', label: 'Weekend', icon: Calendar },
                     { key: 'next_2_weeks', label: '2 Weeks', icon: Calendar }
                   ].map(({ key, label, icon: Icon }, index) => (
-                    <button
+                <button
                       key={`${key}-${index}`} // Use index to allow duplicate keys
                       onClick={() => setSelectedFilter(key)}
-                      className={`
+                  className={`
                         flex flex-col items-center justify-center gap-1 rounded-lg
                         text-xs font-medium transition-all duration-200 active:scale-95
                         ${embedded ? 'py-1.5 px-1' : 'py-2 px-1'}
@@ -916,12 +916,12 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                           : theme === 'light'
                             ? 'text-gray-500 active:bg-gray-100 border border-transparent'
                             : 'text-white/60 active:bg-white/10 border border-transparent'
-                        }
-                      `}
-                    >
+                    }
+                  `}
+                >
                       <Icon className="w-3 h-3" />
                       <span className="leading-none">{label}</span>
-                    </button>
+                </button>
                   ))}
                 </div>
               </>
@@ -957,11 +957,11 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     <span className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/70'}`}>
                       {routeEvents.filter(e => !e.isRouteWaypoint).length} events found
                     </span>
-                    <button
-                      onClick={() => {
+                <button
+                  onClick={() => {
                         setActiveMode('recommendations');
                         onClearRoute?.();
-                      }}
+                  }}
                       className={`
                         p-1.5 rounded-lg transition-colors
                         ${theme === 'light' ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-white/10 text-white/70'}
@@ -969,10 +969,10 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                       title="Clear route"
                     >
                       <X className="w-4 h-4" />
-                    </button>
+                </button>
                   </div>
-                </div>
-                
+              </div>
+              
                 {/* Route Events List */}
                 <div className="space-y-3">
                   {routeEvents
@@ -980,25 +980,25 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     .map((event, index) => (
                       <EventCard key={event.id || `route-event-${index}`} event={event} index={index} onEventClick={onEventClick} />
                     ))}
-                </div>
-                
+            </div>
+
                 {routeEvents.filter(e => !e.isRouteWaypoint).length === 0 && (
                   <div className="text-center py-6 space-y-3">
-                    <div className={`
+          <div className={`
                       w-12 h-12 rounded-full mx-auto flex items-center justify-center
                       ${'bg-white/10'}
-                    `}>
+                `}>
                       <Navigation className="w-6 h-6 text-white/60" />
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <h4 className={`font-medium mb-1 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                         Route calculated successfully
                       </h4>
                       <p className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
                         No events found along this route. Try adjusting your search radius or travel dates.
-                      </p>
-                    </div>
-                  </div>
+                  </p>
+                </div>
+              </div>
                 )}
               </div>
             ) : activeMode === 'recommendations' ? (
@@ -1039,23 +1039,23 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                     </p>
                   </div>
                   {!getActiveLocation() && (
-                    <button
+                  <button
                       onClick={switchToGPS}
                       disabled={isLoadingGPS}
-                      className={`
+                    className={`
                         px-4 py-2 rounded-lg font-medium transition-all duration-200
                         ${isLoadingGPS
                             ? 'bg-gray-400/20 text-gray-400 border border-gray-400/40 cursor-not-allowed'
                             : theme === 'light'
                                 ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200'
                                 : 'bg-pin-blue/20 text-pin-blue border border-pin-blue/30 hover:bg-pin-blue/30'}
-                      `}
-                    >
+                    `}
+                  >
                       <Navigation className={`w-4 h-4 inline mr-2 ${isLoadingGPS ? 'animate-spin' : ''}`} />
                       {isLoadingGPS ? 'Getting Location...' : 'Get Location'}
-                    </button>
-                  )}
-                </div>
+                  </button>
+              )}
+            </div>
               )
             ) : activeMode === 'route' ? (
               // Route Planner Content (when in route mode but no route events yet)
@@ -1068,9 +1068,9 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   theme={theme}
                   embedded={true} // Add embedded prop to adjust styling
                 />
-              </div>
-            ) : null}
           </div>
+            ) : null}
+        </div>
         </>
       )}
     </div>

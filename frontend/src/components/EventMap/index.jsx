@@ -413,7 +413,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
 
       const canonicalUrl = generateCanonicalUrl(event);
       const { element: canonicalEl, previousHref: originalCanonical } = injectCanonicalLink(canonicalUrl);
-
+      
       // Update page title and meta description for this event
       const originalTitle = document.title;
       const originalDescription = document.querySelector('meta[name="description"]')?.content;
@@ -469,9 +469,9 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
                 />
               </div>
             ) : (
-              <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
-                <Icon className={`w-6 h-6 ${category.color}`} />
-              </div>
+            <div className="p-2 rounded-lg bg-spark-yellow/10 border border-spark-yellow/20">
+              <Icon className={`w-6 h-6 ${category.color}`} />
+            </div>
             )}
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
@@ -1575,7 +1575,7 @@ const EventMap = ({
   const handleAddressSelect = (data) => {
     setSelectedLocation({ lat: data.lat, lng: data.lng, address: data.address, city: data.address });
     setSearchValue(data.address);
-
+    
     // Center map on the chosen location
     setMapCenter({ lat: data.lat, lng: data.lng });
 
@@ -4024,14 +4024,14 @@ const EventMap = ({
                   
                   // Normal mode - show regular events based on filters
                   const regularEvents = (
-                    // Always show all events unless filters are active
-                    selectedDate || 
-                    selectedTime !== 'all' || 
-                    !selectedCategory.includes('all') || 
-                    mapCenter ||
-                    miscFilters.feeFilter !== 'all'
-                      ? filteredEvents
-                      : events
+                  // Always show all events unless filters are active
+                  selectedDate || 
+                  selectedTime !== 'all' || 
+                  !selectedCategory.includes('all') || 
+                  mapCenter ||
+                  miscFilters.feeFilter !== 'all'
+                    ? filteredEvents
+                    : events
                   ) || [];
                   
                   console.log('🗺️ Normal mode - showing regular events:', regularEvents.length);
@@ -4142,13 +4142,13 @@ const EventMap = ({
                 
                 // Normal mode - show regular events based on filters
                 return (
-                  // Always show all events unless filters are active
-                  selectedDate || 
-                  selectedTime !== 'all' || 
-                  !selectedCategory.includes('all') || 
-                  effectiveMapCenter ||
-                  miscFilters.feeFilter !== 'all'
-                    ? filteredEvents
+              // Always show all events unless filters are active
+              selectedDate || 
+              selectedTime !== 'all' || 
+              !selectedCategory.includes('all') || 
+              effectiveMapCenter ||
+              miscFilters.feeFilter !== 'all'
+                ? filteredEvents
                     : events
                 ) || [];
               })(),
@@ -4465,7 +4465,7 @@ const EventMap = ({
                 onClose={() => setIsMobileRecommendationsOpen(false)}
               />
             </div>
-          </div>
+        </div>
         </>
       )}
 

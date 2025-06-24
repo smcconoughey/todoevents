@@ -85,9 +85,9 @@ const RoutePlanner = ({
             hasDirectionsService: !!window.google?.maps?.DirectionsService
           });
           
-          if (isMapsReady() && window.google?.maps?.DirectionsService) {
+        if (isMapsReady() && window.google?.maps?.DirectionsService) {
             // Only initialize the DirectionsService, don't set any map
-            directionsServiceRef.current = new window.google.maps.DirectionsService();
+          directionsServiceRef.current = new window.google.maps.DirectionsService();
             console.log('✅ DirectionsService initialized successfully');
             setIsGoogleMapsLoading(false);
             return true;
@@ -205,21 +205,21 @@ const RoutePlanner = ({
       for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
         const step = steps[stepIndex];
         const stepDistanceMeters = step.distance.value;
-        
+          
         // If we haven't reached enough intermediate points yet
         if (points.filter(p => !p.isWaypoint).length < optimalPointCount - 2) {
           // Check if this step crosses our target distance
           if (accumulatedDistance + stepDistanceMeters >= targetDistance) {
             // Add a point at the step location (good approximation)
-            points.push({
+              points.push({
               lat: step.start_location.lat(),
               lng: step.start_location.lng(),
-              legIndex,
-              stepIndex,
+                legIndex,
+                stepIndex,
               stepStart: true,
               isWaypoint: false,
               routeProgress: accumulatedDistance / (totalDistanceMiles * 1609.34)
-            });
+              });
             
             // Set next target distance
             targetDistance += spacingMeters;
@@ -264,7 +264,7 @@ const RoutePlanner = ({
     // Get current date for route waypoints
     const currentDate = new Date().toISOString().split('T')[0];
     const currentTime = new Date().toTimeString().slice(0, 5);
-    
+      
     // Extract key points from the route
     route.legs.forEach((leg, legIndex) => {
       // Add start location (major city/landmark)
@@ -372,7 +372,7 @@ const RoutePlanner = ({
         });
       }
     });
-    
+
     console.log(`✅ Extracted ${routeEvents.length} route waypoints`);
     return routeEvents;
   };
@@ -393,12 +393,12 @@ const RoutePlanner = ({
       // Prepare the request payload for the backend
       const requestPayload = {
         coordinates: samplePoints.map(point => ({
-          lat: point.lat,
-          lng: point.lng
+        lat: point.lat,
+        lng: point.lng
         })),
         radius: searchRadius
       };
-      
+
       // Add timing context if provided
       if (timingContext && enableEventTimeFilter) {
         const flexibility = eventTimeFlexibility;
@@ -414,7 +414,7 @@ const RoutePlanner = ({
           endDate: endDate.toISOString().split('T')[0]
         };
       }
-      
+
       const searchUrl = `${API_URL}/events/route-batch`;
       console.log('🔍 Event search URL:', searchUrl);
       console.log('📦 Request payload:', requestPayload);
@@ -590,7 +590,7 @@ const RoutePlanner = ({
 
           // Extract route waypoints from Google Directions response
           const routeWaypoints = extractRouteEvents(result);
-          
+
           // Sample points along the route for event discovery
           const samplePoints = sampleRoutePoints(route, searchRadius);
           console.log(`🎯 Sampling ${samplePoints.length} points along route for event search`);
@@ -683,18 +683,18 @@ const RoutePlanner = ({
         }
       `}</style>
       {!embedded && (
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Navigation className="w-5 h-5" />
-            Route Planner
-          </h3>
-          <button
-            onClick={onClose}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Navigation className="w-5 h-5" />
+          Route Planner
+        </h3>
+        <button
+          onClick={onClose}
             className={`p-1 rounded-full ${theme === 'light' ? 'hover:bg-gray-200' : 'hover:bg-gray-700'}`}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
       )}
 
       <div className="space-y-4">

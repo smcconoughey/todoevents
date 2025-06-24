@@ -127,7 +127,7 @@ if (require.main === module) {
     main().catch(console.error);
 }
 
-module.exports = { syncSitemap };
+module.exports = { syncSitemap }; 
 
 /**
  * Adds alternate URL patterns for each event entry so we always have:
