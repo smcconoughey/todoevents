@@ -764,7 +764,7 @@ const RecommendationsPanel = ({ userLocation, onEventClick, onExploreMore, onRou
                   <button
                     onClick={() => setIsExpanded(false)}
                     className={`
-                      p-2 rounded-lg transition-all duration-200
+                      hidden lg:block p-2 rounded-lg transition-all duration-200
                       ${theme === 'light'
                           ? 'hover:bg-gray-100'
                           : 'hover:bg-white/10'
