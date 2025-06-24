@@ -1796,7 +1796,8 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
-.video-embed iframe {
+.video-embed iframe,
+.video-embed video {
     position: absolute;
     top: 0;
     left: 0;
@@ -1804,6 +1805,7 @@ body {
     height: 100%;
     border: none;
     border-radius: 12px;
+    object-fit: cover;
 }
 
 .video-description {
