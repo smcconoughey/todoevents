@@ -5008,7 +5008,16 @@ async def serve_uploaded_image(image_type: str, filename: str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Image not found")
     
-    return FileResponse(file_path)
+    # Return file with proper headers for browser caching and CORS
+    return FileResponse(
+        file_path,
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 @app.delete("/events/{event_id}/banner")
 async def delete_event_banner(
