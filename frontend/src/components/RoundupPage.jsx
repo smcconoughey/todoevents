@@ -16,7 +16,22 @@ import {
   Filter,
   Image as ImageIcon,
   Grid,
-  Search
+  Search,
+  Loader2,
+  MapIcon,
+  Music,
+  Users,
+  GraduationCap,
+  Coffee,
+  Gamepad2,
+  Heart,
+  Briefcase,
+  Baby,
+  Utensils,
+  Camera,
+  Palette,
+  Zap,
+  CircleDot
 } from 'lucide-react';
 import { WebIcon } from './EventMap/WebIcons';
 import { CategoryIcon } from './EventMap/CategoryIcons';
@@ -35,6 +50,22 @@ const debounce = (func, delay) => {
     }, delay);
   };
 };
+
+// Line clamp utility styles
+const lineClampStyles = `
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+`;
 
 const RoundupPage = () => {
   const { theme } = useTheme();
@@ -251,6 +282,9 @@ const RoundupPage = () => {
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-neutral-950' : 'bg-gray-50'}`}>
+      {/* Add line clamp styles */}
+      <style dangerouslySetInnerHTML={{ __html: lineClampStyles }} />
+      
       {/* Header */}
       <div className={`${theme === 'dark' ? 'bg-neutral-900' : 'bg-white'} shadow-sm border-b ${theme === 'dark' ? 'border-neutral-800' : 'border-gray-200'}`}>
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -560,9 +594,9 @@ const RoundupPage = () => {
           </div>
 
           {/* Map Section */}
-          <div className="flex-1 px-6 pb-6">
+          <div className="flex-1 px-6 pb-4">
             <div 
-              className="w-full h-80 rounded-2xl overflow-hidden shadow-2xl mb-6 relative"
+              className="w-full h-64 rounded-2xl overflow-hidden shadow-2xl mb-6 relative"
               style={{ backgroundColor: '#e8f4f8' }}
             >
               {/* Simulated Map Background */}
@@ -659,12 +693,12 @@ const RoundupPage = () => {
                 {events.slice(0, 6).map((event, index) => {
                   const category = getCategory(event.category);
                   const positions = [
-                    { x: '25%', y: '20%' },
-                    { x: '65%', y: '35%' },
-                    { x: '45%', y: '55%' },
-                    { x: '75%', y: '70%' },
-                    { x: '20%', y: '75%' },
-                    { x: '55%', y: '25%' }
+                    { x: '25%', y: '30%' },
+                    { x: '65%', y: '45%' },
+                    { x: '45%', y: '65%' },
+                    { x: '75%', y: '25%' },
+                    { x: '20%', y: '70%' },
+                    { x: '55%', y: '35%' }
                   ];
                   const pos = positions[index] || positions[0];
                   
@@ -679,50 +713,26 @@ const RoundupPage = () => {
                     >
                       {/* Pin Drop Shadow */}
                       <div 
-                        className="absolute top-12 left-1/2 transform -translate-x-1/2 w-6 h-3 rounded-full opacity-20 blur-sm"
+                        className="absolute top-8 left-1/2 transform -translate-x-1/2 w-4 h-2 rounded-full opacity-20 blur-sm"
                         style={{ backgroundColor: '#000' }}
                       />
                       
-                      {/* Main Pin */}
-                      <div className="relative">
-                        {/* Pin Shape using SVG */}
-                        <svg 
-                          width="40" 
-                          height="52" 
-                          viewBox="0 0 40 52" 
-                          className="drop-shadow-lg"
-                        >
-                          {/* Pin Body */}
-                          <path
-                            d="M20 0C8.954 0 0 8.954 0 20c0 11.046 20 32 20 32s20-20.954 20-32C40 8.954 31.046 0 20 0z"
-                            fill={category.color}
-                            stroke="rgba(255,255,255,0.3)"
-                            strokeWidth="2"
-                          />
-                          {/* Inner circle for icon */}
-                          <circle
-                            cx="20"
-                            cy="20"
-                            r="12"
-                            fill="rgba(255,255,255,0.9)"
-                          />
-                        </svg>
-                        
-                        {/* Category Icon */}
+                      {/* Main Pin - Simplified for better rendering */}
+                      <div className="relative w-8 h-10">
+                        {/* Pin background circle */}
                         <div 
-                          className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center justify-center w-6 h-6"
+                          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
+                          style={{ backgroundColor: category.color }}
                         >
                           <CategoryIcon 
                             category={event.category} 
-                            className="w-5 h-5" 
-                            style={{ color: category.color }}
+                            className="w-4 h-4 text-white" 
                           />
                         </div>
-                        
-                        {/* Pin Highlight */}
+                        {/* Pin point */}
                         <div 
-                          className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full opacity-30"
-                          style={{ backgroundColor: 'white' }}
+                          className="absolute top-6 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-4 border-transparent"
+                          style={{ borderTopColor: category.color }}
                         />
                       </div>
                     </div>
@@ -730,10 +740,10 @@ const RoundupPage = () => {
                 })}
 
                 {/* Location Label */}
-                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg">
+                <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-lg">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-gray-800">
+                    <MapPin className="w-3 h-3 text-blue-600" />
+                    <span className="text-xs font-medium text-gray-800">
                       {selectedLocation?.city}
                     </span>
                   </div>
@@ -742,47 +752,47 @@ const RoundupPage = () => {
             </div>
 
             {/* Events List */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {events.slice(0, 6).map((event, index) => {
                 const category = getCategory(event.category);
                 return (
                   <div
                     key={event.id}
-                    className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg border-l-4"
+                    className="bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-lg border-l-4"
                     style={{ borderLeftColor: category.color }}
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3">
                       {/* Event Icon */}
                       <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center shadow-md flex-shrink-0"
+                        className="w-10 h-10 rounded-full flex items-center justify-center shadow-md flex-shrink-0 mt-0.5"
                         style={{ backgroundColor: `${category.color}20` }}
                       >
                         <CategoryIcon 
                           category={event.category} 
-                          className="w-6 h-6" 
+                          className="w-5 h-5" 
                           style={{ color: category.color }}
                         />
                       </div>
 
                       {/* Event Details */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg text-gray-900 mb-1 leading-tight">
+                        <h3 className="font-bold text-base text-gray-900 mb-1 leading-tight line-clamp-2">
                           {event.title}
                         </h3>
                         
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-gray-600">
-                            <Calendar className="w-4 h-4" style={{ color: category.color }} />
-                            <span className="font-medium">
+                            <Calendar className="w-3 h-3 flex-shrink-0" style={{ color: category.color }} />
+                            <span className="text-sm font-medium">
                               {formatEventDate(event)}
                               {event.start_time && ` • ${formatEventTime(event)}`}
                             </span>
                           </div>
                           
                           {event.address && (
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <MapPin className="w-4 h-4" style={{ color: category.color }} />
-                              <span className="text-sm truncate">
+                            <div className="flex items-start gap-2 text-gray-600">
+                              <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: category.color }} />
+                              <span className="text-xs leading-tight line-clamp-1">
                                 {event.address}
                               </span>
                             </div>
@@ -792,7 +802,7 @@ const RoundupPage = () => {
                         {/* Category Badge */}
                         <div className="mt-2">
                           <span 
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
                             style={{ backgroundColor: category.color }}
                           >
                             {category.name}
