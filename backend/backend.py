@@ -2536,7 +2536,8 @@ async def read_event(event_id: int):
                          COALESCE(interest_count, 0) as interest_count,
                          COALESCE(view_count, 0) as view_count,
                          fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
-                         start_datetime, end_datetime, updated_at, verified
+                         start_datetime, end_datetime, updated_at, verified, banner_image, logo_image, secondary_category,
+                         is_premium_event
                          FROM events WHERE id = {placeholder}""", (event_id,))
             event = c.fetchone()
             
