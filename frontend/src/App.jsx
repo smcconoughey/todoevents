@@ -13,6 +13,7 @@ import AccountPage from './components/AccountPage';
 import SubscriptionPage from './components/SubscriptionPage';
 import EnterpriseDashboard from './components/EnterpriseDashboard';
 import MissionOps from './components/MissionOps';
+import RoundupPage from './components/RoundupPage';
 import { initGoogleMaps } from './googleMapsLoader';
 import { testApiUrl } from './config';
 import './index.css';
@@ -144,6 +145,7 @@ function App() {
             <Route path="/hosts" element={<HostsPage />} />
             <Route path="/creators" element={<EventCreatorPage />} />
             <Route path="/flyer" element={<FlyerPage />} />
+            <Route path="/roundup" element={<RoundupPage />} />
             
             {/* Individual Event Pages - both old and new format */}
             <Route path="/e/:slug" element={<EventMap mapsLoaded={mapsLoaded} eventSlug={true} />} />
