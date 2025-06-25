@@ -64,7 +64,11 @@ const LoginForm = ({ mode = 'login', onSuccess = () => {}, onModeChange = () => 
         }
       }, 30000);
     }
-    return () => clearTimeout(timeout);
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
   }, [isLoading, accountCreationStep, mode]);
 
   const handleChange = (e) => {

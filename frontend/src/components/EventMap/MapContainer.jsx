@@ -378,9 +378,25 @@ const MapContainer = React.forwardRef(({
       if (zoomTimeoutRef.current) clearTimeout(zoomTimeoutRef.current);
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      if (proximityCircleRef.current) {
+        proximityCircleRef.current.setMap(null);
+        proximityCircleRef.current = null;
+      }
+      if (clustererRef.current) {
+        clustererRef.current.clearMarkers();
+        clustererRef.current = null;
+      }
+      if (markersRef.current) {
+        markersRef.current.forEach(marker => {
+          marker.setMap(null);
+        });
+        markersRef.current = [];
       }
       if (mapInstanceRef.current) {
         google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+        mapInstanceRef.current = null;
       }
     };
   }, []);
@@ -461,7 +477,7 @@ const MapContainer = React.forwardRef(({
       const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
         map: mapInstanceRef.current,
-        icon: createMarkerIcon(eventCategory.id, true, theme, event.verified),
+        icon: createMarkerIcon(eventCategory.id, true, theme, event.verified || event.is_premium_event),
         optimized: true,
         title: event.title,
         zIndex: event.id

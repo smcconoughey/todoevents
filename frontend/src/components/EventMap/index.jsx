@@ -782,7 +782,9 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
           className={`p-3 rounded-lg border transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:shadow-lg animate-slide-in-up ${
             selectedEvent?.id === event.id
               ? 'border-spark-yellow/40 bg-spark-yellow/10 shadow-lg animate-pulse-glow'
-              : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+              : (event.verified || event.is_premium_event)
+                ? 'border-amber-400/40 bg-amber-500/10 shadow-md hover:bg-amber-500/20 hover:border-amber-400/60 hover:shadow-amber-400/30'
+                : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
           }`}
           onClick={() => handleEventClick(event)}
         >
@@ -792,8 +794,11 @@ const renderEventList = (events, selectedEvent, handleEventClick, user, mapCente
                 {React.createElement(category.icon, {
                   className: `w-4 h-4 ${category.color}`
                 })}
-                <h3 className="font-semibold text-white text-sm truncate">
+                <h3 className="font-semibold text-white text-sm truncate flex items-center gap-1">
                   {event.title || 'Untitled Event'}
+                  {(event.verified || event.is_premium_event) && (
+                    <span className="text-amber-400 flex-shrink-0">⭐</span>
+                  )}
                 </h3>
               </div>
               
@@ -896,6 +901,7 @@ const EventMap = ({
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();
+  const timeoutRefs = useRef(new Set()); // Track all timeouts for cleanup
 
   const DEFAULT_CENTER = { lat: 39.8283, lng: -98.5795 };
   const DEFAULT_ZOOM = 4;
@@ -1386,6 +1392,17 @@ const EventMap = ({
     trackPageVisit('homepage', '/');
   }, []);
 
+  // Cleanup all timeouts on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clear all tracked timeouts
+      timeoutRefs.current.forEach(timeoutId => {
+        clearTimeout(timeoutId);
+      });
+      timeoutRefs.current.clear();
+    };
+  }, []);
+
   // Track first-time sign-in to show welcome popup
   useEffect(() => {
     if (user && !localStorage.getItem('hasSeenFirstTimeSignIn')) {
@@ -1449,6 +1466,8 @@ const EventMap = ({
 
   // Handle URL parameters for event deep linking and create trigger
   useEffect(() => {
+    let timeoutId;
+    
     const handleUrlParams = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const eventId = urlParams.get('event');
@@ -1557,7 +1576,10 @@ const EventMap = ({
     // Only run if we're actually on a URL that should have an event selected
     const currentPath = window.location.pathname;
     if (events.length > 0 && (currentPath.startsWith('/e/') || new URLSearchParams(window.location.search).get('event'))) {
-      handleUrlParams();
+      // Add a small delay to prevent race conditions
+      timeoutId = setTimeout(() => {
+        handleUrlParams();
+      }, 100);
     } else if (events.length === 0) {
       // Also check for create parameter even when no events loaded
       const urlParams = new URLSearchParams(window.location.search);
@@ -1581,7 +1603,14 @@ const EventMap = ({
         }
       }
     }
-  }, [events.length, user, slug, manuallyClosed]); // Include manuallyClosed to react to close actions
+
+    // Cleanup timeout
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [events.length, user, slug, manuallyClosed, selectedEvent]); // Include manuallyClosed to react to close actions
 
   const handleAddressSelect = (data) => {
     setSelectedLocation({ lat: data.lat, lng: data.lng, address: data.address, city: data.address });
@@ -2259,9 +2288,16 @@ const EventMap = ({
         link.click();
         document.body.removeChild(link);
         
+        // Clean up the data URL to prevent memory leaks
+        if (dataUrl.startsWith('data:')) {
+          // For data URLs, we can't revoke them, but we can clear the reference
+          dataUrl = null;
+        }
+        
         console.log('Download completed successfully');
         setDownloadStatus('Downloaded!');
-        setTimeout(() => setDownloadStatus(''), 2000);
+        const timeoutId = setTimeout(() => setDownloadStatus(''), 2000);
+        timeoutRefs.current.add(timeoutId);
         
       } finally {
         // Cleanup: restore ShareCard to original position
@@ -2295,7 +2331,8 @@ const EventMap = ({
       console.error('Download error:', err);
       
       setDownloadStatus(`Error: ${err.message}`);
-      setTimeout(() => setDownloadStatus(''), 6000);
+      const timeoutId = setTimeout(() => setDownloadStatus(''), 6000);
+      timeoutRefs.current.add(timeoutId);
     }
   };
 
@@ -2319,7 +2356,8 @@ const EventMap = ({
     
     navigator.clipboard.writeText(url);
     setDownloadStatus('Link copied!');
-    setTimeout(() => setDownloadStatus(''), 1500);
+    const timeoutId = setTimeout(() => setDownloadStatus(''), 1500);
+    timeoutRefs.current.add(timeoutId);
   };
 
   // Facebook share
