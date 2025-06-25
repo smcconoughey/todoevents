@@ -2436,11 +2436,11 @@ async def list_events(
             # Optimized query with specific columns and LIMIT, including ALL fields
             base_query = f"""
                 SELECT id, title, description, short_description, date, start_time, end_time, end_date, 
-                       category, address, city, state, country, lat, lng, recurring, frequency, created_by, created_at,
+                       category, secondary_category, address, city, state, country, lat, lng, recurring, frequency, created_by, created_at,
                        COALESCE(interest_count, 0) as interest_count,
                        COALESCE(view_count, 0) as view_count,
                        fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
-                       start_datetime, end_datetime, updated_at, verified
+                       start_datetime, end_datetime, updated_at, verified, is_premium_event, banner_image, logo_image
                        {location_select}
                 FROM events 
                 {where_clause}
@@ -4911,6 +4911,9 @@ async def upload_event_banner(
             image_bytes = await file.read()
             processed_image_bytes = process_image(image_bytes, 600, 200, 5)
             
+            # Generate unique filename for logging
+            unique_filename = f"banner_{event_id}_{uuid.uuid4().hex[:8]}_{file.filename}"
+            
             # Store as base64 string in database instead of file system
             import base64
             base64_image = base64.b64encode(processed_image_bytes).decode('utf-8')
@@ -5000,6 +5003,9 @@ async def upload_event_logo(
             # Read and process the image
             image_bytes = await file.read()
             processed_image_bytes = process_image(image_bytes, 200, 200, 5)
+            
+            # Generate unique filename for logging
+            unique_filename = f"logo_{event_id}_{uuid.uuid4().hex[:8]}_{file.filename}"
             
             # Store as base64 string in database instead of file system
             import base64

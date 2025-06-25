@@ -449,7 +449,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
       {event.banner_image && (
         <div className="relative h-32 w-full">
           <img
-            src={`${API_URL}/uploads/banners/${event.banner_image}`}
+            src={event.banner_image}
             alt="Event Banner"
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -468,7 +468,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
             {event.logo_image ? (
               <div className="relative">
                 <img
-                  src={`${API_URL}/uploads/logos/${event.logo_image}`}
+                  src={event.logo_image}
                   alt="Event Logo"
                   className="w-12 h-12 object-cover rounded-lg"
                   onError={(e) => {

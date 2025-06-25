@@ -1233,7 +1233,7 @@ const CreateEventForm = ({
                       <div className="space-y-3">
                         <div className="relative">
                           <img
-                            src={bannerImage ? `${API_URL}/uploads/banners/${bannerImage}` : bannerPreview}
+                            src={bannerImage || bannerPreview}
                             alt="Banner"
                             className="w-full h-24 object-cover rounded-lg border"
                           />
@@ -1276,7 +1276,7 @@ const CreateEventForm = ({
                       <div className="space-y-3">
                         <div className="relative">
                           <img
-                            src={logoImage ? `${API_URL}/uploads/logos/${logoImage}` : logoPreview}
+                            src={logoImage || logoPreview}
                             alt="Logo"
                             className="w-16 h-16 object-cover rounded-lg border mx-auto"
                           />
