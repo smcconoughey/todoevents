@@ -4951,10 +4951,10 @@ async def upload_event_banner(
                 details=f"Banner image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
             )
             
-        # Clear events-related cache entries since event was updated with new banner
+        # Clear entire cache since event was updated with new banner
         # (done outside the database context to ensure transaction is committed)
-        cleared_count = event_cache.clear_pattern("events:")
-        logger.info(f"Cleared {cleared_count} event cache entries after banner upload")
+        event_cache.clear()
+        logger.info("Cleared entire cache after banner upload")
         
         return {
             "detail": "Banner image uploaded successfully",
@@ -5049,10 +5049,10 @@ async def upload_event_logo(
                 details=f"Logo image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
             )
             
-        # Clear events-related cache entries since event was updated with new logo
+        # Clear entire cache since event was updated with new logo
         # (done outside the database context to ensure transaction is committed)
-        cleared_count = event_cache.clear_pattern("events:")
-        logger.info(f"Cleared {cleared_count} event cache entries after logo upload")
+        event_cache.clear()
+        logger.info("Cleared entire cache after logo upload")
         
         return {
             "detail": "Logo image uploaded successfully",
