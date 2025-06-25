@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Plus, Clock, Calendar, AlertCircle, MapPin, Star, Crown, Repeat, Sparkles, AlertTriangle, Building2, Image, Upload } from 'lucide-react';
 import { EventLoadingAnimation, SuccessAnimation, AnimatedModalWrapper } from '../ui/loading-animations';
 import {
@@ -34,6 +35,7 @@ const CreateEventForm = ({
   initialEvent = null
 }) => {
   const { user, token } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
@@ -648,15 +650,25 @@ const CreateEventForm = ({
       
       // Wait for animation, then handle completion
       setTimeout(() => {
-      // Pass the saved event back to parent for any additional processing
-      // BUT DON'T make another API call - this was causing the duplication
-      if (onSubmit) {
-        onSubmit(savedEvent, true); // true = skip API call, form already made it
-      }
-      
-      // Close the form only after successful submission
-      onClose();
+        // Pass the saved event back to parent for any additional processing
+        // BUT DON'T make another API call - this was causing the duplication
+        if (onSubmit) {
+          onSubmit(savedEvent, true); // true = skip API call, form already made it
+        }
+        
+        // Close the form only after successful submission
+        onClose();
         setShowSuccessAnimation(false);
+        
+        // Navigate to the created event's URL only for new events (not edits)
+        if (!initialEvent && savedEvent.slug) {
+          // Navigate to the event page using the slug
+          navigate(`/e/${savedEvent.slug}`);
+          // Also refresh the page to ensure the event appears
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+        }
       }, 2000); // 2 second success animation
     } catch (error) {
       console.error('Error saving event:', error);
