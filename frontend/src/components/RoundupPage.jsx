@@ -603,56 +603,64 @@ const RoundupPage = () => {
               <div 
                 className="w-full h-full relative"
                 style={{
-                  backgroundImage: `
-                    linear-gradient(45deg, rgba(34, 197, 94, 0.1) 0%, transparent 25%),
-                    linear-gradient(-45deg, rgba(59, 130, 246, 0.1) 25%, transparent 50%),
-                    linear-gradient(135deg, rgba(168, 85, 247, 0.1) 50%, transparent 75%),
-                    radial-gradient(circle at 30% 30%, rgba(34, 197, 94, 0.15) 0%, transparent 40%),
-                    radial-gradient(circle at 70% 70%, rgba(59, 130, 246, 0.15) 0%, transparent 40%)
-                  `,
-                  backgroundColor: '#f8fafc'
+                  background: `
+                    linear-gradient(45deg, rgba(34, 197, 94, 0.08) 0%, transparent 25%),
+                    linear-gradient(-45deg, rgba(59, 130, 246, 0.08) 25%, transparent 50%),
+                    radial-gradient(circle at 30% 40%, rgba(34, 197, 94, 0.12) 0%, transparent 30%),
+                    radial-gradient(circle at 70% 60%, rgba(59, 130, 246, 0.12) 0%, transparent 30%),
+                    #f1f5f9
+                  `
                 }}
               >
-                {/* Map Grid Lines */}
-                <svg className="absolute inset-0 w-full h-full opacity-10">
-                  <defs>
-                    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#64748b" strokeWidth="1"/>
-                    </pattern>
-                    <pattern id="roads" width="100" height="100" patternUnits="userSpaceOnUse">
-                      <path d="M 0 50 L 100 50" fill="none" stroke="#e2e8f0" strokeWidth="3"/>
-                      <path d="M 50 0 L 50 100" fill="none" stroke="#e2e8f0" strokeWidth="2"/>
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-                  <rect width="100%" height="100%" fill="url(#roads)" />
-                </svg>
+                {/* Simple Map Grid */}
+                <div 
+                  className="absolute inset-0 opacity-20"
+                  style={{
+                    backgroundImage: `
+                      linear-gradient(rgba(148, 163, 184, 0.3) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(148, 163, 184, 0.3) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '40px 40px'
+                  }}
+                />
 
-                {/* Simulated Roads */}
-                <svg className="absolute inset-0 w-full h-full opacity-20">
+                {/* Road Lines */}
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 300">
                   {/* Main highway */}
                   <path
-                    d="M 0 60 Q 150 40 300 80 T 600 60"
+                    d="M 0 120 Q 100 80 200 140 Q 300 200 400 160"
                     fill="none"
                     stroke="#94a3b8"
-                    strokeWidth="4"
+                    strokeWidth="6"
                     strokeLinecap="round"
+                    opacity="0.4"
                   />
                   {/* Secondary road */}
                   <path
-                    d="M 100 0 Q 120 100 140 200 T 180 300"
+                    d="M 80 0 Q 120 150 160 300"
                     fill="none"
                     stroke="#cbd5e1"
-                    strokeWidth="2"
+                    strokeWidth="4"
                     strokeLinecap="round"
+                    opacity="0.3"
                   />
                   {/* Local street */}
                   <path
-                    d="M 300 20 L 320 180"
+                    d="M 240 50 L 280 250"
+                    fill="none"
+                    stroke="#e2e8f0"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    opacity="0.25"
+                  />
+                  {/* Cross street */}
+                  <path
+                    d="M 50 200 Q 200 180 350 220"
                     fill="none"
                     stroke="#e2e8f0"
                     strokeWidth="2"
                     strokeLinecap="round"
+                    opacity="0.2"
                   />
                 </svg>
 
@@ -660,31 +668,48 @@ const RoundupPage = () => {
                 <div className="absolute inset-0">
                   {/* Park/Green space */}
                   <div 
-                    className="absolute w-16 h-12 rounded-lg opacity-30"
+                    className="absolute rounded-lg"
                     style={{ 
-                      top: '20%', 
-                      left: '60%', 
-                      backgroundColor: '#22c55e',
-                      borderRadius: '50% 20% 50% 20%'
+                      top: '15%', 
+                      left: '55%', 
+                      width: '80px',
+                      height: '60px',
+                      backgroundColor: 'rgba(34, 197, 94, 0.25)',
+                      borderRadius: '40% 60% 50% 30%'
                     }}
                   />
                   {/* Water body */}
                   <div 
-                    className="absolute w-12 h-8 rounded-full opacity-40"
+                    className="absolute rounded-full"
                     style={{ 
-                      top: '65%', 
-                      left: '15%', 
-                      backgroundColor: '#3b82f6'
+                      top: '60%', 
+                      left: '10%', 
+                      width: '70px',
+                      height: '40px',
+                      backgroundColor: 'rgba(59, 130, 246, 0.3)'
                     }}
                   />
-                  {/* Built area */}
+                  {/* Built area - downtown */}
                   <div 
-                    className="absolute w-20 h-16 opacity-20"
+                    className="absolute"
                     style={{ 
-                      top: '40%', 
-                      left: '35%', 
-                      backgroundColor: '#6b7280',
-                      clipPath: 'polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)'
+                      top: '35%', 
+                      left: '30%', 
+                      width: '90px',
+                      height: '70px',
+                      backgroundColor: 'rgba(107, 114, 128, 0.15)',
+                      clipPath: 'polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%)'
+                    }}
+                  />
+                  {/* Small park */}
+                  <div 
+                    className="absolute rounded-full"
+                    style={{ 
+                      top: '25%', 
+                      left: '75%', 
+                      width: '35px',
+                      height: '35px',
+                      backgroundColor: 'rgba(34, 197, 94, 0.2)'
                     }}
                   />
                 </div>
@@ -713,26 +738,50 @@ const RoundupPage = () => {
                     >
                       {/* Pin Drop Shadow */}
                       <div 
-                        className="absolute top-8 left-1/2 transform -translate-x-1/2 w-4 h-2 rounded-full opacity-20 blur-sm"
+                        className="absolute top-12 left-1/2 transform -translate-x-1/2 w-6 h-3 rounded-full opacity-20 blur-sm"
                         style={{ backgroundColor: '#000' }}
                       />
                       
-                      {/* Main Pin - Simplified for better rendering */}
-                      <div className="relative w-8 h-10">
-                        {/* Pin background circle */}
+                      {/* Main Pin */}
+                      <div className="relative">
+                        {/* Pin Shape using SVG */}
+                        <svg 
+                          width="40" 
+                          height="52" 
+                          viewBox="0 0 40 52" 
+                          className="drop-shadow-lg"
+                        >
+                          {/* Pin Body */}
+                          <path
+                            d="M20 0C8.954 0 0 8.954 0 20c0 11.046 20 32 20 32s20-20.954 20-32C40 8.954 31.046 0 20 0z"
+                            fill={category.color}
+                            stroke="rgba(255,255,255,0.3)"
+                            strokeWidth="2"
+                          />
+                          {/* Inner circle for icon */}
+                          <circle
+                            cx="20"
+                            cy="20"
+                            r="12"
+                            fill="rgba(255,255,255,0.9)"
+                          />
+                        </svg>
+                        
+                        {/* Category Icon */}
                         <div 
-                          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
-                          style={{ backgroundColor: category.color }}
+                          className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center justify-center w-6 h-6"
                         >
                           <CategoryIcon 
                             category={event.category} 
-                            className="w-4 h-4 text-white" 
+                            className="w-5 h-5" 
+                            style={{ color: category.color }}
                           />
                         </div>
-                        {/* Pin point */}
+                        
+                        {/* Pin Highlight */}
                         <div 
-                          className="absolute top-6 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-4 border-transparent"
-                          style={{ borderTopColor: category.color }}
+                          className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full opacity-30"
+                          style={{ backgroundColor: 'white' }}
                         />
                       </div>
                     </div>
