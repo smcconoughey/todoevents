@@ -4951,6 +4951,10 @@ async def upload_event_banner(
                 details=f"Banner image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
             )
             
+            # Clear event cache since event was updated with new banner
+            event_cache.clear()
+            logger.info("Cleared event cache after banner upload")
+            
             return {
                 "detail": "Banner image uploaded successfully",
                 "filename": unique_filename,
@@ -5043,6 +5047,10 @@ async def upload_event_logo(
                 user_agent=None,  # TODO: Extract from request
                 details=f"Logo image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
             )
+            
+            # Clear event cache since event was updated with new logo
+            event_cache.clear()
+            logger.info("Cleared event cache after logo upload")
             
             return {
                 "detail": "Logo image uploaded successfully",
