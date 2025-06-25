@@ -233,11 +233,38 @@ const CreateEventForm = ({
   const handleSameDayChange = (checked) => {
     setIsSameDay(checked);
     if (checked) {
+      // When switching to same day, clear end_date and copy start date
       setFormData(prev => ({
         ...prev,
         end_date: ''
       }));
     }
+  };
+
+  // Function to calculate end time automatically (2 hours after start time)
+  const calculateEndTime = (startTime) => {
+    if (!startTime) return '';
+    
+    try {
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const endHours = (hours + 2) % 24; // Handle day rollover
+      return `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    } catch (error) {
+      console.error('Error calculating end time:', error);
+      return '';
+    }
+  };
+
+  const handleStartTimeChange = (newStartTime) => {
+    setFormData(prev => {
+      const newEndTime = calculateEndTime(newStartTime);
+      return {
+        ...prev,
+        start_time: newStartTime,
+        // Only auto-set end time if it's currently empty or if we're updating from an empty start time
+        end_time: !prev.end_time || !prev.start_time ? newEndTime : prev.end_time
+      };
+    });
   };
 
   // Function to validate if address has street-level detail
@@ -578,7 +605,7 @@ const CreateEventForm = ({
                 <Input
                   type="time"
                   value={formData.start_time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
                   className="input-themed h-10"
                 />
               </div>

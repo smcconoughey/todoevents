@@ -295,6 +295,32 @@ const CreateEventForm = ({
     }
   };
 
+  // Function to calculate end time automatically (2 hours after start time)
+  const calculateEndTime = (startTime) => {
+    if (!startTime) return '';
+    
+    try {
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const endHours = (hours + 2) % 24; // Handle day rollover
+      return `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    } catch (error) {
+      console.error('Error calculating end time:', error);
+      return '';
+    }
+  };
+
+  const handleStartTimeChange = (newStartTime) => {
+    setFormData(prev => {
+      const newEndTime = calculateEndTime(newStartTime);
+      return {
+        ...prev,
+        start_time: newStartTime,
+        // Only auto-set end time if it's currently empty or if we're updating from an empty start time
+        end_time: !prev.end_time || !prev.start_time ? newEndTime : prev.end_time
+      };
+    });
+  };
+
   const handleImageUpload = (type) => {
     if (initialEvent && initialEvent.id) {
       // For existing events, use the modal upload
@@ -854,7 +880,7 @@ const CreateEventForm = ({
                 <Input
                   type="time"
                   value={formData.start_time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
                   className="input-themed h-12 border-2 focus:border-pin-blue/50 transition-all duration-200"
                   required
                 />
@@ -880,7 +906,6 @@ const CreateEventForm = ({
                 <label className="text-sm font-semibold text-themed-secondary flex items-center gap-2">
                   <Clock className="w-4 h-4 text-fresh-teal" />
                   End Time
-                  {isSameDay && <span className="text-xs bg-themed-surface px-2 py-0.5 rounded-full border border-themed/30">Auto</span>}
                 </label>
                 <Input
                   type="time"

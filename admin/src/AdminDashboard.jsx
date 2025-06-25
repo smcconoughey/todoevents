@@ -41,8 +41,6 @@ ChartJS.register(
   Filler
 );
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://todoevents.onrender.com';
-
 // Get API URL from environment variable or fallback to production backend
 const API_URL = import.meta.env.VITE_API_URL || 'https://todoevents-backend.onrender.com';
 console.log('Admin Dashboard API URL:', API_URL);
@@ -3930,7 +3928,12 @@ const AdminDashboard = () => {
                                 src={`${API_URL}/uploads/${file.media_type === 'banner' ? 'banners' : 'logos'}/${file.filename}`}
                                 alt={`${file.media_type} for ${file.event_title}`}
                                 className="h-10 w-10 object-cover rounded border border-gray-200"
+                                onLoad={() => {
+                                  console.log('Image loaded successfully:', `${API_URL}/uploads/${file.media_type === 'banner' ? 'banners' : 'logos'}/${file.filename}`);
+                                }}
                                 onError={(e) => {
+                                  console.error('Image failed to load:', `${API_URL}/uploads/${file.media_type === 'banner' ? 'banners' : 'logos'}/${file.filename}`);
+                                  console.error('Error details:', e);
                                   e.target.style.display = 'none';
                                   e.target.nextSibling.style.display = 'block';
                                 }}
@@ -3941,6 +3944,7 @@ const AdminDashboard = () => {
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{file.filename}</div>
                             <div className="text-sm text-gray-500 capitalize">{file.media_type}</div>
+                            <div className="text-xs text-gray-400">URL: {API_URL}/uploads/{file.media_type === 'banner' ? 'banners' : 'logos'}/{file.filename}</div>
                           </div>
                         </div>
                       </td>
