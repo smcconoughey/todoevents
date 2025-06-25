@@ -449,7 +449,7 @@ const RoundupPage = () => {
                   {getFilterLabel(selectedFilter)} near {selectedLocation.city}
                 </h2>
                 <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                  {events.length} events found
+                  {Math.min(events.length, 6)} events found
                 </p>
               </div>
               
@@ -579,18 +579,16 @@ const RoundupPage = () => {
           }}
         >
           {/* Header */}
-          <div className="p-8 pb-6 text-white">
-            <div className="text-center">
-              <h1 className="text-5xl font-bold mb-3 drop-shadow-lg">
-                {getFilterLabel(selectedFilter)}
+          <div className="text-center px-6 pt-8 pb-6">
+                          <h1 className="text-4xl font-bold text-white mb-2">
+                {getTimeFilterLabel(selectedFilter)}
               </h1>
-              <h2 className="text-3xl font-semibold mb-2 opacity-90">
-                {selectedLocation?.city}
-              </h2>
-              <p className="text-xl opacity-80">
-                {events.length} amazing events happening
-              </p>
-            </div>
+            <h2 className="text-2xl font-semibold text-white/90 mb-2">
+              {selectedLocation?.city || 'Your City'}
+            </h2>
+            <p className="text-lg text-white/70">
+              {Math.min(events.length, 6)} amazing events happening
+            </p>
           </div>
 
           {/* Map Section */}
@@ -825,14 +823,14 @@ const RoundupPage = () => {
 
                       {/* Event Details */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-base text-gray-900 mb-1 leading-tight line-clamp-2">
+                        <h3 className="font-bold text-sm text-gray-900 mb-1 leading-tight line-clamp-2">
                           {event.title}
                         </h3>
                         
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-gray-600">
                             <Calendar className="w-3 h-3 flex-shrink-0" style={{ color: category.color }} />
-                            <span className="text-sm font-medium">
+                            <span className="text-xs font-medium">
                               {formatEventDate(event)}
                               {event.start_time && ` • ${formatEventTime(event)}`}
                             </span>
@@ -849,7 +847,7 @@ const RoundupPage = () => {
                         </div>
 
                         {/* Category Badge */}
-                        <div className="mt-2">
+                        <div className="mt-1.5">
                           <span 
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
                             style={{ backgroundColor: category.color }}
