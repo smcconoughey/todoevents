@@ -89,7 +89,19 @@ const RoundupPage = () => {
           );
         }
 
-        setEvents(filteredEvents.slice(0, 8));
+        // Remove duplicates based on event title and date
+        const uniqueEvents = [];
+        const seen = new Set();
+        
+        for (const event of filteredEvents) {
+          const key = `${event.title}-${event.date}-${event.start_time}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            uniqueEvents.push(event);
+          }
+        }
+
+        setEvents(uniqueEvents.slice(0, 8));
       } else {
         setEvents([]);
       }
@@ -522,85 +534,206 @@ const RoundupPage = () => {
       <div 
         ref={cardRef}
         style={{ display: 'none' }}
-        className="w-[1200px] h-[630px] relative overflow-hidden"
+        className="w-[630px] h-[1200px] relative overflow-hidden"
       >
         <div 
           className="w-full h-full flex flex-col relative"
-          style={{ backgroundColor: theme === 'dark' ? '#0f0f0f' : '#ffffff' }}
+          style={{ 
+            background: theme === 'dark' 
+              ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
+              : 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
+          }}
         >
           {/* Header */}
-          <div className="p-8 pb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className={`text-4xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {getFilterLabel(selectedFilter)} near {selectedLocation?.city}
-                </h1>
-                <p className={`text-xl ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                  {events.length} amazing events to check out
-                </p>
-              </div>
-              <div className="text-right">
-                <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  todo-events.com
-                </div>
-                <div className={`text-lg ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                  /roundup
-                </div>
-              </div>
+          <div className="p-8 pb-6 text-white">
+            <div className="text-center">
+              <h1 className="text-5xl font-bold mb-3 drop-shadow-lg">
+                {getFilterLabel(selectedFilter)}
+              </h1>
+              <h2 className="text-3xl font-semibold mb-2 opacity-90">
+                {selectedLocation?.city}
+              </h2>
+              <p className="text-xl opacity-80">
+                {events.length} amazing events happening
+              </p>
             </div>
           </div>
 
-          {/* Events Grid */}
-          <div className="flex-1 px-8 pb-8">
-            <div className="grid grid-cols-4 gap-6 h-full">
-              {events.slice(0, 8).map((event, index) => {
+          {/* Map Section */}
+          <div className="flex-1 px-6 pb-6">
+            <div 
+              className="w-full h-80 rounded-2xl overflow-hidden shadow-2xl mb-6 relative"
+              style={{ backgroundColor: '#e8f4f8' }}
+            >
+              {/* Simulated Map Background */}
+              <div 
+                className="w-full h-full relative"
+                style={{
+                  backgroundImage: `
+                    radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 70% 60%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 20% 80%, rgba(245, 101, 101, 0.1) 0%, transparent 50%)
+                  `,
+                  backgroundColor: '#f0f9ff'
+                }}
+              >
+                {/* Map Grid Lines */}
+                <svg className="absolute inset-0 w-full h-full opacity-20">
+                  <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#64748b" strokeWidth="1"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+
+                {/* Event Pins on Map */}
+                {events.slice(0, 6).map((event, index) => {
+                  const category = getCategory(event.category);
+                  const positions = [
+                    { x: '25%', y: '20%' },
+                    { x: '65%', y: '35%' },
+                    { x: '45%', y: '55%' },
+                    { x: '75%', y: '70%' },
+                    { x: '20%', y: '75%' },
+                    { x: '55%', y: '25%' }
+                  ];
+                  const pos = positions[index] || positions[0];
+                  
+                  return (
+                    <div
+                      key={event.id}
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 animate-bounce"
+                      style={{ 
+                        left: pos.x, 
+                        top: pos.y,
+                        animationDelay: `${index * 0.2}s`,
+                        animationDuration: '2s'
+                      }}
+                    >
+                      {/* Pin Drop Shadow */}
+                      <div 
+                        className="absolute top-8 left-1/2 transform -translate-x-1/2 w-4 h-2 rounded-full opacity-30"
+                        style={{ backgroundColor: category.color }}
+                      />
+                      
+                      {/* Main Pin */}
+                      <div 
+                        className="w-8 h-10 relative"
+                        style={{ 
+                          background: `linear-gradient(145deg, ${category.color} 0%, ${category.color}dd 100%)`,
+                          clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
+                          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                        }}
+                      >
+                        {/* Pin Icon */}
+                        <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
+                          <CategoryIcon 
+                            category={event.category} 
+                            className="w-4 h-4 text-white drop-shadow-sm" 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Location Label */}
+                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-800">
+                      {selectedLocation?.city}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Events List */}
+            <div className="space-y-4">
+              {events.slice(0, 6).map((event, index) => {
                 const category = getCategory(event.category);
                 return (
                   <div
                     key={event.id}
-                    className={`
-                      rounded-xl overflow-hidden shadow-lg
-                      ${theme === 'dark'
-                        ? 'bg-neutral-800 border border-neutral-700'
-                        : 'bg-gray-50 border border-gray-200'
-                      }
-                    `}
+                    className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg border-l-4"
+                    style={{ borderLeftColor: category.color }}
                   >
-                    {/* Event Header */}
-                    <div 
-                      className="h-20 flex items-center justify-center"
-                      style={{ backgroundColor: `${category.color}30` }}
-                    >
-                      <CategoryIcon 
-                        category={event.category} 
-                        className="w-8 h-8" 
-                        style={{ color: category.color }}
-                      />
-                    </div>
+                    <div className="flex items-start gap-4">
+                      {/* Event Icon */}
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center shadow-md flex-shrink-0"
+                        style={{ backgroundColor: `${category.color}20` }}
+                      >
+                        <CategoryIcon 
+                          category={event.category} 
+                          className="w-6 h-6" 
+                          style={{ color: category.color }}
+                        />
+                      </div>
 
-                    {/* Event Details */}
-                    <div className="p-3">
-                      <h3 className={`font-semibold text-sm mb-2 line-clamp-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                        {event.title}
-                      </h3>
-                      
-                      <div className="space-y-1 text-xs">
-                        <div className={`flex items-center gap-1 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                          <Calendar className="w-3 h-3" />
-                          <span>{formatEventDate(event)}</span>
-                        </div>
+                      {/* Event Details */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-lg text-gray-900 mb-1 leading-tight">
+                          {event.title}
+                        </h3>
                         
-                        {event.start_time && (
-                          <div className={`flex items-center gap-1 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                            <Clock className="w-3 h-3" />
-                            <span>{formatEventTime(event)}</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Calendar className="w-4 h-4" style={{ color: category.color }} />
+                            <span className="font-medium">
+                              {formatEventDate(event)}
+                              {event.start_time && ` • ${formatEventTime(event)}`}
+                            </span>
                           </div>
-                        )}
+                          
+                          {event.address && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <MapPin className="w-4 h-4" style={{ color: category.color }} />
+                              <span className="text-sm truncate">
+                                {event.address}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Category Badge */}
+                        <div className="mt-2">
+                          <span 
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
+                            style={{ backgroundColor: category.color }}
+                          >
+                            {category.name}
+                            {event.verified && (
+                              <span className="ml-1 w-3 h-3 bg-green-400 rounded-full flex items-center justify-center">
+                                <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </span>
+                            )}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 pt-4 text-white text-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="text-2xl font-bold mb-1">
+                todo-events.com
+              </div>
+              <div className="text-lg opacity-90">
+                /roundup
+              </div>
+              <div className="text-sm opacity-75 mt-2">
+                Find local events wherever you are
+              </div>
             </div>
           </div>
         </div>
