@@ -447,8 +447,9 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
       
       {/* Premium Banner Image */}
       {event.banner_image && (
-        <div className="relative h-32 w-full">
+        <div className="relative h-32 w-full" key={`banner-${event.id}`}>
           <img
+            key={`banner-img-${event.id}`}
             src={event.banner_image}
             alt="Event Banner"
             className="w-full h-full object-cover"
@@ -466,8 +467,9 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
           <div className="flex items-center gap-3">
             {/* Logo Image or Category Icon */}
             {event.logo_image ? (
-              <div className="relative">
+              <div className="relative" key={`logo-${event.id}`}>
                 <img
+                  key={`logo-img-${event.id}`}
                   src={event.logo_image}
                   alt="Event Logo"
                   className="w-12 h-12 object-cover rounded-lg"
