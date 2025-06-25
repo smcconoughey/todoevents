@@ -4304,6 +4304,66 @@ async def force_regenerate_sitemap():
         logger.error(f"❌ Error regenerating sitemap: {str(e)}")
         return {"error": str(e), "success": False}
 
+@app.post("/api/debug/fix-event-images/{event_id}")
+async def debug_fix_event_images(
+    event_id: int,
+    banner_filename: Optional[str] = None,
+    logo_filename: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Debug endpoint to manually fix image data for events"""
+    # Only allow admin users
+    if current_user['role'] not in ['admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Check if event exists
+            cursor.execute(f"SELECT id, title, banner_image, logo_image FROM events WHERE id = {placeholder}", (event_id,))
+            event = cursor.fetchone()
+            
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            updates = []
+            update_values = []
+            
+            if banner_filename:
+                updates.append(f"banner_image = {placeholder}")
+                update_values.append(banner_filename)
+            
+            if logo_filename:
+                updates.append(f"logo_image = {placeholder}")
+                update_values.append(logo_filename)
+            
+            if updates:
+                update_query = f"UPDATE events SET {', '.join(updates)} WHERE id = {placeholder}"
+                update_values.append(event_id)
+                
+                cursor.execute(update_query, update_values)
+                conn.commit()
+                
+                logger.info(f"Fixed image data for event {event_id}: banner={banner_filename}, logo={logo_filename}")
+                
+                return {
+                    "detail": "Image data fixed successfully",
+                    "event_id": event_id,
+                    "banner_image": banner_filename,
+                    "logo_image": logo_filename,
+                    "rows_updated": cursor.rowcount
+                }
+            else:
+                return {"detail": "No image filenames provided"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fixing image data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fix image data")
+
 @app.put("/admin/events/{event_id}/verification")
 async def toggle_event_verification(
     event_id: int,
