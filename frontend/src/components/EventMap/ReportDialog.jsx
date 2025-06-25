@@ -33,11 +33,13 @@ const ReportDialog = ({ isOpen, onClose, event }) => {
 
     try {
       const reportData = {
-        event_id: event.id,
+        eventId: event.id,
+        eventTitle: event.title || 'Unknown Event',
         reason: selectedReason,
-        details: details.trim(),
-        reporter_email: email.trim(),
-        reporter_name: name.trim()
+        category: selectedReason,
+        description: details.trim(),
+        reporterEmail: email.trim(),
+        reporterName: name.trim()
       };
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/report-event`, {

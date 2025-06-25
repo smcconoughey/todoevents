@@ -6,6 +6,11 @@ if __name__ == "__main__":
     # Initialize database on startup
     init_db()
     
+    # Create uploads directories for image storage
+    os.makedirs("uploads/banners", exist_ok=True)
+    os.makedirs("uploads/logos", exist_ok=True)
+    logger.info("✅ Upload directories initialized")
+    
     # Create default admin user
     try:
         with get_db() as conn:

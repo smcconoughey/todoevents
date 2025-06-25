@@ -361,6 +361,7 @@ const CreateEventForm = ({
     const uploadPromises = [];
 
     if (pendingBannerFile) {
+      console.log('Preparing to upload banner image:', pendingBannerFile.name, pendingBannerFile.size, 'bytes');
       const bannerFormData = new FormData();
       bannerFormData.append('file', pendingBannerFile);
       
@@ -371,11 +372,18 @@ const CreateEventForm = ({
             'Authorization': `Bearer ${token}`
           },
           body: bannerFormData
-        }, 15000)
+        }, 15000).then(response => {
+          console.log('Banner upload response:', response);
+          return response;
+        }).catch(error => {
+          console.error('Banner upload failed:', error);
+          throw new Error(`Banner upload failed: ${error.message}`);
+        })
       );
     }
 
     if (pendingLogoFile) {
+      console.log('Preparing to upload logo image:', pendingLogoFile.name, pendingLogoFile.size, 'bytes');
       const logoFormData = new FormData();
       logoFormData.append('file', pendingLogoFile);
       
@@ -386,17 +394,30 @@ const CreateEventForm = ({
             'Authorization': `Bearer ${token}`
           },
           body: logoFormData
-        }, 15000)
+        }, 15000).then(response => {
+          console.log('Logo upload response:', response);
+          return response;
+        }).catch(error => {
+          console.error('Logo upload failed:', error);
+          throw new Error(`Logo upload failed: ${error.message}`);
+        })
       );
     }
 
     if (uploadPromises.length > 0) {
       try {
-        await Promise.all(uploadPromises);
-        console.log('Images uploaded successfully');
+        console.log(`Starting upload of ${uploadPromises.length} images for event ${eventId}`);
+        const results = await Promise.all(uploadPromises);
+        console.log('All images uploaded successfully:', results);
+        
+        // Show success message for image uploads
+        if (results.length > 0) {
+          console.log('✅ Images uploaded and attached to event successfully');
+        }
       } catch (error) {
         console.error('Error uploading images:', error);
-        // Don't throw error - event creation should still succeed
+        // Still show the error to user but don't prevent event creation success
+        setError(`Event created successfully, but image upload failed: ${error.message}. You can add images later by editing the event.`);
       }
     }
   };

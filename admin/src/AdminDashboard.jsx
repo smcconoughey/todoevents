@@ -3925,7 +3925,18 @@ const AdminDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <Image className="h-10 w-10 text-gray-400" />
+                            {file.filename ? (
+                              <img
+                                src={`${API_URL}/uploads/${file.media_type === 'banner' ? 'banners' : 'logos'}/${file.filename}`}
+                                alt={`${file.media_type} for ${file.event_title}`}
+                                className="h-10 w-10 object-cover rounded border border-gray-200"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'block';
+                                }}
+                              />
+                            ) : null}
+                            <Image className="h-10 w-10 text-gray-400" style={{ display: file.filename ? 'none' : 'block' }} />
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{file.filename}</div>

@@ -4853,32 +4853,21 @@ async def upload_event_banner(
             # Create uploads directory if it doesn't exist
             upload_dir = "uploads/banners"
             os.makedirs(upload_dir, exist_ok=True)
-            logger.info(f"Banner upload directory ready: {upload_dir}")
             
             # Generate unique filename - always save as JPG after processing
             unique_filename = f"banner_{event_id}_{uuid.uuid4().hex}.jpg"
             file_path = os.path.join(upload_dir, unique_filename)
-            logger.info(f"Saving banner to: {file_path}")
             
             # Save the processed image
             with open(file_path, "wb") as buffer:
                 buffer.write(processed_image_bytes)
-            logger.info(f"Banner file saved successfully: {len(processed_image_bytes)} bytes written")
             
             # Update event with banner image filename
-            logger.info(f"Updating event {event_id} with banner_image: {unique_filename}")
             cursor.execute(f"""
                 UPDATE events 
                 SET banner_image = {placeholder}
                 WHERE id = {placeholder}
             """, (unique_filename, event_id))
-            
-            # Check if update was successful
-            if cursor.rowcount == 0:
-                logger.error(f"Failed to update event {event_id} - no rows affected")
-                raise HTTPException(status_code=500, detail="Failed to link banner image to event")
-            
-            logger.info(f"Database updated successfully for event {event_id}")
             
             conn.commit()
             
