@@ -109,10 +109,27 @@ const isDateInRange = (dateStr, range) => {
 
 // Add function to check if an event has passed
 const isEventPast = (event) => {
-  if (!event.date) return false;
-  const today = new Date();
-  const eventDate = new Date(event.date);
-  return eventDate < today && eventDate.toDateString() !== today.toDateString();
+  if (!event || !event.date) return false;
+  
+  try {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
+    
+    // If the event has an end date, use that for comparison
+    if (event.end_date) {
+      const endDate = normalizeDate(event.end_date);
+      endDate.setHours(23, 59, 59, 999); // End of the end date
+      return endDate < now;
+    }
+    
+    // If no end date, check if the event date has passed
+    const eventDate = normalizeDate(event.date);
+    eventDate.setHours(23, 59, 59, 999); // End of the event date
+    return eventDate < now;
+  } catch (error) {
+    console.warn('Error checking if event is past:', error);
+    return false; // Don't filter out events if we can't determine
+  }
 };
 
 // Function to add slight random offsets to events at the same location
