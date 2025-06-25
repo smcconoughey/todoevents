@@ -23,6 +23,7 @@ import { CategoryIcon } from './EventMap/CategoryIcons';
 import categories, { getCategory } from './EventMap/categoryConfig';
 import { API_URL } from '../config';
 import html2canvas from 'html2canvas';
+import AddressAutocomplete from './EventMap/AddressAutocomplete';
 
 // Debounce helper function
 const debounce = (func, delay) => {
@@ -42,9 +43,6 @@ const RoundupPage = () => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedFilter, setSelectedFilter] = useState('this_weekend');
   const [selectedCategories, setSelectedCategories] = useState(['all']);
-  const [citySuggestions, setCitySuggestions] = useState([]);
-  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
-  const [loadingCities, setLoadingCities] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   
@@ -52,47 +50,14 @@ const RoundupPage = () => {
   const cardRef = useRef(null);
   const abortControllerRef = useRef(null);
 
-  // Load city suggestions on mount
-  useEffect(() => {
-    fetchCitySuggestions();
-  }, []);
-
-  const fetchCitySuggestions = async () => {
-    setLoadingCities(true);
-    try {
-      const response = await fetch(`${API_URL}/api/recommendations/nearby-cities?limit=12&max_distance=500`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const cities = await response.json();
-        setCitySuggestions(cities || []);
-      } else {
-        console.error('Failed to fetch city suggestions');
-        setCitySuggestions([]);
-      }
-    } catch (error) {
-      console.error('Error fetching city suggestions:', error);
-      setCitySuggestions([]);
-    } finally {
-      setLoadingCities(false);
-    }
-  };
-
   const fetchEvents = useCallback(async () => {
     if (!selectedLocation) return;
 
-    // Abort previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Create new abort controller
     abortControllerRef.current = new AbortController();
-
     setLoading(true);
     
     try {
@@ -101,7 +66,7 @@ const RoundupPage = () => {
         lng: selectedLocation.lng,
         city: selectedLocation.city,
         max_distance: 50.0,
-        limit: 12, // Get more events to choose from
+        limit: 12,
         time_filter: selectedFilter
       };
 
@@ -118,17 +83,14 @@ const RoundupPage = () => {
         const data = await response.json();
         let filteredEvents = data.events || [];
 
-        // Filter by categories if not 'all'
         if (!selectedCategories.includes('all') && selectedCategories.length > 0) {
           filteredEvents = filteredEvents.filter(event => 
             selectedCategories.includes(event.category)
           );
         }
 
-        // Limit to 6-8 events for the grid
         setEvents(filteredEvents.slice(0, 8));
       } else {
-        console.error('Failed to fetch events');
         setEvents([]);
       }
     } catch (error) {
@@ -140,21 +102,19 @@ const RoundupPage = () => {
     }
   }, [selectedLocation, selectedFilter, selectedCategories]);
 
-  // Fetch events when parameters change
   useEffect(() => {
     if (selectedLocation) {
       fetchEvents();
     }
   }, [fetchEvents]);
 
-  const handleCitySelect = (city) => {
+  const handleLocationSelect = (locationData) => {
+    console.log('Location selected:', locationData);
     setSelectedLocation({
-      lat: city.lat,
-      lng: city.lng,
-      city: `${city.city}, ${city.state}`
+      lat: locationData.lat,
+      lng: locationData.lng,
+      city: locationData.address || locationData.city || 'Selected Location'
     });
-    setSearchValue(`${city.city}, ${city.state}`);
-    setShowCitySuggestions(false);
   };
 
   const handleCategoryToggle = (category) => {
@@ -307,87 +267,16 @@ const RoundupPage = () => {
             {/* City Selection */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`}>
-                Select City
+                Select Location
               </label>
               <div className="relative">
-                <input
-                  type="text"
+                <AddressAutocomplete
+                  onSelect={handleLocationSelect}
                   value={searchValue}
-                  onChange={(e) => {
-                    setSearchValue(e.target.value);
-                    if (!showCitySuggestions && e.target.value.length > 0) {
-                      setShowCitySuggestions(true);
-                    }
-                  }}
-                  onFocus={() => setShowCitySuggestions(true)}
-                  placeholder="Search for a city..."
-                  className={`
-                    w-full px-4 py-3 rounded-xl border transition-colors
-                    ${theme === 'dark'
-                      ? 'bg-neutral-800 border-neutral-700 text-white placeholder-white/50'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                    }
-                    focus:outline-none focus:ring-2 focus:ring-blue-500
-                  `}
+                  onChange={setSearchValue}
+                  theme={theme}
                 />
-                <Search className={`absolute right-3 top-3 w-5 h-5 ${theme === 'dark' ? 'text-white/50' : 'text-gray-400'}`} />
               </div>
-
-              {/* City Suggestions */}
-              {showCitySuggestions && (
-                <div className={`
-                  absolute z-50 mt-1 w-full rounded-xl shadow-lg border max-h-60 overflow-y-auto
-                  ${theme === 'dark'
-                    ? 'bg-neutral-800 border-neutral-700'
-                    : 'bg-white border-gray-200'
-                  }
-                `}>
-                  {loadingCities ? (
-                    <div className="p-4 text-center">
-                      <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                    </div>
-                  ) : (() => {
-                      const filteredCities = citySuggestions.filter(city => 
-                        searchValue === '' || 
-                        city.city.toLowerCase().includes(searchValue.toLowerCase()) ||
-                        city.state.toLowerCase().includes(searchValue.toLowerCase()) ||
-                        `${city.city}, ${city.state}`.toLowerCase().includes(searchValue.toLowerCase())
-                      );
-
-                      return filteredCities.length > 0 ? (
-                        filteredCities.map((city, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleCitySelect(city)}
-                            className={`
-                              w-full px-4 py-3 text-left transition-colors
-                              ${theme === 'dark'
-                                ? 'hover:bg-neutral-700 text-white'
-                                : 'hover:bg-gray-50 text-gray-900'
-                              }
-                            `}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="font-medium">{city.city}, {city.state}</div>
-                                <div className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                                  {city.event_count} events
-                                </div>
-                              </div>
-                              <MapPin className={`w-4 h-4 ${theme === 'dark' ? 'text-white/50' : 'text-gray-400'}`} />
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="p-4 text-center">
-                          <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                            No cities found matching "{searchValue}"
-                          </p>
-                        </div>
-                      );
-                    })()}
-                </div>
-              )}
             </div>
 
             {/* Time Filter */}
@@ -479,10 +368,10 @@ const RoundupPage = () => {
           <div className="text-center py-12">
             <Globe className={`w-16 h-16 mx-auto mb-4 ${theme === 'dark' ? 'text-white/50' : 'text-gray-400'}`} />
             <h3 className={`text-xl font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Select a City to Get Started
+              Select a Location to Get Started
             </h3>
             <p className={`${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-              Choose a city from the suggestions above to see available events
+              Search for any city, address, or location above to see available events
             </p>
           </div>
         ) : loading ? (
@@ -492,7 +381,7 @@ const RoundupPage = () => {
               Finding Events...
             </h3>
             <p className={`${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-              Searching for {getFilterLabel(selectedFilter).toLowerCase()} events in {selectedLocation.city}
+              Searching for {getFilterLabel(selectedFilter).toLowerCase()} events near {selectedLocation.city}
             </p>
           </div>
         ) : events.length === 0 ? (
@@ -502,7 +391,7 @@ const RoundupPage = () => {
               No Events Found
             </h3>
             <p className={`${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-              No events found for {getFilterLabel(selectedFilter).toLowerCase()} in {selectedLocation.city}. Try a different time period or city.
+              No events found for {getFilterLabel(selectedFilter).toLowerCase()} near {selectedLocation.city}. Try a different time period or location.
             </p>
           </div>
         ) : (
@@ -511,7 +400,7 @@ const RoundupPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {getFilterLabel(selectedFilter)} in {selectedLocation.city}
+                  {getFilterLabel(selectedFilter)} near {selectedLocation.city}
                 </h2>
                 <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
                   {events.length} events found
@@ -644,7 +533,7 @@ const RoundupPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className={`text-4xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  {getFilterLabel(selectedFilter)} in {selectedLocation?.city}
+                  {getFilterLabel(selectedFilter)} near {selectedLocation?.city}
                 </h1>
                 <p className={`text-xl ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
                   {events.length} amazing events to check out
@@ -716,14 +605,6 @@ const RoundupPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Click outside to close city suggestions */}
-      {showCitySuggestions && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowCitySuggestions(false)}
-        />
-      )}
     </div>
   );
 };
