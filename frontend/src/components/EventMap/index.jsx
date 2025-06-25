@@ -452,6 +452,11 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
             src={`${API_URL}/uploads/banners/${event.banner_image}`}
             alt="Event Banner"
             className="w-full h-full object-cover"
+            onError={(e) => {
+              // Hide the banner image if it fails to load
+              e.target.style.display = 'none';
+              e.target.parentElement.style.display = 'none';
+            }}
           />
         </div>
       )}
@@ -466,6 +471,10 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
                   src={`${API_URL}/uploads/logos/${event.logo_image}`}
                   alt="Event Logo"
                   className="w-12 h-12 object-cover rounded-lg"
+                  onError={(e) => {
+                    // Hide logo if it fails to load
+                    e.target.style.display = 'none';
+                  }}
                 />
               </div>
             ) : (

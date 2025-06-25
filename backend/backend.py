@@ -4911,28 +4911,19 @@ async def upload_event_banner(
             image_bytes = await file.read()
             processed_image_bytes = process_image(image_bytes, 600, 200, 5)
             
-            # Create uploads directory if it doesn't exist
-            upload_dir = "uploads/banners"
-            os.makedirs(upload_dir, exist_ok=True)
-            logger.info(f"Banner upload directory ready: {upload_dir}")
+            # Store as base64 string in database instead of file system
+            import base64
+            base64_image = base64.b64encode(processed_image_bytes).decode('utf-8')
+            image_data_url = f"data:image/jpeg;base64,{base64_image}"
             
-            # Generate unique filename - always save as JPG after processing
-            unique_filename = f"banner_{event_id}_{uuid.uuid4().hex}.jpg"
-            file_path = os.path.join(upload_dir, unique_filename)
-            logger.info(f"Saving banner to: {file_path}")
+            logger.info(f"Storing banner image in database for event {event_id} ({len(processed_image_bytes)} bytes as base64)")
             
-            # Save the processed image
-            with open(file_path, "wb") as buffer:
-                buffer.write(processed_image_bytes)
-            logger.info(f"Banner file saved successfully: {len(processed_image_bytes)} bytes written")
-            
-            # Update event with banner image filename
-            logger.info(f"Updating event {event_id} with banner_image: {unique_filename}")
+            # Update event with base64 image data instead of filename
             cursor.execute(f"""
                 UPDATE events 
                 SET banner_image = {placeholder}
                 WHERE id = {placeholder}
-            """, (unique_filename, event_id))
+            """, (image_data_url, event_id))
             
             # Check if update was successful
             if cursor.rowcount == 0:
@@ -5010,26 +5001,19 @@ async def upload_event_logo(
             image_bytes = await file.read()
             processed_image_bytes = process_image(image_bytes, 200, 200, 5)
             
-            # Create uploads directory if it doesn't exist
-            upload_dir = "uploads/logos"
-            os.makedirs(upload_dir, exist_ok=True)
+            # Store as base64 string in database instead of file system
+            import base64
+            base64_image = base64.b64encode(processed_image_bytes).decode('utf-8')
+            image_data_url = f"data:image/jpeg;base64,{base64_image}"
             
-            # Generate unique filename - always save as JPG after processing
-            unique_filename = f"logo_{event_id}_{uuid.uuid4().hex}.jpg"
-            file_path = os.path.join(upload_dir, unique_filename)
+            logger.info(f"Storing logo image in database for event {event_id} ({len(processed_image_bytes)} bytes as base64)")
             
-            # Save the processed image
-            with open(file_path, "wb") as buffer:
-                buffer.write(processed_image_bytes)
-            logger.info(f"Logo file saved successfully: {len(processed_image_bytes)} bytes written")
-            
-            # Update event with logo image filename
-            logger.info(f"Updating event {event_id} with logo_image: {unique_filename}")
+            # Update event with base64 image data instead of filename
             cursor.execute(f"""
                 UPDATE events 
                 SET logo_image = {placeholder}
                 WHERE id = {placeholder}
-            """, (unique_filename, event_id))
+            """, (image_data_url, event_id))
             
             # Check if update was successful
             if cursor.rowcount == 0:
