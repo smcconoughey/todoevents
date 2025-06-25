@@ -4951,16 +4951,17 @@ async def upload_event_banner(
                 details=f"Banner image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
             )
             
-            # Clear event cache since event was updated with new banner
-            event_cache.clear()
-            logger.info("Cleared event cache after banner upload")
-            
-            return {
-                "detail": "Banner image uploaded successfully",
-                "filename": unique_filename,
-                "event_id": event_id,
-                "processed_size": len(processed_image_bytes)
-            }
+        # Clear events-related cache entries since event was updated with new banner
+        # (done outside the database context to ensure transaction is committed)
+        cleared_count = event_cache.clear_pattern("events:")
+        logger.info(f"Cleared {cleared_count} event cache entries after banner upload")
+        
+        return {
+            "detail": "Banner image uploaded successfully",
+            "filename": unique_filename,
+            "event_id": event_id,
+            "processed_size": len(processed_image_bytes)
+        }
             
     except HTTPException:
         raise
@@ -5048,16 +5049,17 @@ async def upload_event_logo(
                 details=f"Logo image uploaded for event {event_id}, processed size: {len(processed_image_bytes)} bytes"
             )
             
-            # Clear event cache since event was updated with new logo
-            event_cache.clear()
-            logger.info("Cleared event cache after logo upload")
-            
-            return {
-                "detail": "Logo image uploaded successfully",
-                "filename": unique_filename,
-                "event_id": event_id,
-                "processed_size": len(processed_image_bytes)
-            }
+        # Clear events-related cache entries since event was updated with new logo
+        # (done outside the database context to ensure transaction is committed)
+        cleared_count = event_cache.clear_pattern("events:")
+        logger.info(f"Cleared {cleared_count} event cache entries after logo upload")
+        
+        return {
+            "detail": "Logo image uploaded successfully",
+            "filename": unique_filename,
+            "event_id": event_id,
+            "processed_size": len(processed_image_bytes)
+        }
             
     except HTTPException:
         raise
@@ -8771,6 +8773,14 @@ class SimpleCache:
         with self._lock:
             self.cache.clear()
             self._last_cleanup = time.time()
+    
+    def clear_pattern(self, pattern: str) -> int:
+        """Clear cache entries that start with the given pattern"""
+        with self._lock:
+            keys_to_delete = [key for key in self.cache.keys() if key.startswith(pattern)]
+            for key in keys_to_delete:
+                del self.cache[key]
+            return len(keys_to_delete)
 
     def stats(self) -> Dict[str, Any]:
         self._cleanup_expired()
