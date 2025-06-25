@@ -313,7 +313,12 @@ const RoundupPage = () => {
                 <input
                   type="text"
                   value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
+                  onChange={(e) => {
+                    setSearchValue(e.target.value);
+                    if (!showCitySuggestions && e.target.value.length > 0) {
+                      setShowCitySuggestions(true);
+                    }
+                  }}
                   onFocus={() => setShowCitySuggestions(true)}
                   placeholder="Search for a city..."
                   className={`
@@ -341,31 +346,46 @@ const RoundupPage = () => {
                     <div className="p-4 text-center">
                       <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
                     </div>
-                  ) : (
-                    citySuggestions.map((city, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleCitySelect(city)}
-                        className={`
-                          w-full px-4 py-3 text-left transition-colors
-                          ${theme === 'dark'
-                            ? 'hover:bg-neutral-700 text-white'
-                            : 'hover:bg-gray-50 text-gray-900'
-                          }
-                        `}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{city.city}, {city.state}</div>
-                            <div className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                              {city.event_count} events
+                  ) : (() => {
+                      const filteredCities = citySuggestions.filter(city => 
+                        searchValue === '' || 
+                        city.city.toLowerCase().includes(searchValue.toLowerCase()) ||
+                        city.state.toLowerCase().includes(searchValue.toLowerCase()) ||
+                        `${city.city}, ${city.state}`.toLowerCase().includes(searchValue.toLowerCase())
+                      );
+
+                      return filteredCities.length > 0 ? (
+                        filteredCities.map((city, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleCitySelect(city)}
+                            className={`
+                              w-full px-4 py-3 text-left transition-colors
+                              ${theme === 'dark'
+                                ? 'hover:bg-neutral-700 text-white'
+                                : 'hover:bg-gray-50 text-gray-900'
+                              }
+                            `}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium">{city.city}, {city.state}</div>
+                                <div className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
+                                  {city.event_count} events
+                                </div>
+                              </div>
+                              <MapPin className={`w-4 h-4 ${theme === 'dark' ? 'text-white/50' : 'text-gray-400'}`} />
                             </div>
-                          </div>
-                          <MapPin className={`w-4 h-4 ${theme === 'dark' ? 'text-white/50' : 'text-gray-400'}`} />
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center">
+                          <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
+                            No cities found matching "{searchValue}"
+                          </p>
                         </div>
-                      </button>
-                    ))
-                  )}
+                      );
+                    })()}
                 </div>
               )}
             </div>
