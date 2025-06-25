@@ -206,10 +206,10 @@ const RoundupPage = () => {
       cardRef.current.style.display = 'block';
 
       const canvas = await html2canvas(cardRef.current, {
-        width: 1200,
-        height: 630,
+        width: 630,
+        height: 1200,
         scale: 2,
-        backgroundColor: theme === 'dark' ? '#0f0f0f' : '#ffffff',
+        backgroundColor: theme === 'dark' ? '#1a1a2e' : '#667eea',
         logging: false,
         allowTaint: true,
         useCORS: true
@@ -570,22 +570,90 @@ const RoundupPage = () => {
                 className="w-full h-full relative"
                 style={{
                   backgroundImage: `
-                    radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 70% 60%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 20% 80%, rgba(245, 101, 101, 0.1) 0%, transparent 50%)
+                    linear-gradient(45deg, rgba(34, 197, 94, 0.1) 0%, transparent 25%),
+                    linear-gradient(-45deg, rgba(59, 130, 246, 0.1) 25%, transparent 50%),
+                    linear-gradient(135deg, rgba(168, 85, 247, 0.1) 50%, transparent 75%),
+                    radial-gradient(circle at 30% 30%, rgba(34, 197, 94, 0.15) 0%, transparent 40%),
+                    radial-gradient(circle at 70% 70%, rgba(59, 130, 246, 0.15) 0%, transparent 40%)
                   `,
-                  backgroundColor: '#f0f9ff'
+                  backgroundColor: '#f8fafc'
                 }}
               >
                 {/* Map Grid Lines */}
-                <svg className="absolute inset-0 w-full h-full opacity-20">
+                <svg className="absolute inset-0 w-full h-full opacity-10">
                   <defs>
-                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#64748b" strokeWidth="1"/>
+                    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#64748b" strokeWidth="1"/>
+                    </pattern>
+                    <pattern id="roads" width="100" height="100" patternUnits="userSpaceOnUse">
+                      <path d="M 0 50 L 100 50" fill="none" stroke="#e2e8f0" strokeWidth="3"/>
+                      <path d="M 50 0 L 50 100" fill="none" stroke="#e2e8f0" strokeWidth="2"/>
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
+                  <rect width="100%" height="100%" fill="url(#roads)" />
                 </svg>
+
+                {/* Simulated Roads */}
+                <svg className="absolute inset-0 w-full h-full opacity-20">
+                  {/* Main highway */}
+                  <path
+                    d="M 0 60 Q 150 40 300 80 T 600 60"
+                    fill="none"
+                    stroke="#94a3b8"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                  {/* Secondary road */}
+                  <path
+                    d="M 100 0 Q 120 100 140 200 T 180 300"
+                    fill="none"
+                    stroke="#cbd5e1"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  {/* Local street */}
+                  <path
+                    d="M 300 20 L 320 180"
+                    fill="none"
+                    stroke="#e2e8f0"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+
+                {/* Geographic features */}
+                <div className="absolute inset-0">
+                  {/* Park/Green space */}
+                  <div 
+                    className="absolute w-16 h-12 rounded-lg opacity-30"
+                    style={{ 
+                      top: '20%', 
+                      left: '60%', 
+                      backgroundColor: '#22c55e',
+                      borderRadius: '50% 20% 50% 20%'
+                    }}
+                  />
+                  {/* Water body */}
+                  <div 
+                    className="absolute w-12 h-8 rounded-full opacity-40"
+                    style={{ 
+                      top: '65%', 
+                      left: '15%', 
+                      backgroundColor: '#3b82f6'
+                    }}
+                  />
+                  {/* Built area */}
+                  <div 
+                    className="absolute w-20 h-16 opacity-20"
+                    style={{ 
+                      top: '40%', 
+                      left: '35%', 
+                      backgroundColor: '#6b7280',
+                      clipPath: 'polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)'
+                    }}
+                  />
+                </div>
 
                 {/* Event Pins on Map */}
                 {events.slice(0, 6).map((event, index) => {
@@ -603,36 +671,59 @@ const RoundupPage = () => {
                   return (
                     <div
                       key={event.id}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2 animate-bounce"
+                      className="absolute transform -translate-x-1/2 -translate-y-full"
                       style={{ 
                         left: pos.x, 
-                        top: pos.y,
-                        animationDelay: `${index * 0.2}s`,
-                        animationDuration: '2s'
+                        top: pos.y
                       }}
                     >
                       {/* Pin Drop Shadow */}
                       <div 
-                        className="absolute top-8 left-1/2 transform -translate-x-1/2 w-4 h-2 rounded-full opacity-30"
-                        style={{ backgroundColor: category.color }}
+                        className="absolute top-12 left-1/2 transform -translate-x-1/2 w-6 h-3 rounded-full opacity-20 blur-sm"
+                        style={{ backgroundColor: '#000' }}
                       />
                       
                       {/* Main Pin */}
-                      <div 
-                        className="w-8 h-10 relative"
-                        style={{ 
-                          background: `linear-gradient(145deg, ${category.color} 0%, ${category.color}dd 100%)`,
-                          clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
-                          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-                        }}
-                      >
-                        {/* Pin Icon */}
-                        <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
+                      <div className="relative">
+                        {/* Pin Shape using SVG */}
+                        <svg 
+                          width="40" 
+                          height="52" 
+                          viewBox="0 0 40 52" 
+                          className="drop-shadow-lg"
+                        >
+                          {/* Pin Body */}
+                          <path
+                            d="M20 0C8.954 0 0 8.954 0 20c0 11.046 20 32 20 32s20-20.954 20-32C40 8.954 31.046 0 20 0z"
+                            fill={category.color}
+                            stroke="rgba(255,255,255,0.3)"
+                            strokeWidth="2"
+                          />
+                          {/* Inner circle for icon */}
+                          <circle
+                            cx="20"
+                            cy="20"
+                            r="12"
+                            fill="rgba(255,255,255,0.9)"
+                          />
+                        </svg>
+                        
+                        {/* Category Icon */}
+                        <div 
+                          className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center justify-center w-6 h-6"
+                        >
                           <CategoryIcon 
                             category={event.category} 
-                            className="w-4 h-4 text-white drop-shadow-sm" 
+                            className="w-5 h-5" 
+                            style={{ color: category.color }}
                           />
                         </div>
+                        
+                        {/* Pin Highlight */}
+                        <div 
+                          className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full opacity-30"
+                          style={{ backgroundColor: 'white' }}
+                        />
                       </div>
                     </div>
                   );
