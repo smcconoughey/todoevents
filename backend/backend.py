@@ -5020,13 +5020,22 @@ async def upload_event_logo(
             # Save the processed image
             with open(file_path, "wb") as buffer:
                 buffer.write(processed_image_bytes)
+            logger.info(f"Logo file saved successfully: {len(processed_image_bytes)} bytes written")
             
             # Update event with logo image filename
+            logger.info(f"Updating event {event_id} with logo_image: {unique_filename}")
             cursor.execute(f"""
                 UPDATE events 
                 SET logo_image = {placeholder}
                 WHERE id = {placeholder}
             """, (unique_filename, event_id))
+            
+            # Check if update was successful
+            if cursor.rowcount == 0:
+                logger.error(f"Failed to update event {event_id} - no rows affected")
+                raise HTTPException(status_code=500, detail="Failed to link logo image to event")
+            
+            logger.info(f"Database updated successfully for event {event_id}")
             
             conn.commit()
             
