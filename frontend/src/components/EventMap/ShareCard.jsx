@@ -218,7 +218,29 @@ const ShareCard = ({ event }) => {
       
       const url = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=roadmap&${marker}${styleParam}&key=${apiKey}`;
       
-      setMapUrl(url);
+      // Convert the external map URL to a base64 data URL for better download compatibility
+      const convertToDataUrl = async (imageUrl) => {
+        try {
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.warn('Failed to convert map image to data URL:', error);
+          return imageUrl; // Fall back to original URL
+        }
+      };
+      
+      convertToDataUrl(url).then(dataUrl => {
+        setMapUrl(dataUrl);
+      }).catch(() => {
+        setMapUrl(url); // Use original URL if conversion fails
+      });
     }
   }, [event?.lat, event?.lng, theme, category]);
 
@@ -474,10 +496,16 @@ const ShareCard = ({ event }) => {
           <img 
             src={mapUrl} 
             alt="Event location map"
-            style={mapImageStyle}
+            style={{
+              ...mapImageStyle,
+              // Ensure image is properly embedded for download
+              display: 'block',
+              maxWidth: '100%',
+              maxHeight: '100%'
+            }}
             onError={() => setMapUrl("")}
             loading="eager"
-            crossOrigin="anonymous"
+            crossOrigin={mapUrl.startsWith('data:') ? undefined : "anonymous"}
           />
         ) : (
           <FallbackMap event={event} category={category} theme={theme} />

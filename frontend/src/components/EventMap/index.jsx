@@ -2184,8 +2184,8 @@ const EventMap = ({
             width: shareCardElement.offsetWidth,
             height: shareCardElement.offsetHeight,
             pixelRatio: 3,
-            useCORS: false,
-            allowTaint: false,
+            useCORS: true,
+            allowTaint: true,
             foreignObjectRendering: false,
             skipFonts: true,
             cacheBust: true,
@@ -2193,8 +2193,7 @@ const EventMap = ({
               // Skip external stylesheets and Google Fonts
               if (node.tagName === 'LINK' && node.href && 
                   (node.href.includes('fonts.googleapis.com') || 
-                   node.href.includes('fonts.gstatic.com') ||
-                   node.href.includes('maps.googleapis.com'))) {
+                   node.href.includes('fonts.gstatic.com'))) {
                 return false;
               }
               // Skip style elements that might contain external CSS
@@ -2202,6 +2201,10 @@ const EventMap = ({
                   (node.textContent.includes('googleapis.com') || 
                    node.textContent.includes('gstatic.com'))) {
                 return false;
+              }
+              // Always include images (including maps), even if they're external or data URLs
+              if (node.tagName === 'IMG') {
+                return true;
               }
               return true;
             }
@@ -2420,8 +2423,8 @@ const EventMap = ({
             width: shareCardElement.offsetWidth,
             height: shareCardElement.offsetHeight,
             pixelRatio: 2, // Lower quality for more reliability
-            useCORS: false,
-            allowTaint: false,
+            useCORS: true,
+            allowTaint: true,
             foreignObjectRendering: false,
             skipFonts: true,
             cacheBust: true,
@@ -2429,8 +2432,7 @@ const EventMap = ({
               // Skip external stylesheets and Google Fonts
               if (node.tagName === 'LINK' && node.href && 
                   (node.href.includes('fonts.googleapis.com') || 
-                   node.href.includes('fonts.gstatic.com') ||
-                   node.href.includes('maps.googleapis.com'))) {
+                   node.href.includes('fonts.gstatic.com'))) {
                 return false;
               }
               // Skip style elements that might contain external CSS
@@ -2438,6 +2440,10 @@ const EventMap = ({
                   (node.textContent.includes('googleapis.com') || 
                    node.textContent.includes('gstatic.com'))) {
                 return false;
+              }
+              // Always include images (including maps), even if they're external or data URLs
+              if (node.tagName === 'IMG') {
+                return true;
               }
               return true;
             }
