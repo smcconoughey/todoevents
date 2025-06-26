@@ -10228,21 +10228,24 @@ async def get_enterprise_client_analytics(
         with get_db() as conn:
             cursor = conn.cursor()
 
+            # Use correct placeholder for database type
+            placeholder = get_placeholder()
+            
             # Simple queries that work
             if current_user["role"] == UserRole.ENTERPRISE:
                 # Enterprise user sees only their own events
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT 
                         COALESCE(u.email, 'None') as client,
                         COUNT(e.id) as event_count,
                         COALESCE(u.role, 'none') as client_role
                     FROM events e
                     LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_by = ?
+                    WHERE e.created_by = {placeholder}
                     GROUP BY u.email, u.role 
                     ORDER BY event_count DESC 
                     LIMIT 20
-                """, [current_user["id"]])
+                """, (current_user["id"],))
                 
                 client_performance = []
                 for row in cursor.fetchall():
@@ -10253,15 +10256,15 @@ async def get_enterprise_client_analytics(
                     })
 
                 # Category distribution for enterprise user
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT 
                         COALESCE(e.category, 'uncategorized') as category,
                         COUNT(*) as count
                     FROM events e
-                    WHERE e.created_by = ?
+                    WHERE e.created_by = {placeholder}
                     GROUP BY e.category 
                     ORDER BY count DESC
-                """, [current_user["id"]])
+                """, (current_user["id"],))
                 
             else:
                 # Admin sees all users
