@@ -10260,12 +10260,16 @@ async def get_enterprise_client_analytics(
                     LEFT JOIN users u ON e.created_by = u.id
                 """
                 params = []
+                conditions = []
                 if start_date:
-                    query += f" WHERE e.created_at >= {placeholder}"
+                    conditions.append(f"e.created_at >= {placeholder}")
                     params.append(start_date)
                 if end_date:
-                    query += f" AND e.created_at <= {placeholder}"
+                    conditions.append(f"e.created_at <= {placeholder}")
                     params.append(end_date)
+
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
                 query += " GROUP BY u.email, u.role ORDER BY event_count DESC LIMIT 20"
                 c.execute(query, tuple(params))
 
@@ -10305,12 +10309,16 @@ async def get_enterprise_client_analytics(
                     FROM events e
                 """
                 params = []
+                conditions = []
                 if start_date:
-                    query += f" WHERE e.created_at >= {placeholder}"
+                    conditions.append(f"e.created_at >= {placeholder}")
                     params.append(start_date)
                 if end_date:
-                    query += f" AND e.created_at <= {placeholder}"
+                    conditions.append(f"e.created_at <= {placeholder}")
                     params.append(end_date)
+
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
                 query += " GROUP BY e.category ORDER BY count DESC"
                 c.execute(query, tuple(params))
 
@@ -12112,11 +12120,18 @@ async def get_analytics_metrics(
             total_events = get_count_from_result(cursor.fetchone())
 
             # Active Events
-            cursor.execute(
-                f"""
-                SELECT COUNT(*) FROM events WHERE date >= date('now')
-            """
-            )
+            if IS_PRODUCTION and DB_URL:
+                cursor.execute(
+                    f"""
+                    SELECT COUNT(*) FROM events WHERE date::date >= CURRENT_DATE
+                """
+                )
+            else:
+                cursor.execute(
+                    f"""
+                    SELECT COUNT(*) FROM events WHERE date >= date('now')
+                """
+                )
             active_events = get_count_from_result(cursor.fetchone())
 
             # Total users
