@@ -238,7 +238,7 @@ const RoundupPage = () => {
 
       const canvas = await html2canvas(cardRef.current, {
         width: 630,
-        height: 1200,
+        height: 1400,
         scale: 2,
         backgroundColor: theme === 'dark' ? '#1a1a2e' : '#667eea',
         logging: false,
@@ -568,7 +568,7 @@ const RoundupPage = () => {
       <div 
         ref={cardRef}
         style={{ display: 'none' }}
-        className="w-[630px] h-[1200px] relative overflow-hidden"
+        className="w-[630px] h-[1400px] relative overflow-hidden"
       >
         <div 
           className="w-full h-full flex flex-col relative"
@@ -587,7 +587,7 @@ const RoundupPage = () => {
               {selectedLocation?.city || 'Your City'}
             </h2>
             <p className="text-lg text-white/70">
-              {Math.min(events.length, 6)} amazing events happening
+              {events.length} amazing events happening
             </p>
           </div>
 
@@ -713,7 +713,7 @@ const RoundupPage = () => {
                 </div>
 
                 {/* Event Pins on Map */}
-                {events.slice(0, 6).map((event, index) => {
+                {events.slice(0, 8).map((event, index) => {
                   const category = getCategory(event.category);
                   const positions = [
                     { x: '25%', y: '30%' },
@@ -721,7 +721,9 @@ const RoundupPage = () => {
                     { x: '45%', y: '65%' },
                     { x: '75%', y: '25%' },
                     { x: '20%', y: '70%' },
-                    { x: '55%', y: '35%' }
+                    { x: '55%', y: '35%' },
+                    { x: '80%', y: '60%' },
+                    { x: '35%', y: '25%' }
                   ];
                   const pos = positions[index] || positions[0];
                   
@@ -800,7 +802,7 @@ const RoundupPage = () => {
 
             {/* Events List */}
             <div className="space-y-3">
-              {events.slice(0, 6).map((event, index) => {
+              {events.slice(0, 8).map((event, index) => {
                 const category = getCategory(event.category);
                 return (
                   <div
