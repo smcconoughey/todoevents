@@ -10224,116 +10224,117 @@ async def get_enterprise_client_analytics(
     if current_user["role"] not in [UserRole.ENTERPRISE, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    placeholder = get_placeholder()
+    cursor = get_db_cursor()
+    
     try:
-        with get_db() as conn:
-            c = conn.cursor()
+        # Client performance data - simplified query
+        if current_user["role"] == UserRole.ENTERPRISE:
+            query = """
+                SELECT 
+                    COALESCE(u.email, 'None') as client,
+                    COUNT(e.id) as event_count,
+                    COALESCE(u.role, 'none') as client_role
+                FROM events e
+                LEFT JOIN users u ON e.created_by = u.id
+                WHERE e.created_by = ?
+            """
+            params = [current_user["id"]]
+            if start_date:
+                query += " AND e.created_at >= ?"
+                params.append(start_date)
+            if end_date:
+                query += " AND e.created_at <= ?"
+                params.append(end_date)
+            query += " GROUP BY u.email, u.role ORDER BY event_count DESC LIMIT 20"
+            cursor.execute(query, params)
+        else:
+            # Admin sees all users
+            query = """
+                SELECT 
+                    COALESCE(u.email, 'None') as client,
+                    COUNT(e.id) as event_count,
+                    COALESCE(u.role, 'none') as client_role
+                FROM events e
+                LEFT JOIN users u ON e.created_by = u.id
+            """
+            params = []
+            conditions = []
+            if start_date:
+                conditions.append("e.created_at >= ?")
+                params.append(start_date)
+            if end_date:
+                conditions.append("e.created_at <= ?")
+                params.append(end_date)
 
-            # Client performance data
-            db_parts = get_db_compatible_query_parts()
-            if current_user["role"] == UserRole.ENTERPRISE:
-                query = f"""
-                    SELECT 
-                        COALESCE(u.email, 'None') as client,
-                        COUNT(e.id) as event_count,
-                        u.role as client_role
-                    FROM events e
-                    LEFT JOIN users u ON e.created_by = u.id
-                    WHERE e.created_by = {placeholder}
-                """
-                params = [current_user["id"]]
-                if start_date:
-                    query += f" AND e.created_at >= {placeholder}"
-                    params.append(start_date)
-                if end_date:
-                    query += f" AND e.created_at <= {placeholder}"
-                    params.append(end_date)
-                query += " GROUP BY u.email, u.role ORDER BY event_count DESC LIMIT 20"
-                c.execute(query, tuple(params))
-            else:
-                query = f"""
-                    SELECT 
-                        COALESCE(u.email, 'None') as client,
-                        COUNT(e.id) as event_count,
-                        u.role as client_role
-                    FROM events e
-                    LEFT JOIN users u ON e.created_by = u.id
-                """
-                params = []
-                conditions = []
-                if start_date:
-                    conditions.append(f"e.created_at >= {placeholder}")
-                    params.append(start_date)
-                if end_date:
-                    conditions.append(f"e.created_at <= {placeholder}")
-                    params.append(end_date)
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+            query += " GROUP BY u.email, u.role ORDER BY event_count DESC LIMIT 20"
+            cursor.execute(query, params)
 
-                if conditions:
-                    query += " WHERE " + " AND ".join(conditions)
-                query += " GROUP BY u.email, u.role ORDER BY event_count DESC LIMIT 20"
-                c.execute(query, tuple(params))
+        client_performance = []
+        for row in cursor.fetchall():
+            client_performance.append({
+                "client": row[0],
+                "event_count": row[1], 
+                "client_role": row[2]
+            })
 
-            client_performance = []
-            for row in c.fetchall():
-                client_performance.append(
-                    {
-                        "client": row[0],
-                        "event_count": row[1],
-                        "client_role": row[2] or "none",
-                    }
-                )
+        # Category distribution - simplified query
+        if current_user["role"] == UserRole.ENTERPRISE:
+            query = """
+                SELECT 
+                    COALESCE(e.category, 'uncategorized') as category,
+                    COUNT(*) as count
+                FROM events e
+                WHERE e.created_by = ?
+            """
+            params = [current_user["id"]]
+            if start_date:
+                query += " AND e.created_at >= ?"
+                params.append(start_date)
+            if end_date:
+                query += " AND e.created_at <= ?"
+                params.append(end_date)
+            query += " GROUP BY e.category ORDER BY count DESC"
+            cursor.execute(query, params)
+        else:
+            query = """
+                SELECT 
+                    COALESCE(e.category, 'uncategorized') as category,
+                    COUNT(*) as count
+                FROM events e
+            """
+            params = []
+            conditions = []
+            if start_date:
+                conditions.append("e.created_at >= ?")
+                params.append(start_date)
+            if end_date:
+                conditions.append("e.created_at <= ?")
+                params.append(end_date)
 
-            # Category distribution
-            if current_user["role"] == UserRole.ENTERPRISE:
-                query = f"""
-                    SELECT 
-                        COALESCE(e.category, 'uncategorized') as category,
-                        COUNT(*) as count
-                    FROM events e
-                    WHERE e.created_by = {placeholder}
-                """
-                params = [current_user["id"]]
-                if start_date:
-                    query += f" AND e.created_at >= {placeholder}"
-                    params.append(start_date)
-                if end_date:
-                    query += f" AND e.created_at <= {placeholder}"
-                    params.append(end_date)
-                query += " GROUP BY e.category ORDER BY count DESC"
-                c.execute(query, tuple(params))
-            else:
-                query = f"""
-                    SELECT 
-                        COALESCE(e.category, 'uncategorized') as category,
-                        COUNT(*) as count
-                    FROM events e
-                """
-                params = []
-                conditions = []
-                if start_date:
-                    conditions.append(f"e.created_at >= {placeholder}")
-                    params.append(start_date)
-                if end_date:
-                    conditions.append(f"e.created_at <= {placeholder}")
-                    params.append(end_date)
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+            query += " GROUP BY e.category ORDER BY count DESC"
+            cursor.execute(query, params)
 
-                if conditions:
-                    query += " WHERE " + " AND ".join(conditions)
-                query += " GROUP BY e.category ORDER BY count DESC"
-                c.execute(query, tuple(params))
+        category_distribution = []
+        for row in cursor.fetchall():
+            category_distribution.append({
+                "category": row[0], 
+                "count": row[1]
+            })
 
-            category_distribution = []
-            for row in c.fetchall():
-                category_distribution.append({"category": row[0], "count": row[1]})
-
-            return {
-                "client_performance": client_performance,
-                "category_distribution": category_distribution,
-            }
+        return {
+            "client_performance": client_performance,
+            "category_distribution": category_distribution
+        }
 
     except Exception as e:
         logger.error(f"Error fetching enterprise analytics: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error fetching analytics")
+        raise HTTPException(status_code=500, detail=f"Error fetching analytics: {str(e)}")
+    finally:
+        cursor.close()
 
 
 @app.post("/admin/users/{user_id}/notify-premium")
@@ -12101,6 +12102,10 @@ async def fix_null_end_times():
 @app.get("/admin/analytics/metrics")
 async def get_analytics_metrics(
     current_user: dict = Depends(get_current_user),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exclude_users: Optional[str] = None,
+    category: Optional[str] = None,
 ):
     """Get comprehensive analytics metrics with filtering"""
     # Check admin permission
@@ -12110,53 +12115,93 @@ async def get_analytics_metrics(
     try:
         with get_db() as conn:
             cursor = conn.cursor()
+            placeholder = get_placeholder()
 
-            # Total events
+            # Parse filters to match time-series endpoint
+            excluded_user_ids = []
+            if exclude_users:
+                try:
+                    excluded_user_ids = [
+                        int(uid.strip())
+                        for uid in exclude_users.split(",")
+                        if uid.strip()
+                    ]
+                except ValueError:
+                    excluded_user_ids = []
+
+            # Default date range (last 90 days) to match time-series
+            if not start_date:
+                start_date = (datetime.utcnow() - timedelta(days=90)).strftime(
+                    "%Y-%m-%d"
+                )
+            if not end_date:
+                end_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+            # Build WHERE conditions for events
+            conditions = ["1=1"]
+            params = []
+
+            if start_date:
+                conditions.append(f"date >= {placeholder}")
+                params.append(start_date)
+            if end_date:
+                conditions.append(f"date <= {placeholder}")
+                params.append(end_date)
+
+            if excluded_user_ids:
+                placeholders = ",".join([placeholder for _ in excluded_user_ids])
+                conditions.append(f"created_by NOT IN ({placeholders})")
+                params.extend(excluded_user_ids)
+
+            if category:
+                conditions.append(f"category = {placeholder}")
+                params.append(category)
+
+            where_clause = " AND ".join(conditions)
+
+            # Total events (with filters)
             cursor.execute(
                 f"""
-                SELECT COUNT(*) FROM events
-            """
+                SELECT COUNT(*) FROM events WHERE {where_clause}
+                """,
+                params
             )
             total_events = get_count_from_result(cursor.fetchone())
 
-            # Active Events
-            if IS_PRODUCTION and DB_URL:
-                cursor.execute(
-                    f"""
-                    SELECT COUNT(*) FROM events WHERE date::date >= CURRENT_DATE
-                """
-                )
-            else:
-                cursor.execute(
-                    f"""
-                    SELECT COUNT(*) FROM events WHERE date >= date('now')
-                """
-                )
+            # Active Events (within date range and future)
+            active_conditions = conditions + [f"date >= {placeholder}"]
+            active_params = params + [datetime.utcnow().strftime("%Y-%m-%d")]
+            cursor.execute(
+                f"""
+                SELECT COUNT(*) FROM events WHERE {" AND ".join(active_conditions)}
+                """,
+                active_params
+            )
             active_events = get_count_from_result(cursor.fetchone())
 
-            # Total users
+            # Total users (no date filtering for users)
             cursor.execute("SELECT COUNT(*) FROM users")
             total_users = get_count_from_result(cursor.fetchone())
 
-            # Active hosts (users with at least one event in the last month)
-            one_month_ago = (datetime.utcnow() - timedelta(days=30)).strftime(
-                "%Y-%m-%d"
-            )
+            # Active hosts (users with at least one event in the filtered period)
             cursor.execute(
                 f"""
-                SELECT COUNT(DISTINCT created_by) FROM events WHERE date >= '{one_month_ago}'
-            """
+                SELECT COUNT(DISTINCT created_by) FROM events WHERE {where_clause}
+                """,
+                params
             )
             active_hosts = get_count_from_result(cursor.fetchone())
 
-            # Events by category
+            # Events by category (with filters)
             cursor.execute(
                 f"""
                 SELECT category, COUNT(*) 
                 FROM events 
+                WHERE {where_clause}
                 GROUP BY category
                 ORDER BY COUNT(*) DESC
-            """
+                """,
+                params
             )
             events_by_category = dict(cursor.fetchall())
 
@@ -12164,15 +12209,16 @@ async def get_analytics_metrics(
             cursor.execute("SELECT role, COUNT(*) FROM users GROUP BY role")
             user_roles = dict(cursor.fetchall())
 
-            # Recent events trend (last 30 days)
+            # Events trend (with filters) 
             cursor.execute(
                 f"""
                 SELECT date, COUNT(*) 
                 FROM events 
-                WHERE date >= '{one_month_ago}'
+                WHERE {where_clause}
                 GROUP BY date
                 ORDER BY date
-            """
+                """,
+                params
             )
             events_trend = dict(cursor.fetchall())
 
@@ -12184,6 +12230,12 @@ async def get_analytics_metrics(
                 "events_by_category": events_by_category,
                 "user_roles": user_roles,
                 "events_trend": events_trend,
+                "filters_applied": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "excluded_user_ids": excluded_user_ids,
+                    "category": category
+                }
             }
     except Exception as e:
         raise HTTPException(
