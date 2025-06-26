@@ -8715,6 +8715,456 @@ async def notify_premium_granted(
         logger.error(f"Error sending premium notification: {str(e)}")
         raise HTTPException(status_code=500, detail="Error sending notification")
 
+# ==================== REFERRAL SYSTEM ENDPOINTS ====================
+
+@app.post("/admin/referrals/create")
+async def create_referral_link(request: Request, code: str = None, commission_rate: float = 0.10, expires_days: int = 365):
+    """Create a new referral link"""
+    current_user = await get_current_admin_user(request)
+    
+    cursor = get_db_cursor()
+    
+    try:
+        # Generate unique referral code if not provided
+        if not code:
+            import uuid
+            code = str(uuid.uuid4())[:8].upper()
+        
+        # Check if code already exists
+        cursor.execute("SELECT id FROM referral_links WHERE code = ?", (code,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Referral code already exists")
+        
+        # Calculate expiry date
+        from datetime import datetime, timedelta
+        expiry_date = datetime.now() + timedelta(days=expires_days)
+        
+        # Insert referral link
+        cursor.execute("""
+            INSERT INTO referral_links (code, commission_rate, created_by, expires_at, is_active)
+            VALUES (?, ?, ?, ?, 1)
+        """, (code, commission_rate, current_user['id'], expiry_date.isoformat()))
+        
+        link_id = cursor.lastrowid
+        cursor.connection.commit()
+        
+        # Generate full referral URL
+        base_url = "https://todo-events.com"  # Replace with actual domain
+        referral_url = f"{base_url}?ref={code}"
+        
+        return {
+            "id": link_id,
+            "code": code,
+            "url": referral_url,
+            "commission_rate": commission_rate,
+            "expires_at": expiry_date.isoformat(),
+            "created_by": current_user['email']
+        }
+        
+    except Exception as e:
+        cursor.connection.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creating referral link: {str(e)}")
+    finally:
+        cursor.close()
+
+@app.get("/admin/referrals")
+async def get_referral_links(request: Request):
+    """Get all referral links with stats"""
+    current_user = await get_current_admin_user(request)
+    
+    cursor = get_db_cursor()
+    
+    try:
+        # Get referral links with stats
+        cursor.execute("""
+            SELECT 
+                rl.id,
+                rl.code,
+                rl.commission_rate,
+                rl.created_at,
+                rl.expires_at,
+                rl.is_active,
+                u.email as created_by_email,
+                COUNT(DISTINCT rt.id) as total_clicks,
+                COUNT(DISTINCT CASE WHEN rt.converted = 1 THEN rt.id END) as conversions,
+                COUNT(DISTINCT CASE WHEN rt.user_id IS NOT NULL THEN rt.user_id END) as signups,
+                COALESCE(SUM(rc.amount), 0) as total_commission
+            FROM referral_links rl
+            LEFT JOIN users u ON rl.created_by = u.id
+            LEFT JOIN referral_tracking rt ON rl.id = rt.referral_link_id
+            LEFT JOIN referral_commissions rc ON rl.id = rc.referral_link_id
+            GROUP BY rl.id
+            ORDER BY rl.created_at DESC
+        """)
+        
+        links = []
+        for row in cursor.fetchall():
+            base_url = "https://todo-events.com"  # Replace with actual domain
+            referral_url = f"{base_url}?ref={row[1]}"
+            
+            links.append({
+                "id": row[0],
+                "code": row[1],
+                "url": referral_url,
+                "commission_rate": row[2],
+                "created_at": row[3],
+                "expires_at": row[4],
+                "is_active": bool(row[5]),
+                "created_by": row[6],
+                "stats": {
+                    "total_clicks": row[7],
+                    "conversions": row[8],
+                    "signups": row[9],
+                    "total_commission": float(row[10]),
+                    "conversion_rate": round((row[8] / max(row[7], 1)) * 100, 2),
+                    "commission_per_click": round(float(row[10]) / max(row[7], 1), 2)
+                }
+            })
+        
+        return {"referral_links": links}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching referral links: {str(e)}")
+    finally:
+        cursor.close()
+
+@app.post("/admin/referrals/{link_id}/toggle")
+async def toggle_referral_link(request: Request, link_id: int):
+    """Toggle referral link active status"""
+    current_user = await get_current_admin_user(request)
+    
+    cursor = get_db_cursor()
+    
+    try:
+        # Toggle active status
+        cursor.execute("""
+            UPDATE referral_links 
+            SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END
+            WHERE id = ?
+        """, (link_id,))
+        
+        cursor.connection.commit()
+        
+        # Get updated status
+        cursor.execute("SELECT is_active FROM referral_links WHERE id = ?", (link_id,))
+        result = cursor.fetchone()
+        
+        return {"id": link_id, "is_active": bool(result[0]) if result else False}
+        
+    except Exception as e:
+        cursor.connection.rollback()
+        raise HTTPException(status_code=500, detail=f"Error toggling referral link: {str(e)}")
+    finally:
+        cursor.close()
+
+@app.get("/admin/referrals/analytics")
+async def get_referral_analytics(request: Request, days: int = 30):
+    """Get referral analytics data"""
+    current_user = await get_current_admin_user(request)
+    
+    cursor = get_db_cursor()
+    
+    try:
+        from datetime import datetime, timedelta
+        start_date = datetime.now() - timedelta(days=days)
+        
+        # Get daily statistics
+        cursor.execute("""
+            SELECT 
+                DATE(rt.created_at) as date,
+                COUNT(*) as clicks,
+                COUNT(CASE WHEN rt.converted = 1 THEN 1 END) as conversions,
+                COUNT(CASE WHEN rt.user_id IS NOT NULL THEN 1 END) as signups
+            FROM referral_tracking rt
+            WHERE rt.created_at >= ?
+            GROUP BY DATE(rt.created_at)
+            ORDER BY date
+        """, (start_date.isoformat(),))
+        
+        daily_stats = []
+        for row in cursor.fetchall():
+            daily_stats.append({
+                "date": row[0],
+                "clicks": row[1],
+                "conversions": row[2],
+                "signups": row[3]
+            })
+        
+        # Get top performing referral codes
+        cursor.execute("""
+            SELECT 
+                rl.code,
+                COUNT(DISTINCT rt.id) as clicks,
+                COUNT(DISTINCT CASE WHEN rt.converted = 1 THEN rt.id END) as conversions,
+                COALESCE(SUM(rc.amount), 0) as commission
+            FROM referral_links rl
+            LEFT JOIN referral_tracking rt ON rl.id = rt.referral_link_id
+            LEFT JOIN referral_commissions rc ON rl.id = rc.referral_link_id
+            WHERE rt.created_at >= ?
+            GROUP BY rl.id
+            ORDER BY conversions DESC, clicks DESC
+            LIMIT 10
+        """, (start_date.isoformat(),))
+        
+        top_codes = []
+        for row in cursor.fetchall():
+            top_codes.append({
+                "code": row[0],
+                "clicks": row[1],
+                "conversions": row[2],
+                "commission": float(row[3])
+            })
+        
+        # Get overall statistics
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT rt.id) as total_clicks,
+                COUNT(DISTINCT CASE WHEN rt.converted = 1 THEN rt.id END) as total_conversions,
+                COUNT(DISTINCT CASE WHEN rt.user_id IS NOT NULL THEN rt.user_id END) as total_signups,
+                COALESCE(SUM(rc.amount), 0) as total_commission,
+                COUNT(DISTINCT rl.id) as active_links
+            FROM referral_links rl
+            LEFT JOIN referral_tracking rt ON rl.id = rt.referral_link_id
+            LEFT JOIN referral_commissions rc ON rl.id = rc.referral_link_id
+            WHERE rl.is_active = 1 AND rt.created_at >= ?
+        """, (start_date.isoformat(),))
+        
+        overall = cursor.fetchone()
+        
+        return {
+            "period_days": days,
+            "daily_stats": daily_stats,
+            "top_codes": top_codes,
+            "overview": {
+                "total_clicks": overall[0] or 0,
+                "total_conversions": overall[1] or 0,
+                "total_signups": overall[2] or 0,
+                "total_commission": float(overall[3] or 0),
+                "active_links": overall[4] or 0,
+                "conversion_rate": round(((overall[1] or 0) / max(overall[0] or 1, 1)) * 100, 2),
+                "avg_commission_per_conversion": round(float(overall[3] or 0) / max(overall[1] or 1, 1), 2)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching referral analytics: {str(e)}")
+    finally:
+        cursor.close()
+
+# Public endpoint for tracking referral clicks
+@app.get("/track-referral")
+async def track_referral_click(ref: str, request: Request):
+    """Track referral link click"""
+    cursor = get_db_cursor()
+    
+    try:
+        # Get referral link
+        cursor.execute("""
+            SELECT id, is_active, expires_at FROM referral_links 
+            WHERE code = ?
+        """, (ref,))
+        
+        link = cursor.fetchone()
+        if not link:
+            return {"status": "invalid"}
+        
+        link_id, is_active, expires_at = link
+        
+        # Check if link is active and not expired
+        if not is_active:
+            return {"status": "inactive"}
+        
+        from datetime import datetime
+        if expires_at and datetime.fromisoformat(expires_at) < datetime.now():
+            return {"status": "expired"}
+        
+        # Get client IP and user agent
+        client_ip = request.client.host
+        user_agent = request.headers.get("user-agent", "")
+        
+        # Track the click
+        cursor.execute("""
+            INSERT INTO referral_tracking (referral_link_id, ip_address, user_agent, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (link_id, client_ip, user_agent, datetime.now().isoformat()))
+        
+        cursor.connection.commit()
+        
+        return {"status": "tracked", "referral_code": ref}
+        
+    except Exception as e:
+        cursor.connection.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        cursor.close()
+
+# Endpoint to link referral to user signup
+@app.post("/admin/referrals/link-signup")
+async def link_referral_signup(request: Request, user_id: int, referral_code: str):
+    """Link a user signup to a referral"""
+    current_user = await get_current_admin_user(request)
+    
+    cursor = get_db_cursor()
+    
+    try:
+        # Get referral link
+        cursor.execute("SELECT id FROM referral_links WHERE code = ?", (referral_code,))
+        link = cursor.fetchone()
+        
+        if not link:
+            raise HTTPException(status_code=404, detail="Referral code not found")
+        
+        link_id = link[0]
+        
+        # Update tracking record with user_id (if there's a recent click from same IP)
+        cursor.execute("""
+            UPDATE referral_tracking 
+            SET user_id = ?
+            WHERE referral_link_id = ? AND user_id IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (user_id, link_id))
+        
+        cursor.connection.commit()
+        
+        return {"status": "linked", "user_id": user_id, "referral_code": referral_code}
+        
+    except Exception as e:
+        cursor.connection.rollback()
+        raise HTTPException(status_code=500, detail=f"Error linking signup: {str(e)}")
+    finally:
+        cursor.close()
+
+# Endpoint to create commission records
+@app.post("/admin/referrals/create-commission")
+async def create_referral_commission(
+    request: Request, 
+    referral_link_id: int, 
+    sale_amount: float, 
+    transaction_id: str = None,
+    description: str = "Premium subscription purchase"
+):
+    """Create a commission record for a referral"""
+    current_user = await get_current_admin_user(request)
+    
+    cursor = get_db_cursor()
+    
+    try:
+        # Get referral link and commission rate
+        cursor.execute("SELECT commission_rate FROM referral_links WHERE id = ?", (referral_link_id,))
+        link = cursor.fetchone()
+        
+        if not link:
+            raise HTTPException(status_code=404, detail="Referral link not found")
+        
+        commission_rate = link[0]
+        commission_amount = sale_amount * commission_rate
+        
+        # Insert commission record
+        cursor.execute("""
+            INSERT INTO referral_commissions 
+            (referral_link_id, sale_amount, commission_rate, amount, transaction_id, description, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            referral_link_id, 
+            sale_amount, 
+            commission_rate, 
+            commission_amount, 
+            transaction_id, 
+            description, 
+            current_user['id'],
+            datetime.now().isoformat()
+        ))
+        
+        commission_id = cursor.lastrowid
+        cursor.connection.commit()
+        
+        return {
+            "id": commission_id,
+            "referral_link_id": referral_link_id,
+            "sale_amount": sale_amount,
+            "commission_rate": commission_rate,
+            "commission_amount": commission_amount,
+            "transaction_id": transaction_id,
+            "description": description
+        }
+        
+    except Exception as e:
+        cursor.connection.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creating commission: {str(e)}")
+    finally:
+        cursor.close()
+
+@app.post("/admin/create-referral-tables")
+async def create_referral_tables(request: Request):
+    """Create referral system database tables"""
+    current_user = await get_current_admin_user(request)
+    
+    cursor = get_db_cursor()
+    
+    try:
+        # Create referral_links table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS referral_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT UNIQUE NOT NULL,
+                commission_rate REAL DEFAULT 0.10,
+                created_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1,
+                FOREIGN KEY (created_by) REFERENCES users (id)
+            )
+        """)
+        
+        # Create referral_tracking table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS referral_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referral_link_id INTEGER NOT NULL,
+                user_id INTEGER,
+                ip_address TEXT,
+                user_agent TEXT,
+                converted BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (referral_link_id) REFERENCES referral_links (id),
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        """)
+        
+        # Create referral_commissions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS referral_commissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referral_link_id INTEGER NOT NULL,
+                sale_amount REAL NOT NULL,
+                commission_rate REAL NOT NULL,
+                amount REAL NOT NULL,
+                transaction_id TEXT,
+                description TEXT,
+                status TEXT DEFAULT 'pending',
+                created_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                paid_at TIMESTAMP,
+                FOREIGN KEY (referral_link_id) REFERENCES referral_links (id),
+                FOREIGN KEY (created_by) REFERENCES users (id)
+            )
+        """)
+        
+        cursor.connection.commit()
+        
+        return {
+            "status": "success",
+            "message": "Referral system tables created successfully",
+            "tables": ["referral_links", "referral_tracking", "referral_commissions"]
+        }
+        
+    except Exception as e:
+        cursor.connection.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creating tables: {str(e)}")
+    finally:
+        cursor.close()
+
 class SimpleCache:
     """Thread-safe TTL cache for frequently accessed data."""
 

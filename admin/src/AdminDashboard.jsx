@@ -6,7 +6,8 @@ import {
   TrendingUp, TrendingDown, Activity, Globe, MapPin, Clock, List,
   ChevronDown, ChevronUp, Lightbulb, FileText, UserCheck, FileX,
   Clock3, CheckCircle2, XCircle, AlertOctagon, ExternalLink, Image,
-  Flag, Monitor, HardDrive, Gavel, FileSearch
+  Flag, Monitor, HardDrive, Gavel, FileSearch, Share2, DollarSign,
+  Copy, ToggleLeft, ToggleRight, Percent
 } from 'lucide-react';
 
 import {
@@ -4152,6 +4153,316 @@ const AdminDashboard = () => {
     );
   };
 
+  // Referral Management Component
+  const ReferralManagement = () => {
+    const [referralLinks, setReferralLinks] = useState([]);
+    const [analytics, setAnalytics] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [createForm, setCreateForm] = useState({ code: '', commission_rate: 0.10 });
+    const [showCreateForm, setShowCreateForm] = useState(false);
+
+    const fetchReferralLinks = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchData('/admin/referrals');
+        setReferralLinks(data.referral_links || []);
+      } catch (error) {
+        setError(`Error fetching referral links: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchAnalytics = async () => {
+      try {
+        const data = await fetchData('/admin/referrals/analytics?days=30');
+        setAnalytics(data);
+      } catch (error) {
+        setError(`Error fetching analytics: ${error.message}`);
+      }
+    };
+
+    const createReferralLink = async () => {
+      try {
+        const params = new URLSearchParams({
+          commission_rate: createForm.commission_rate.toString(),
+          expires_days: '365'
+        });
+        if (createForm.code) {
+          params.append('code', createForm.code);
+        }
+
+        await fetchData(`/admin/referrals/create?${params}`, 'POST');
+        setCreateForm({ code: '', commission_rate: 0.10 });
+        setShowCreateForm(false);
+        fetchReferralLinks();
+        fetchAnalytics();
+      } catch (error) {
+        setError(`Error creating referral link: ${error.message}`);
+      }
+    };
+
+    const toggleReferralLink = async (linkId) => {
+      try {
+        await fetchData(`/admin/referrals/${linkId}/toggle`, 'POST');
+        fetchReferralLinks();
+      } catch (error) {
+        setError(`Error toggling referral link: ${error.message}`);
+      }
+    };
+
+    const copyToClipboard = (text) => {
+      navigator.clipboard.writeText(text);
+      // Simple feedback - you could add a toast notification here
+      alert('Copied to clipboard!');
+    };
+
+    const createTables = async () => {
+      try {
+        await fetchData('/admin/create-referral-tables', 'POST');
+        alert('Referral tables created successfully!');
+        fetchReferralLinks();
+      } catch (error) {
+        setError(`Error creating tables: ${error.message}`);
+      }
+    };
+
+    useEffect(() => {
+      fetchReferralLinks();
+      fetchAnalytics();
+    }, []);
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Referral Management</h2>
+            <p className="text-gray-600">Create and manage referral links to track signups and sales</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={createTables}
+              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 flex items-center"
+            >
+              <Database className="mr-2 w-4 h-4" />
+              Setup Tables
+            </button>
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center"
+            >
+              <Plus className="mr-2 w-4 h-4" />
+              New Referral Link
+            </button>
+          </div>
+        </div>
+
+        {/* Analytics Overview */}
+        {analytics && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Eye className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Clicks</p>
+                  <p className="text-2xl font-bold text-gray-900">{analytics.overview.total_clicks}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <UserPlus className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Signups</p>
+                  <p className="text-2xl font-bold text-gray-900">{analytics.overview.total_signups}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Percent className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
+                  <p className="text-2xl font-bold text-gray-900">{analytics.overview.conversion_rate}%</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <DollarSign className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Commission</p>
+                  <p className="text-2xl font-bold text-gray-900">${analytics.overview.total_commission.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Form */}
+        {showCreateForm && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">Create New Referral Link</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Custom Code (optional)
+                </label>
+                <input
+                  type="text"
+                  value={createForm.code}
+                  onChange={(e) => setCreateForm({ ...createForm, code: e.target.value })}
+                  placeholder="Leave empty for auto-generated"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Commission Rate
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  value={createForm.commission_rate}
+                  onChange={(e) => setCreateForm({ ...createForm, commission_rate: parseFloat(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter as decimal (0.10 = 10%)</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={createReferralLink}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Create Link
+              </button>
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Referral Links Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">Referral Links</h3>
+          </div>
+          
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Code & URL
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Commission
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Performance
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {referralLinks.map((link) => (
+                    <tr key={link.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{link.code}</div>
+                          <div className="text-sm text-gray-500 flex items-center">
+                            <span className="truncate max-w-xs">{link.url}</span>
+                            <button
+                              onClick={() => copyToClipboard(link.url)}
+                              className="ml-2 text-blue-600 hover:text-blue-800"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{(link.commission_rate * 100).toFixed(1)}%</div>
+                        <div className="text-sm text-gray-500">${link.stats.total_commission.toFixed(2)} earned</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {link.stats.total_clicks} clicks → {link.stats.signups} signups
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {link.stats.conversion_rate}% conversion rate
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          link.is_active 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {link.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => toggleReferralLink(link.id)}
+                          className={`mr-2 ${
+                            link.is_active 
+                              ? 'text-red-600 hover:text-red-900' 
+                              : 'text-green-600 hover:text-green-900'
+                          }`}
+                        >
+                          {link.is_active ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Instructions */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-blue-900 mb-2">How to use referral links:</h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>1. Create a referral link with a custom code or auto-generated one</li>
+            <li>2. Share the link with potential customers</li>
+            <li>3. When someone clicks the link, it will be tracked</li>
+            <li>4. When they sign up, you can manually link the signup to track conversions</li>
+            <li>5. When they make a purchase, manually create a commission record</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
   // Moderation Tools Component
   const ModerationTools = () => {
     return (
@@ -4235,6 +4546,7 @@ const AdminDashboard = () => {
               { name: 'Events', icon: <Calendar className="mr-2" />, tab: 'events' },
               { name: 'Privacy', icon: <FileText className="mr-2" />, tab: 'privacy' },
               { name: 'Premium', icon: <UserCheck className="mr-2" />, tab: 'premium' },
+              { name: 'Referrals', icon: <Share2 className="mr-2" />, tab: 'referrals' },
               { name: 'Media', icon: <Image className="mr-2" />, tab: 'media' },
               { name: 'Bulk Import', icon: <Plus className="mr-2" />, tab: 'bulk' },
               { name: 'Analytics', icon: <BarChart2 className="mr-2" />, tab: 'analytics' },
@@ -4298,6 +4610,7 @@ const AdminDashboard = () => {
           {activeTab === 'events' && <EventManagement />}
           {activeTab === 'privacy' && <PrivacyManagement />}
           {activeTab === 'premium' && <PremiumManagement />}
+          {activeTab === 'referrals' && <ReferralManagement />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'media' && <MediaModeration />}
           {activeTab === 'moderation' && <ModerationTools />}

@@ -581,7 +581,7 @@ const RoundupPage = () => {
           {/* Header */}
           <div className="text-center px-6 pt-8 pb-6">
                           <h1 className="text-4xl font-bold text-white mb-2">
-                {getTimeFilterLabel(selectedFilter)}
+                {getFilterLabel(selectedFilter)}
               </h1>
             <h2 className="text-2xl font-semibold text-white/90 mb-2">
               {selectedLocation?.city || 'Your City'}
