@@ -12,8 +12,16 @@ const WelcomePopup = ({ onClose, forceShow = false }) => {
     if (forceShow) {
       setIsVisible(true);
     } else {
+      // Track visit count instead of just first-time visit
+      const visitCount = parseInt(localStorage.getItem('visitCount') || '0', 10);
       const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-      if (!hasSeenWelcome) {
+      
+      // Increment visit count
+      const newVisitCount = visitCount + 1;
+      localStorage.setItem('visitCount', newVisitCount.toString());
+      
+      // Show popup on 3rd visit if they haven't seen it yet
+      if (newVisitCount === 3 && !hasSeenWelcome) {
         setTimeout(() => setIsVisible(true), 1000);
       }
     }
