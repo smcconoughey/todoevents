@@ -10308,8 +10308,11 @@ async def get_enterprise_client_analytics(
             }
 
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"Error fetching enterprise analytics: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error fetching analytics: {str(e)}")
+        logger.error(f"Full traceback: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Error fetching analytics: {str(e)} | Full error: {error_details[:200]}")
 
 
 @app.post("/admin/users/{user_id}/notify-premium")
@@ -12104,92 +12107,36 @@ async def get_analytics_metrics(
                 except ValueError:
                     excluded_user_ids = []
 
-            # Only apply date filters if explicitly provided
-            # Don't default to 90-day filtering for main metrics
-
-            # Build WHERE conditions for events (only if filters provided)
-            conditions = []
-            params = []
-
-            if start_date:
-                conditions.append(f"date >= {placeholder}")
-                params.append(start_date)
-            if end_date:
-                conditions.append(f"date <= {placeholder}")
-                params.append(end_date)
-
-            if excluded_user_ids:
-                placeholders = ",".join([placeholder for _ in excluded_user_ids])
-                conditions.append(f"created_by NOT IN ({placeholders})")
-                params.extend(excluded_user_ids)
-
-            if category:
-                conditions.append(f"category = {placeholder}")
-                params.append(category)
-
-            where_clause = " AND ".join(conditions) if conditions else "1=1"
-
-            # Total events (with filters)
-            cursor.execute(
-                f"""
-                SELECT COUNT(*) FROM events WHERE {where_clause}
-                """,
-                params
-            )
+            # Total events (ALL events - no default filtering)
+            cursor.execute("SELECT COUNT(*) FROM events")
             total_events = get_count_from_result(cursor.fetchone())
 
-            # Active Events (within date range and future)
-            active_conditions = conditions + [f"date >= {placeholder}"]
-            active_params = params + [datetime.utcnow().strftime("%Y-%m-%d")]
-            cursor.execute(
-                f"""
-                SELECT COUNT(*) FROM events WHERE {" AND ".join(active_conditions)}
-                """,
-                active_params
-            )
+            # Active Events  
+            if IS_PRODUCTION and DB_URL:
+                cursor.execute("SELECT COUNT(*) FROM events WHERE date::date >= CURRENT_DATE")
+            else:
+                cursor.execute("SELECT COUNT(*) FROM events WHERE date >= date('now')")
             active_events = get_count_from_result(cursor.fetchone())
 
-            # Total users (no date filtering for users)
+            # Total users
             cursor.execute("SELECT COUNT(*) FROM users")
             total_users = get_count_from_result(cursor.fetchone())
 
-            # Active hosts (users with at least one event in the filtered period)
-            cursor.execute(
-                f"""
-                SELECT COUNT(DISTINCT created_by) FROM events WHERE {where_clause}
-                """,
-                params
-            )
+            # Active hosts (users with at least one event in the last month)
+            one_month_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+            cursor.execute(f"SELECT COUNT(DISTINCT created_by) FROM events WHERE date >= '{one_month_ago}'")
             active_hosts = get_count_from_result(cursor.fetchone())
 
-            # Events by category (with filters)
-            cursor.execute(
-                f"""
-                SELECT category, COUNT(*) 
-                FROM events 
-                WHERE {where_clause}
-                GROUP BY category
-                ORDER BY COUNT(*) DESC
-                """,
-                params
-            )
+            # Events by category
+            cursor.execute("SELECT category, COUNT(*) FROM events GROUP BY category ORDER BY COUNT(*) DESC")
             events_by_category = dict(cursor.fetchall())
 
             # User role distribution
             cursor.execute("SELECT role, COUNT(*) FROM users GROUP BY role")
             user_roles = dict(cursor.fetchall())
 
-            # Events trend (with filters) 
-            cursor.execute(
-                f"""
-                SELECT date, COUNT(*) 
-                FROM events 
-                WHERE {where_clause}
-                GROUP BY date
-                ORDER BY date
-                """,
-                params
-            )
+            # Recent events trend (last 30 days)
+            cursor.execute(f"SELECT date, COUNT(*) FROM events WHERE date >= '{one_month_ago}' GROUP BY date ORDER BY date")
             events_trend = dict(cursor.fetchall())
 
             return {
@@ -12199,13 +12146,7 @@ async def get_analytics_metrics(
                 "active_hosts": active_hosts,
                 "events_by_category": events_by_category,
                 "user_roles": user_roles,
-                "events_trend": events_trend,
-                "filters_applied": {
-                    "start_date": start_date,
-                    "end_date": end_date,
-                    "excluded_user_ids": excluded_user_ids,
-                    "category": category
-                }
+                "events_trend": events_trend
             }
     except Exception as e:
         raise HTTPException(
