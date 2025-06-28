@@ -165,9 +165,7 @@ const ShareCard = ({ event }) => {
       
       // Enhanced map styles for better readability
       const baseStyles = [
-        "feature:poi.business|visibility:off", // Hide business POIs for cleaner look
-        "feature:poi.medical|visibility:off",
-        "feature:poi.school|visibility:off", 
+        "feature:poi|visibility:off", // Hide all POIs (shops, stores, businesses, etc.)
         "feature:transit|visibility:simplified",
         "feature:road.arterial|element:labels|visibility:on",
         "feature:road.highway|element:labels|visibility:on",

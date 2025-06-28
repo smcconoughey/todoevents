@@ -68,17 +68,7 @@ const lightMapStyles = [
   },
   {
     featureType: "poi",
-    elementType: "geometry",
-    stylers: [{ color: "#D1E6CF" }]
-  },
-  {
-    featureType: "poi",
-    stylers: [{ visibility: "on" }]
-  },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#52B788" }]
+    stylers: [{ visibility: "off" }]
   }
 ];
 
