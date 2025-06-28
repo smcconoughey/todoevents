@@ -278,14 +278,14 @@ const MapContainer = React.forwardRef(({
       console.log("Updating map to:", mapType, isDarkMode ? "dark mode" : "light mode");
       
       const mapOptions = {
-        mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.SATELLITE : google.maps.MapTypeId.ROADMAP,
+        mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
       };
 
       // Only apply custom styles for roadmap mode
       if (mapType === MAP_TYPE_ROADMAP) {
         mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
       } else {
-        // Remove custom styles for satellite mode
+        // Remove custom styles for hybrid/satellite mode
         mapOptions.styles = [];
       }
 
@@ -308,7 +308,7 @@ const MapContainer = React.forwardRef(({
         const mapOptions = {
           center: mapCenter || DEFAULT_CENTER,
           zoom: mapCenter ? 13 : DEFAULT_ZOOM,
-          mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.SATELLITE : google.maps.MapTypeId.ROADMAP,
+          mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
@@ -326,7 +326,7 @@ const MapContainer = React.forwardRef(({
           scaleControl: false
         };
 
-        // Only apply custom styles for roadmap mode, satellite mode uses default styling
+        // Only apply custom styles for roadmap mode, hybrid/satellite mode shows labels and borders by default
         if (mapType === MAP_TYPE_ROADMAP) {
           mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
         }
@@ -493,10 +493,13 @@ const MapContainer = React.forwardRef(({
       // Find the category for this event
       const eventCategory = categories.find(cat => cat.id === event.category) || categories[0];
       
+      // Use light theme for pins when in satellite mode for better visibility
+      const pinTheme = mapType === MAP_TYPE_SATELLITE ? THEME_LIGHT : theme;
+      
       const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
         map: mapInstanceRef.current,
-        icon: createMarkerIcon(eventCategory.id, true, theme, event.verified || event.is_premium_event),
+        icon: createMarkerIcon(eventCategory.id, true, pinTheme, event.verified || event.is_premium_event),
         optimized: true,
         title: event.title,
         zIndex: event.id

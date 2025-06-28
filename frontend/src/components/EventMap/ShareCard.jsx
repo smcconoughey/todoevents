@@ -216,10 +216,10 @@ const ShareCard = ({ event }) => {
       const allStyles = [...baseStyles, ...(theme === "dark" ? darkStyles : lightStyles)];
       const styleParam = allStyles.map(style => `&style=${encodeURIComponent(style)}`).join('');
       
-      // Choose map type based on user preference
-      const mapTypeParam = mapType === MAP_TYPE_SATELLITE ? 'satellite' : 'roadmap';
+      // Choose map type based on user preference - use hybrid for satellite to show labels and borders
+      const mapTypeParam = mapType === MAP_TYPE_SATELLITE ? 'hybrid' : 'roadmap';
       
-      // For satellite maps, don't include custom styles as they interfere with satellite imagery
+      // For hybrid/satellite maps, don't include custom styles as they interfere with satellite imagery
       const finalStyleParam = mapType === MAP_TYPE_SATELLITE ? '' : styleParam;
       
       const url = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=${mapTypeParam}&${marker}${finalStyleParam}&key=${apiKey}`;

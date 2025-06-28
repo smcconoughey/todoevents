@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState, useContext } from 'react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import categories from './categoryConfig';
 import { initGoogleMaps } from '@/googleMapsLoader';
-import { ThemeContext, THEME_DARK, THEME_LIGHT } from '@/components/ThemeContext';
+import { ThemeContext, THEME_DARK, THEME_LIGHT, MAP_TYPE_ROADMAP, MAP_TYPE_SATELLITE } from '@/components/ThemeContext';
 import { createMarkerIcon, createClusterIcon } from './markerUtils';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -206,7 +206,7 @@ const MapContainer = React.forwardRef(({
   const resizeObserverRef = useRef(null);
   
   // Get current theme from context
-  const { theme } = useContext(ThemeContext);
+  const { theme, mapType } = useContext(ThemeContext);
   const isDarkMode = theme === THEME_DARK;
 
   // Reset view functionality
@@ -246,16 +246,24 @@ const MapContainer = React.forwardRef(({
 
         if (!mapRef.current) return;
 
-        const map = new google.maps.Map(mapRef.current, {
+        // Configure map options based on theme and map type
+        const mapOptions = {
           center: mapCenter || DEFAULT_CENTER,
           zoom: mapCenter ? 13 : DEFAULT_ZOOM,
-          styles: isDarkMode ? darkMapStyles : lightMapStyles,
+          mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
           clickableIcons: false,
           gestureHandling: "greedy"
-        });
+        };
+
+        // Only apply custom styles for roadmap mode, hybrid/satellite mode shows labels and borders by default
+        if (mapType === MAP_TYPE_ROADMAP) {
+          mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
+        }
+
+        const map = new google.maps.Map(mapRef.current, mapOptions);
 
         mapInstanceRef.current = map;
 
@@ -295,6 +303,27 @@ const MapContainer = React.forwardRef(({
       }
     };
   }, []);
+
+  // Update map styles and type when theme or map type changes
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      console.log("Updating beta map to:", mapType, isDarkMode ? "dark mode" : "light mode");
+      
+      const mapOptions = {
+        mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
+      };
+
+      // Only apply custom styles for roadmap mode
+      if (mapType === MAP_TYPE_ROADMAP) {
+        mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
+      } else {
+        // Remove custom styles for hybrid/satellite mode
+        mapOptions.styles = [];
+      }
+
+      mapInstanceRef.current.setOptions(mapOptions);
+    }
+  }, [theme, mapType]);
 
   // Handle map center and zoom updates
   useEffect(() => {
@@ -387,10 +416,13 @@ const MapContainer = React.forwardRef(({
       // Find the category for this event
       const eventCategory = categories.find(cat => cat.id === event.category) || categories[0];
       
+      // Use light theme for pins when in satellite mode for better visibility
+      const pinTheme = mapType === MAP_TYPE_SATELLITE ? THEME_LIGHT : theme;
+      
       const marker = new google.maps.Marker({
         position: { lat: event.lat, lng: event.lng },
         map: mapInstanceRef.current,
-        icon: createMarkerIcon(eventCategory.id, true, theme),
+        icon: createMarkerIcon(eventCategory.id, true, pinTheme),
         optimized: true,
         title: event.title,
         zIndex: event.id
