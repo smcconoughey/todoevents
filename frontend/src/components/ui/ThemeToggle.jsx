@@ -1,99 +1,174 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
-import { ThemeContext, THEME_LIGHT, THEME_DARK } from '../../components/ThemeContext';
+import React, { useContext, useEffect, useState, useRef } from 'react';
+import { Sun, Moon, Map, Satellite, Settings, ChevronDown } from 'lucide-react';
+import { ThemeContext, THEME_LIGHT, THEME_DARK, MAP_TYPE_ROADMAP, MAP_TYPE_SATELLITE } from '../../components/ThemeContext';
 import { Button } from './button';
 
-const ThemeToggle = () => {
-  const { theme, toggleTheme } = useContext(ThemeContext);
-  const [localTheme, setLocalTheme] = useState(theme);
-  const [isToggling, setIsToggling] = useState(false);
+const ThemeSelector = () => {
+  const { theme, mapType, toggleTheme, setMapType } = useContext(ThemeContext);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
   
-  // Keep local state in sync with context
+  // Close dropdown when clicking outside
   useEffect(() => {
-    setLocalTheme(theme);
-    console.log('ThemeToggle: theme from context updated to', theme);
-  }, [theme]);
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
 
-  const handleToggle = () => {
-    console.log('ThemeToggle: button clicked, current theme:', theme);
-    
-    // Show visual feedback during toggle
-    setIsToggling(true);
-    
-    // Determine the new theme - only toggle between light and dark
-    const newTheme = theme === THEME_LIGHT ? THEME_DARK : THEME_LIGHT;
-    
-    console.log('ThemeToggle: switching to new theme:', newTheme);
-    
-    // Directly manipulate DOM in addition to context update for immediate visual feedback
-    document.documentElement.setAttribute('data-theme', newTheme);
-    
-    // Add/remove the theme classes
-    document.documentElement.classList.remove('light-mode', 'dark-mode');
-    document.documentElement.classList.add(`${newTheme}-mode`);
-    document.body.classList.remove('light-mode', 'dark-mode');
-    document.body.classList.add(`${newTheme}-mode`);
-    
-    // Persist the setting in localStorage for a more consistent experience
-    localStorage.setItem('theme', newTheme);
-    
-    // Call context toggle function
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleThemeToggle = () => {
     toggleTheme();
-    
-    // Reset toggling state after animation
-    setTimeout(() => {
-      setIsToggling(false);
-    }, 600);
   };
 
-  // Get theme-specific styling and labels
+  const handleMapTypeChange = (newMapType) => {
+    setMapType(newMapType);
+  };
+
+  // Get current theme info for the main button
   const getThemeInfo = () => {
-    switch (localTheme) {
+    switch (theme) {
       case THEME_LIGHT:
         return {
           icon: Sun,
-          label: 'Switch to dark mode',
           iconClass: 'text-amber-500',
-          bgClass: 'hover:bg-amber-50 dark:hover:bg-amber-950'
         };
       case THEME_DARK:
         return {
           icon: Moon,
-          label: 'Switch to light mode',
           iconClass: 'text-indigo-400',
-          bgClass: 'hover:bg-indigo-50 dark:hover:bg-indigo-950'
         };
       default:
         return {
           icon: Sun,
-          label: 'Switch theme',
           iconClass: 'text-amber-500',
-          bgClass: 'hover:bg-amber-50'
         };
     }
   };
 
   const themeInfo = getThemeInfo();
-  const IconComponent = themeInfo.icon;
+  const ThemeIcon = themeInfo.icon;
+  const MapIcon = mapType === MAP_TYPE_SATELLITE ? Satellite : Map;
   
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleToggle}
-      aria-label={themeInfo.label}
-      className={`relative overflow-hidden w-10 h-10 rounded-full bg-opacity-20 transition-all duration-300 ${
-        themeInfo.bgClass
-      } ${isToggling ? 'animate-pulse scale-105' : 'scale-100'}`}
+    <div className="relative" ref={dropdownRef}>
+      {/* Main Theme Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Open theme settings"
+        className={`relative overflow-hidden w-10 h-10 rounded-full bg-opacity-20 transition-all duration-300 hover:bg-white/10 ${
+          isOpen ? 'bg-white/10 scale-105' : 'scale-100'
+        }`}
       >
-      <IconComponent 
-        size={18} 
-        className={`${themeInfo.iconClass} transition-all duration-300 ${
-          isToggling ? 'animate-spin' : ''
-        }`} 
-      />
-    </Button>
+        <div className="relative w-full h-full flex items-center justify-center">
+          {/* Main theme icon */}
+          <ThemeIcon 
+            size={14} 
+            className={`${themeInfo.iconClass} transition-all duration-300 absolute`} 
+          />
+          {/* Small map indicator */}
+          <MapIcon 
+            size={8} 
+            className="text-white/60 absolute bottom-0 right-0 translate-x-1/3 translate-y-1/3" 
+          />
+          {/* Dropdown indicator */}
+          <ChevronDown 
+            size={6} 
+            className={`text-white/40 absolute top-0 right-0 transition-transform duration-200 ${
+              isOpen ? 'rotate-180' : ''
+            }`} 
+          />
+        </div>
+      </Button>
+
+      {/* Dropdown Panel */}
+      {isOpen && (
+        <div className="absolute top-12 right-0 z-50 w-72 p-4 bg-neutral-900/95 backdrop-blur-lg rounded-xl border border-white/10 shadow-2xl">
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+              <Settings size={16} className="text-white/70" />
+              <h3 className="text-sm font-semibold text-white">Display Settings</h3>
+            </div>
+
+            {/* Theme Slider */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white/90">Appearance</span>
+                <span className="text-xs text-white/60 capitalize">{theme} mode</span>
+              </div>
+              
+              <div className="relative">
+                {/* Slider Track */}
+                <div className="w-full h-8 bg-white/10 rounded-full p-1 cursor-pointer" onClick={handleThemeToggle}>
+                  {/* Slider Background Icons */}
+                  <div className="flex items-center justify-between h-full px-2">
+                    <Sun size={14} className={`transition-colors duration-300 ${theme === THEME_LIGHT ? 'text-amber-500' : 'text-white/30'}`} />
+                    <Moon size={14} className={`transition-colors duration-300 ${theme === THEME_DARK ? 'text-indigo-400' : 'text-white/30'}`} />
+                  </div>
+                  
+                  {/* Slider Thumb */}
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300 ease-out ${
+                    theme === THEME_LIGHT ? 'left-1' : 'left-[calc(100%-28px)]'
+                  }`}>
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ThemeIcon size={12} className="text-neutral-800" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Map Type Slider */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white/90">Map Style</span>
+                <span className="text-xs text-white/60 capitalize">{mapType === MAP_TYPE_SATELLITE ? 'Satellite' : 'Standard'}</span>
+              </div>
+              
+              <div className="relative">
+                {/* Slider Track */}
+                <div className="w-full h-8 bg-white/10 rounded-full p-1 cursor-pointer" onClick={() => handleMapTypeChange(mapType === MAP_TYPE_ROADMAP ? MAP_TYPE_SATELLITE : MAP_TYPE_ROADMAP)}>
+                  {/* Slider Background Icons */}
+                  <div className="flex items-center justify-between h-full px-2">
+                    <Map size={14} className={`transition-colors duration-300 ${mapType === MAP_TYPE_ROADMAP ? 'text-green-400' : 'text-white/30'}`} />
+                    <Satellite size={14} className={`transition-colors duration-300 ${mapType === MAP_TYPE_SATELLITE ? 'text-blue-400' : 'text-white/30'}`} />
+                  </div>
+                  
+                  {/* Slider Thumb */}
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300 ease-out ${
+                    mapType === MAP_TYPE_ROADMAP ? 'left-1' : 'left-[calc(100%-28px)]'
+                  }`}>
+                    <div className="w-full h-full flex items-center justify-center">
+                      {mapType === MAP_TYPE_ROADMAP ? (
+                        <Map size={12} className="text-neutral-800" />
+                      ) : (
+                        <Satellite size={12} className="text-neutral-800" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Settings Info */}
+            <div className="pt-2 border-t border-white/10">
+              <p className="text-xs text-white/50 leading-relaxed">
+                Appearance affects the overall interface. Map style changes how the map is displayed - standard shows roads and landmarks, satellite shows aerial imagery.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default ThemeToggle; 
+export default ThemeSelector; 

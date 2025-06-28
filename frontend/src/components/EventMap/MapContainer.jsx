@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState, useContext } from 'react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import categories from './categoryConfig';
 import { initGoogleMaps } from '@/googleMapsLoader';
-import { ThemeContext, THEME_DARK, THEME_LIGHT } from '@/components/ThemeContext';
+import { ThemeContext, THEME_DARK, THEME_LIGHT, MAP_TYPE_ROADMAP, MAP_TYPE_SATELLITE } from '@/components/ThemeContext';
 import { createMarkerIcon, createClusterIcon } from './markerUtils';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -212,7 +212,7 @@ const MapContainer = React.forwardRef(({
   const isUserZoomingRef = useRef(false);
   
   // Get current theme from context
-  const { theme } = useContext(ThemeContext);
+  const { theme, mapType } = useContext(ThemeContext);
   const isDarkMode = theme === THEME_DARK;
 
   // Performance optimization: filter events based on zoom level and viewport
@@ -272,15 +272,26 @@ const MapContainer = React.forwardRef(({
     }
   }));
 
-  // Update map styles when theme changes
+  // Update map styles and type when theme or map type changes
   useEffect(() => {
     if (mapInstanceRef.current) {
-      console.log("Updating map styles to:", isDarkMode ? "dark mode" : "light mode");
-      mapInstanceRef.current.setOptions({
-        styles: isDarkMode ? darkMapStyles : lightMapStyles
-      });
+      console.log("Updating map to:", mapType, isDarkMode ? "dark mode" : "light mode");
+      
+      const mapOptions = {
+        mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.SATELLITE : google.maps.MapTypeId.ROADMAP,
+      };
+
+      // Only apply custom styles for roadmap mode
+      if (mapType === MAP_TYPE_ROADMAP) {
+        mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
+      } else {
+        // Remove custom styles for satellite mode
+        mapOptions.styles = [];
+      }
+
+      mapInstanceRef.current.setOptions(mapOptions);
     }
-  }, [theme]);
+  }, [theme, mapType]);
 
   // Initialize map
   useEffect(() => {
@@ -293,10 +304,11 @@ const MapContainer = React.forwardRef(({
 
         if (!mapRef.current) return;
 
-        const map = new google.maps.Map(mapRef.current, {
+        // Configure map options based on theme and map type
+        const mapOptions = {
           center: mapCenter || DEFAULT_CENTER,
           zoom: mapCenter ? 13 : DEFAULT_ZOOM,
-          styles: isDarkMode ? darkMapStyles : lightMapStyles,
+          mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.SATELLITE : google.maps.MapTypeId.ROADMAP,
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
@@ -312,7 +324,14 @@ const MapContainer = React.forwardRef(({
           panControl: false,
           zoomControl: true,
           scaleControl: false
-        });
+        };
+
+        // Only apply custom styles for roadmap mode, satellite mode uses default styling
+        if (mapType === MAP_TYPE_ROADMAP) {
+          mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
+        }
+
+        const map = new google.maps.Map(mapRef.current, mapOptions);
 
         mapInstanceRef.current = map;
 

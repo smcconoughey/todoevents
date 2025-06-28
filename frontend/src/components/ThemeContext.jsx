@@ -4,10 +4,16 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 export const THEME_DARK = 'dark';
 export const THEME_LIGHT = 'light';
 
+// Map type options
+export const MAP_TYPE_ROADMAP = 'roadmap';
+export const MAP_TYPE_SATELLITE = 'satellite';
+
 // Create the Theme Context
 export const ThemeContext = createContext({
   theme: THEME_DARK,
+  mapType: MAP_TYPE_ROADMAP,
   toggleTheme: () => {},
+  setMapType: () => {},
 });
 
 // Custom hook to use the theme context
@@ -34,6 +40,18 @@ export const ThemeProvider = ({ children }) => {
     const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     console.log('System prefers dark mode:', isDarkMode);
     return isDarkMode ? THEME_DARK : THEME_LIGHT;
+  });
+
+  // Initialize map type from localStorage
+  const [mapType, setMapTypeState] = useState(() => {
+    const savedMapType = localStorage.getItem('mapType');
+    console.log('Initial map type from localStorage:', savedMapType);
+    
+    if (savedMapType && [MAP_TYPE_ROADMAP, MAP_TYPE_SATELLITE].includes(savedMapType)) {
+      return savedMapType;
+    }
+    
+    return MAP_TYPE_ROADMAP; // Default to roadmap
   });
 
   // Update the data-theme attribute and mobile meta tags when theme changes
@@ -96,6 +114,12 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Update map type in localStorage when it changes
+  useEffect(() => {
+    console.log('Map type changed to:', mapType);
+    localStorage.setItem('mapType', mapType);
+  }, [mapType]);
+
   // Toggle between light and dark themes
   const toggleTheme = () => {
     console.log('Toggle theme called, current theme:', theme);
@@ -106,8 +130,16 @@ export const ThemeProvider = ({ children }) => {
     });
   };
 
+  // Set map type
+  const setMapType = (newMapType) => {
+    console.log('Setting map type to:', newMapType);
+    if ([MAP_TYPE_ROADMAP, MAP_TYPE_SATELLITE].includes(newMapType)) {
+      setMapTypeState(newMapType);
+    }
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, mapType, toggleTheme, setMapType }}>
       {children}
     </ThemeContext.Provider>
   );

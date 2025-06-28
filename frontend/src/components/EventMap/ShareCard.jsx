@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { ThemeContext } from "../ThemeContext";
+import { ThemeContext, MAP_TYPE_SATELLITE } from "../ThemeContext";
 import { getCategory } from "./categoryConfig";
 import { CategoryIcon } from "./CategoryIcons";
 import { PaidIcon, FreeIcon, HostIcon } from "./WebIcons";
@@ -146,7 +146,7 @@ function formatTime(event) {
 }
 
 const ShareCard = ({ event }) => {
-  const { theme } = useContext(ThemeContext);
+  const { theme, mapType } = useContext(ThemeContext);
   const category = getCategory(event.category);
   const [mapUrl, setMapUrl] = useState("");
   
@@ -216,7 +216,13 @@ const ShareCard = ({ event }) => {
       const allStyles = [...baseStyles, ...(theme === "dark" ? darkStyles : lightStyles)];
       const styleParam = allStyles.map(style => `&style=${encodeURIComponent(style)}`).join('');
       
-      const url = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=roadmap&${marker}${styleParam}&key=${apiKey}`;
+      // Choose map type based on user preference
+      const mapTypeParam = mapType === MAP_TYPE_SATELLITE ? 'satellite' : 'roadmap';
+      
+      // For satellite maps, don't include custom styles as they interfere with satellite imagery
+      const finalStyleParam = mapType === MAP_TYPE_SATELLITE ? '' : styleParam;
+      
+      const url = `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=${mapTypeParam}&${marker}${finalStyleParam}&key=${apiKey}`;
       
       // Convert the external map URL to a base64 data URL for better download compatibility
       const convertToDataUrl = async (imageUrl) => {
@@ -242,7 +248,7 @@ const ShareCard = ({ event }) => {
         setMapUrl(url); // Use original URL if conversion fails
       });
     }
-  }, [event?.lat, event?.lng, theme, category]);
+  }, [event?.lat, event?.lng, theme, mapType, category]);
 
   // Simplified inline styles for better image generation compatibility
   const containerStyle = {

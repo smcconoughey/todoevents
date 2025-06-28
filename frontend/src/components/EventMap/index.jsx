@@ -68,7 +68,7 @@ import {
 import {
   SheetClose
 } from "@/components/ui/sheet";
-import ThemeToggle from '@/components/ui/ThemeToggle';
+import ThemeSelector from '@/components/ui/ThemeToggle';
 import AddressAutocomplete from './AddressAutocomplete';
 import WelcomePopup from '../WelcomePopup';
 import RoutePlanner from './RoutePlanner';
@@ -2686,7 +2686,7 @@ const EventMap = ({
             >
               <HelpCircle className="h-5 w-5" />
             </Button>
-            <ThemeToggle />
+            <ThemeSelector />
             <Button
               variant="ghost"
               size="icon"
@@ -2731,7 +2731,7 @@ const EventMap = ({
                       >
                   <HelpCircle className="w-4 h-4" />
                       </Button>
-                <ThemeToggle />
+                <ThemeSelector />
                 {user ? (
                   <UserDropdown />
                 ) : (
@@ -2752,7 +2752,7 @@ const EventMap = ({
           )}
           {isSidebarCollapsed && (
             <div className="flex flex-col gap-2">
-              <ThemeToggle />
+              <ThemeSelector />
             </div>
           )}
           <Button
@@ -3413,7 +3413,7 @@ const EventMap = ({
                         >
                     <HelpCircle className="w-4 h-4" />
                         </Button>
-                  <ThemeToggle />
+                  <ThemeSelector />
                   {user ? (
                     <UserDropdown />
                   ) : (
