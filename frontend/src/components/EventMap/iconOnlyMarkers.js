@@ -257,7 +257,10 @@ const iconPaths = {
   Cross: '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
 
   // Custom Cow icon for livestock (keeping for backward compatibility)
-  Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>'
+  Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>',
+
+  // Navigation icon for route planning
+  Navigation: '<polygon points="3,11 22,2 13,21 11,13 3,11" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
 
 };
 
@@ -289,6 +292,7 @@ const categoryIconMap = {
   'agriculture': 'Wheat',
   'adventure': 'Mountain',
   'seasonal': 'Snowflake',
+  'navigation': 'Navigation',
   'livestock': 'Cow', // Add livestock mapping if it exists
   'other': 'MapPin'
 };

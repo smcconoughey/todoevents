@@ -248,8 +248,41 @@ const MapContainer = React.forwardRef(({
           gestureHandling: "greedy"
         };
 
-        // Only apply custom styles for roadmap mode, hybrid/satellite mode shows labels and borders by default
-        if (mapType === MAP_TYPE_ROADMAP) {
+        // Apply custom styles for both roadmap and hybrid modes to hide POI
+        if (mapType === MAP_TYPE_SATELLITE) {
+          // For hybrid/satellite mode, only apply POI hiding styles
+          mapOptions.styles = [
+            {
+              featureType: "poi",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi.business",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi.attraction",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi.place_of_worship",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi.school",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi.medical",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi.government",
+              stylers: [{ visibility: "off" }]
+            }
+          ];
+        } else {
+          // Apply full custom styles for roadmap mode
           mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
         }
 
@@ -303,12 +336,42 @@ const MapContainer = React.forwardRef(({
         mapTypeId: mapType === MAP_TYPE_SATELLITE ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
       };
 
-      // Only apply custom styles for roadmap mode
-      if (mapType === MAP_TYPE_ROADMAP) {
-        mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
+      // Apply custom styles for both roadmap and hybrid modes to hide POI
+      if (mapType === MAP_TYPE_SATELLITE) {
+        // For hybrid/satellite mode, only apply POI hiding styles
+        mapOptions.styles = [
+          {
+            featureType: "poi",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "poi.business",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "poi.attraction",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "poi.place_of_worship",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "poi.school",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "poi.medical",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "poi.government",
+            stylers: [{ visibility: "off" }]
+          }
+        ];
       } else {
-        // Remove custom styles for hybrid/satellite mode
-        mapOptions.styles = [];
+        // Apply full custom styles for roadmap mode
+        mapOptions.styles = isDarkMode ? darkMapStyles : lightMapStyles;
       }
 
       mapInstanceRef.current.setOptions(mapOptions);

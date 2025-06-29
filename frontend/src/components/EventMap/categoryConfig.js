@@ -218,8 +218,8 @@ const categories = [
     name: 'Veteran',
     icon: Award,
     color: 'text-pin-blue-800',
-    markerColor: '#003D99',
-    markerSVG: createCategoryMarkerSVG('#003D99', iconPaths.Award)
+    markerColor: '#2196F3',
+    markerSVG: createCategoryMarkerSVG('#2196F3', iconPaths.Award)
   },
   {
     id: 'cookout',
@@ -275,8 +275,8 @@ const categories = [
     name: 'Outdoors & Nature',
     icon: TreePine,
     color: 'text-fresh-teal-800',
-    markerColor: '#00695C',
-    markerSVG: createCategoryMarkerSVG('#00695C', iconPaths.TreePine)
+    markerColor: '#26A69A',
+    markerSVG: createCategoryMarkerSVG('#26A69A', iconPaths.TreePine)
   },
   {
     id: 'photography',
@@ -315,8 +315,8 @@ const categories = [
     name: 'Agriculture',
     icon: Wheat,
     color: 'text-fresh-teal-900',
-    markerColor: '#004D40',
-    markerSVG: createCategoryMarkerSVG('#004D40', iconPaths.Wheat)
+    markerColor: '#4CAF50',
+    markerSVG: createCategoryMarkerSVG('#4CAF50', iconPaths.Wheat)
   },
 
   {
