@@ -14,7 +14,46 @@
 
 /* Custom CSS variables for theming */
 
-:root,
+/* Default root variables (fallback to dark theme) */
+:root {
+  /* Brand Colors - Default Dark Mode */
+  --spark-yellow: #FFD82E;      
+  --spark-yellow-muted: #E6C029; 
+  --spark-yellow-text: #FFF7B8; 
+  --pin-blue: #3C92FF;          
+  --pin-blue-muted: #2C7DE6;    
+  --vibrant-magenta: #E04A73;   
+  --fresh-teal: #2FB8A6;        
+  
+  /* Neutrals - Default Dark Mode */
+  --bg-main: #0f0f0f;           
+  --bg-card: rgba(26, 26, 26, 0.95);
+  --bg-card-hover: rgba(45, 45, 45, 0.95);
+  --bg-card-active: rgba(60, 60, 60, 0.95);
+  --text-primary: #FAFBFC;      
+  --text-secondary: rgba(255, 255, 255, 0.85); 
+  --text-tertiary: rgba(255, 255, 255, 0.6);   
+  --text-muted: rgba(255, 255, 255, 0.4);      
+  --border-color: rgba(255, 216, 46, 0.2);
+  --border-color-hover: rgba(255, 216, 46, 0.3);
+  
+  /* Button Text Colors - Default Dark Mode */
+  --btn-yellow-text: #1A1A1A;   
+  --btn-blue-text: #FAFBFC;     
+  
+  /* Semantic Colors - Default Dark Mode */
+  --accent-color: var(--spark-yellow);
+  --secondary-color: var(--pin-blue);
+  --error-color: var(--vibrant-magenta);
+  --success-color: var(--fresh-teal);
+  --warning-color: #F59E0B;
+  
+  /* Animation & Transition */
+  --transition-speed: 0.25s;
+  --bounce-ease: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+[data-theme='dark'],
 .dark-mode {
   /* Brand Colors - Dark Mode */
   --spark-yellow: #FFD82E;      /* Primary - slightly darker for contrast */

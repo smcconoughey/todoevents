@@ -95,7 +95,8 @@ export const CategoryIcon = ({ category, className, style }) => {
   // If we have an icon from categoryConfig, use it
   if (categoryConfig && categoryConfig.icon) {
     const Icon = categoryConfig.icon;
-    return <Icon className={className || ''} style={style} />;
+    const colorClass = style ? '' : (categoryConfig.color || '');
+    return <Icon className={`${colorClass} ${className || ''}`} style={style} />;
   }
   
   // Otherwise fall back to our local mapping

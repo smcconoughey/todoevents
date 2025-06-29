@@ -62,8 +62,7 @@ const FallbackMap = ({ event, category, theme }) => (
         >
           <CategoryIcon 
             category={event.category} 
-            className="w-5 h-5 sm:w-6 sm:h-6" 
-            style={{ color: "#1F2937" }}
+            className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800"
           />
         </div>
       </div>
@@ -454,7 +453,7 @@ const ShareCard = ({ event }) => {
           <div style={categoryStyle}>
             <CategoryIcon 
               category={event.category} 
-              style={{ width: '15px', height: '15px', color: category.color || "#F5C842" }}
+              className="w-[15px] h-[15px]"
             />
             <span style={categoryTextStyle}>
               {category.label || event.category}
@@ -628,7 +627,7 @@ const ShareCard = ({ event }) => {
               }}>
                 <CategoryIcon 
                   category={event.secondary_category} 
-                  style={{ width: '12px', height: '12px', color: '#8b5cf6' }}
+                  className="w-3 h-3 text-purple-500"
                 />
               </div>
               <p style={detailTextStyle}>
