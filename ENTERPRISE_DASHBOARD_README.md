@@ -14,7 +14,7 @@ A comprehensive client management and event organization dashboard designed for 
 - **Enhanced Bulk Import**: Upload CSV/JSON files with client-specific event data
 - **Event Export**: Download events in CSV or JSON format for offline editing
 - **Template System**: Pre-built templates with client_name field for enterprise use
-- **Batch Processing**: Handle up to 100 events per import for optimal performance
+- **Batch Processing**: Handle unlimited events per import
 
 ### Advanced Event Table
 - **Sortable Columns**: Sort by date, client, status, views, and engagement
@@ -153,7 +153,7 @@ Enterprise events include all standard fields plus client organization:
 1. **Access Bulk Import**: Navigate to "Bulk Import" tab
 2. **Use Template**: Copy the enterprise JSON template
 3. **Add Client Data**: Include `client_name` for each event
-4. **Validate & Import**: System validates and imports up to 100 events
+4. **Validate & Import**: System validates and imports all events
 5. **Review Results**: Check success/error counts and details
 
 ### Client Analytics

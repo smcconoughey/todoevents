@@ -543,31 +543,40 @@ const BetaDashboard = () => {
     const templateJson = {
       "events": [
         {
-          "title": "Sample Music Festival",
-          "description": "A wonderful outdoor music festival featuring local and international artists. Bring your friends and family for a day of great music, food, and fun.",
-          "date": "2024-07-15",
-          "start_time": "14:00",
-          "end_time": "22:00",
-          "end_date": "2024-07-15",
+          "title": "Summerfest",
+          "description": "The World's Largest Music Festival, spanning multiple weekends in June and July. With hundreds of artists across 12 stages, it offers a diverse lineup from global superstars to emerging acts, alongside delicious food and vibrant lakefront views. A true music marathon for all ages and tastes.",
+          "date": "2025-06-19",
+          "start_time": "12:00",
+          "end_time": "23:00",
+          "end_date": "2025-07-05",
           "category": "music",
-          "address": "Central Park, New York, NY, USA",
-          "lat": 40.7829,
-          "lng": -73.9654,
+          "secondary_category": "fair-festival",
+          "address": "Henry Maier Festival Park, Milwaukee, WI, USA",
+          "lat": 43.0307,
+          "lng": -87.8979,
           "recurring": false,
-          "frequency": null
+          "frequency": null,
+          "fee_required": "Admission tickets required, some headliner shows require separate tickets",
+          "event_url": "https://www.summerfest.com/",
+          "host_name": "Milwaukee World Festival, Inc.",
+          "verified": true
         },
         {
-          "title": "Food Truck Rally",
-          "description": "Join us for an amazing food truck rally featuring the best local cuisine. Over 20 food trucks will be serving delicious meals.",
-          "date": "2024-07-20",
-          "start_time": "11:00",
-          "end_time": "20:00",
-          "category": "food-drink",
-          "secondary_category": "community",
-          "address": "Downtown Plaza, Los Angeles, CA, USA",
-          "lat": 34.0522,
-          "lng": -118.2437,
-          "recurring": false
+          "title": "Farmers Market",
+          "description": "Weekly farmers market featuring local produce, artisanal foods, and handcrafted goods. Support local farmers and businesses while enjoying fresh, seasonal offerings.",
+          "date": "2025-05-15",
+          "start_time": "08:00",
+          "end_time": "13:00",
+          "category": "community",
+          "secondary_category": "food-drink",
+          "address": "Downtown Square, Madison, WI, USA",
+          "lat": 43.0731,
+          "lng": -89.4012,
+          "recurring": true,
+          "frequency": "weekly",
+          "fee_required": "Free admission",
+          "event_url": "https://www.madisonmarket.org/",
+          "host_name": "Madison Farmers Association"
         },
         {
           "title": "Art Gallery Opening",
@@ -772,7 +781,7 @@ const BetaDashboard = () => {
                 <li><strong>host_name:</strong> Organization or host name</li>
                 <li><strong>secondary_category:</strong> Additional categorization for better organization</li>
               </ul>
-              <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, agriculture, other</p>
+              <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, agriculture, navigation, other</p>
               <p><strong>Optional secondary category:</strong> Use the same category IDs as above. Adds more descriptive categorization to events.</p>
               <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
               <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>

@@ -475,10 +475,7 @@ const BulkOperations = ({ userRole }) => {
         return;
       }
 
-      if (jsonData.events.length > 100) {
-        setBulkError('Too many events. Maximum 100 events per batch.');
-        return;
-      }
+      // No limit on number of events
 
       // Validate required fields
       const requiredFields = ['title', 'description', 'date', 'start_time', 'category', 'address', 'lat', 'lng'];

@@ -37,7 +37,7 @@ I've successfully implemented a comprehensive enterprise dashboard revision that
   }
   ```
 - **Validation**: Validates required fields and client assignments
-- **Batch Processing**: Handles up to 100 events per import
+- **Batch Processing**: Handles unlimited events per import
 - **Error Reporting**: Detailed error reporting with client context
 
 #### **Export Events Functionality**
@@ -167,7 +167,7 @@ I've successfully implemented a comprehensive enterprise dashboard revision that
 ### **Scalability Features**
 - **Handles Hundreds of Events**: Optimized for large datasets
 - **Client Organization**: Unlimited client assignments
-- **Bulk Operations**: Process up to 100 events at once
+- **Bulk Operations**: Process unlimited events at once
 - **Efficient Filtering**: Fast search across large event collections
 
 ### **Data Structure**

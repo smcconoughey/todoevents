@@ -904,7 +904,25 @@ const AdminDashboard = () => {
           "frequency": null,
           "fee_required": "Admission tickets required, some headliner shows require separate tickets",
           "event_url": "https://www.summerfest.com/",
-          "host_name": "Milwaukee World Festival, Inc."
+          "host_name": "Milwaukee World Festival, Inc.",
+          "verified": true
+        },
+        {
+          "title": "Farmers Market",
+          "description": "Weekly farmers market featuring local produce, artisanal foods, and handcrafted goods. Support local farmers and businesses while enjoying fresh, seasonal offerings.",
+          "date": "2025-05-15",
+          "start_time": "08:00",
+          "end_time": "13:00",
+          "category": "community",
+          "secondary_category": "food-drink",
+          "address": "Downtown Square, Madison, WI, USA",
+          "lat": 43.0731,
+          "lng": -89.4012,
+          "recurring": true,
+          "frequency": "weekly",
+          "fee_required": "Free admission",
+          "event_url": "https://www.madisonmarket.org/",
+          "host_name": "Madison Farmers Association"
         },
         {
           "title": "Sample Music Festival",
@@ -1190,10 +1208,7 @@ const AdminDashboard = () => {
           return;
         }
 
-        if (jsonData.events.length > 100) {
-          setBulkError('Too many events. Please limit to 100 events per batch for optimal performance.');
-          return;
-        }
+        // No limit on number of events
 
         // Validate required fields for each event
         const requiredFields = ['title', 'description', 'date', 'start_time', 'category', 'address', 'lat', 'lng'];
@@ -1325,12 +1340,12 @@ const AdminDashboard = () => {
                   </ul>
                 </div>
                 <div>
-                  <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, agriculture, other</p>
+                  <p><strong>Valid categories:</strong> food-drink, music, arts, sports, automotive, airshows, vehicle-sports, community, religious, education, veteran, cookout, networking, fair-festival, diving, shopping, health, outdoors, photography, family, gaming, real-estate, adventure, seasonal, agriculture, navigation, other</p>
                   <p><strong>Optional secondary category:</strong> Use the same category IDs as above. Adds more descriptive categorization to events.</p>
               <p><strong>Time format:</strong> HH:MM (24-hour format, e.g., "14:30" for 2:30 PM)</p>
               <p><strong>Date format:</strong> YYYY-MM-DD (e.g., "2024-07-15")</p>
               <p><strong>Frequency options:</strong> weekly, monthly (only if recurring is true)</p>
-                  <p><strong>Batch size:</strong> Maximum 100 events per import for optimal performance</p>
+                  <p><strong>Batch size:</strong> No limit on number of events per import</p>
                 </div>
               </div>
             </div>
