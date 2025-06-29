@@ -199,8 +199,24 @@ def generate_event_json_ld(event: Dict[str, Any], base_url: str = "https://todo-
         }
         if organizer_url:
             organizer["url"] = organizer_url
+        else:
+            # Add default URL to ensure organizer always has a URL
+            organizer["url"] = f"{base_url}"
         
         json_ld["organizer"] = organizer
+    else:
+        # Always include organizer even if host_name is missing
+        json_ld["organizer"] = {
+            "@type": "Organization",
+            "name": "TodoEvents",
+            "url": base_url
+        }
+    
+    # Performer - always include this field
+    json_ld["performer"] = {
+        "@type": "PerformingGroup",
+        "name": host_name or event.get('title', '') or "Event Performers"
+    }
     
     # Offers (pricing)
     price = event.get('price', 0.0)
@@ -404,12 +420,21 @@ def validate_event_data(event: Dict[str, Any]) -> List[str]:
     if not event.get('state'):
         issues.append("Missing state for geographic SEO")
     
-    # Structured data
+    # Structured data - Schema.org fields
     if not event.get('host_name'):
         issues.append("Missing host_name for JSON-LD organizer")
     
     if not event.get('lat') or not event.get('lng'):
         issues.append("Missing coordinates for location schema")
+        
+    if not event.get('organizer_url'):
+        issues.append("Missing field 'url' in organizer")
+        
+    if not event.get('end_time') and not event.get('end_datetime'):
+        issues.append("Missing field 'endDate'")
+        
+    if not event.get('price') and not event.get('fee_required'):
+        issues.append("Missing price information for offers")
     
     return issues
 

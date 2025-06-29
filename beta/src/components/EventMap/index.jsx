@@ -173,12 +173,25 @@ const generateEventSchema = (event) => {
       ? `${event.end_date}T${event.end_time}:00`
       : (event.end_time ? `${event.date}T${event.end_time}:00` : null);
 
+    // Generate canonical URL for the event
+    const eventUrl = event.slug 
+      ? `${window.location.origin}/e/${event.slug}`
+      : `${window.location.origin}/?event=${event.id}`;
+      
+    // Generate image URL (use share card or default image)
+    const imageUrl = event.id 
+      ? `${window.location.origin}/api/events/${event.id}/share-card` 
+      : `${window.location.origin}/images/todosharecard.png`;
+
     const schema = {
       "@context": "https://schema.org",
       "@type": "Event",
       "name": event.title || 'Untitled Event',
       "description": event.description || 'No description available',
       "startDate": startDateTime,
+      "url": eventUrl,
+      "image": imageUrl,
+      "eventStatus": "https://schema.org/EventScheduled",
       "location": {
         "@type": "Place",
         "name": event.address || 'Location not specified',
@@ -191,7 +204,19 @@ const generateEventSchema = (event) => {
       },
       "organizer": {
         "@type": "Organization",
-        "name": "TodoEvents"
+        "name": event.host_name || "TodoEvents",
+        "url": event.organizer_url || window.location.origin
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": event.price ? String(event.price) : "0",
+        "priceCurrency": event.currency || "USD",
+        "availability": "https://schema.org/InStock",
+        "url": eventUrl
+      },
+      "performer": {
+        "@type": "PerformingGroup",
+        "name": event.host_name || event.title || "Event Performers"
       }
     };
 
