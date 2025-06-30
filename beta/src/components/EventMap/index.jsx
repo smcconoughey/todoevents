@@ -764,7 +764,11 @@ const EventMap = ({
   const [miscFilters, setMiscFilters] = useState({
     feeFilter: 'all' // 'all', 'free', 'paid'
   });
-
+  const [routeSteps, setRouteSteps] = useState([]);
+  const [routeEvents, setRouteEvents] = useState([]);
+  const [showRouteTimeline, setShowRouteTimeline] = useState(false);
+  const [routeDirectionsRenderer, setRouteDirectionsRenderer] = useState(null);
+  const [isMobileRecommendationsOpen, setIsMobileRecommendationsOpen] = useState(false);
 
   const mapRef = useRef(null);
   const shareCardRef = useRef();

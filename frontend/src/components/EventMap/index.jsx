@@ -938,7 +938,7 @@ const EventMap = ({
   const [routeEvents, setRouteEvents] = useState([]);
   const [showRouteTimeline, setShowRouteTimeline] = useState(false);
   const [routeDirectionsRenderer, setRouteDirectionsRenderer] = useState(null);
-  const [isMobileRecommendationsOpen, setIsMobileRecommendationsOpen] = useState(true);
+  const [isMobileRecommendationsOpen, setIsMobileRecommendationsOpen] = useState(false);
 
 
   const mapRef = useRef(null);
