@@ -10152,7 +10152,7 @@ async def validate_trial_invite(request: Request):
             try:
                 c.execute(f"""
                     SELECT * FROM trial_invite_codes 
-                    WHERE code = {placeholder} AND (is_active = 1 OR is_active = TRUE)
+                    WHERE code = {placeholder} 
                 """, (invite_code,))
                 
                 invite_data = c.fetchone()
@@ -10169,6 +10169,15 @@ async def validate_trial_invite(request: Request):
                     columns = [desc[0] for desc in c.description]
                     invite_data = dict(zip(columns, invite_data))
                 
+                # Check if code is active
+                is_active = invite_data.get('is_active')
+                if not is_active:
+                    logger.info(f"Inactive invite code attempted: {invite_code}")
+                    return {
+                        "valid": False,
+                        "error": "Invite code is no longer active"
+                    }
+
                 # Check if code has expired
                 from datetime import datetime, timezone
                 expires_at = invite_data.get('expires_at')
@@ -10250,7 +10259,7 @@ async def create_user_with_invite(user: UserCreateWithInvite):
                 invite_code = user.invite_code.upper().strip()
                 c.execute(f"""
                     SELECT * FROM trial_invite_codes 
-                    WHERE code = {placeholder} AND (is_active = 1 OR is_active = TRUE)
+                    WHERE code = {placeholder} 
                 """, (invite_code,))
                 
                 invite_data = c.fetchone()
@@ -10261,6 +10270,12 @@ async def create_user_with_invite(user: UserCreateWithInvite):
                         columns = [desc[0] for desc in c.description]
                         invite_data = dict(zip(columns, invite_data))
                     
+                    # Check if code is active
+                    is_active = invite_data.get('is_active')
+                    if not is_active:
+                        logger.info(f"Inactive invite code attempted during registration: {invite_code}")
+                        pass  # Code is not active, trial_info will remain None
+
                     # Check if code is still valid
                     from datetime import datetime
                     expires_at = invite_data.get('expires_at')
