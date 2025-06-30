@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp, Lightbulb, FileText, UserCheck, FileX,
   Clock3, CheckCircle2, XCircle, AlertOctagon, ExternalLink, Image,
   Flag, Monitor, HardDrive, Gavel, FileSearch, Share2, DollarSign,
-  Copy, ToggleLeft, ToggleRight, Percent
+  Copy, ToggleLeft, ToggleRight, Percent, Building, Crown, Gift, User
 } from 'lucide-react';
 
 import {
@@ -3357,12 +3357,32 @@ const AdminDashboard = () => {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [grantingPremium, setGrantingPremium] = useState(null);
     const [grantMonths, setGrantMonths] = useState(1);
+    const [activeTab, setActiveTab] = useState('users');
+    const [trialInvites, setTrialInvites] = useState([]);
+    const [generatingInvite, setGeneratingInvite] = useState(false);
+    const [newTrialInvite, setNewTrialInvite] = useState(null);
 
     const fetchPremiumUsers = async () => {
       setLoading(true);
       try {
         const data = await fetchData('/admin/premium-users');
-        setPremiumUsers(data.users || []);
+        // Include enterprise users in the list
+        const allPremiumUsers = data.users || [];
+        // Sort by role priority (enterprise > admin > premium > user) then by expiration
+        const sortedUsers = allPremiumUsers.sort((a, b) => {
+          const roleOrder = { enterprise: 4, admin: 3, premium: 2, user: 1 };
+          const aRole = roleOrder[a.role] || 0;
+          const bRole = roleOrder[b.role] || 0;
+          
+          if (aRole !== bRole) return bRole - aRole;
+          
+          // If same role, sort by expiration date
+          if (!a.premium_expires_at && !b.premium_expires_at) return 0;
+          if (!a.premium_expires_at) return 1;
+          if (!b.premium_expires_at) return -1;
+          return new Date(b.premium_expires_at) - new Date(a.premium_expires_at);
+        });
+        setPremiumUsers(sortedUsers);
       } catch (error) {
         setError(`Failed to fetch premium users: ${error.message}`);
       } finally {
@@ -3370,9 +3390,21 @@ const AdminDashboard = () => {
       }
     };
 
+    const fetchTrialInvites = async () => {
+      try {
+        const data = await fetchData('/admin/trial-invites');
+        setTrialInvites(data.invites || []);
+      } catch (error) {
+        setError(`Failed to fetch trial invites: ${error.message}`);
+      }
+    };
+
     useEffect(() => {
       fetchPremiumUsers();
-    }, []);
+      if (activeTab === 'invites') {
+        fetchTrialInvites();
+      }
+    }, [activeTab]);
 
     const handleGrantPremium = async (userId) => {
       try {
@@ -3385,6 +3417,25 @@ const AdminDashboard = () => {
         setError(null);
       } catch (error) {
         setError(`Failed to grant premium: ${error.message}`);
+      }
+    };
+
+    const handleGrantEnterprise = async (userId) => {
+      try {
+        // First grant premium access, then upgrade to enterprise
+        await fetchData(`/admin/users/${userId}/grant-premium`, 'POST', {
+          months: grantMonths
+        });
+        
+        // Update role to enterprise
+        await fetchData(`/admin/users/${userId}/role?role=enterprise`, 'PUT');
+        
+        setGrantingPremium(null);
+        setGrantMonths(1);
+        fetchPremiumUsers();
+        setError(null);
+      } catch (error) {
+        setError(`Failed to grant enterprise: ${error.message}`);
       }
     };
 
@@ -3416,11 +3467,13 @@ const AdminDashboard = () => {
         setInviteType('premium');
         
         if (response.user_exists) {
-          setError(`User ${inviteEmail} already exists with role: ${response.current_role}`);
+          setError(`User ${inviteEmail} already exists with role: ${response.current_role}. They have been upgraded to ${inviteType}.`);
         } else {
           setError(null);
           alert(`${inviteType.charAt(0).toUpperCase() + inviteType.slice(1)} invitation sent to ${inviteEmail}`);
         }
+        
+        fetchPremiumUsers(); // Refresh the list
       } catch (error) {
         setError(`Failed to send invitation: ${error.message}`);
       }
@@ -3435,22 +3488,103 @@ const AdminDashboard = () => {
       }
     };
 
+    const handleGenerateTrialInvite = async () => {
+      setGeneratingInvite(true);
+      try {
+        const response = await fetchData('/generate-premium-trial-invite', 'POST');
+        setNewTrialInvite(response);
+        setActiveTab('invites');
+        fetchTrialInvites();
+      } catch (error) {
+        setError(`Failed to generate trial invite: ${error.message}`);
+      } finally {
+        setGeneratingInvite(false);
+      }
+    };
+
     const formatDate = (dateString) => {
       if (!dateString) return 'Never';
-      return new Date(dateString).toLocaleDateString();
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch {
+        return 'Invalid Date';
+      }
     };
 
     const isExpired = (dateString) => {
       if (!dateString) return false;
-      return new Date(dateString) < new Date();
+      try {
+        return new Date(dateString) < new Date();
+      } catch {
+        return false;
+      }
+    };
+
+    const getDaysRemaining = (dateString) => {
+      if (!dateString) return null;
+      try {
+        const days = Math.ceil((new Date(dateString) - new Date()) / (1000 * 60 * 60 * 24));
+        return Math.max(0, days);
+      } catch {
+        return null;
+      }
+    };
+
+    const getUserTypeIcon = (role) => {
+      switch (role) {
+        case 'enterprise':
+          return <Building className="w-4 h-4" />;
+        case 'admin':
+          return <Shield className="w-4 h-4" />;
+        case 'premium':
+          return <Crown className="w-4 h-4" />;
+        default:
+          return <User className="w-4 h-4" />;
+      }
+    };
+
+    const copyInviteCode = (code) => {
+      navigator.clipboard.writeText(code);
+      alert('Invite code copied to clipboard!');
+    };
+
+    const handleDeactivateInvite = async (inviteCode) => {
+      if (!confirm(`Are you sure you want to deactivate invite code ${inviteCode}?`)) return;
+      
+      try {
+        await fetchData(`/admin/trial-invites/${inviteCode}`, 'DELETE');
+        fetchTrialInvites(); // Refresh the list
+        setError(null);
+      } catch (error) {
+        setError(`Failed to deactivate invite code: ${error.message}`);
+      }
     };
 
     return (
       <div className="space-y-6">
         {/* Header with Actions */}
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-800">Premium Management</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Premium & Enterprise Management</h2>
           <div className="flex space-x-4">
+            <button
+              onClick={handleGenerateTrialInvite}
+              disabled={generatingInvite}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center disabled:opacity-50"
+            >
+              {generatingInvite ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Gift className="w-4 h-4 mr-2" />
+              )}
+              Generate Trial Invite
+            </button>
             <button
               onClick={() => setShowInviteModal(true)}
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center"
@@ -3468,97 +3602,263 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Premium Users Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="px-6 py-4 border-b">
-            <h3 className="text-lg font-semibold text-gray-800">Premium Users ({premiumUsers.length})</h3>
-          </div>
-          
-          {loading ? (
-            <div className="p-8 text-center">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
-              <p>Loading premium users...</p>
-            </div>
-          ) : premiumUsers.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <UserCheck className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No premium users found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Granted By</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {premiumUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                          <div className="text-sm text-gray-500">ID: {user.id}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.role === 'premium' ? 'bg-purple-100 text-purple-800' : 
-                          user.role === 'enterprise' ? 'bg-indigo-100 text-indigo-800' : 
-                          user.role === 'admin' ? 'bg-red-100 text-red-800' : 
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(user.premium_expires_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.granted_by_email || 'System'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.is_expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                        }`}>
-                          {user.is_expired ? 'Expired' : 'Active'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => setGrantingPremium(user)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Extend Premium"
-                        >
-                          <Clock className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleNotifyUser(user.id)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Send Notification"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleRemovePremium(user.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Remove Premium"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'users'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Premium Users ({premiumUsers.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('invites')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'invites'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Trial Invites
+            </button>
+          </nav>
         </div>
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="px-6 py-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Premium & Enterprise Users ({premiumUsers.length})
+              </h3>
+            </div>
+            
+            {loading ? (
+              <div className="p-8 text-center">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+                <p>Loading premium users...</p>
+              </div>
+            ) : premiumUsers.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <UserCheck className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>No premium or enterprise users found</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Left</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Granted By</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {premiumUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{user.email}</div>
+                            <div className="text-sm text-gray-500">ID: {user.id}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {getUserTypeIcon(user.role)}
+                            <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              user.role === 'enterprise' ? 'bg-purple-100 text-purple-800' : 
+                              user.role === 'premium' ? 'bg-amber-100 text-amber-800' : 
+                              user.role === 'admin' ? 'bg-red-100 text-red-800' : 
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {user.role}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatDate(user.premium_expires_at)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {user.premium_expires_at ? (
+                            <span className={`font-medium ${
+                              isExpired(user.premium_expires_at) ? 'text-red-600' :
+                              getDaysRemaining(user.premium_expires_at) <= 7 ? 'text-orange-600' :
+                              'text-green-600'
+                            }`}>
+                              {isExpired(user.premium_expires_at) ? 'Expired' : `${getDaysRemaining(user.premium_expires_at)} days`}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.granted_by_email || 'System'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.is_expired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {user.is_expired ? 'Expired' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button
+                            onClick={() => setGrantingPremium(user)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Extend/Modify Access"
+                          >
+                            <Clock className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleNotifyUser(user.id)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Send Notification"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
+                          {user.role !== 'admin' && (
+                            <button
+                              onClick={() => handleRemovePremium(user.id)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Remove Premium"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Trial Invites Tab */}
+        {activeTab === 'invites' && (
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="px-6 py-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">Trial Invite Codes</h3>
+            </div>
+            
+            {newTrialInvite && (
+              <div className="p-6 bg-green-50 border-b border-green-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-medium text-green-800">New Trial Invite Generated!</h4>
+                    <p className="text-sm text-green-600 mt-1">
+                      Code: <span className="font-mono bg-white px-2 py-1 rounded">{newTrialInvite.invite_code}</span>
+                    </p>
+                    <p className="text-sm text-green-600">
+                      Expires: {formatDate(newTrialInvite.expires_at)}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => copyInviteCode(newTrialInvite.invite_code)}
+                      className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                    >
+                      Copy Code
+                    </button>
+                    <button
+                      onClick={() => setNewTrialInvite(null)}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+                         {trialInvites.length === 0 ? (
+               <div className="p-8 text-center text-gray-500">
+                 <Gift className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                 <p>No trial invite codes found</p>
+                 <p className="text-sm mt-2">Generate codes using the button above</p>
+               </div>
+             ) : (
+               <div className="overflow-x-auto">
+                 <table className="w-full">
+                   <thead className="bg-gray-50">
+                     <tr>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uses</th>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody className="bg-white divide-y divide-gray-200">
+                     {trialInvites.map((invite, index) => (
+                       <tr key={index} className="hover:bg-gray-50">
+                         <td className="px-6 py-4 whitespace-nowrap">
+                           <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                             {invite.code}
+                           </span>
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                           {invite.trial_type}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                           {invite.trial_duration_days} days
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                           {invite.current_uses || 0} / {invite.max_uses || 1}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                           {formatDate(invite.expires_at)}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap">
+                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                             !invite.is_active ? 'bg-gray-100 text-gray-800' :
+                             invite.is_expired ? 'bg-red-100 text-red-800' : 
+                             invite.is_fully_used ? 'bg-orange-100 text-orange-800' :
+                             'bg-green-100 text-green-800'
+                           }`}>
+                             {!invite.is_active ? 'Deactivated' :
+                              invite.is_expired ? 'Expired' :
+                              invite.is_fully_used ? 'Used Up' :
+                              'Active'}
+                           </span>
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                           <button
+                             onClick={() => copyInviteCode(invite.code)}
+                             className="text-blue-600 hover:text-blue-900"
+                             title="Copy Code"
+                           >
+                             <Copy className="w-4 h-4" />
+                           </button>
+                           {invite.is_active && (
+                             <button
+                               onClick={() => handleDeactivateInvite(invite.code)}
+                               className="text-red-600 hover:text-red-900"
+                               title="Deactivate"
+                             >
+                               <XCircle className="w-4 h-4" />
+                             </button>
+                           )}
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+          </div>
+        )}
 
         {/* Invite Modal */}
         <Modal
@@ -3584,21 +3884,21 @@ const AdminDashboard = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Invitation Type
+                Account Type
               </label>
               <select
                 value={inviteType}
                 onChange={(e) => setInviteType(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="premium">Premium Trial (10 events/month)</option>
-                <option value="enterprise">Enterprise Trial (250 events/month)</option>
+                <option value="premium">Premium (10 events/month)</option>
+                <option value="enterprise">Enterprise (250 events/month)</option>
               </select>
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {inviteType.charAt(0).toUpperCase() + inviteType.slice(1)} Duration (Months)
+                Duration (Months)
               </label>
               <select
                 value={inviteMonths}
@@ -3609,6 +3909,8 @@ const AdminDashboard = () => {
                 <option value={3}>3 Months</option>
                 <option value={6}>6 Months</option>
                 <option value={12}>12 Months</option>
+                <option value={24}>24 Months</option>
+                <option value={36}>36 Months</option>
               </select>
             </div>
             
@@ -3643,17 +3945,34 @@ const AdminDashboard = () => {
           </div>
         </Modal>
 
-        {/* Grant Premium Modal */}
+        {/* Grant Premium/Enterprise Modal */}
         <Modal
           isOpen={!!grantingPremium}
           onClose={() => setGrantingPremium(null)}
-          title={`Extend Premium for ${grantingPremium?.email}`}
-          size="sm"
+          title={`Manage Access for ${grantingPremium?.email}`}
+          size="md"
         >
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Additional Months
+                Current Status
+              </label>
+              <div className="flex items-center space-x-2">
+                {grantingPremium && getUserTypeIcon(grantingPremium.role)}
+                <span className="capitalize font-medium">{grantingPremium?.role}</span>
+                {grantingPremium?.premium_expires_at && (
+                  <span className={`text-sm ${
+                    isExpired(grantingPremium.premium_expires_at) ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    (Expires: {formatDate(grantingPremium.premium_expires_at)})
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Extend/Add Access (Months)
               </label>
               <select
                 value={grantMonths}
@@ -3664,6 +3983,8 @@ const AdminDashboard = () => {
                 <option value={3}>3 Months</option>
                 <option value={6}>6 Months</option>
                 <option value={12}>12 Months</option>
+                <option value={24}>24 Months</option>
+                <option value={36}>36 Months</option>
               </select>
             </div>
             
@@ -3676,9 +3997,17 @@ const AdminDashboard = () => {
               </button>
               <button
                 onClick={() => handleGrantPremium(grantingPremium.id)}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 flex items-center"
               >
+                <Crown className="w-4 h-4 mr-2" />
                 Grant Premium
+              </button>
+              <button
+                onClick={() => handleGrantEnterprise(grantingPremium.id)}
+                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 flex items-center"
+              >
+                <Building className="w-4 h-4 mr-2" />
+                Grant Enterprise
               </button>
             </div>
           </div>

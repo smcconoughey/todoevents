@@ -9388,25 +9388,40 @@ async def get_premium_users(current_user: dict = Depends(get_current_user)):
                 logger.warning(f"Could not check premium columns: {e}")
                 has_premium_columns = False
 
-            # Build query based on available columns
+            # Build query based on available columns - include enterprise users
             if has_premium_columns and "premium_expires_at" in existing_columns:
-                # Full query with premium columns
+                # Full query with premium columns - include all premium/enterprise/admin users
                 query = f"""
                     SELECT u.id, u.email, u.role, u.created_at,
                            u.premium_expires_at, u.premium_granted_by, u.premium_invited,
                            admin.email as granted_by_email
                     FROM users u
                     LEFT JOIN users admin ON u.premium_granted_by = admin.id
-                    WHERE u.role = 'premium' OR u.premium_expires_at IS NOT NULL
-                    ORDER BY u.premium_expires_at DESC NULLS LAST, u.created_at DESC
+                    WHERE u.role IN ('premium', 'enterprise', 'admin') OR u.premium_expires_at IS NOT NULL
+                    ORDER BY 
+                        CASE u.role 
+                            WHEN 'enterprise' THEN 4 
+                            WHEN 'admin' THEN 3 
+                            WHEN 'premium' THEN 2 
+                            ELSE 1 
+                        END DESC,
+                        u.premium_expires_at DESC NULLS LAST, 
+                        u.created_at DESC
                 """
             else:
-                # Fallback query without premium columns
+                # Fallback query without premium columns - include enterprise users
                 query = f"""
                     SELECT u.id, u.email, u.role, u.created_at
                     FROM users u
-                    WHERE u.role = 'premium'
-                    ORDER BY u.created_at DESC
+                    WHERE u.role IN ('premium', 'enterprise', 'admin')
+                    ORDER BY 
+                        CASE u.role 
+                            WHEN 'enterprise' THEN 4 
+                            WHEN 'admin' THEN 3 
+                            WHEN 'premium' THEN 2 
+                            ELSE 1 
+                        END DESC,
+                        u.created_at DESC
                 """
 
             c.execute(query)
@@ -9424,30 +9439,63 @@ async def get_premium_users(current_user: dict = Depends(get_current_user)):
                 if "granted_by_email" not in user_dict:
                     user_dict["granted_by_email"] = None
 
-                # Check if premium is expired
+                # Check if premium is expired with proper timezone handling
                 if user_dict["premium_expires_at"]:
                     try:
-                        from datetime import datetime
+                        from datetime import datetime, timezone
 
-                        expires_at = (
-                            datetime.fromisoformat(
-                                user_dict["premium_expires_at"].replace("Z", "+00:00")
+                        # Handle both string and datetime objects
+                        expires_at = user_dict["premium_expires_at"]
+                        if isinstance(expires_at, str):
+                            # Parse ISO format string
+                            expires_at = datetime.fromisoformat(
+                                expires_at.replace("Z", "+00:00")
                             )
-                            if isinstance(user_dict["premium_expires_at"], str)
-                            else user_dict["premium_expires_at"]
-                        )
-                        user_dict["is_expired"] = expires_at < datetime.utcnow()
-                    except:
+                        
+                        # Ensure timezone awareness
+                        if expires_at.tzinfo is None:
+                            expires_at = expires_at.replace(tzinfo=timezone.utc)
+                        
+                        current_time = datetime.now(timezone.utc)
+                        user_dict["is_expired"] = expires_at < current_time
+                        
+                        # Calculate days remaining
+                        if expires_at > current_time:
+                            days_remaining = (expires_at - current_time).days
+                            user_dict["days_remaining"] = max(0, days_remaining)
+                        else:
+                            user_dict["days_remaining"] = 0
+                            
+                    except Exception as e:
+                        logger.warning(f"Error parsing expiration date for user {user_dict['id']}: {e}")
                         user_dict["is_expired"] = False
+                        user_dict["days_remaining"] = 0
                 else:
                     user_dict["is_expired"] = False
+                    user_dict["days_remaining"] = None
+                    
+                # Add user type information
+                user_dict["user_type"] = user_dict["role"]
+                if user_dict["role"] == "enterprise":
+                    user_dict["event_limit"] = 250
+                elif user_dict["role"] == "premium":
+                    user_dict["event_limit"] = 10
+                elif user_dict["role"] == "admin":
+                    user_dict["event_limit"] = "unlimited"
+                else:
+                    user_dict["event_limit"] = 3
 
                 users.append(user_dict)
 
             return {
                 "users": users,
+                "total_count": len(users),
                 "has_premium_columns": has_premium_columns,
                 "available_columns": existing_columns if has_premium_columns else [],
+                "premium_count": len([u for u in users if u["role"] == "premium"]),
+                "enterprise_count": len([u for u in users if u["role"] == "enterprise"]),
+                "admin_count": len([u for u in users if u["role"] == "admin"]),
+                "expired_count": len([u for u in users if u.get("is_expired", False)]),
             }
 
     except Exception as e:
@@ -9848,6 +9896,121 @@ async def invite_enterprise_user(
     except Exception as e:
         logger.error(f"Error sending enterprise invitation: {str(e)}")
         raise HTTPException(status_code=500, detail="Error sending invitation")
+
+
+# Admin Trial Invite Management
+@app.get("/admin/trial-invites")
+async def get_trial_invites(current_user: dict = Depends(get_current_user)):
+    """Get all trial invite codes for admin management"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if trial_invite_codes table exists
+            try:
+                c.execute(f"""
+                    SELECT code, trial_type, trial_duration_days, max_uses, current_uses, 
+                           expires_at, created_at, is_active
+                    FROM trial_invite_codes 
+                    ORDER BY created_at DESC
+                """)
+                
+                invites = []
+                for row in c.fetchall():
+                    if isinstance(row, (list, tuple)):
+                        columns = [desc[0] for desc in c.description]
+                        invite_dict = dict(zip(columns, row))
+                    else:
+                        invite_dict = dict(row)
+                    
+                    # Check if expired
+                    expires_at = invite_dict.get('expires_at')
+                    if expires_at:
+                        from datetime import datetime, timezone
+                        if isinstance(expires_at, str):
+                            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                        if expires_at.tzinfo is None:
+                            expires_at = expires_at.replace(tzinfo=timezone.utc)
+                        
+                        invite_dict["is_expired"] = expires_at < datetime.now(timezone.utc)
+                        invite_dict["days_remaining"] = max(0, (expires_at - datetime.now(timezone.utc)).days)
+                    else:
+                        invite_dict["is_expired"] = False
+                        invite_dict["days_remaining"] = None
+                    
+                    # Check if fully used
+                    current_uses = invite_dict.get('current_uses', 0)
+                    max_uses = invite_dict.get('max_uses', 1)
+                    invite_dict["is_fully_used"] = current_uses >= max_uses
+                    invite_dict["remaining_uses"] = max(0, max_uses - current_uses)
+                    
+                    invites.append(invite_dict)
+                
+                return {
+                    "invites": invites,
+                    "total_count": len(invites),
+                    "active_count": len([i for i in invites if i.get("is_active", True)]),
+                    "expired_count": len([i for i in invites if i.get("is_expired", False)]),
+                    "used_count": len([i for i in invites if i.get("is_fully_used", False)])
+                }
+                
+            except Exception as e:
+                # Table doesn't exist or other error
+                logger.warning(f"Trial invites table not accessible: {e}")
+                return {
+                    "invites": [],
+                    "total_count": 0,
+                    "active_count": 0,
+                    "expired_count": 0,
+                    "used_count": 0,
+                    "error": "Trial invites table not found"
+                }
+                
+    except Exception as e:
+        logger.error(f"Error getting trial invites: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving trial invites: {str(e)}")
+
+
+@app.delete("/admin/trial-invites/{invite_code}")
+async def deactivate_trial_invite(invite_code: str, current_user: dict = Depends(get_current_user)):
+    """Deactivate a trial invite code"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Update invite to inactive
+            c.execute(f"""
+                UPDATE trial_invite_codes 
+                SET is_active = FALSE 
+                WHERE code = {placeholder}
+            """, (invite_code.upper(),))
+            
+            if c.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Invite code not found")
+            
+            conn.commit()
+            
+            log_activity(
+                current_user["id"],
+                "deactivate_trial_invite",
+                f"Deactivated trial invite code: {invite_code}"
+            )
+            
+            return {"detail": f"Trial invite code {invite_code} deactivated"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deactivating trial invite: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error deactivating invite code")
 
 
 # Premium Trial Invite Code System
