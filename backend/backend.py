@@ -10115,59 +10115,109 @@ async def validate_trial_invite(request: Request):
         with get_db() as conn:
             c = conn.cursor()
             
-            # Check if invite code exists and is valid
-            c.execute(f"""
-                SELECT * FROM trial_invite_codes 
-                WHERE code = {placeholder} AND is_active = 1
-            """, (invite_code,))
-            
-            invite_data = c.fetchone()
-            
-            if not invite_data:
-                return {
-                    "valid": False,
-                    "error": "Invalid or expired invite code"
-                }
-            
-            # Convert to dict for easier access
-            if isinstance(invite_data, (list, tuple)):
-                columns = [desc[0] for desc in c.description]
-                invite_data = dict(zip(columns, invite_data))
-            
-            # Check if code has expired
-            from datetime import datetime
-            expires_at = invite_data.get('expires_at')
-            if expires_at:
-                if isinstance(expires_at, str):
-                    expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            # First check if the trial_invite_codes table exists
+            try:
+                if IS_PRODUCTION and DB_URL:
+                    # PostgreSQL - check if table exists
+                    c.execute("""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = 'trial_invite_codes'
+                        )
+                    """)
+                    table_exists = c.fetchone()[0]
+                else:
+                    # SQLite - check if table exists
+                    c.execute("""
+                        SELECT name FROM sqlite_master 
+                        WHERE type='table' AND name='trial_invite_codes'
+                    """)
+                    table_exists = c.fetchone() is not None
                 
-                if expires_at < datetime.utcnow():
+                if not table_exists:
+                    logger.warning("Trial invite codes table does not exist")
                     return {
                         "valid": False,
-                        "error": "Invite code has expired"
+                        "error": "Trial invite system not initialized"
                     }
-            
-            # Check if code has reached max uses
-            current_uses = invite_data.get('current_uses', 0)
-            max_uses = invite_data.get('max_uses', 1)
-            
-            if current_uses >= max_uses:
+                    
+            except Exception as e:
+                logger.error(f"Error checking table existence: {e}")
                 return {
                     "valid": False,
-                    "error": "Invite code has been fully used"
+                    "error": "Database error checking invite codes"
                 }
             
-            return {
-                "valid": True,
-                "trial_type": invite_data.get('trial_type', 'premium7d'),
-                "trial_duration_days": invite_data.get('trial_duration_days', 7),
-                "remaining_uses": max_uses - current_uses
-            }
+            # Check if invite code exists and is valid
+            try:
+                c.execute(f"""
+                    SELECT * FROM trial_invite_codes 
+                    WHERE code = {placeholder} AND (is_active = 1 OR is_active = TRUE)
+                """, (invite_code,))
+                
+                invite_data = c.fetchone()
+                
+                if not invite_data:
+                    logger.info(f"Invalid invite code attempted: {invite_code}")
+                    return {
+                        "valid": False,
+                        "error": "Invalid or expired invite code"
+                    }
+                
+                # Convert to dict for easier access
+                if isinstance(invite_data, (list, tuple)):
+                    columns = [desc[0] for desc in c.description]
+                    invite_data = dict(zip(columns, invite_data))
+                
+                # Check if code has expired
+                from datetime import datetime, timezone
+                expires_at = invite_data.get('expires_at')
+                if expires_at:
+                    if isinstance(expires_at, str):
+                        expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    elif expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=timezone.utc)
+                    
+                    if expires_at < datetime.now(timezone.utc):
+                        logger.info(f"Expired invite code attempted: {invite_code}")
+                        return {
+                            "valid": False,
+                            "error": "Invite code has expired"
+                        }
+                
+                # Check if code has reached max uses
+                current_uses = invite_data.get('current_uses', 0)
+                max_uses = invite_data.get('max_uses', 1)
+                
+                if current_uses >= max_uses:
+                    logger.info(f"Fully used invite code attempted: {invite_code}")
+                    return {
+                        "valid": False,
+                        "error": "Invite code has been fully used"
+                    }
+                
+                logger.info(f"Valid invite code validated: {invite_code}")
+                return {
+                    "valid": True,
+                    "trial_type": invite_data.get('trial_type', 'premium7d'),
+                    "trial_duration_days": invite_data.get('trial_duration_days', 7),
+                    "remaining_uses": max_uses - current_uses
+                }
+                
+            except Exception as e:
+                logger.error(f"Error querying invite codes: {e}")
+                return {
+                    "valid": False,
+                    "error": "Database error validating invite code"
+                }
             
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error validating trial invite: {str(e)}")
+        logger.error(f"Error details: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to validate invite code")
 
 
@@ -10200,7 +10250,7 @@ async def create_user_with_invite(user: UserCreateWithInvite):
                 invite_code = user.invite_code.upper().strip()
                 c.execute(f"""
                     SELECT * FROM trial_invite_codes 
-                    WHERE code = {placeholder} AND is_active = 1
+                    WHERE code = {placeholder} AND (is_active = 1 OR is_active = TRUE)
                 """, (invite_code,))
                 
                 invite_data = c.fetchone()
