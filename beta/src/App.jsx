@@ -8,6 +8,7 @@ import HostsPage from './components/HostsPage';
 import EventCreatorPage from './components/EventCreatorPage';
 import FlyerPage from './components/FlyerPage';
 import WelcomePopup from './components/WelcomePopup';
+import RegistrationPage from './components/RegistrationPage';
 import GlassSplashScreen from './components/GlassSplashScreen';
 import { initGoogleMaps } from './googleMapsLoader';
 import { testApiUrl } from './config';
@@ -149,6 +150,14 @@ function App() {
                 <Route 
                   path="/" 
                   element={<EventMapGlass mapsLoaded={mapsLoaded} />} 
+                />
+                <Route 
+                  path="/register" 
+                  element={<RegistrationPage />} 
+                />
+                <Route 
+                  path="/signup" 
+                  element={<RegistrationPage />} 
                 />
                 <Route 
                   path="/events/:eventSlug" 

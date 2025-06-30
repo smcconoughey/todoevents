@@ -9850,6 +9850,408 @@ async def invite_enterprise_user(
         raise HTTPException(status_code=500, detail="Error sending invitation")
 
 
+# Premium Trial Invite Code System
+@app.post("/generate-premium-trial-invite")
+async def generate_premium_trial_invite():
+    """Generate a unique invite code for 7-day premium trial"""
+    try:
+        import secrets
+        import string
+        from datetime import datetime, timedelta
+        
+        # Generate a unique invite code
+        code_length = 8
+        code = 'TRIAL7D' + ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(code_length))
+        
+        # Set expiration for 30 days from now
+        expires_at = datetime.utcnow() + timedelta(days=30)
+        
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Create the trial invite codes table if it doesn't exist
+            if IS_PRODUCTION and DB_URL:
+                # PostgreSQL
+                c.execute("""
+                    CREATE TABLE IF NOT EXISTS trial_invite_codes (
+                        id SERIAL PRIMARY KEY,
+                        code TEXT UNIQUE NOT NULL,
+                        trial_type TEXT NOT NULL DEFAULT 'premium7d',
+                        trial_duration_days INTEGER NOT NULL DEFAULT 7,
+                        max_uses INTEGER DEFAULT 1,
+                        current_uses INTEGER DEFAULT 0,
+                        expires_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_active BOOLEAN DEFAULT TRUE
+                    )
+                """)
+            else:
+                # SQLite
+                c.execute("""
+                    CREATE TABLE IF NOT EXISTS trial_invite_codes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        code TEXT UNIQUE NOT NULL,
+                        trial_type TEXT NOT NULL DEFAULT 'premium7d',
+                        trial_duration_days INTEGER NOT NULL DEFAULT 7,
+                        max_uses INTEGER DEFAULT 1,
+                        current_uses INTEGER DEFAULT 0,
+                        expires_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_active BOOLEAN DEFAULT TRUE
+                    )
+                """)
+            
+            # Insert the new invite code
+            c.execute(f"""
+                INSERT INTO trial_invite_codes (code, trial_type, trial_duration_days, expires_at) 
+                VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+            """, (code, 'premium7d', 7, expires_at))
+            
+            conn.commit()
+            
+            logger.info(f"Generated premium trial invite code: {code}")
+            
+            return {
+                "invite_code": code,
+                "trial_type": "premium7d",
+                "trial_duration_days": 7,
+                "expires_at": expires_at.isoformat(),
+                "max_uses": 1
+            }
+            
+    except Exception as e:
+        logger.error(f"Error generating premium trial invite: {str(e)}")
+        # Return a fallback code if database fails
+        import secrets
+        import string
+        fallback_code = 'TRIAL7D' + ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+        return {
+            "invite_code": fallback_code,
+            "trial_type": "premium7d", 
+            "trial_duration_days": 7,
+            "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat(),
+            "max_uses": 1,
+            "fallback": True
+        }
+
+
+@app.post("/validate-trial-invite")
+async def validate_trial_invite(request: Request):
+    """Validate a trial invite code and return trial info"""
+    try:
+        body = await request.json()
+        invite_code = body.get('invite_code', '').upper().strip()
+        
+        if not invite_code:
+            raise HTTPException(status_code=400, detail="Invite code is required")
+        
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if invite code exists and is valid
+            c.execute(f"""
+                SELECT * FROM trial_invite_codes 
+                WHERE code = {placeholder} AND is_active = 1
+            """, (invite_code,))
+            
+            invite_data = c.fetchone()
+            
+            if not invite_data:
+                return {
+                    "valid": False,
+                    "error": "Invalid or expired invite code"
+                }
+            
+            # Convert to dict for easier access
+            if isinstance(invite_data, (list, tuple)):
+                columns = [desc[0] for desc in c.description]
+                invite_data = dict(zip(columns, invite_data))
+            
+            # Check if code has expired
+            from datetime import datetime
+            expires_at = invite_data.get('expires_at')
+            if expires_at:
+                if isinstance(expires_at, str):
+                    expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                
+                if expires_at < datetime.utcnow():
+                    return {
+                        "valid": False,
+                        "error": "Invite code has expired"
+                    }
+            
+            # Check if code has reached max uses
+            current_uses = invite_data.get('current_uses', 0)
+            max_uses = invite_data.get('max_uses', 1)
+            
+            if current_uses >= max_uses:
+                return {
+                    "valid": False,
+                    "error": "Invite code has been fully used"
+                }
+            
+            return {
+                "valid": True,
+                "trial_type": invite_data.get('trial_type', 'premium7d'),
+                "trial_duration_days": invite_data.get('trial_duration_days', 7),
+                "remaining_uses": max_uses - current_uses
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error validating trial invite: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to validate invite code")
+
+
+# Modified user creation to handle invite codes
+class UserCreateWithInvite(UserCreate):
+    invite_code: Optional[str] = None
+
+
+@app.post("/users-with-invite", response_model=UserResponse)
+async def create_user_with_invite(user: UserCreateWithInvite):
+    """Create user with optional invite code for premium trial"""
+    # Validate password (this will raise an error if invalid)
+    password_validation = PasswordValidator.validate_password(user.password)
+    
+    placeholder = get_placeholder()
+    
+    # Pre-hash password outside the database transaction to reduce transaction time
+    hashed_password = get_password_hash(user.password)
+    
+    # Log the registration attempt
+    logger.info(f"Registration attempt for email: {user.email} with invite: {bool(user.invite_code)}")
+    
+    # Validate invite code if provided
+    trial_info = None
+    if user.invite_code:
+        try:
+            with get_db() as conn:
+                c = conn.cursor()
+                
+                invite_code = user.invite_code.upper().strip()
+                c.execute(f"""
+                    SELECT * FROM trial_invite_codes 
+                    WHERE code = {placeholder} AND is_active = 1
+                """, (invite_code,))
+                
+                invite_data = c.fetchone()
+                
+                if invite_data:
+                    # Convert to dict for easier access
+                    if isinstance(invite_data, (list, tuple)):
+                        columns = [desc[0] for desc in c.description]
+                        invite_data = dict(zip(columns, invite_data))
+                    
+                    # Check if code is still valid
+                    from datetime import datetime
+                    expires_at = invite_data.get('expires_at')
+                    current_uses = invite_data.get('current_uses', 0)
+                    max_uses = invite_data.get('max_uses', 1)
+                    
+                    is_valid = True
+                    if expires_at:
+                        if isinstance(expires_at, str):
+                            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                        if expires_at < datetime.utcnow():
+                            is_valid = False
+                    
+                    if current_uses >= max_uses:
+                        is_valid = False
+                    
+                    if is_valid:
+                        trial_info = {
+                            'code': invite_code,
+                            'trial_type': invite_data.get('trial_type', 'premium7d'),
+                            'duration_days': invite_data.get('trial_duration_days', 7)
+                        }
+        except Exception as e:
+            logger.warning(f"Error validating invite code during registration: {str(e)}")
+            # Continue with registration even if invite validation fails
+    
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # First check connection health with a simple query
+            try:
+                c.execute("SELECT 1")
+            except Exception as e:
+                logger.error(f"Database health check failed during registration: {str(e)}")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database connection issues. Please try again later."
+                )
+            
+            # Check if email exists - with timeout handling
+            try:
+                c.execute(f"SELECT id FROM users WHERE email = {placeholder}", (user.email,))
+                existing_user = c.fetchone()
+                if existing_user:
+                    logger.info(f"Registration failed: Email already exists - {user.email}")
+                    raise HTTPException(status_code=400, detail="Email already registered")
+            except Exception as e:
+                if "timeout" in str(e).lower() or "deadlock" in str(e).lower():
+                    logger.error(f"Timeout checking for existing email: {str(e)}")
+                    raise HTTPException(
+                        status_code=408,
+                        detail="Registration request timed out. Please try again."
+                    )
+                raise
+            
+            # Determine initial role and trial settings
+            initial_role = UserRole.USER
+            premium_expires_at = None
+            premium_granted_by = None
+            
+            if trial_info:
+                # Grant premium trial based on invite code
+                initial_role = UserRole.PREMIUM
+                from datetime import datetime, timedelta
+                premium_expires_at = datetime.utcnow() + timedelta(days=trial_info['duration_days'])
+                premium_granted_by = f"Trial Invite: {trial_info['code']}"
+            
+            # Insert user with appropriate role and trial settings
+            try:
+                # Check if premium columns exist
+                has_premium_columns = False
+                try:
+                    if IS_PRODUCTION and DB_URL:
+                        c.execute("""
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'users' 
+                            AND column_name IN ('premium_expires_at', 'premium_granted_by')
+                        """)
+                        existing_columns = [row[0] for row in c.fetchall()]
+                    else:
+                        c.execute('PRAGMA table_info(users)')
+                        columns_info = c.fetchall()
+                        existing_columns = [col[1] for col in columns_info if col[1] in ['premium_expires_at', 'premium_granted_by']]
+                    
+                    has_premium_columns = len(existing_columns) >= 2
+                except Exception:
+                    has_premium_columns = False
+                
+                if has_premium_columns and trial_info:
+                    # Insert with premium trial fields
+                    c.execute(f"""
+                        INSERT INTO users (email, hashed_password, role, premium_expires_at, premium_granted_by, created_at)
+                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
+                    """, (user.email, hashed_password, initial_role, premium_expires_at, premium_granted_by))
+                else:
+                    # Standard insert
+                    c.execute(f"""
+                        INSERT INTO users (email, hashed_password, role, created_at)
+                        VALUES ({placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP)
+                    """, (user.email, hashed_password, initial_role))
+                
+                # Get the last inserted ID
+                if IS_PRODUCTION and DB_URL:
+                    c.execute("SELECT lastval()")
+                else:
+                    c.execute("SELECT last_insert_rowid()")
+                
+                last_id = c.fetchone()[0]
+                
+                # Mark invite code as used if applicable
+                if trial_info:
+                    try:
+                        c.execute(f"""
+                            UPDATE trial_invite_codes 
+                            SET current_uses = current_uses + 1
+                            WHERE code = {placeholder}
+                        """, (trial_info['code'],))
+                        
+                        logger.info(f"Marked invite code {trial_info['code']} as used for user {user.email}")
+                    except Exception as e:
+                        logger.warning(f"Failed to mark invite code as used: {str(e)}")
+                
+                conn.commit()
+                logger.info(f"User registered successfully: {user.email} (ID: {last_id}) with role: {initial_role}")
+                
+            except Exception as e:
+                conn.rollback()
+                error_msg = str(e)
+                logger.error(f"Error inserting user: {error_msg}")
+                
+                if "timeout" in error_msg.lower() or "deadlock" in error_msg.lower():
+                    raise HTTPException(
+                        status_code=408,
+                        detail="Registration request timed out. The server might be busy, please try again."
+                    )
+                elif "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
+                    raise HTTPException(status_code=400, detail="Email already registered")
+                else:
+                    raise HTTPException(status_code=500, detail="Error creating user")
+            
+            # Get the created user data
+            try:
+                logger.info(f"Fetching created user with ID {last_id}")
+                c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (last_id,))
+                user_data = dict(c.fetchone())
+                
+                # Enhanced logging for law enforcement compliance
+                log_activity(last_id, "registration", f"New user registered: {user.email}" + (f" with trial invite: {trial_info['code']}" if trial_info else ""))
+                
+                # Return user data along with password strength and trial info
+                logger.info(f"User registration successful: {user.email}")
+                response_data = {
+                    **user_data,
+                    "password_strength": password_validation["strength"]
+                }
+                
+                if trial_info:
+                    response_data["trial_activated"] = True
+                    response_data["trial_type"] = trial_info["trial_type"]
+                    response_data["trial_expires_at"] = premium_expires_at.isoformat() if premium_expires_at else None
+                
+                return response_data
+                
+            except Exception as e:
+                logger.error(f"Error retrieving created user: {str(e)}")
+                # Even if we can't fetch the user, registration was successful
+                response_data = {
+                    "id": last_id,
+                    "email": user.email,
+                    "role": initial_role,
+                    "password_strength": password_validation["strength"]
+                }
+                
+                if trial_info:
+                    response_data["trial_activated"] = True
+                    response_data["trial_type"] = trial_info["trial_type"]
+                    response_data["trial_expires_at"] = premium_expires_at.isoformat() if premium_expires_at else None
+                
+                return response_data
+                
+    except HTTPException as http_ex:
+        # Pass through HTTP exceptions
+        raise http_ex
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Unexpected error creating user: {error_msg}")
+        
+        # Return more specific error messages
+        if "timeout" in error_msg.lower():
+            raise HTTPException(
+                status_code=408,
+                detail="Registration request timed out. Please try again later."
+            )
+        elif "connection" in error_msg.lower():
+            raise HTTPException(
+                status_code=503,
+                detail="Database connection issues. Please try again later."
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Error creating user")
+
+
 @app.get("/enterprise/stats")
 async def get_enterprise_stats(current_user: dict = Depends(get_current_user)):
     """Get enterprise dashboard stats"""

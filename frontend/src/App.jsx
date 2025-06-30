@@ -14,6 +14,7 @@ import SubscriptionPage from './components/SubscriptionPage';
 import EnterpriseDashboard from './components/EnterpriseDashboard';
 import MissionOps from './components/MissionOps';
 import RoundupPage from './components/RoundupPage';
+import RegistrationPage from './components/RegistrationPage';
 import { initGoogleMaps } from './googleMapsLoader';
 import { testApiUrl } from './config';
 import './index.css';
@@ -138,6 +139,8 @@ function App() {
           <Routes>
             {/* Main Routes */}
             <Route path="/" element={<EventMap mapsLoaded={mapsLoaded} />} />
+            <Route path="/register" element={<RegistrationPage />} />
+            <Route path="/signup" element={<RegistrationPage />} />
             <Route path="/account" element={<AccountPage />} />
             <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/enterprise-dashboard" element={<EnterpriseDashboard />} />

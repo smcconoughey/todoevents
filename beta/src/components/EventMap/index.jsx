@@ -68,6 +68,7 @@ import EventInteractionComponents from './EventInteractionComponents';
 import ExternalLinkWarning from './ExternalLinkWarning';
 import EmailContactPopup from './EmailContactPopup';
 import { batchedSync } from '@/utils/batchedSync';
+import PremiumTrialPopup from '../PremiumTrialPopup';
 
 // Simple page visit tracking (privacy-friendly)
 const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
@@ -760,6 +761,7 @@ const EventMap = ({
   const [externalLinkDialog, setExternalLinkDialog] = useState({ isOpen: false, url: '' });
   const [showFirstTimeSignInPopup, setShowFirstTimeSignInPopup] = useState(false);
   const [showEmailContactPopup, setShowEmailContactPopup] = useState(false);
+  const [showPremiumTrialPopup, setShowPremiumTrialPopup] = useState(false);
   // Add new state for misc filters
   const [miscFilters, setMiscFilters] = useState({
     feeFilter: 'all' // 'all', 'free', 'paid'
@@ -4025,6 +4027,9 @@ const EventMap = ({
         isOpen={showEmailContactPopup}
         onClose={() => setShowEmailContactPopup(false)}
       />
+
+      {/* Premium Trial Popup */}
+      <PremiumTrialPopup onClose={() => setShowPremiumTrialPopup(false)} />
     </div>
   );
 };

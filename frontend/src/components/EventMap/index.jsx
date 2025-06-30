@@ -85,6 +85,7 @@ import UserDropdown from "../UserDropdown";
 import { useAuth } from './AuthContext';
 import { useTheme } from '../ThemeContext';
 import { AnimatedModalWrapper, StaggeredListAnimation, SmoothLoader, PanelSlideAnimation, PremiumWelcomeAnimation } from '../ui/loading-animations';
+import PremiumTrialPopup from '../PremiumTrialPopup';
 
 // Simple page visit tracking (privacy-friendly)
 const trackPageVisit = async (pageType, pagePath = window.location.pathname) => {
@@ -930,6 +931,7 @@ const EventMap = ({
   // Premium welcome animation state
   const [showPremiumWelcome, setShowPremiumWelcome] = useState(false);
   const [premiumWelcomeData, setPremiumWelcomeData] = useState(null);
+  const [showPremiumTrialPopup, setShowPremiumTrialPopup] = useState(false);
   
   // Route planning state
   const [showRoutePlanner, setShowRoutePlanner] = useState(false);
@@ -4665,6 +4667,9 @@ const EventMap = ({
           }}
         />
       )}
+
+      {/* Premium Trial Popup */}
+      <PremiumTrialPopup onClose={() => setShowPremiumTrialPopup(false)} />
     </div>
   );
 };
