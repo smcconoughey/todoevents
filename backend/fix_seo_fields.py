@@ -16,6 +16,8 @@ import sys
 import argparse
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 # Add the current directory to the path so we can import modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -24,32 +26,68 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from seo_utils import SEOEventProcessor, generate_event_json_ld, validate_event_data
 
 def get_db_connection(db_path: str = "events.db"):
-    """Get a connection to the SQLite database"""
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Get a connection to the database (SQLite or PostgreSQL)"""
+    # Check if we're using PostgreSQL (production) or SQLite (development)
+    database_url = os.environ.get("DATABASE_URL")
+    
+    if database_url and database_url.startswith("postgresql"):
+        print(f"Using PostgreSQL database: {database_url}")
+        conn = psycopg2.connect(database_url)
+        conn.cursor_factory = RealDictCursor
+        return conn
+    else:
+        print(f"Using SQLite database: {db_path}")
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def get_all_events(conn) -> List[Dict[str, Any]]:
     """Get all events from the database"""
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT 
-            id, title, slug, description, short_description,
-            date, start_time, end_time, end_date,
-            start_datetime, end_datetime,
-            category, address, city, state, country,
-            lat, lng, price, currency, fee_required,
-            event_url, host_name, organizer_url,
-            created_by, created_at, updated_at,
-            interest_count, view_count, is_published,
-            verified
-        FROM events 
-        WHERE is_published = 1
-    """)
+    
+    # Check if we're using PostgreSQL or SQLite
+    if hasattr(conn, 'cursor_factory') and conn.cursor_factory == RealDictCursor:
+        # PostgreSQL query
+        cursor.execute("""
+            SELECT 
+                id, title, slug, description, short_description,
+                date, start_time, end_time, end_date,
+                start_datetime, end_datetime,
+                category, address, city, state, country,
+                lat, lng, price, currency, fee_required,
+                event_url, host_name, organizer_url,
+                created_by, created_at, updated_at,
+                interest_count, view_count, is_published,
+                verified
+            FROM events 
+            WHERE is_published = true
+        """)
+    else:
+        # SQLite query
+        cursor.execute("""
+            SELECT 
+                id, title, slug, description, short_description,
+                date, start_time, end_time, end_date,
+                start_datetime, end_datetime,
+                category, address, city, state, country,
+                lat, lng, price, currency, fee_required,
+                event_url, host_name, organizer_url,
+                created_by, created_at, updated_at,
+                interest_count, view_count, is_published,
+                verified
+            FROM events 
+            WHERE is_published = 1
+        """)
     
     events = []
     for row in cursor.fetchall():
-        events.append(dict(row))
+        # Convert to dict - handles both SQLite Row and psycopg2 RealDictRow
+        if hasattr(row, 'keys'):
+            # SQLite Row object
+            events.append(dict(row))
+        else:
+            # PostgreSQL RealDictRow is already dict-like
+            events.append(row)
     
     return events
 
@@ -92,25 +130,47 @@ def update_event_seo_fields(conn, event: Dict[str, Any]) -> Dict[str, Any]:
                         except ValueError:
                             pass
     
-    # Update the database
+    # Update the database - check if we're using PostgreSQL or SQLite
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE events
-        SET 
-            short_description = ?,
-            organizer_url = ?,
-            end_time = ?,
-            end_date = ?,
-            updated_at = ?
-        WHERE id = ?
-    """, (
-        processed_event.get('short_description', ''),
-        processed_event.get('organizer_url', ''),
-        processed_event.get('end_time', ''),
-        processed_event.get('end_date', ''),
-        datetime.now().isoformat(),
-        processed_event['id']
-    ))
+    
+    if hasattr(conn, 'cursor_factory') and conn.cursor_factory == RealDictCursor:
+        # PostgreSQL query
+        cursor.execute("""
+            UPDATE events
+            SET 
+                short_description = %s,
+                organizer_url = %s,
+                end_time = %s,
+                end_date = %s,
+                updated_at = %s
+            WHERE id = %s
+        """, (
+            processed_event.get('short_description', ''),
+            processed_event.get('organizer_url', ''),
+            processed_event.get('end_time', ''),
+            processed_event.get('end_date', ''),
+            datetime.now().isoformat(),
+            processed_event['id']
+        ))
+    else:
+        # SQLite query
+        cursor.execute("""
+            UPDATE events
+            SET 
+                short_description = ?,
+                organizer_url = ?,
+                end_time = ?,
+                end_date = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (
+            processed_event.get('short_description', ''),
+            processed_event.get('organizer_url', ''),
+            processed_event.get('end_time', ''),
+            processed_event.get('end_date', ''),
+            datetime.now().isoformat(),
+            processed_event['id']
+        ))
     
     return processed_event
 

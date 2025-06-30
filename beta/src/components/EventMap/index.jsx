@@ -506,6 +506,23 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
                   </div>
                 </div>
               )}
+              
+              {/* Add to Calendar Button */}
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <div className="p-1.5 rounded-md bg-green-500/10">
+                  <Calendar className="w-4 h-4 text-green-400" />
+                </div>
+                <div className="flex flex-col flex-1">
+                  <span className="text-xs text-white/50">Calendar</span>
+                  <a
+                    href={`/events/${event.id}/calendar`}
+                    className="font-body text-green-400 hover:text-green-300 underline text-left transition-colors"
+                    download={`event_${event.id}.ics`}
+                  >
+                    Add to Google Calendar
+                  </a>
+                </div>
+              </div>
             </div>
             
             {/* Add event interaction components to the details panel */}

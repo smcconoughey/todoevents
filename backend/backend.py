@@ -2936,6 +2936,133 @@ async def read_event(event_id: int):
         raise HTTPException(status_code=500, detail="Error retrieving event")
 
 
+@app.get("/events/{event_id}/calendar")
+async def get_event_calendar(event_id: int):
+    """
+    Generate an iCalendar (.ics) file for an event
+    This can be used to add events to Google Calendar, Apple Calendar, Outlook, etc.
+    """
+    from icalendar import Calendar, Event as ICalEvent
+    import pytz
+    from datetime import datetime, timedelta
+    from fastapi.responses import Response
+    
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Get event details
+            cursor.execute(f"""
+                SELECT id, title, description, date, start_time, end_time, end_date, 
+                       address, city, state, country, lat, lng, host_name
+                FROM events 
+                WHERE id = {placeholder}
+            """, (event_id,))
+            
+            event = cursor.fetchone()
+            
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            # Convert to dict
+            event_dict = dict(event)
+            
+            # Create iCalendar event
+            cal = Calendar()
+            cal.add('prodid', '-//TodoEvents//Event Calendar//EN')
+            cal.add('version', '2.0')
+            
+            ical_event = ICalEvent()
+            ical_event.add('summary', event_dict['title'])
+            ical_event.add('description', event_dict['description'] or '')
+            
+            # Format location
+            location_parts = []
+            if event_dict['address']:
+                location_parts.append(event_dict['address'])
+            elif event_dict['city'] and event_dict['state']:
+                location_parts.append(f"{event_dict['city']}, {event_dict['state']}")
+                
+            if location_parts:
+                ical_event.add('location', ', '.join(location_parts))
+            
+            # Add geographic position if available
+            if event_dict['lat'] and event_dict['lng']:
+                ical_event.add('geo', (float(event_dict['lat']), float(event_dict['lng'])))
+            
+            # Parse date and time
+            event_date = event_dict['date']
+            start_time = event_dict['start_time']
+            end_time = event_dict['end_time'] or start_time  # Default to start time if no end time
+            end_date = event_dict['end_date'] or event_date  # Default to event date if no end date
+            
+            # Create datetime objects
+            try:
+                # Start datetime
+                start_dt_str = f"{event_date}T{start_time}"
+                start_dt = datetime.strptime(start_dt_str, "%Y-%m-%dT%H:%M")
+                
+                # End datetime
+                end_dt_str = f"{end_date}T{end_time}"
+                end_dt = datetime.strptime(end_dt_str, "%Y-%m-%dT%H:%M")
+                
+                # If end time is earlier than start time on the same day, assume it's the next day
+                if end_date == event_date and end_time < start_time:
+                    end_dt = end_dt + timedelta(days=1)
+                
+                # Add timezone (UTC)
+                utc = pytz.UTC
+                start_dt = utc.localize(start_dt)
+                end_dt = utc.localize(end_dt)
+                
+                ical_event.add('dtstart', start_dt)
+                ical_event.add('dtend', end_dt)
+            except ValueError:
+                # Fallback to all-day event if time parsing fails
+                start_date = datetime.strptime(event_date, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_date, "%Y-%m-%d").date() + timedelta(days=1)
+                ical_event.add('dtstart', start_date)
+                ical_event.add('dtend', end_date)
+            
+            # Add organizer if available
+            if event_dict['host_name']:
+                ical_event.add('organizer', event_dict['host_name'])
+            
+            # Add unique identifier
+            ical_event.add('uid', f"{event_dict['id']}@todo-events.com")
+            
+            # Add creation timestamp
+            ical_event.add('dtstamp', datetime.now(pytz.UTC))
+            
+            # Add event to calendar
+            cal.add_component(ical_event)
+            
+            # Generate iCalendar file
+            ical_data = cal.to_ical()
+            
+            # Return as downloadable file
+            filename = f"event_{event_dict['id']}.ics"
+            
+            return Response(
+                content=ical_data,
+                media_type="text/calendar",
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}",
+                    "Content-Type": "text/calendar; charset=utf-8",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating calendar for event {event_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating calendar")
+
+
 def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
     """Ensure slug uniqueness by appending event ID if needed"""
     if not base_slug:
