@@ -19,11 +19,13 @@ const RegistrationPage = () => {
   });
   
   const [validationStatus, setValidationStatus] = useState({
-    length: false,
-    uppercase: false,
-    lowercase: false,
-    number: false,
-    special: false
+    minLength: false,
+    sufficient: false,
+    typeCount: 0,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecial: false
   });
   
   const [inviteInfo, setInviteInfo] = useState(null);
@@ -93,14 +95,30 @@ const RegistrationPage = () => {
   };
 
   const validatePassword = (password) => {
-    setValidationStatus({
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /\d/.test(password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    });
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    const typeCount = [hasUppercase, hasLowercase, hasNumber, hasSpecial].filter(Boolean).length;
+    
+    return {
+      minLength: password.length >= 8,
+      sufficient: typeCount >= 2 && password.length >= 8,
+      typeCount,
+      hasUppercase,
+      hasLowercase,
+      hasNumber,
+      hasSpecial
+    };
   };
+
+  useEffect(() => {
+    if (formData.password) {
+      const validation = validatePassword(formData.password);
+      setValidationStatus(validation);
+    }
+  }, [formData.password]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -113,9 +131,9 @@ const RegistrationPage = () => {
       return;
     }
 
-    const allRequirementsMet = Object.values(validationStatus).every(Boolean);
+    const allRequirementsMet = validationStatus.minLength && validationStatus.sufficient;
     if (!allRequirementsMet) {
-      setError('Password does not meet all requirements');
+      setError('Password must be at least 8 characters and contain at least 2 different character types');
       setIsLoading(false);
       return;
     }
@@ -175,18 +193,17 @@ const RegistrationPage = () => {
 
   const PasswordRequirements = () => (
     <div className="space-y-1 text-xs">
-      {Object.entries({
-        length: 'At least 8 characters',
-        uppercase: 'One uppercase letter',
-        lowercase: 'One lowercase letter', 
-        number: 'One number',
-        special: 'One special character'
-      }).map(([key, label]) => (
-        <div key={key} className={`flex items-center gap-1 ${validationStatus[key] ? 'text-green-400' : 'text-gray-400'}`}>
-          {validationStatus[key] ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 border border-gray-400 rounded-full" />}
-          <span>{label}</span>
-        </div>
-      ))}
+      <div className={`flex items-center gap-1 ${validationStatus.minLength ? 'text-green-400' : 'text-gray-400'}`}>
+        {validationStatus.minLength ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 border border-gray-400 rounded-full" />}
+        <span>At least 8 characters</span>
+      </div>
+      <div className={`flex items-center gap-1 ${validationStatus.sufficient ? 'text-green-400' : 'text-gray-400'}`}>
+        {validationStatus.sufficient ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 border border-gray-400 rounded-full" />}
+        <span>At least 2 of: uppercase, lowercase, number, special character</span>
+      </div>
+      <div className="text-xs text-gray-400 mt-1">
+        Current types: {validationStatus.typeCount || 0}/4
+      </div>
     </div>
   );
 
