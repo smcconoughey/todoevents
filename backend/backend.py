@@ -9616,6 +9616,95 @@ async def remove_premium(user_id: int, current_user: dict = Depends(get_current_
         raise HTTPException(status_code=500, detail="Error removing premium access")
 
 
+@app.post("/admin/users/{user_id}/set-expiration")
+async def set_user_expiration(
+    user_id: int, request: Request, current_user: dict = Depends(get_current_user)
+):
+    """Set custom expiration date for a user"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    try:
+        body = await request.json()
+        expiration_date = body.get("expiration_date")
+        
+        if not expiration_date:
+            raise HTTPException(status_code=400, detail="Expiration date is required")
+        
+        # Parse and validate the date
+        from datetime import datetime
+        try:
+            # Parse the datetime string (from datetime-local input)
+            expires_at = datetime.fromisoformat(expiration_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format")
+        
+        # Check if date is in the future
+        if expires_at <= datetime.utcnow():
+            raise HTTPException(status_code=400, detail="Expiration date must be in the future")
+        
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check if user exists
+            c.execute(f"SELECT id, email, role FROM users WHERE id = {placeholder}", (user_id,))
+            user = c.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Handle different database return formats
+            if isinstance(user, dict):
+                user_email = user['email']
+                current_role = user['role']
+            else:
+                user_id_db, user_email, current_role = user
+            
+            # Update user's expiration and ensure they have premium role
+            granted_by = f"Manual expiration set by admin on {datetime.utcnow().strftime('%Y-%m-%d')}"
+            
+            # If user isn't premium, upgrade them to premium
+            if current_role not in ['premium', 'admin', 'enterprise']:
+                c.execute(f"""
+                    UPDATE users 
+                    SET role = 'premium', premium_expires_at = {placeholder}, premium_granted_by = {placeholder}
+                    WHERE id = {placeholder}
+                """, (expires_at.isoformat(), granted_by, user_id))
+                logger.info(f"Upgraded user {user_email} to premium with custom expiration: {expires_at.isoformat()}")
+            else:
+                # Just update the expiration date
+                c.execute(f"""
+                    UPDATE users 
+                    SET premium_expires_at = {placeholder}, premium_granted_by = {placeholder}
+                    WHERE id = {placeholder}
+                """, (expires_at.isoformat(), granted_by, user_id))
+                logger.info(f"Set custom expiration for user {user_email}: {expires_at.isoformat()}")
+            
+            conn.commit()
+            
+            # Log the activity
+            log_activity(
+                current_user["id"],
+                "set_custom_expiration", 
+                f"Set custom expiration for {user_email}: {expires_at.isoformat()}"
+            )
+            
+            return {
+                "success": True,
+                "message": f"Set expiration date for {user_email}",
+                "user_id": user_id,
+                "expiration_date": expires_at.isoformat()
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting user expiration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to set expiration: {str(e)}")
+
+
 @app.post("/admin/premium-invite")
 async def invite_premium_user(
     request: PremiumInviteRequest, current_user: dict = Depends(get_current_user)

@@ -3361,6 +3361,8 @@ const AdminDashboard = () => {
     const [trialInvites, setTrialInvites] = useState([]);
     const [generatingInvite, setGeneratingInvite] = useState(false);
     const [newTrialInvite, setNewTrialInvite] = useState(null);
+    const [useCustomDate, setUseCustomDate] = useState(false);
+    const [customExpirationDate, setCustomExpirationDate] = useState('');
 
     const fetchPremiumUsers = async () => {
       setLoading(true);
@@ -3408,11 +3410,21 @@ const AdminDashboard = () => {
 
     const handleGrantPremium = async (userId) => {
       try {
-        await fetchData(`/admin/users/${userId}/grant-premium`, 'POST', {
-          months: grantMonths
-        });
+        if (useCustomDate && customExpirationDate) {
+          // Use custom expiration date endpoint
+          await fetchData(`/admin/users/${userId}/set-expiration`, 'POST', {
+            expiration_date: customExpirationDate
+          });
+        } else {
+          // Use months-based grant
+          await fetchData(`/admin/users/${userId}/grant-premium`, 'POST', {
+            months: grantMonths
+          });
+        }
         setGrantingPremium(null);
         setGrantMonths(1);
+        setUseCustomDate(false);
+        setCustomExpirationDate('');
         fetchPremiumUsers();
         setError(null);
       } catch (error) {
@@ -3422,16 +3434,27 @@ const AdminDashboard = () => {
 
     const handleGrantEnterprise = async (userId) => {
       try {
-        // First grant premium access, then upgrade to enterprise
-        await fetchData(`/admin/users/${userId}/grant-premium`, 'POST', {
-          months: grantMonths
-        });
-        
-        // Update role to enterprise
-        await fetchData(`/admin/users/${userId}/role?role=enterprise`, 'PUT');
+        if (useCustomDate && customExpirationDate) {
+          // Set custom expiration first
+          await fetchData(`/admin/users/${userId}/set-expiration`, 'POST', {
+            expiration_date: customExpirationDate
+          });
+          // Then upgrade to enterprise
+          await fetchData(`/admin/users/${userId}/role?role=enterprise`, 'PUT');
+        } else {
+          // First grant premium access, then upgrade to enterprise
+          await fetchData(`/admin/users/${userId}/grant-premium`, 'POST', {
+            months: grantMonths
+          });
+          
+          // Update role to enterprise
+          await fetchData(`/admin/users/${userId}/role?role=enterprise`, 'PUT');
+        }
         
         setGrantingPremium(null);
         setGrantMonths(1);
+        setUseCustomDate(false);
+        setCustomExpirationDate('');
         fetchPremiumUsers();
         setError(null);
       } catch (error) {
@@ -3972,20 +3995,58 @@ const AdminDashboard = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Extend/Add Access (Months)
+                Access Management
               </label>
-              <select
-                value={grantMonths}
-                onChange={(e) => setGrantMonths(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={1}>1 Month</option>
-                <option value={3}>3 Months</option>
-                <option value={6}>6 Months</option>
-                <option value={12}>12 Months</option>
-                <option value={24}>24 Months</option>
-                <option value={36}>36 Months</option>
-              </select>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="months-option"
+                    name="access-type"
+                    checked={!useCustomDate}
+                    onChange={() => setUseCustomDate(false)}
+                    className="mr-2"
+                  />
+                  <label htmlFor="months-option" className="text-sm">Extend by months</label>
+                </div>
+                
+                {!useCustomDate && (
+                  <select
+                    value={grantMonths}
+                    onChange={(e) => setGrantMonths(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={1}>1 Month</option>
+                    <option value={3}>3 Months</option>
+                    <option value={6}>6 Months</option>
+                    <option value={12}>12 Months</option>
+                    <option value={24}>24 Months</option>
+                    <option value={36}>36 Months</option>
+                  </select>
+                )}
+                
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="custom-date-option"
+                    name="access-type"
+                    checked={useCustomDate}
+                    onChange={() => setUseCustomDate(true)}
+                    className="mr-2"
+                  />
+                  <label htmlFor="custom-date-option" className="text-sm">Set custom expiration date</label>
+                </div>
+                
+                {useCustomDate && (
+                  <input
+                    type="datetime-local"
+                    value={customExpirationDate}
+                    onChange={(e) => setCustomExpirationDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                )}
+              </div>
             </div>
             
             <div className="flex justify-end space-x-3 pt-4">
