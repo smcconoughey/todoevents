@@ -1,5 +1,18 @@
 User-agent: *
 Allow: /
+Allow: /api/v1/local-events
+Allow: /events
+Allow: /health
+Allow: /images/
+Allow: /favicon.ico
+Allow: /sitemap.xml
+Allow: /e/
+Allow: /hosts
+Allow: /creators
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
+Crawl-delay: 1
 
 # AI Search Tools and Crawlers
 User-agent: GPTBot
@@ -22,26 +35,5 @@ User-agent: Bingbot
 Allow: /
 Allow: /api/v1/local-events
 
-# API Endpoints for AI Tools
-Allow: /api/v1/local-events
-Allow: /events
-Allow: /health
-
-# Block private/admin areas
-Disallow: /admin/
-Disallow: /api/
-Disallow: /backend/
-
-# Allow important directories and pages
-Allow: /images/
-Allow: /favicon.ico
-Allow: /sitemap.xml
-Allow: /e/
-Allow: /hosts
-Allow: /creators
-
 # Sitemap location
 Sitemap: https://todo-events.com/sitemap.xml
-
-# Crawl-delay for responsible AI crawling
-Crawl-delay: 1 
