@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
-Allow: /api/v1/local-events
 Allow: /events
 Allow: /health
 Allow: /images/
@@ -9,6 +8,7 @@ Allow: /sitemap.xml
 Allow: /e/
 Allow: /hosts
 Allow: /creators
+Allow: /api/v1/local-events
 Disallow: /admin/
 Disallow: /api/
 Disallow: /backend/
@@ -17,23 +17,78 @@ Crawl-delay: 1
 # AI Search Tools and Crawlers
 User-agent: GPTBot
 Allow: /
+Allow: /events
+Allow: /health
+Allow: /images/
+Allow: /favicon.ico
+Allow: /sitemap.xml
+Allow: /e/
+Allow: /hosts
+Allow: /creators
 Allow: /api/v1/local-events
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
 
 User-agent: ChatGPT-User
 Allow: /
+Allow: /events
+Allow: /health
+Allow: /images/
+Allow: /favicon.ico
+Allow: /sitemap.xml
+Allow: /e/
+Allow: /hosts
+Allow: /creators
 Allow: /api/v1/local-events
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
 
 User-agent: CCBot
 Allow: /
+Allow: /events
+Allow: /health
+Allow: /images/
+Allow: /favicon.ico
+Allow: /sitemap.xml
+Allow: /e/
+Allow: /hosts
+Allow: /creators
 Allow: /api/v1/local-events
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
 
 User-agent: anthropic-ai
 Allow: /
+Allow: /events
+Allow: /health
+Allow: /images/
+Allow: /favicon.ico
+Allow: /sitemap.xml
+Allow: /e/
+Allow: /hosts
+Allow: /creators
 Allow: /api/v1/local-events
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
 
 User-agent: Bingbot
 Allow: /
+Allow: /events
+Allow: /health
+Allow: /images/
+Allow: /favicon.ico
+Allow: /sitemap.xml
+Allow: /e/
+Allow: /hosts
+Allow: /creators
 Allow: /api/v1/local-events
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
 
 # Sitemap location
 Sitemap: https://todo-events.com/sitemap.xml
