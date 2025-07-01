@@ -10454,6 +10454,149 @@ async def create_user_with_invite(user: UserCreateWithInvite):
             raise HTTPException(status_code=500, detail="Error creating user")
 
 
+@app.post("/debug/fix-trial-expiration")
+async def fix_trial_expiration(request: Request, current_user: dict = Depends(get_current_user)):
+    """Debug endpoint to fix trial expiration for premium users who are missing it"""
+    
+    # Only allow admins to use this
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        body = await request.json()
+        target_email = body.get('email')
+        trial_days = body.get('days', 7)
+        
+        if not target_email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Check user's current status
+            c.execute(f"""
+                SELECT id, email, role, premium_expires_at, premium_granted_by 
+                FROM users 
+                WHERE email = {placeholder}
+            """, (target_email,))
+            
+            user = c.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Handle different database return formats
+            if isinstance(user, dict):
+                user_id = user['id']
+                current_role = user['role']
+                current_expires = user.get('premium_expires_at')
+                current_granted_by = user.get('premium_granted_by')
+            else:
+                user_id, email, current_role, current_expires, current_granted_by = user
+            
+            # Check if this user needs fixing
+            if current_role == 'premium' and not current_expires:
+                from datetime import datetime, timedelta
+                
+                # Set trial expiration
+                trial_expires = datetime.utcnow() + timedelta(days=trial_days)
+                granted_by = f"Trial Fix - {trial_days}d trial from {datetime.utcnow().strftime('%Y-%m-%d')}"
+                
+                c.execute(f"""
+                    UPDATE users 
+                    SET premium_expires_at = {placeholder}, premium_granted_by = {placeholder}
+                    WHERE id = {placeholder}
+                """, (trial_expires.isoformat(), granted_by, user_id))
+                
+                conn.commit()
+                
+                logger.info(f"Fixed trial expiration for user {target_email}: {trial_expires.isoformat()}")
+                
+                return {
+                    "success": True,
+                    "message": f"Fixed trial expiration for {target_email}",
+                    "user_id": user_id,
+                    "trial_expires_at": trial_expires.isoformat(),
+                    "trial_days": trial_days
+                }
+                
+            elif current_role == 'premium' and current_expires:
+                return {
+                    "success": False,
+                    "message": f"User {target_email} already has trial expiration set",
+                    "current_expires_at": current_expires
+                }
+                
+            else:
+                return {
+                    "success": False,
+                    "message": f"User {target_email} has role '{current_role}', not premium"
+                }
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fixing trial expiration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fix trial expiration: {str(e)}")
+
+
+@app.get("/debug/list-problematic-users")
+async def list_problematic_users(current_user: dict = Depends(get_current_user)):
+    """Debug endpoint to list premium users without expiration dates"""
+    
+    # Only allow admins to use this
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        placeholder = get_placeholder()
+        
+        with get_db() as conn:
+            c = conn.cursor()
+            
+            # Find premium users without expiration dates
+            c.execute(f"""
+                SELECT id, email, role, premium_expires_at, premium_granted_by 
+                FROM users 
+                WHERE role = 'premium' AND (premium_expires_at IS NULL OR premium_expires_at = '')
+                ORDER BY id DESC
+            """)
+            
+            problematic_users = c.fetchall()
+            
+            users_list = []
+            for user in problematic_users:
+                if isinstance(user, dict):
+                    users_list.append({
+                        "id": user['id'],
+                        "email": user['email'],
+                        "role": user['role'],
+                        "premium_expires_at": user.get('premium_expires_at'),
+                        "premium_granted_by": user.get('premium_granted_by')
+                    })
+                else:
+                    user_id, email, role, expires_at, granted_by = user
+                    users_list.append({
+                        "id": user_id,
+                        "email": email,
+                        "role": role,
+                        "premium_expires_at": expires_at,
+                        "premium_granted_by": granted_by
+                    })
+            
+            return {
+                "success": True,
+                "count": len(users_list),
+                "problematic_users": users_list
+            }
+            
+    except Exception as e:
+        logger.error(f"Error listing problematic users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list users: {str(e)}")
+
+
 @app.get("/enterprise/stats")
 async def get_enterprise_stats(current_user: dict = Depends(get_current_user)):
     """Get enterprise dashboard stats"""
