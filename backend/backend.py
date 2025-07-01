@@ -10115,39 +10115,6 @@ async def validate_trial_invite(request: Request):
         with get_db() as conn:
             c = conn.cursor()
             
-            # First check if the trial_invite_codes table exists
-            try:
-                if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL - check if table exists
-                    c.execute("""
-                        SELECT EXISTS (
-                            SELECT FROM information_schema.tables 
-                            WHERE table_name = 'trial_invite_codes'
-                        )
-                    """)
-                    table_exists = c.fetchone()[0]
-                else:
-                    # SQLite - check if table exists
-                    c.execute("""
-                        SELECT name FROM sqlite_master 
-                        WHERE type='table' AND name='trial_invite_codes'
-                    """)
-                    table_exists = c.fetchone() is not None
-                
-                if not table_exists:
-                    logger.warning("Trial invite codes table does not exist")
-                    return {
-                        "valid": False,
-                        "error": "Trial invite system not initialized"
-                    }
-                    
-            except Exception as e:
-                logger.error(f"Error checking table existence: {e}")
-                return {
-                    "valid": False,
-                    "error": "Database error checking invite codes"
-                }
-            
             # Check if invite code exists and is valid
             try:
                 c.execute(f"""
@@ -10215,6 +10182,13 @@ async def validate_trial_invite(request: Request):
                 
             except Exception as e:
                 logger.error(f"Error querying invite codes: {e}")
+                # Check for table not existing error
+                if "no such table" in str(e).lower() or ("relation" in str(e).lower() and "does not exist" in str(e).lower()):
+                    logger.warning("Trial invite codes table does not exist")
+                    return {
+                        "valid": False,
+                        "error": "Trial invite system not initialized"
+                    }
                 return {
                     "valid": False,
                     "error": "Database error validating invite code"
