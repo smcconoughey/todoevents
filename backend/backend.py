@@ -9663,7 +9663,7 @@ async def set_user_expiration(
                 user_id_db, user_email, current_role = user
             
             # Update user's expiration and ensure they have premium role
-            granted_by = f"Manual expiration set by admin on {datetime.utcnow().strftime('%Y-%m-%d')}"
+            granted_by_admin_id = current_user["id"]  # Use admin's user ID, not text description
             
             # If user isn't premium, upgrade them to premium
             if current_role not in ['premium', 'admin', 'enterprise']:
@@ -9671,7 +9671,7 @@ async def set_user_expiration(
                     UPDATE users 
                     SET role = 'premium', premium_expires_at = {placeholder}, premium_granted_by = {placeholder}
                     WHERE id = {placeholder}
-                """, (expires_at.isoformat(), granted_by, user_id))
+                """, (expires_at.isoformat(), granted_by_admin_id, user_id))
                 logger.info(f"Upgraded user {user_email} to premium with custom expiration: {expires_at.isoformat()}")
             else:
                 # Just update the expiration date
@@ -9679,7 +9679,7 @@ async def set_user_expiration(
                     UPDATE users 
                     SET premium_expires_at = {placeholder}, premium_granted_by = {placeholder}
                     WHERE id = {placeholder}
-                """, (expires_at.isoformat(), granted_by, user_id))
+                """, (expires_at.isoformat(), granted_by_admin_id, user_id))
                 logger.info(f"Set custom expiration for user {user_email}: {expires_at.isoformat()}")
             
             conn.commit()
