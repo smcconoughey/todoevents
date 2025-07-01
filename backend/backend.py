@@ -1804,12 +1804,12 @@ class PasswordValidator:
         else:
             character_type_messages.append('special character (!@#$%^&*(),.?":{}|<>)')
 
-        # Require at least 3 out of 4 character types (more flexible)
-        if character_types < 3:
+        # Require at least 2 out of 4 character types (more flexible)
+        if character_types < 2:
             validation_result["is_valid"] = False
             missing_types = 4 - character_types
             validation_result["feedback"].append(
-                f"Password must contain at least 3 different character types. "
+                f"Password must contain at least 2 different character types. "
                 f"Missing {missing_types} types from: {', '.join(character_type_messages)}"
             )
 
