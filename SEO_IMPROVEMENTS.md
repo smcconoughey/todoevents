@@ -28,12 +28,12 @@ The following Schema.org fields were missing or incomplete in our event pages:
 
 - Enhanced `generate_event_json_ld()` in `seo_utils.py` to include all required fields
 - Updated validation logic in `validate_event_data()` to check for missing fields
-- Created `fix_seo_fields.py` script to update existing events in the database
-- Added the script to deployment process to ensure all events have proper SEO fields
+- Introduced `populate_production_seo_fields.py` and a scheduled job `run_seo_population` as the single entry point for populating SEO fields
+- Removed the `fix_seo_fields.py` startup step; SEO data is populated only through the scheduled job
 
 ### Database Updates
 
-The script `fix_seo_fields.py` makes the following updates to events:
+The script `populate_production_seo_fields.py` performs the following updates to events:
 
 1. Adds missing organizer URLs
 2. Calculates end times for events missing them (defaults to 2 hours after start time)
@@ -42,16 +42,10 @@ The script `fix_seo_fields.py` makes the following updates to events:
 
 ### Testing
 
-You can run the script in dry-run mode to check for issues without making changes:
+The scheduled job handles SEO population automatically. To trigger it manually run:
 
 ```bash
-python backend/fix_seo_fields.py --dry-run
-```
-
-Or run it to fix the issues:
-
-```bash
-python backend/fix_seo_fields.py
+python backend/populate_production_seo_fields.py
 ```
 
 ### Future Improvements
