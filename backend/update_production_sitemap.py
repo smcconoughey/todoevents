@@ -28,38 +28,41 @@ def slugify(text):
     return slug.strip('-')
 
 def get_production_events():
-    """Fetch all future events from production API"""
+    """Fetch all future events from production API with pagination"""
     api_base = "https://todoevents-backend.onrender.com"
     
     try:
-        print("🔗 Fetching events from production API...")
+        print("🔗 Fetching ALL future events from production API...")
         
-        # Try to get all events
-        response = requests.get(f"{api_base}/api/v1/local-events", timeout=30)
+        all_events = []
+        limit = 1000  # Max limit per request
+        offset = 0
         
-        if response.status_code != 200:
-            print(f"❌ API error: {response.status_code}")
-            return []
-        
-        api_response = response.json()
-        
-        # The API returns a JSON object with events array, not direct array
-        if isinstance(api_response, list):
-            all_events = api_response
-        elif isinstance(api_response, dict) and isinstance(api_response.get('events'), list):
-            all_events = api_response['events']
-        elif isinstance(api_response, dict):
-            # Look for any array field in the response
-            for key, value in api_response.items():
-                if isinstance(value, list) and len(value) > 0:
-                    all_events = value
-                    break
-            else:
-                print(f"❌ No event array found in API response")
-                return []
-        else:
-            print(f"❌ Unexpected API response format: {type(api_response)}")
-            return []
+        while True:
+            # Use the main events endpoint with higher limits and pagination
+            response = requests.get(
+                f"{api_base}/events?limit={limit}&offset={offset}", 
+                timeout=60
+            )
+            
+            if response.status_code != 200:
+                print(f"❌ API error: {response.status_code}")
+                break
+            
+            batch_events = response.json()
+            
+            if not batch_events or not isinstance(batch_events, list) or len(batch_events) == 0:
+                print(f"📊 No more events at offset {offset}")
+                break
+            
+            print(f"📊 Fetched {len(batch_events)} events (offset {offset})")
+            all_events.extend(batch_events)
+            
+            # If we got fewer events than the limit, we've reached the end
+            if len(batch_events) < limit:
+                break
+                
+            offset += limit
             
         print(f"📊 Found {len(all_events)} total events from API")
         
@@ -82,8 +85,12 @@ def get_production_events():
         
         print(f"📅 Found {len(future_events)} future events")
         
+        # Reduce duplicates by title, date, and location
+        unique_events = reduce_duplicates(future_events)
+        print(f"🔄 After duplicate reduction: {len(unique_events)} unique events")
+        
         # Extract city/state from address if not directly available
-        for event in future_events:
+        for event in unique_events:
             if not event.get('city') or not event.get('state'):
                 address = event.get('address') or event.get('location', {}).get('address', '')
                 if address and isinstance(address, str):
@@ -99,18 +106,111 @@ def get_production_events():
                         event['state'] = state_part if not event.get('state') else event['state']
         
         # Show breakdown
-        with_slugs = sum(1 for e in future_events if e.get('slug'))
-        with_location = sum(1 for e in future_events if e.get('city') and e.get('state'))
+        with_slugs = sum(1 for e in unique_events if e.get('slug'))
+        with_location = sum(1 for e in unique_events if e.get('city') and e.get('state'))
         
         print(f"   🏷️ Events with slugs: {with_slugs}")
         print(f"   📍 Events with city/state: {with_location}")
-        print(f"   🔧 Events needing slugs: {len(future_events) - with_slugs}")
+        print(f"   🔧 Events needing slugs: {len(unique_events) - with_slugs}")
         
-        return future_events
+        return unique_events
         
     except Exception as e:
         print(f"❌ API error: {e}")
         return []
+
+def reduce_duplicates(events):
+    """Reduce duplicate events based on title, date, and location similarity"""
+    if not events:
+        return events
+    
+    # Create a mapping of potential duplicates
+    seen_events = {}
+    unique_events = []
+    
+    for event in events:
+        # Create a normalized signature for the event
+        title = (event.get('title') or '').lower().strip()
+        date = event.get('date') or ''
+        address = (event.get('address') or '').lower().strip()
+        
+        # Normalize title for comparison (remove common words, extra spaces)
+        normalized_title = re.sub(r'\b(the|a|an|and|or|at|in|on|for|with|by)\b', '', title)
+        normalized_title = re.sub(r'\s+', ' ', normalized_title).strip()
+        
+        # Create signature
+        signature = f"{normalized_title}|{date}|{address[:50]}"  # First 50 chars of address
+        
+        # Check for similar signatures
+        is_duplicate = False
+        for existing_sig, existing_event in seen_events.items():
+            # Check if this might be a duplicate
+            if (date == existing_event.get('date') and 
+                similarity_score(normalized_title, existing_sig.split('|')[0]) > 0.8):
+                # This is likely a duplicate, keep the one with more complete data
+                if event_completeness_score(event) > event_completeness_score(existing_event):
+                    # Replace the existing event with this more complete one
+                    seen_events[signature] = event
+                    # Update the unique_events list
+                    for i, unique_event in enumerate(unique_events):
+                        if unique_event['id'] == existing_event['id']:
+                            unique_events[i] = event
+                            break
+                is_duplicate = True
+                break
+        
+        if not is_duplicate:
+            seen_events[signature] = event
+            unique_events.append(event)
+    
+    return unique_events
+
+def similarity_score(str1, str2):
+    """Calculate similarity score between two strings (0.0 to 1.0)"""
+    if not str1 or not str2:
+        return 0.0
+    
+    # Simple Jaccard similarity using word sets
+    words1 = set(str1.split())
+    words2 = set(str2.split())
+    
+    if not words1 and not words2:
+        return 1.0
+    if not words1 or not words2:
+        return 0.0
+    
+    intersection = len(words1.intersection(words2))
+    union = len(words1.union(words2))
+    
+    return intersection / union if union > 0 else 0.0
+
+def event_completeness_score(event):
+    """Calculate completeness score for an event (higher = more complete)"""
+    score = 0
+    
+    # Required fields
+    if event.get('title'): score += 10
+    if event.get('date'): score += 10
+    if event.get('address'): score += 10
+    
+    # Optional but valuable fields
+    if event.get('description'): score += 5
+    if event.get('start_time'): score += 3
+    if event.get('end_time'): score += 2
+    if event.get('category'): score += 3
+    if event.get('slug'): score += 5
+    if event.get('city'): score += 3
+    if event.get('state'): score += 3
+    if event.get('lat') and event.get('lng'): score += 5
+    if event.get('event_url'): score += 2
+    if event.get('host_name'): score += 2
+    if event.get('verified'): score += 5
+    
+    # Popularity indicators
+    score += min(int(event.get('interest_count', 0) or 0), 10)
+    score += min(int(event.get('view_count', 0) or 0) // 10, 5)
+    
+    return score
 
 def generate_missing_slugs_for_display(events):
     """Generate slugs for events that don't have them (for sitemap only)"""
