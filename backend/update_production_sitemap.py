@@ -66,8 +66,9 @@ def get_production_events():
             
         print(f"📊 Found {len(all_events)} total events from API")
         
-        # Filter for future events only
-        current_date = datetime.now().date()
+        # Filter for future events only - events after July 2nd, 2025
+        cutoff_date = datetime(2025, 7, 2).date()
+        print(f"📅 Filtering for events after {cutoff_date}")
         future_events = []
         
         for event in all_events:
@@ -78,12 +79,29 @@ def get_production_events():
             if event_date_str:
                 try:
                     event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
-                    if event_date >= current_date:
+                    if event_date > cutoff_date:  # Events AFTER July 2nd, 2025
                         future_events.append(event)
                 except:
                     continue
         
-        print(f"📅 Found {len(future_events)} future events")
+        print(f"📅 Found {len(future_events)} future events after {cutoff_date}")
+        
+        # Show date range statistics
+        if future_events:
+            event_dates = []
+            for event in future_events:
+                date_str = event.get('date')
+                if date_str:
+                    try:
+                        event_dates.append(datetime.strptime(date_str, '%Y-%m-%d').date())
+                    except:
+                        continue
+            
+            if event_dates:
+                min_date = min(event_dates)
+                max_date = max(event_dates)
+                print(f"📊 Date range: {min_date} to {max_date}")
+                print(f"📊 Total days span: {(max_date - min_date).days} days")
         
         # Reduce duplicates by title, date, and location
         unique_events = reduce_duplicates(future_events)
