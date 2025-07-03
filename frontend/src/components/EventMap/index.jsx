@@ -730,7 +730,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
             </div>
                             {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
                 <div className="text-xs text-white/40 mt-1 text-center">
-                  <strong>Facebook:</strong> Opens with pre-filled post content and auto-downloads event image.<br/>
+                  <strong>Facebook:</strong> Auto-downloads image and copies post text to clipboard.<br/>
                   <strong>Instagram:</strong> Download and upload the image to your story or feed!
                 </div>
           </div>
@@ -2615,64 +2615,64 @@ const EventMap = ({
         postContent += `🔗 Get details: ${eventUrl}\n`;
         postContent += `\n#TodoEvents #LocalEvents #${selectedEvent.city || 'Events'}`;
 
-        // Use the most reliable Facebook sharing method - the classic sharer
-        const sharerUrl = `https://www.facebook.com/sharer/sharer.php?` +
-          `u=${encodeURIComponent(eventUrl)}&` +
-          `quote=${encodeURIComponent(postContent)}`;
+        // Use the simplest Facebook sharing method - just the URL (no quote parameter)
+        const sharerUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
 
-        // Detect if user is on mobile for app deep linking
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
+        // Copy the post content to clipboard immediately for easy pasting
         setTimeout(() => {
-          if (isMobile) {
-            // Try Facebook app first on mobile using intent URL
-            const facebookIntent = `intent://post?text=${encodeURIComponent(postContent)}#Intent;package=com.facebook.katana;scheme=https;S.browser_fallback_url=${encodeURIComponent(sharerUrl)};end`;
+          try {
+            navigator.clipboard.writeText(postContent);
+            setDownloadStatus('✅ Image downloaded! Post content copied to clipboard.');
             
-            // Create a temporary link to test if Facebook app is available
-            const tempLink = document.createElement('a');
-            tempLink.href = `fb://compose?text=${encodeURIComponent(postContent)}`;
-            tempLink.style.display = 'none';
-            document.body.appendChild(tempLink);
-            
-            // Try to open Facebook app
-            try {
-              tempLink.click();
-              
-              // Fallback to web sharer after a short delay if app doesn't open
-              setTimeout(() => {
-                window.open(sharerUrl, '_blank', 'width=626,height=436,scrollbars=yes,resizable=yes');
-              }, 1500);
-            } catch (e) {
-              // Direct fallback to web sharer
+            // Open Facebook after clipboard copy
+            setTimeout(() => {
               window.open(sharerUrl, '_blank', 'width=626,height=436,scrollbars=yes,resizable=yes');
-            }
-            
-            document.body.removeChild(tempLink);
-          } else {
-            // Desktop: Use reliable sharer URL
-            window.open(sharerUrl, '_blank', 'width=626,height=436,scrollbars=yes,resizable=yes');
-          }
-          
-          setDownloadStatus(`✅ Image downloaded! Facebook opened - paste the content below into your post.`);
-          
-          // Show the post content for easy copying
-          setTimeout(() => {
-            setDownloadStatus(`📋 Copy this text: "${postContent.substring(0, 100)}..."`);
-            
-            // Try to copy to clipboard
-            try {
-              navigator.clipboard.writeText(postContent);
+              setDownloadStatus('📋 Facebook opened! Paste the copied text and upload the image.');
+              
               setTimeout(() => {
-                setDownloadStatus('✅ Post content copied to clipboard! Paste it in Facebook along with the image.');
+                setDownloadStatus('💡 Tip: Paste (Cmd+V) the text and add the downloaded image to your post!');
                 setTimeout(() => setDownloadStatus(''), 5000);
-              }, 1000);
-            } catch (e) {
-              setTimeout(() => {
-                setDownloadStatus('💡 Upload the downloaded image and copy the post content from above!');
-                setTimeout(() => setDownloadStatus(''), 4000);
-              }, 2000);
-            }
-          }, 2000);
+              }, 3000);
+            }, 500);
+            
+          } catch (e) {
+            // Fallback if clipboard fails
+            setDownloadStatus('✅ Image downloaded! Opening Facebook...');
+            
+            setTimeout(() => {
+              window.open(sharerUrl, '_blank', 'width=626,height=436,scrollbars=yes,resizable=yes');
+              
+              // Show the content for manual copying
+              const contentDiv = document.createElement('div');
+              contentDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0,0,0,0.9);
+                color: white;
+                padding: 20px;
+                border-radius: 10px;
+                max-width: 400px;
+                z-index: 10000;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+              `;
+              contentDiv.innerHTML = `
+                <div style="margin-bottom: 10px; font-weight: bold;">📋 Copy this text for Facebook:</div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; margin-bottom: 10px; max-height: 200px; overflow-y: auto;">
+                  ${postContent.replace(/\n/g, '<br>')}
+                </div>
+                <div style="text-align: center;">
+                  <button onclick="this.parentElement.parentElement.remove()" style="background: #1877f2; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">Close</button>
+                </div>
+              `;
+              document.body.appendChild(contentDiv);
+              
+              setDownloadStatus('📝 Copy the text from the popup and paste it in Facebook with the image!');
+              setTimeout(() => setDownloadStatus(''), 8000);
+            }, 500);
+          }
         }, 500);
 
       } catch (error) {
@@ -4546,7 +4546,7 @@ const EventMap = ({
                 </div>
                 {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
                 <div className="text-xs text-white/40 mt-1 text-center">
-                  <strong>Facebook:</strong> Opens with pre-filled post content and auto-downloads event image.<br/>
+                  <strong>Facebook:</strong> Auto-downloads image and copies post text to clipboard.<br/>
                   <strong>Instagram:</strong> Download and upload the image to your story or feed!
                 </div>
               </div>
