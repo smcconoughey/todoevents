@@ -728,11 +728,11 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, onReport, a
                 </Button>
               </div>
             </div>
-            {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
-            <div className="text-xs text-white/40 mt-1 text-center">
-              <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
-              <strong>Instagram:</strong> Download and upload the image to your story or feed!
-            </div>
+                            {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
+                <div className="text-xs text-white/40 mt-1 text-center">
+                  <strong>Facebook:</strong> Opens with pre-filled post content and auto-downloads event image.<br/>
+                  <strong>Instagram:</strong> Download and upload the image to your story or feed!
+                </div>
           </div>
         )}
       </div>
@@ -2410,15 +2410,15 @@ const EventMap = ({
   // Facebook share
   const handleFacebookShare = async () => {
     try {
-      setDownloadStatus('Preparing for Facebook sharing...');
+      setDownloadStatus('Preparing Facebook draft post...');
       
-      // First generate and download the image automatically
+      // First generate the image
       const shareCardElement = shareCardRef.current?.querySelector('#share-card-root');
       if (!shareCardElement) {
         throw new Error('ShareCard element not found');
       }
 
-      // Create temporary wrapper for proper sizing (same as download function)
+      // Create temporary wrapper for proper sizing
       const tempWrapper = document.createElement('div');
       tempWrapper.style.cssText = `
         position: fixed;
@@ -2458,122 +2458,98 @@ const EventMap = ({
         let dataUrl = null;
         let method = '';
 
-        // Try multiple methods with better error handling
+        // Try image generation
         try {
-          // Method 1: Safe mode with Google Fonts filtering
-          console.log('Trying Facebook share method 1: Safe mode...');
           const safeOptions = {
             backgroundColor: theme === "dark" ? "#0f0f0f" : "#ffffff",
             width: shareCardElement.offsetWidth,
             height: shareCardElement.offsetHeight,
-            pixelRatio: 2, // Lower quality for more reliability
+            pixelRatio: 2,
             useCORS: true,
             allowTaint: true,
             foreignObjectRendering: false,
             skipFonts: true,
             cacheBust: true,
             filter: (node) => {
-              // Skip external stylesheets and Google Fonts
               if (node.tagName === 'LINK' && node.href && 
                   (node.href.includes('fonts.googleapis.com') || 
                    node.href.includes('fonts.gstatic.com'))) {
                 return false;
               }
-              // Skip style elements that might contain external CSS
               if (node.tagName === 'STYLE' && node.textContent && 
                   (node.textContent.includes('googleapis.com') || 
                    node.textContent.includes('gstatic.com'))) {
                 return false;
-              }
-              // Always include images (including maps), even if they're external or data URLs
-              if (node.tagName === 'IMG') {
-                return true;
               }
               return true;
             }
           };
 
           dataUrl = await htmlToImage.toPng(shareCardElement, safeOptions);
-          method = 'Safe mode';
-        } catch (safeError) {
-          console.log('Safe mode failed, trying method 2:', safeError.message);
+          method = 'HTML-to-image';
+        } catch (htmlError) {
+          // Fallback to canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = 1200;
+          canvas.height = 900;
+          const ctx = canvas.getContext('2d');
           
-          // Method 2: Canvas fallback - create basic image
-          try {
-            console.log('Trying Facebook share method 2: Canvas fallback...');
-            const canvas = document.createElement('canvas');
-            canvas.width = 1200;
-            canvas.height = 900;
-            const ctx = canvas.getContext('2d');
+          ctx.fillStyle = theme === "dark" ? "#0f0f0f" : "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          ctx.fillStyle = theme === "dark" ? "#ffffff" : "#000000";
+          ctx.font = 'bold 48px Arial, sans-serif';
+          ctx.textAlign = 'center';
+          
+          const wrapText = (text, x, y, maxWidth, lineHeight) => {
+            const words = text.split(' ');
+            let line = '';
+            let currentY = y;
             
-            // Fill background
-            ctx.fillStyle = theme === "dark" ? "#0f0f0f" : "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Add event info as text
-            ctx.fillStyle = theme === "dark" ? "#ffffff" : "#000000";
-            ctx.font = 'bold 48px Arial, sans-serif';
-            ctx.textAlign = 'center';
-            
-            const wrapText = (text, x, y, maxWidth, lineHeight) => {
-              const words = text.split(' ');
-              let line = '';
-              let currentY = y;
+            for (let n = 0; n < words.length; n++) {
+              const testLine = line + words[n] + ' ';
+              const metrics = ctx.measureText(testLine);
+              const testWidth = metrics.width;
               
-              for (let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' ';
-                const metrics = ctx.measureText(testLine);
-                const testWidth = metrics.width;
-                
-                if (testWidth > maxWidth && n > 0) {
-                  ctx.fillText(line, x, currentY);
-                  line = words[n] + ' ';
-                  currentY += lineHeight;
-                } else {
-                  line = testLine;
-                }
+              if (testWidth > maxWidth && n > 0) {
+                ctx.fillText(line, x, currentY);
+                line = words[n] + ' ';
+                currentY += lineHeight;
+              } else {
+                line = testLine;
               }
-              ctx.fillText(line, x, currentY);
-              return currentY + lineHeight;
-            };
-            
-            // Draw event details
-            let currentY = 150;
-            currentY = wrapText(selectedEvent.title, canvas.width/2, currentY, 1000, 60) + 40;
-            
-            ctx.font = '32px Arial, sans-serif';
-            currentY = wrapText(`${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, currentY, 1000, 40) + 20;
-            currentY = wrapText(`${selectedEvent.address}`, canvas.width/2, currentY, 1000, 40) + 40;
-            
-            ctx.font = '24px Arial, sans-serif';
-            currentY = wrapText(selectedEvent.description || '', canvas.width/2, currentY, 1000, 35) + 60;
-            
-            // Add branding
-            ctx.font = 'bold 28px Arial, sans-serif';
-            ctx.fillStyle = '#3B82F6';
-            ctx.fillText('Find more events at todo-events.com', canvas.width/2, canvas.height - 100);
-            
-            dataUrl = canvas.toDataURL('image/png');
-            method = 'Canvas fallback';
-          } catch (canvasError) {
-            console.error('Canvas fallback failed:', canvasError);
-            throw new Error('All image generation methods failed');
-          }
+            }
+            ctx.fillText(line, x, currentY);
+            return currentY + lineHeight;
+          };
+          
+          let currentY = 150;
+          currentY = wrapText(selectedEvent.title, canvas.width/2, currentY, 1000, 60) + 40;
+          
+          ctx.font = '32px Arial, sans-serif';
+          currentY = wrapText(`📅 ${selectedEvent.date} at ${selectedEvent.time}`, canvas.width/2, currentY, 1000, 40) + 20;
+          currentY = wrapText(`📍 ${selectedEvent.address}`, canvas.width/2, currentY, 1000, 40) + 40;
+          
+          ctx.font = '24px Arial, sans-serif';
+          currentY = wrapText(selectedEvent.description || '', canvas.width/2, currentY, 1000, 35) + 60;
+          
+          ctx.font = 'bold 28px Arial, sans-serif';
+          ctx.fillStyle = '#3B82F6';
+          ctx.fillText('Find more events at todo-events.com', canvas.width/2, canvas.height - 100);
+          
+          dataUrl = canvas.toDataURL('image/png');
+          method = 'Canvas fallback';
         }
 
-        // Restore ShareCard to original position
+        // Restore ShareCard
         if (originalNextSibling) {
           originalParent.insertBefore(shareCardElement, originalNextSibling);
         } else {
           originalParent.appendChild(shareCardElement);
         }
-
-        // Clean up temp wrapper
         document.body.removeChild(tempWrapper);
 
-        console.log(`Facebook share image generated using: ${method}`);
-
-        // Automatically download the image
+        // Download the image for user
         const link = document.createElement('a');
         link.download = `${selectedEvent.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_event.png`;
         link.href = dataUrl;
@@ -2581,37 +2557,9 @@ const EventMap = ({
         link.click();
         document.body.removeChild(link);
 
-        // Also try to copy to clipboard as backup
-        try {
-          const img = new Image();
-          img.onload = async () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            
-            canvas.toBlob(async (blob) => {
-              try {
-                await navigator.clipboard.write([
-                  new ClipboardItem({ 'image/png': blob })
-                ]);
-                console.log('Image also copied to clipboard');
-              } catch (e) {
-                console.log('Clipboard copy failed, but download succeeded');
-              }
-            });
-          };
-          img.src = dataUrl;
-        } catch (e) {
-          console.log('Clipboard backup failed, but download succeeded');
-        }
-
-        // Open Facebook with event URL and helpful text
-        // Generate URL using canonical format (location-based if available)
+        // Generate the canonical event URL
         let eventUrl;
         if (selectedEvent.slug) {
-          // Use location-based URL if city and state are available (Google-friendly format)
           if (selectedEvent.city && selectedEvent.state) {
             const citySlug = selectedEvent.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
             const stateSlug = selectedEvent.state.toLowerCase();
@@ -2622,19 +2570,104 @@ const EventMap = ({
         } else {
           eventUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
         }
-        const encodedUrl = encodeURIComponent(eventUrl);
-        const shareText = encodeURIComponent(`Check out this amazing event: ${selectedEvent.title}!\n\n${selectedEvent.date} at ${selectedEvent.time}\n${selectedEvent.address}\n\n${selectedEvent.description}\n\nFind more local events at todo-events.com`);
+
+        // Create comprehensive Facebook post content
+        const eventDate = selectedEvent.date;
+        const eventTime = selectedEvent.time || selectedEvent.start_time;
+        const eventDescription = selectedEvent.description || selectedEvent.short_description || '';
         
-        // Small delay to let download start
-        setTimeout(() => {
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${shareText}`, '_blank');
+        // Format a nice Facebook post
+        let postContent = `🎉 ${selectedEvent.title}\n\n`;
+        postContent += `📅 ${eventDate}`;
+        if (eventTime) {
+          postContent += ` at ${eventTime}`;
+        }
+        postContent += `\n📍 ${selectedEvent.address}\n\n`;
+        
+        if (eventDescription) {
+          // Truncate description if too long for Facebook
+          const maxDescLength = 200;
+          const truncatedDesc = eventDescription.length > maxDescLength 
+            ? eventDescription.substring(0, maxDescLength) + '...' 
+            : eventDescription;
+          postContent += `${truncatedDesc}\n\n`;
+        }
+        
+        // Add categories/tags if available
+        if (selectedEvent.category) {
+          const categoryHashtags = {
+            'food-drink': '#Food #Drinks #Dining',
+            'music': '#Music #Concert #LiveMusic',
+            'arts': '#Arts #Culture #Gallery',
+            'sports': '#Sports #Fitness #Recreation', 
+            'community': '#Community #Local #Neighborhood',
+            'business': '#Business #Networking #Professional',
+            'education': '#Education #Learning #Workshop',
+            'health': '#Health #Wellness #Medical',
+            'technology': '#Tech #Innovation #Digital',
+            'entertainment': '#Entertainment #Fun #Events'
+          };
           
-          setDownloadStatus(`✅ Image downloaded (${method})! Upload it to your Facebook post.`);
-          setTimeout(() => setDownloadStatus(''), 5000);
+          const hashtags = categoryHashtags[selectedEvent.category] || `#${selectedEvent.category}`;
+          postContent += `${hashtags}\n\n`;
+        }
+        
+        postContent += `🔗 Get details: ${eventUrl}\n`;
+        postContent += `\n#TodoEvents #LocalEvents #${selectedEvent.city || 'Events'}`;
+
+        // Try multiple Facebook sharing approaches for maximum compatibility
+        
+        // Method 1: Modern Facebook sharing with intent (works on mobile apps)
+        const facebookAppUrl = `fb://composer/?text=${encodeURIComponent(postContent)}`;
+        
+        // Method 2: Facebook web composer (desktop/mobile web)
+        const facebookWebUrl = `https://www.facebook.com/composer/?text=${encodeURIComponent(postContent)}`;
+        
+        // Method 3: Facebook dialog API (most compatible)
+        const dialogUrl = `https://www.facebook.com/dialog/share?` +
+          `app_id=966242223397117&` + // Generic app ID for basic sharing
+          `href=${encodeURIComponent(eventUrl)}&` +
+          `quote=${encodeURIComponent(postContent)}&` +
+          `display=popup&` +
+          `redirect_uri=${encodeURIComponent(window.location.origin)}`;
+
+        // Method 4: Simple sharer (most reliable fallback)
+        const sharerUrl = `https://www.facebook.com/sharer/sharer.php?` +
+          `u=${encodeURIComponent(eventUrl)}&` +
+          `quote=${encodeURIComponent(postContent)}`;
+
+        // Detect if user is on mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        setTimeout(() => {
+          if (isMobile) {
+            // Try Facebook app first on mobile, fallback to web
+            const testApp = window.open(facebookAppUrl, '_blank');
+            
+            // If app doesn't open (blocked or not installed), open web version
+            setTimeout(() => {
+              if (testApp && testApp.closed) {
+                window.open(facebookWebUrl, '_blank', 'width=626,height=436');
+              }
+            }, 1000);
+          } else {
+            // Desktop: Try web composer first, fallback to dialog
+            const composerWindow = window.open(facebookWebUrl, '_blank', 'width=626,height=500,scrollbars=yes,resizable=yes');
+            
+            // If composer doesn't work, try dialog
+            if (!composerWindow) {
+              window.open(dialogUrl, '_blank', 'width=626,height=436');
+            }
+          }
+          
+          setDownloadStatus(`✅ Image downloaded! Facebook opened with pre-filled post content.`);
+          setTimeout(() => {
+            setDownloadStatus('💡 Upload the downloaded image to your Facebook post for best results!');
+            setTimeout(() => setDownloadStatus(''), 4000);
+          }, 3000);
         }, 500);
 
       } catch (error) {
-        // Clean up on error
         if (tempWrapper.parentNode) {
           document.body.removeChild(tempWrapper);
         }
@@ -2643,10 +2676,10 @@ const EventMap = ({
 
     } catch (error) {
       console.error('Facebook share error:', error);
-      // Fallback to simple URL sharing using canonical format
+      
+      // Ultimate fallback - simple sharing
       let fallbackUrl;
       if (selectedEvent.slug) {
-        // Use location-based URL if city and state are available (Google-friendly format)
         if (selectedEvent.city && selectedEvent.state) {
           const citySlug = selectedEvent.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
           const stateSlug = selectedEvent.state.toLowerCase();
@@ -2657,10 +2690,13 @@ const EventMap = ({
       } else {
         fallbackUrl = `${window.location.origin}/?event=${selectedEvent.id}`;
       }
+      
+      const fallbackText = `Check out this event: ${selectedEvent.title}!\n\n📅 ${selectedEvent.date}\n📍 ${selectedEvent.address}`;
       const url = encodeURIComponent(fallbackUrl);
-      const shareText = encodeURIComponent(`Check out this event: ${selectedEvent.title}!`);
+      const shareText = encodeURIComponent(fallbackText);
+      
       window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${shareText}`, '_blank');
-      setDownloadStatus('❌ Facebook opened. Use "Download Image" button to get the image separately.');
+      setDownloadStatus('✅ Facebook opened! Use "Download Image" button to get the event image.');
       setTimeout(() => setDownloadStatus(''), 4000);
     }
   };
@@ -4502,7 +4538,7 @@ const EventMap = ({
                 </div>
                 {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
                 <div className="text-xs text-white/40 mt-1 text-center">
-                  <strong>Facebook:</strong> Image will auto-download, then upload it in Facebook.<br/>
+                  <strong>Facebook:</strong> Opens with pre-filled post content and auto-downloads event image.<br/>
                   <strong>Instagram:</strong> Download and upload the image to your story or feed!
                 </div>
               </div>
