@@ -376,6 +376,60 @@ def save_sitemap_to_frontend(sitemap_content):
         print(f"❌ Error saving sitemap: {e}")
         return False
 
+def deploy_sitemap_to_production():
+    """Automatically commit and push sitemap changes to trigger deployment"""
+    import subprocess
+    import os
+    
+    try:
+        # Change to the project root directory
+        project_root = Path(__file__).parent.parent
+        os.chdir(project_root)
+        
+        print("🚀 Deploying sitemap to production...")
+        
+        # Add the sitemap file
+        result = subprocess.run(['git', 'add', 'frontend/public/sitemap.xml'], 
+                              capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"❌ Git add failed: {result.stderr}")
+            return False
+        
+        # Check if there are changes to commit
+        result = subprocess.run(['git', 'status', '--porcelain'], 
+                              capture_output=True, text=True)
+        if not result.stdout.strip():
+            print("📋 No changes to commit - sitemap already up to date")
+            return True
+        
+        # Create commit message with current timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        commit_msg = f"Auto-update sitemap - {timestamp}"
+        
+        # Commit changes
+        result = subprocess.run(['git', 'commit', '-m', commit_msg], 
+                              capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"❌ Git commit failed: {result.stderr}")
+            return False
+        
+        print(f"✅ Committed sitemap changes: {commit_msg}")
+        
+        # Push to trigger deployment
+        result = subprocess.run(['git', 'push'], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"❌ Git push failed: {result.stderr}")
+            return False
+        
+        print("✅ Pushed to production - deployment will start automatically")
+        print("⏳ Production sitemap will update in 30-60 seconds")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Deployment error: {e}")
+        return False
+
 def ping_search_engines(sitemap_url="https://todo-events.com/sitemap.xml"):
     """Notify search engines about sitemap update"""
     import urllib.request
@@ -402,8 +456,18 @@ def ping_search_engines(sitemap_url="https://todo-events.com/sitemap.xml"):
 
 def main():
     """Main script execution"""
+    import sys
+    
+    # Check for auto-deploy flag
+    auto_deploy = '--deploy' in sys.argv or '--auto-deploy' in sys.argv
+    
     print("🚀 TodoEvents Production Sitemap Update")
     print("=" * 50)
+    
+    if auto_deploy:
+        print("🚀 Auto-deployment enabled - will commit and push changes")
+    else:
+        print("📋 Manual mode - use --deploy flag for auto-deployment")
     
     # Step 1: Fetch all future events from production API
     events = get_production_events()
@@ -421,8 +485,23 @@ def main():
     if save_sitemap_to_frontend(sitemap_content):
         print("✅ Frontend sitemap updated successfully")
         
-        # Step 5: Notify search engines
-        ping_search_engines()
+        # Step 5: Deploy to production
+        if auto_deploy and deploy_sitemap_to_production():
+            print("✅ Production deployment initiated")
+            
+            # Step 6: Notify search engines (wait a bit for deployment)
+            print("⏳ Waiting 30 seconds for deployment...")
+            import time
+            time.sleep(30)
+            ping_search_engines()
+        elif auto_deploy:
+            print("⚠️ Production deployment failed - manual git push required")
+            print("💡 Run: git add frontend/public/sitemap.xml && git commit -m 'Update sitemap' && git push")
+        else:
+            print("📋 Sitemap updated locally only")
+            print("💡 To deploy to production:")
+            print("   Option 1: Run script with --deploy flag")
+            print("   Option 2: Manual: git add frontend/public/sitemap.xml && git commit -m 'Update sitemap' && git push")
         
         print("\n🎉 Sitemap update complete!")
         print("🔗 View at: https://todo-events.com/sitemap.xml")
