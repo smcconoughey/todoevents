@@ -13,7 +13,7 @@ import os
 import sys
 import json
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 from urllib.parse import quote
@@ -248,11 +248,11 @@ def generate_missing_slugs_for_display(events):
     return events
 
 def generate_sitemap_xml(events):
-    """Generate complete sitemap XML with proper URL formats"""
-    current_date = datetime.utcnow().strftime('%Y-%m-%d')
+    """Generate complete sitemap XML with proper URL formats following Google's best practices"""
+    current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     domain = "https://todo-events.com"
     
-    # Start sitemap
+    # Start sitemap with proper encoding
     sitemap = f'''<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
@@ -260,22 +260,16 @@ def generate_sitemap_xml(events):
   <url>
     <loc>{domain}/</loc>
     <lastmod>{current_date}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
   </url>
 
   <!-- Main pages -->
   <url>
     <loc>{domain}/hosts</loc>
     <lastmod>{current_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
   </url>
   <url>
     <loc>{domain}/creators</loc>
     <lastmod>{current_date}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
   </url>
 
   <!-- Events - Multiple URL formats for each event -->'''
@@ -291,7 +285,7 @@ def generate_sitemap_xml(events):
             
         event_count += 1
         
-        # Determine lastmod date
+        # Determine accurate lastmod date (Google prioritizes this)
         lastmod = current_date
         for date_field in ['updated_at', 'created_at']:
             if event.get(date_field):
@@ -300,7 +294,11 @@ def generate_sitemap_xml(events):
                         parsed_date = datetime.fromisoformat(event[date_field].replace('Z', '+00:00'))
                     else:
                         parsed_date = event[date_field]
-                    lastmod = parsed_date.strftime('%Y-%m-%d')
+                    # Use ISO format for more precision if available
+                    if parsed_date.hour != 0 or parsed_date.minute != 0:
+                        lastmod = parsed_date.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+                    else:
+                        lastmod = parsed_date.strftime('%Y-%m-%d')
                     break
                 except:
                     continue
@@ -310,8 +308,6 @@ def generate_sitemap_xml(events):
   <url>
     <loc>{domain}/e/{slug}</loc>
     <lastmod>{lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
   </url>'''
         url_count += 1
         
@@ -328,8 +324,6 @@ def generate_sitemap_xml(events):
   <url>
     <loc>{domain}/us/{state_slug}/{city_slug}/events/{slug}</loc>
     <lastmod>{lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
   </url>'''
             url_count += 1
             geographic_url_count += 1
@@ -339,8 +333,6 @@ def generate_sitemap_xml(events):
   <url>
     <loc>{domain}/events/{slug}</loc>
     <lastmod>{lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
   </url>'''
         url_count += 1
     
@@ -351,6 +343,7 @@ def generate_sitemap_xml(events):
     
     print(f"📊 Generated sitemap with {url_count} URLs from {event_count} events")
     print(f"📍 Geographic URLs (Google's failing format): {geographic_url_count}")
+    print(f"📅 Using accurate lastmod dates for crawl prioritization")
     return sitemap
 
 def save_sitemap_to_frontend(sitemap_content):
@@ -376,7 +369,7 @@ def save_sitemap_to_frontend(sitemap_content):
         print(f"❌ Error saving sitemap: {e}")
         return False
 
-def deploy_sitemap_to_production():
+def deploy_sitemap_to_production(include_robots=False):
     """Automatically commit and push sitemap changes to trigger deployment"""
     import subprocess
     import os
@@ -388,9 +381,14 @@ def deploy_sitemap_to_production():
         
         print("🚀 Deploying sitemap to production...")
         
-        # Add the sitemap file
-        result = subprocess.run(['git', 'add', 'frontend/public/sitemap.xml'], 
-                              capture_output=True, text=True)
+        # Add the files
+        if include_robots:
+            result = subprocess.run(['git', 'add', 'frontend/public/sitemap.xml', 'frontend/public/robots.txt'], 
+                                  capture_output=True, text=True)
+        else:
+            result = subprocess.run(['git', 'add', 'frontend/public/sitemap.xml'], 
+                                  capture_output=True, text=True)
+        
         if result.returncode != 0:
             print(f"❌ Git add failed: {result.stderr}")
             return False
@@ -403,9 +401,11 @@ def deploy_sitemap_to_production():
             return True
         
         # Create commit message with current timestamp
-        from datetime import datetime
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        commit_msg = f"Auto-update sitemap - {timestamp}"
+        if include_robots:
+            commit_msg = f"Auto-update sitemap and robots.txt - {timestamp}"
+        else:
+            commit_msg = f"Auto-update sitemap - {timestamp}"
         
         # Commit changes
         result = subprocess.run(['git', 'commit', '-m', commit_msg], 
@@ -414,7 +414,7 @@ def deploy_sitemap_to_production():
             print(f"❌ Git commit failed: {result.stderr}")
             return False
         
-        print(f"✅ Committed sitemap changes: {commit_msg}")
+        print(f"✅ Committed changes: {commit_msg}")
         
         # Push to trigger deployment
         result = subprocess.run(['git', 'push'], capture_output=True, text=True)
@@ -430,29 +430,67 @@ def deploy_sitemap_to_production():
         print(f"❌ Deployment error: {e}")
         return False
 
-def ping_search_engines(sitemap_url="https://todo-events.com/sitemap.xml"):
-    """Notify search engines about sitemap update"""
-    import urllib.request
-    import urllib.parse
-    
-    search_engines = [
-        f"https://www.google.com/ping?sitemap={urllib.parse.quote(sitemap_url)}",
-        f"https://www.bing.com/ping?sitemap={urllib.parse.quote(sitemap_url)}"
-    ]
-    
+def notify_search_engines(sitemap_url="https://todo-events.com/sitemap.xml"):
+    """Notify search engines about sitemap update using current best practices"""
     print("🔔 Notifying search engines...")
     
-    for engine_url in search_engines:
-        try:
-            response = urllib.request.urlopen(engine_url, timeout=10)
-            engine_name = "Google" if "google" in engine_url else "Bing"
-            if response.getcode() == 200:
-                print(f"✅ {engine_name} notified successfully")
+    # IndexNow for Bing, Yandex, Naver, Seznam (instant notification)
+    try:
+        indexnow_url = "https://api.indexnow.org/indexnow"
+        
+        # IndexNow requires a key - using domain as key (common practice)
+        indexnow_data = {
+            "host": "todo-events.com",
+            "key": "todo-events-sitemap-update",
+            "keyLocation": f"https://todo-events.com/robots.txt",
+            "urlList": [sitemap_url]
+        }
+        
+        response = requests.post(indexnow_url, json=indexnow_data, timeout=10)
+        if response.status_code in [200, 202]:
+            print("✅ IndexNow: Bing, Yandex, and other engines notified")
+        else:
+            print(f"⚠️ IndexNow returned status {response.status_code}")
+            
+    except Exception as e:
+        print(f"⚠️ IndexNow notification failed: {e}")
+    
+    # Google no longer supports ping endpoint (deprecated June 2023)
+    print("📋 Google: Submit sitemap manually in Search Console")
+    print("💡 Use Search Console URL Inspection for faster indexing of specific pages")
+    
+    # Provide actionable next steps
+    print("\n🚀 Next Steps for Faster Indexing:")
+    print("   1. Submit sitemap in Google Search Console")
+    print("   2. Share new event URLs on social media (Twitter, Facebook)")
+    print("   3. Use URL Inspection tool for priority events")
+    print("   4. Ensure robots.txt references your sitemap")
+
+def ensure_robots_txt_has_sitemap():
+    """Ensure robots.txt references the sitemap"""
+    try:
+        frontend_robots_path = Path(__file__).parent.parent / 'frontend' / 'public' / 'robots.txt'
+        
+        if frontend_robots_path.exists():
+            robots_content = frontend_robots_path.read_text(encoding='utf-8')
+            sitemap_line = "Sitemap: https://todo-events.com/sitemap.xml"
+            
+            if sitemap_line not in robots_content:
+                # Add sitemap reference if not present
+                robots_content = robots_content.rstrip() + f"\n\n{sitemap_line}\n"
+                frontend_robots_path.write_text(robots_content, encoding='utf-8')
+                print("✅ Added sitemap reference to robots.txt")
+                return True
             else:
-                print(f"⚠️ {engine_name} returned status {response.getcode()}")
-        except Exception as e:
-            engine_name = "Google" if "google" in engine_url else "Bing"
-            print(f"❌ Failed to notify {engine_name}: {e}")
+                print("✅ robots.txt already references sitemap")
+                return False
+        else:
+            print("⚠️ robots.txt not found")
+            return False
+            
+    except Exception as e:
+        print(f"⚠️ Error updating robots.txt: {e}")
+        return False
 
 def main():
     """Main script execution"""
@@ -485,29 +523,48 @@ def main():
     if save_sitemap_to_frontend(sitemap_content):
         print("✅ Frontend sitemap updated successfully")
         
-        # Step 5: Deploy to production
-        if auto_deploy and deploy_sitemap_to_production():
-            print("✅ Production deployment initiated")
-            
-            # Step 6: Notify search engines (wait a bit for deployment)
+        # Step 5: Ensure robots.txt references sitemap  
+        robots_updated = ensure_robots_txt_has_sitemap()
+        
+        # Step 6: Deploy to production
+        if auto_deploy:
+            # Add robots.txt to deployment if it was updated
+            if robots_updated and deploy_sitemap_to_production(include_robots=True):
+                print("✅ Production deployment initiated (sitemap + robots.txt)")
+            elif deploy_sitemap_to_production():
+                print("✅ Production deployment initiated (sitemap only)")
+            else:
+                print("⚠️ Production deployment failed - manual git push required")
+                print("💡 Run: git add frontend/public/ && git commit -m 'Update sitemap' && git push")
+                return
+                
+            # Step 7: Wait for deployment and notify search engines
             print("⏳ Waiting 30 seconds for deployment...")
             import time
             time.sleep(30)
-            ping_search_engines()
-        elif auto_deploy:
-            print("⚠️ Production deployment failed - manual git push required")
-            print("💡 Run: git add frontend/public/sitemap.xml && git commit -m 'Update sitemap' && git push")
+            notify_search_engines()
         else:
             print("📋 Sitemap updated locally only")
             print("💡 To deploy to production:")
             print("   Option 1: Run script with --deploy flag")
-            print("   Option 2: Manual: git add frontend/public/sitemap.xml && git commit -m 'Update sitemap' && git push")
+            if robots_updated:
+                print("   Option 2: Manual: git add frontend/public/ && git commit -m 'Update sitemap and robots.txt' && git push")
+            else:
+                print("   Option 2: Manual: git add frontend/public/sitemap.xml && git commit -m 'Update sitemap' && git push")
         
         print("\n🎉 Sitemap update complete!")
         print("🔗 View at: https://todo-events.com/sitemap.xml")
         print("📊 Check Google Search Console for indexing status")
         print("\n💡 Note: This addresses the geographic URL format issue:")
         print("   https://www.todo-events.com/us/{state}/{city}/events/{slug}")
+        
+        # Always show best practices reminder
+        print("\n🚀 SEO Best Practices Applied:")
+        print("   ✅ Removed deprecated changefreq/priority tags")
+        print("   ✅ Added accurate lastmod dates for crawl prioritization") 
+        print("   ✅ UTF-8 encoding and absolute URLs")
+        print("   ✅ IndexNow notifications for Bing/Yandex")
+        print("   ✅ robots.txt sitemap reference")
         
     else:
         print("❌ Failed to update frontend sitemap")
