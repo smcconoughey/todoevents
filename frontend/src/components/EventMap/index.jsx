@@ -2615,56 +2615,64 @@ const EventMap = ({
         postContent += `🔗 Get details: ${eventUrl}\n`;
         postContent += `\n#TodoEvents #LocalEvents #${selectedEvent.city || 'Events'}`;
 
-        // Try multiple Facebook sharing approaches for maximum compatibility
-        
-        // Method 1: Modern Facebook sharing with intent (works on mobile apps)
-        const facebookAppUrl = `fb://composer/?text=${encodeURIComponent(postContent)}`;
-        
-        // Method 2: Facebook web composer (desktop/mobile web)
-        const facebookWebUrl = `https://www.facebook.com/composer/?text=${encodeURIComponent(postContent)}`;
-        
-        // Method 3: Facebook dialog API (most compatible)
-        const dialogUrl = `https://www.facebook.com/dialog/share?` +
-          `app_id=966242223397117&` + // Generic app ID for basic sharing
-          `href=${encodeURIComponent(eventUrl)}&` +
-          `quote=${encodeURIComponent(postContent)}&` +
-          `display=popup&` +
-          `redirect_uri=${encodeURIComponent(window.location.origin)}`;
-
-        // Method 4: Simple sharer (most reliable fallback)
+        // Use the most reliable Facebook sharing method - the classic sharer
         const sharerUrl = `https://www.facebook.com/sharer/sharer.php?` +
           `u=${encodeURIComponent(eventUrl)}&` +
           `quote=${encodeURIComponent(postContent)}`;
 
-        // Detect if user is on mobile
+        // Detect if user is on mobile for app deep linking
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         setTimeout(() => {
           if (isMobile) {
-            // Try Facebook app first on mobile, fallback to web
-            const testApp = window.open(facebookAppUrl, '_blank');
+            // Try Facebook app first on mobile using intent URL
+            const facebookIntent = `intent://post?text=${encodeURIComponent(postContent)}#Intent;package=com.facebook.katana;scheme=https;S.browser_fallback_url=${encodeURIComponent(sharerUrl)};end`;
             
-            // If app doesn't open (blocked or not installed), open web version
-            setTimeout(() => {
-              if (testApp && testApp.closed) {
-                window.open(facebookWebUrl, '_blank', 'width=626,height=436');
-              }
-            }, 1000);
-          } else {
-            // Desktop: Try web composer first, fallback to dialog
-            const composerWindow = window.open(facebookWebUrl, '_blank', 'width=626,height=500,scrollbars=yes,resizable=yes');
+            // Create a temporary link to test if Facebook app is available
+            const tempLink = document.createElement('a');
+            tempLink.href = `fb://compose?text=${encodeURIComponent(postContent)}`;
+            tempLink.style.display = 'none';
+            document.body.appendChild(tempLink);
             
-            // If composer doesn't work, try dialog
-            if (!composerWindow) {
-              window.open(dialogUrl, '_blank', 'width=626,height=436');
+            // Try to open Facebook app
+            try {
+              tempLink.click();
+              
+              // Fallback to web sharer after a short delay if app doesn't open
+              setTimeout(() => {
+                window.open(sharerUrl, '_blank', 'width=626,height=436,scrollbars=yes,resizable=yes');
+              }, 1500);
+            } catch (e) {
+              // Direct fallback to web sharer
+              window.open(sharerUrl, '_blank', 'width=626,height=436,scrollbars=yes,resizable=yes');
             }
+            
+            document.body.removeChild(tempLink);
+          } else {
+            // Desktop: Use reliable sharer URL
+            window.open(sharerUrl, '_blank', 'width=626,height=436,scrollbars=yes,resizable=yes');
           }
           
-          setDownloadStatus(`✅ Image downloaded! Facebook opened with pre-filled post content.`);
+          setDownloadStatus(`✅ Image downloaded! Facebook opened - paste the content below into your post.`);
+          
+          // Show the post content for easy copying
           setTimeout(() => {
-            setDownloadStatus('💡 Upload the downloaded image to your Facebook post for best results!');
-            setTimeout(() => setDownloadStatus(''), 4000);
-          }, 3000);
+            setDownloadStatus(`📋 Copy this text: "${postContent.substring(0, 100)}..."`);
+            
+            // Try to copy to clipboard
+            try {
+              navigator.clipboard.writeText(postContent);
+              setTimeout(() => {
+                setDownloadStatus('✅ Post content copied to clipboard! Paste it in Facebook along with the image.');
+                setTimeout(() => setDownloadStatus(''), 5000);
+              }, 1000);
+            } catch (e) {
+              setTimeout(() => {
+                setDownloadStatus('💡 Upload the downloaded image and copy the post content from above!');
+                setTimeout(() => setDownloadStatus(''), 4000);
+              }, 2000);
+            }
+          }, 2000);
         }, 500);
 
       } catch (error) {
