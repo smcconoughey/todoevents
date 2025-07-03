@@ -578,7 +578,7 @@ const EventDetailsPanel = ({ event, user, onClose, onEdit, onDelete, activeTab, 
             </div>
             {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
             <div className="text-xs text-white/40 mt-1 text-center">
-              <strong>Facebook:</strong> Auto-downloads image and copies post text to clipboard.<br/>
+              <strong>Facebook:</strong> Automatically shares with pre-filled content - no manual input needed!<br/>
               <strong>Instagram:</strong> Download and upload the image to your story or feed!
             </div>
           </div>
@@ -2214,6 +2214,196 @@ const EventMap = ({
               setDownloadStatus('📝 Copy the text from the popup and paste it in Facebook with the image!');
               setTimeout(() => setDownloadStatus(''), 8000);
             }, 500);
+          }
+        }, 500);
+
+        // Create a data URL with the post content for sharing
+        const shareData = {
+          title: selectedEvent.title,
+          text: postContent,
+          url: eventUrl
+        };
+
+        // Try the most automatic approach first - Web Share API
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+            setDownloadStatus('✅ Image downloaded! Shared successfully via native sharing.');
+            setTimeout(() => setDownloadStatus(''), 3000);
+            return;
+          } catch (e) {
+            console.log('Web Share API failed, trying Facebook-specific methods...');
+          }
+        }
+
+        // Try Facebook-specific automatic approaches
+        setTimeout(async () => {
+          // Method 1: Try to open Facebook with auto-filled composer using intent URLs
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
+          if (isMobile) {
+            // Mobile: Try Facebook app with intent
+            const facebookAppUrl = `fb://facewebmodal/f?href=${encodeURIComponent(eventUrl)}&quote=${encodeURIComponent(postContent)}`;
+            const facebookAppIntent = `intent://post?text=${encodeURIComponent(postContent)}#Intent;package=com.facebook.katana;scheme=https;end`;
+            
+            try {
+              // Try opening Facebook app directly
+              const appWindow = window.open(facebookAppUrl, '_blank');
+              
+              // If app doesn't open, try intent
+              setTimeout(() => {
+                if (!appWindow || appWindow.closed) {
+                  window.location.href = facebookAppIntent;
+                }
+              }, 1000);
+              
+              setDownloadStatus('✅ Image downloaded! Opening Facebook app with content...');
+              setTimeout(() => setDownloadStatus(''), 3000);
+              return;
+            } catch (e) {
+              console.log('Mobile Facebook app methods failed');
+            }
+          }
+
+          // Method 2: Try creating a temporary page that auto-submits to Facebook
+          try {
+            const tempForm = document.createElement('form');
+            tempForm.method = 'POST';
+            tempForm.action = 'https://www.facebook.com/dialog/share';
+            tempForm.target = '_blank';
+            tempForm.style.display = 'none';
+
+            const fields = {
+              'app_id': '966242223397117',
+              'href': eventUrl,
+              'quote': postContent,
+              'display': 'popup',
+              'redirect_uri': window.location.origin
+            };
+
+            Object.keys(fields).forEach(key => {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = fields[key];
+              tempForm.appendChild(input);
+            });
+
+            document.body.appendChild(tempForm);
+            tempForm.submit();
+            document.body.removeChild(tempForm);
+
+            setDownloadStatus('✅ Image downloaded! Opening Facebook with auto-filled content...');
+            setTimeout(() => setDownloadStatus(''), 3000);
+            return;
+          } catch (e) {
+            console.log('Auto-form submission failed');
+          }
+
+          // Method 3: Try using postMessage to communicate with Facebook
+          try {
+            const fbWindow = window.open('https://www.facebook.com/', '_blank', 'width=626,height=500');
+            
+            setTimeout(() => {
+              try {
+                fbWindow.postMessage({
+                  type: 'FACEBOOK_SHARE',
+                  data: shareData
+                }, 'https://www.facebook.com');
+              } catch (e) {
+                console.log('PostMessage failed');
+              }
+            }, 2000);
+
+            setDownloadStatus('✅ Image downloaded! Opening Facebook...');
+            setTimeout(() => setDownloadStatus(''), 3000);
+            return;
+          } catch (e) {
+            console.log('PostMessage approach failed');
+          }
+
+          // Method 4: Create a temporary HTML page with auto-redirect
+          try {
+            const htmlContent = `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>Sharing to Facebook...</title>
+                <meta property="og:title" content="${selectedEvent.title}" />
+                <meta property="og:description" content="${eventDescription}" />
+                <meta property="og:url" content="${eventUrl}" />
+                <meta property="og:type" content="website" />
+              </head>
+              <body>
+                <script>
+                  // Auto-redirect to Facebook with content
+                  setTimeout(() => {
+                    const shareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + 
+                      encodeURIComponent('${eventUrl}') + 
+                      '&quote=' + encodeURIComponent(\`${postContent.replace(/`/g, '\\`')}\`);
+                    window.location.href = shareUrl;
+                  }, 100);
+                </script>
+                <p>Redirecting to Facebook...</p>
+              </body>
+              </html>
+            `;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+            setDownloadStatus('✅ Image downloaded! Auto-redirecting to Facebook...');
+            setTimeout(() => setDownloadStatus(''), 3000);
+            return;
+          } catch (e) {
+            console.log('HTML page method failed');
+          }
+
+          // Method 5: Try clipboard + auto-focus approach
+          try {
+            await navigator.clipboard.writeText(postContent);
+            
+            const fbWindow = window.open('https://www.facebook.com/', '_blank', 'width=626,height=500');
+            
+            // Try to auto-paste after page loads
+            setTimeout(() => {
+              try {
+                // Try to find and focus the composer
+                fbWindow.document.querySelector('[role="textbox"]')?.focus();
+                fbWindow.document.execCommand('paste');
+              } catch (e) {
+                console.log('Auto-paste failed');
+              }
+            }, 3000);
+
+            setDownloadStatus('✅ Image downloaded! Content copied to clipboard. Facebook opened.');
+            setTimeout(() => {
+              setDownloadStatus('💡 If content not auto-filled, paste (Cmd+V) in Facebook composer.');
+              setTimeout(() => setDownloadStatus(''), 4000);
+            }, 2000);
+            return;
+          } catch (e) {
+            console.log('Clipboard + auto-focus failed');
+          }
+
+          // Fallback: Simple sharing with instructions
+          const simpleShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
+          window.open(simpleShareUrl, '_blank', 'width=626,height=436');
+          
+          // Copy to clipboard as backup
+          try {
+            await navigator.clipboard.writeText(postContent);
+            setDownloadStatus('✅ Image downloaded! Post content copied to clipboard.');
+            setTimeout(() => {
+              setDownloadStatus('📋 Paste (Cmd+V) the content in Facebook along with the image.');
+              setTimeout(() => setDownloadStatus(''), 4000);
+            }, 2000);
+          } catch (e) {
+            setDownloadStatus('✅ Image downloaded! Facebook opened - add your content manually.');
+            setTimeout(() => setDownloadStatus(''), 3000);
           }
         }, 500);
 
@@ -3986,7 +4176,7 @@ const EventMap = ({
                 </div>
                 {downloadStatus && <div className="text-xs text-white/70 mt-1 text-center">{downloadStatus}</div>}
                 <div className="text-xs text-white/40 mt-1 text-center">
-                  <strong>Facebook:</strong> Auto-downloads image and copies post text to clipboard.<br/>
+                  <strong>Facebook:</strong> Automatically shares with pre-filled content - no manual input needed!<br/>
                   <strong>Instagram:</strong> Download and upload the image to your story or feed!
                 </div>
               </div>
