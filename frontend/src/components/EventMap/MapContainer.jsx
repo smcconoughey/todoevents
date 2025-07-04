@@ -103,19 +103,24 @@ const isEventPast = (event) => {
   
   try {
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Start of today
     
     // If the event has an end date, use that for comparison
     if (event.end_date) {
       const endDate = normalizeDate(event.end_date);
       endDate.setHours(23, 59, 59, 999); // End of the end date
-      return endDate < now;
+      // Offset by 1 day to be more permissive
+      const oneDayAfterEnd = new Date(endDate);
+      oneDayAfterEnd.setDate(oneDayAfterEnd.getDate() + 1);
+      return oneDayAfterEnd < now;
     }
     
-    // If no end date, check if the event date has passed
+    // If no end date, check if the event date has completely passed (offset by 1 day)
     const eventDate = normalizeDate(event.date);
-    eventDate.setHours(23, 59, 59, 999); // End of the event date
-    return eventDate < now;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+    return eventDate < yesterday;
   } catch (error) {
     console.warn('Error checking if event is past:', error);
     return false; // Don't filter out events if we can't determine
