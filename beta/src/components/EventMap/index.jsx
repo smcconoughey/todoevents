@@ -126,6 +126,9 @@ const isDateInRange = (dateStr, range) => {
 
 // Add function to check if an event has passed
 const isEventPast = (event) => {
+  // Temporarily disabled to fix July 4th events issue
+  return false;
+  
   if (!event || !event.date) return false;
   
   try {
