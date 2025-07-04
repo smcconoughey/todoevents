@@ -179,9 +179,6 @@ const isDateInRange = (dateStr, range) => {
 
 // Add function to check if an event has passed
 const isEventPast = (event) => {
-  // Temporarily disabled to fix July 4th events issue
-  return false;
-  
   if (!event || !event.date) return false;
   
   try {
@@ -191,7 +188,10 @@ const isEventPast = (event) => {
     if (event.end_date) {
       const endDate = normalizeDate(event.end_date);
       endDate.setHours(23, 59, 59, 999); // End of the end date
-      return endDate < now;
+      // Offset by 1 day to be more permissive
+      const oneDayAfterEnd = new Date(endDate);
+      oneDayAfterEnd.setDate(oneDayAfterEnd.getDate() + 1);
+      return oneDayAfterEnd < now;
     }
     
     // If no end date but has end time, check if the event has finished today
@@ -199,15 +199,19 @@ const isEventPast = (event) => {
       const eventDate = normalizeDate(event.date);
       const [endHour, endMinute] = event.end_time.split(':').map(Number);
       eventDate.setHours(endHour, endMinute, 0, 0);
-      return eventDate < now;
+      // Offset by 1 day to be more permissive
+      const oneDayAfterEvent = new Date(eventDate);
+      oneDayAfterEvent.setDate(oneDayAfterEvent.getDate() + 1);
+      return oneDayAfterEvent < now;
     }
     
-    // If no end time, check if the event date has completely passed (not today)
+    // If no end time, check if the event date has completely passed (offset by 1 day)
     const eventDate = normalizeDate(event.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
     eventDate.setHours(0, 0, 0, 0);
-    return eventDate < today;
+    return eventDate < yesterday;
   } catch (error) {
     console.warn('Error checking if event is past:', error);
     return false; // Don't filter out events if we can't determine
