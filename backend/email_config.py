@@ -722,9 +722,45 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         return self.send_email(to_email, subject, html_content, text_content)
     
-    def send_premium_notification_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, granted_by: Optional[str] = None) -> bool:
+    def send_premium_notification_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, granted_by: Optional[str] = None, message: Optional[str] = None) -> bool:
         """Send notification email when premium access is granted to existing user"""
-        subject = "🌟 You've Been Upgraded to Premium!"
+        
+        # Determine if this is a trial based on expiration date
+        is_trial = False
+        trial_duration = ""
+        if expires_at:
+            try:
+                from datetime import datetime, timedelta
+                if isinstance(expires_at, str):
+                    expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expiry_date = expires_at
+                
+                now = datetime.now(expiry_date.tzinfo) if expiry_date.tzinfo else datetime.now()
+                days_remaining = (expiry_date - now).days
+                
+                # If expiration is less than 180 days, consider it a trial
+                if days_remaining <= 180:
+                    is_trial = True
+                    if days_remaining <= 30:
+                        trial_duration = f"{days_remaining} days"
+                    else:
+                        months = round(days_remaining / 30)
+                        trial_duration = f"{months} month{'s' if months != 1 else ''}"
+            except:
+                pass
+        
+        # Set subject and header based on trial vs permanent
+        if is_trial:
+            subject = "🎯 Welcome to Your Todo Events Premium Trial!"
+            header_text = "Premium Trial Started!"
+            main_heading = f"Welcome to your Premium trial{f', {user_name}' if user_name else ''}!"
+            intro_text = f"You've been granted a {trial_duration} Premium trial{f' by {granted_by}' if granted_by else ''}! This gives you full access to all our premium features."
+        else:
+            subject = "🌟 You've Been Upgraded to Premium!"
+            header_text = "Account Upgraded!"
+            main_heading = f"Great news{f', {user_name}' if user_name else ''}!"
+            intro_text = f"Your Todo Events account has been upgraded to Premium{f' by {granted_by}' if granted_by else ''}! You now have access to all our premium features."
         
         # Format expiration date
         expiry_text = ""
@@ -735,7 +771,11 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
                 else:
                     expiry_date = expires_at
-                expiry_text = f"Your premium access expires on {expiry_date.strftime('%B %d, %Y')}."
+                
+                if is_trial:
+                    expiry_text = f"Your premium trial expires on {expiry_date.strftime('%B %d, %Y')}."
+                else:
+                    expiry_text = f"Your premium access expires on {expiry_date.strftime('%B %d, %Y')}."
             except:
                 expiry_text = "Check your account for premium expiration details."
         
@@ -753,31 +793,35 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                 .header h1 {{ color: white; margin: 0; font-size: 24px; }}
                 .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
                 .premium-badge {{ background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
-                .premium-badge h2 {{ margin: 0; font-size: 24px; }}
+                .trial-badge {{ background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .premium-badge h2, .trial-badge h2 {{ margin: 0; font-size: 24px; }}
                 .features {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
                 .button {{ background: #8e44ad; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
                 .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
                 .expiry-info {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 20px 0; }}
+                .custom-message {{ background: #e8f5e8; border-left: 4px solid #27ae60; padding: 15px; margin: 20px 0; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
                     <h1>🎯 Todo Events Premium</h1>
-                    <p style="color: white; margin: 10px 0 0 0;">Account Upgraded!</p>
+                    <p style="color: white; margin: 10px 0 0 0;">{header_text}</p>
                 </div>
                 
                 <div class="content">
-                    <h2>Great news{f', {user_name}' if user_name else ''}!</h2>
+                    <h2>{main_heading}</h2>
                     
-                    <p>Your Todo Events account has been upgraded to Premium{f' by {granted_by}' if granted_by else ''}! You now have access to all our premium features.</p>
+                    <p>{intro_text}</p>
                     
-                    <div class="premium-badge">
-                        <h2>🌟 Premium Access Activated</h2>
-                        <p style="margin: 5px 0 0 0;">All premium features are now available</p>
+                    <div class="{'trial-badge' if is_trial else 'premium-badge'}">
+                        <h2>{'🎯 Premium Trial Active' if is_trial else '🌟 Premium Access Activated'}</h2>
+                        <p style="margin: 5px 0 0 0;">{'Trial period: ' + trial_duration if is_trial else 'All premium features are now available'}</p>
                     </div>
                     
-                    {f'<div class="expiry-info"><strong>📅 Access Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
+                    {f'<div class="custom-message"><strong>Personal Message:</strong><br>{message}</div>' if message else ''}
+                    
+                    {f'<div class="expiry-info"><strong>📅 {'Trial' if is_trial else 'Access'} Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
                     
                     <div class="features">
                         <h3>Your Premium Features:</h3>
@@ -804,12 +848,12 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     
                     <p>If you have any questions about your premium features, please contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
                     
-                    <p>Enjoy your premium experience!<br>The Todo Events Team</p>
+                    <p>{'Enjoy your premium trial' if is_trial else 'Enjoy your premium experience'}!<br>The Todo Events Team</p>
                 </div>
                 
                 <div class="footer">
                     <p>© 2024 Todo Events. Premium event hosting made simple.</p>
-                    <p>This notification was sent to {to_email}.</p>
+                    <p>This notification was sent to {to_email}. If you didn't expect this email, you can safely ignore it.</p>
                 </div>
             </div>
         </body>
@@ -818,11 +862,13 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         # Create text version
         text_content = f"""
-        Todo Events Premium - Account Upgraded!
+        Todo Events Premium - {header_text}
         
-        Great news{f', {user_name}' if user_name else ''}!
+        {main_heading}
         
-        Your Todo Events account has been upgraded to Premium{f' by {granted_by}' if granted_by else ''}!
+        {intro_text}
+        
+        {f'Personal Message: {message}' if message else ''}
         
         {expiry_text if expiry_text else ''}
         
@@ -843,7 +889,7 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         Questions? Contact us at support@todo-events.com
         
-        Enjoy your premium experience!
+        {'Enjoy your premium trial' if is_trial else 'Enjoy your premium experience'}!
         The Todo Events Team
         
         This notification was sent to {to_email}.
@@ -851,9 +897,45 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         return self.send_email(to_email, subject, html_content, text_content)
     
-    def send_enterprise_notification_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, granted_by: Optional[str] = None) -> bool:
+    def send_enterprise_notification_email(self, to_email: str, user_name: Optional[str] = None, expires_at: Optional[str] = None, granted_by: Optional[str] = None, message: Optional[str] = None) -> bool:
         """Send notification email when enterprise access is granted to existing user"""
-        subject = "🏢 Welcome to Todo Events Enterprise!"
+        
+        # Determine if this is a trial based on expiration date
+        is_trial = False
+        trial_duration = ""
+        if expires_at:
+            try:
+                from datetime import datetime, timedelta
+                if isinstance(expires_at, str):
+                    expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expiry_date = expires_at
+                
+                now = datetime.now(expiry_date.tzinfo) if expiry_date.tzinfo else datetime.now()
+                days_remaining = (expiry_date - now).days
+                
+                # If expiration is less than 180 days, consider it a trial
+                if days_remaining <= 180:
+                    is_trial = True
+                    if days_remaining <= 30:
+                        trial_duration = f"{days_remaining} days"
+                    else:
+                        months = round(days_remaining / 30)
+                        trial_duration = f"{months} month{'s' if months != 1 else ''}"
+            except:
+                pass
+        
+        # Set subject and header based on trial vs permanent
+        if is_trial:
+            subject = "🎯 Welcome to Your Todo Events Enterprise Trial!"
+            header_text = "Enterprise Trial Started!"
+            main_heading = f"Welcome to your Enterprise trial{f', {user_name}' if user_name else ''}!"
+            intro_text = f"You've been granted a {trial_duration} Enterprise trial{f' by {granted_by}' if granted_by else ''}! This gives you full access to all our enterprise features."
+        else:
+            subject = "🌟 You've Been Upgraded to Enterprise!"
+            header_text = "Account Upgraded!"
+            main_heading = f"Great news{f', {user_name}' if user_name else ''}!"
+            intro_text = f"Your Todo Events account has been upgraded to Enterprise{f' by {granted_by}' if granted_by else ''}! You now have access to all our enterprise features."
         
         # Format expiration date
         expiry_text = ""
@@ -864,9 +946,13 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
                 else:
                     expiry_date = expires_at
-                expiry_text = f"Your enterprise access expires on {expiry_date.strftime('%B %d, %Y')}."
+                
+                if is_trial:
+                    expiry_text = f"Your enterprise trial expires on {expiry_date.strftime('%B %d, %Y')}."
+                else:
+                    expiry_text = f"Your enterprise access expires on {expiry_date.strftime('%B %d, %Y')}."
             except:
-                expiry_text = "Check your account for enterprise access details."
+                expiry_text = "Check your account for enterprise expiration details."
         
         # Create HTML content
         html_content = f"""
@@ -881,52 +967,51 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                 .header {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
                 .header h1 {{ color: white; margin: 0; font-size: 24px; }}
                 .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
-                .enterprise-badge {{ background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
-                .enterprise-badge h2 {{ margin: 0; font-size: 24px; }}
+                .enterprise-badge {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .trial-badge {{ background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }}
+                .enterprise-badge h2, .trial-badge h2 {{ margin: 0; font-size: 24px; }}
                 .features {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
                 .button {{ background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
                 .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
-                .expiry-info {{ background: #f3e8ff; border: 1px solid #c4b5fd; padding: 15px; border-radius: 6px; margin: 20px 0; }}
-                .enterprise-highlight {{ background: linear-gradient(135deg, #f3e8ff, #e0e7ff); padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed; }}
+                .expiry-info {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 20px 0; }}
+                .custom-message {{ background: #e8f5e8; border-left: 4px solid #27ae60; padding: 15px; margin: 20px 0; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🏢 Todo Events Enterprise</h1>
-                    <p style="color: white; margin: 10px 0 0 0;">Account Upgraded!</p>
+                    <h1>Todo Events Enterprise</h1>
+                    <p style="color: white; margin: 10px 0 0 0;">{header_text}</p>
                 </div>
                 
                 <div class="content">
-                    <h2>Welcome to Enterprise{f', {user_name}' if user_name else ''}!</h2>
+                    <h2>{main_heading}</h2>
                     
-                    <p>Your Todo Events account has been upgraded to Enterprise{f' by {granted_by}' if granted_by else ''}! You now have access to our most powerful features designed for organizations and high-volume event creators.</p>
+                    <p>{intro_text}</p>
                     
-                    <div class="enterprise-badge">
-                        <h2>Enterprise Access Activated</h2>
-                        <p style="margin: 5px 0 0 0;">All enterprise features are now available</p>
+                    <div class="{'trial-badge' if is_trial else 'enterprise-badge'}">
+                        <h2>{'🎯 Enterprise Trial Active' if is_trial else '🏢 Enterprise Access Activated'}</h2>
+                        <p style="margin: 5px 0 0 0;">{'Trial period: ' + trial_duration if is_trial else 'All enterprise features are now available'}</p>
                     </div>
                     
-                    {f'<div class="expiry-info"><strong>📅 Access Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
+                    {f'<div class="custom-message"><strong>Personal Message:</strong><br>{message}</div>' if message else ''}
                     
-                    <div class="enterprise-highlight">
-                        <h3>Enterprise Event Capacity:</h3>
-                        <p><strong>250 Events</strong> - Create up to 250 events with full enterprise features</p>
-                    </div>
+                    {f'<div class="expiry-info"><strong>📅 {'Trial' if is_trial else 'Access'} Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
                     
                     <div class="features">
                         <h3>Your Enterprise Features:</h3>
                         <ul>
-                            <li><strong>Enterprise Dashboard:</strong> Advanced client management and analytics for professional event organizers</li>
-                            <li><strong>Client Organization:</strong> Organize events by client with dedicated analytics and performance tracking</li>
-                            <li><strong>Bulk Import/Export:</strong> Upload hundreds of events with CSV/JSON support for efficient management</li>
-                            <li><strong>Advanced Filtering:</strong> Powerful search and filtering tools for large event datasets</li>
-                            <li><strong>Auto-Verified Events:</strong> Your events get instant verification badges for maximum credibility</li>
-                            <li><strong>Event Analytics:</strong> Access comprehensive performance insights and engagement metrics</li>
-                            <li><strong>250 Events/Month:</strong> High-volume event management capacity for enterprise needs</li>
+                            <li><strong>Auto-Verified Events:</strong> Your events now get instant verification badges and enhanced priority in search results for maximum visibility</li>
+                            <li><strong>250 Enterprise Events/Month:</strong> Create up to 250 verified events monthly</li>
                             <li><strong>Recurring Events:</strong> Create series and repeating events with flexible scheduling options</li>
-                            <li><strong>Priority Support:</strong> Dedicated assistance through our priority support at support@todo-events.com</li>
+                            <li><strong>Banner & Logo Uploads:</strong> Professional branding with custom banners and logos for your events</li>
+                            <li><strong>Basic Event Analytics:</strong> Track performance with view counts, interest levels, and engagement metrics</li>
+                            <li><strong>Priority Support:</strong> Get faster assistance through our dedicated support at support@todo-events.com</li>
+                            <li><strong>Enterprise Dashboard (Beta):</strong> Advanced client management and bulk operations currently in development</li>
+                            <li><strong>Client Organization (Beta):</strong> Organize events by client with dedicated analytics and performance tracking</li>
+                            <li><strong>Bulk Import/Export (Beta):</strong> Upload hundreds of events with CSV/JSON support</li>
                         </ul>
+                        <p><em>Note: Core features are active. Enterprise dashboard features are in beta development phase.</em></p>
                     </div>
                     
                     <a href="https://todo-events.com/dashboard" class="button">Explore Enterprise Features</a>
@@ -936,18 +1021,17 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                         <li>Log in to your account to see the new enterprise features</li>
                         <li>Create your first enterprise event with auto-verification</li>
                         <li>Check out the advanced analytics for your existing events</li>
-                        <li>Explore recurring event options for regular gatherings</li>
-                        <li>Contact our support team for onboarding assistance</li>
+                        <li>Access the Enterprise Dashboard for advanced features</li>
                     </ul>
                     
-                    <p>If you have any questions about your enterprise features or need assistance with setup, please contact our support team at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
+                    <p>If you have any questions about your enterprise features, please contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
                     
-                    <p>Welcome to Todo Events Enterprise!<br>The Todo Events Team</p>
+                    <p>{'Enjoy your enterprise trial' if is_trial else 'Enjoy your enterprise experience'}!<br>The Todo Events Team</p>
                 </div>
                 
                 <div class="footer">
-                    <p>© 2024 Todo Events. Enterprise event hosting made simple.</p>
-                    <p>This notification was sent to {to_email}.</p>
+                    <p>© 2024 Todo Events. Enterprise event management made simple.</p>
+                    <p>This notification was sent to {to_email}. If you didn't expect this email, you can safely ignore it.</p>
                 </div>
             </div>
         </body>
@@ -956,39 +1040,40 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         # Create text version
         text_content = f"""
-        Todo Events Enterprise - Account Upgraded!
+        Todo Events Enterprise - {header_text}
         
-        Welcome to Enterprise{f', {user_name}' if user_name else ''}!
+        {main_heading}
         
-        Your Todo Events account has been upgraded to Enterprise{f' by {granted_by}' if granted_by else ''}!
+        {intro_text}
+        
+        {f'Personal Message: {message}' if message else ''}
         
         {expiry_text if expiry_text else ''}
         
-        Enterprise Event Capacity: 250 Events
-        Create up to 250 events with full enterprise features
+        Your Enterprise Features:
+        - Auto-Verified Events: Your events now get instant verification badges and enhanced priority in search results for maximum visibility
+        - 250 Enterprise Events/Month: Create up to 250 verified events monthly
+        - Recurring Events: Create series and repeating events with flexible scheduling options
+        - Banner & Logo Uploads: Professional branding with custom banners and logos for your events
+        - Basic Event Analytics: Track performance with view counts, interest levels, and engagement metrics
+        - Priority Support: Get faster assistance through our dedicated support at support@todo-events.com
+        - Enterprise Dashboard (Beta): Advanced client management and bulk operations currently in development
+        - Client Organization (Beta): Organize events by client with dedicated analytics and performance tracking
+        - Bulk Import/Export (Beta): Upload hundreds of events with CSV/JSON support
         
-                 Your Enterprise Features:
-         - Auto-Verified Events: Your events get instant verification badges
-         - Advanced Analytics: Access detailed insights into your event performance
-         - Recurring Events: Create series and repeating events with ease
-         - Priority Support: Get faster help with premium support
-         - Enhanced Visibility: Your events get better placement in search results
-         - Custom Branding: Add your personal touch to events
-         
-         Coming Soon: Enterprise dashboard with advanced team management and reporting features
+        Note: Core features are active. Enterprise dashboard features are in beta development phase.
         
-                 What's next?
-         - Log in to your account to see the new enterprise features
-         - Create your first enterprise event with auto-verification
-         - Check out the advanced analytics for your existing events
-         - Explore recurring event options for regular gatherings
-         - Contact our support team for onboarding assistance
+        What's next?
+        - Log in to your account to see the new enterprise features
+        - Create your first enterprise event with auto-verification
+        - Check out the advanced analytics for your existing events
+        - Access the Enterprise Dashboard for advanced features
         
         Visit your dashboard: https://todo-events.com/dashboard
         
-                 Questions? Contact our support team at support@todo-events.com
+        Questions? Contact us at support@todo-events.com
         
-        Welcome to Todo Events Enterprise!
+        {'Enjoy your enterprise trial' if is_trial else 'Enjoy your enterprise experience'}!
         The Todo Events Team
         
         This notification was sent to {to_email}.

@@ -9798,6 +9798,7 @@ async def invite_premium_user(
                         user_name=existing_user.get("full_name"),
                         expires_at=expires_at.isoformat(),
                         granted_by=current_user.get("email", "Admin"),
+                        message=request.message
                     )
 
                     if email_sent:
@@ -9953,6 +9954,7 @@ async def invite_enterprise_user(
                         user_name=existing_user.get("full_name"),
                         expires_at=expires_at.isoformat(),
                         granted_by=current_user.get("email", "Admin"),
+                        message=request.message
                     )
 
                     if email_sent:
