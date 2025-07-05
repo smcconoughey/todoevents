@@ -9824,22 +9824,36 @@ async def invite_premium_user(
                     "months": request.months,
                 }
 
-            # Create invitation record (we'll send email here in production)
-            # For now, we'll just log the invitation
+            # Create invitation record and send email
             log_activity(
                 current_user["id"],
                 "premium_invite",
                 f"Invited {request.email} for {request.months} months premium trial",
             )
 
-            # In a real implementation, you would send an email here
-            # send_premium_invitation_email(request.email, request.months, request.message)
+            # Send premium invitation email to new users
+            try:
+                from email_config import email_service
+
+                email_sent = email_service.send_premium_invitation_email(
+                    to_email=request.email,
+                    months=request.months,
+                    message=request.message,
+                    invited_by=current_user.get("email", "Admin")
+                )
+
+                if email_sent:
+                    logger.info(f"✅ Premium invitation email sent to {request.email}")
+                else:
+                    logger.error(f"❌ Failed to send premium invitation email to {request.email}")
+            except Exception as e:
+                logger.error(f"❌ Error sending premium invitation email: {str(e)}")
 
             return {
                 "detail": f"Premium invitation sent to {request.email}",
                 "email": request.email,
                 "months": request.months,
-                "message": "Invitation email would be sent in production",
+                "message": "Invitation email sent successfully",
             }
     except Exception as e:
         logger.error(f"Error sending premium invitation: {str(e)}")
@@ -9965,22 +9979,36 @@ async def invite_enterprise_user(
                     "months": request.months,
                 }
 
-            # Create invitation record (we'll send email here in production)
-            # For now, we'll just log the invitation
+            # Create invitation record and send email
             log_activity(
                 current_user["id"],
                 "enterprise_invite",
                 f"Invited {request.email} for {request.months} months enterprise trial",
             )
 
-            # In a real implementation, you would send an email here
-            # send_enterprise_invitation_email(request.email, request.months, request.message)
+            # Send enterprise invitation email to new users
+            try:
+                from email_config import email_service
+
+                email_sent = email_service.send_enterprise_invitation_email(
+                    to_email=request.email,
+                    months=request.months,
+                    message=request.message,
+                    invited_by=current_user.get("email", "Admin")
+                )
+
+                if email_sent:
+                    logger.info(f"✅ Enterprise invitation email sent to {request.email}")
+                else:
+                    logger.error(f"❌ Failed to send enterprise invitation email to {request.email}")
+            except Exception as e:
+                logger.error(f"❌ Error sending enterprise invitation email: {str(e)}")
 
             return {
                 "detail": f"Enterprise invitation sent to {request.email}",
                 "email": request.email,
                 "months": request.months,
-                "message": "Invitation email would be sent in production",
+                "message": "Invitation email sent successfully",
             }
     except Exception as e:
         logger.error(f"Error sending enterprise invitation: {str(e)}")
