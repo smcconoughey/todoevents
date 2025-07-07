@@ -762,6 +762,13 @@ We will restrict the use of your personal data for marketing, analytics, and thi
             main_heading = f"Great news{f', {user_name}' if user_name else ''}!"
             intro_text = f"Your Todo Events account has been upgraded to Premium{f' by {granted_by}' if granted_by else ''}! You now have access to all our premium features."
         
+        # Set badge classes and text
+        badge_class = "trial-badge" if is_trial else "premium-badge"
+        status_heading = "🎯 Premium Trial Active" if is_trial else "🌟 Premium Access Activated"
+        status_text = f"Trial period: {trial_duration}" if is_trial else "All premium features are now available"
+        trial_or_access = "Trial" if is_trial else "Access"
+        closing_text = "Enjoy your premium trial" if is_trial else "Enjoy your premium experience"
+        
         # Format expiration date
         expiry_text = ""
         if expires_at:
@@ -814,14 +821,14 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     
                     <p>{intro_text}</p>
                     
-                    <div class="{'trial-badge' if is_trial else 'premium-badge'}">
-                        <h2>{'🎯 Premium Trial Active' if is_trial else '🌟 Premium Access Activated'}</h2>
-                        <p style="margin: 5px 0 0 0;">{'Trial period: ' + trial_duration if is_trial else 'All premium features are now available'}</p>
+                    <div class="{badge_class}">
+                        <h2>{status_heading}</h2>
+                        <p style="margin: 5px 0 0 0;">{status_text}</p>
                     </div>
                     
                     {f'<div class="custom-message"><strong>Personal Message:</strong><br>{message}</div>' if message else ''}
                     
-                    {f'<div class="expiry-info"><strong>📅 {'Trial' if is_trial else 'Access'} Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
+                    {f'<div class="expiry-info"><strong>📅 {trial_or_access} Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
                     
                     <div class="features">
                         <h3>Your Premium Features:</h3>
@@ -848,7 +855,7 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     
                     <p>If you have any questions about your premium features, please contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
                     
-                    <p>{'Enjoy your premium trial' if is_trial else 'Enjoy your premium experience'}!<br>The Todo Events Team</p>
+                    <p>{"Enjoy your premium trial" if is_trial else "Enjoy your premium experience"}!<br>The Todo Events Team</p>
                 </div>
                 
                 <div class="footer">
@@ -889,7 +896,7 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         Questions? Contact us at support@todo-events.com
         
-        {'Enjoy your premium trial' if is_trial else 'Enjoy your premium experience'}!
+        {"Enjoy your premium trial" if is_trial else "Enjoy your premium experience"}!
         The Todo Events Team
         
         This notification was sent to {to_email}.
@@ -936,6 +943,13 @@ We will restrict the use of your personal data for marketing, analytics, and thi
             header_text = "Account Upgraded!"
             main_heading = f"Great news{f', {user_name}' if user_name else ''}!"
             intro_text = f"Your Todo Events account has been upgraded to Enterprise{f' by {granted_by}' if granted_by else ''}! You now have access to all our enterprise features."
+        
+        # Set badge classes and text
+        badge_class = "trial-badge" if is_trial else "enterprise-badge"
+        status_heading = "🎯 Enterprise Trial Active" if is_trial else "🏢 Enterprise Access Activated"
+        status_text = f"Trial period: {trial_duration}" if is_trial else "All enterprise features are now available"
+        trial_or_access = "Trial" if is_trial else "Access"
+        closing_text = "Enjoy your enterprise trial" if is_trial else "Enjoy your enterprise experience"
         
         # Format expiration date
         expiry_text = ""
@@ -989,14 +1003,14 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     
                     <p>{intro_text}</p>
                     
-                    <div class="{'trial-badge' if is_trial else 'enterprise-badge'}">
-                        <h2>{'🎯 Enterprise Trial Active' if is_trial else '🏢 Enterprise Access Activated'}</h2>
-                        <p style="margin: 5px 0 0 0;">{'Trial period: ' + trial_duration if is_trial else 'All enterprise features are now available'}</p>
+                    <div class="{badge_class}">
+                        <h2>{status_heading}</h2>
+                        <p style="margin: 5px 0 0 0;">{status_text}</p>
                     </div>
                     
                     {f'<div class="custom-message"><strong>Personal Message:</strong><br>{message}</div>' if message else ''}
                     
-                    {f'<div class="expiry-info"><strong>📅 {'Trial' if is_trial else 'Access'} Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
+                    {f'<div class="expiry-info"><strong>📅 {trial_or_access} Details:</strong><br>{expiry_text}</div>' if expiry_text else ''}
                     
                     <div class="features">
                         <h3>Your Enterprise Features:</h3>
@@ -1026,7 +1040,7 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                     
                     <p>If you have any questions about your enterprise features, please contact us at <a href="mailto:support@todo-events.com">support@todo-events.com</a>.</p>
                     
-                    <p>{'Enjoy your enterprise trial' if is_trial else 'Enjoy your enterprise experience'}!<br>The Todo Events Team</p>
+                    <p>{closing_text}!<br>The Todo Events Team</p>
                 </div>
                 
                 <div class="footer">
@@ -1073,7 +1087,7 @@ We will restrict the use of your personal data for marketing, analytics, and thi
         
         Questions? Contact us at support@todo-events.com
         
-        {'Enjoy your enterprise trial' if is_trial else 'Enjoy your enterprise experience'}!
+        {closing_text}!
         The Todo Events Team
         
         This notification was sent to {to_email}.
@@ -1220,6 +1234,10 @@ We will restrict the use of your personal data for marketing, analytics, and thi
             else:
                 access_text = "You'll keep access to all premium features until your current billing period ends."
         
+        # Set CSS colors based on cancellation type
+        bg_color = "#ffe6e6" if cancellation_type == "immediate" else "#fff3cd"
+        border_color = "#ffcccc" if cancellation_type == "immediate" else "#ffeaa7"
+        
         # Create HTML content
         html_content = f"""
         <!DOCTYPE html>
@@ -1233,7 +1251,7 @@ We will restrict the use of your personal data for marketing, analytics, and thi
                 .header {{ background: linear-gradient(135deg, #6c757d, #495057); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }}
                 .header h1 {{ color: white; margin: 0; font-size: 24px; }}
                 .content {{ background: white; padding: 30px; border: 1px solid #e0e0e0; }}
-                .cancellation-notice {{ background: {'#ffe6e6' if cancellation_type == 'immediate' else '#fff3cd'}; border: 1px solid {'#ffcccc' if cancellation_type == 'immediate' else '#ffeaa7'}; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .cancellation-notice {{ background: {bg_color}; border: 1px solid {border_color}; padding: 20px; border-radius: 8px; margin: 20px 0; }}
                 .what-happens {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
                 .button {{ background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }}
                 .footer {{ background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; font-size: 14px; color: #666; }}
