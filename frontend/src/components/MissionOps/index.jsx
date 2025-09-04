@@ -1,8 +1,7 @@
 import React from 'react';
 import { useAuth } from '../EventMap/AuthContext';
 import { useTheme } from '../ThemeContext';
-import { MissionOpsProvider } from './MissionOpsContext';
-import MissionOpsGrid from './MissionOpsGrid';
+import TextConsole from './TextConsole';
 import { Target, Shield, User } from 'lucide-react';
 
 const MissionOpsAuthGuard = () => {
@@ -71,11 +70,7 @@ const MissionOpsAuthGuard = () => {
     );
   }
 
-  return (
-    <MissionOpsProvider>
-      <MissionOpsGrid />
-    </MissionOpsProvider>
-  );
+  return <TextConsole />;
 };
 
 const MissionOps = () => {
