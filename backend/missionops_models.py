@@ -6,7 +6,7 @@ All models are prefixed with 'missionops_' to avoid conflicts with existing todo
 import os
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional, List, Dict, Any
 from contextlib import contextmanager
 
@@ -18,6 +18,20 @@ from fastapi.responses import JSONResponse
 from shared_utils import get_current_user, get_db, get_placeholder, IS_PRODUCTION, DB_URL
 
 logger = logging.getLogger(__name__)
+
+# Shared datetime conversion used by helpers in this module
+def convert_datetime_to_string(obj):
+    """Convert datetime and date objects to ISO format strings"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, date):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: convert_datetime_to_string(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_datetime_to_string(item) for item in obj]
+    else:
+        return obj
 
 # Pydantic Models for MissionOps
 class MissionOpsBaseModel(BaseModel):
@@ -394,6 +408,61 @@ class DecisionLogResponseEnhanced(DecisionLogResponse):
     impact_assessment: Optional[str] = ""
     review_date: Optional[str] = None
 
+# ===== Text-based Interface (Sessions, Messages, Context) =====
+
+class TextSessionCreate(MissionOpsBaseModel):
+    title: Optional[str] = "MissionOps Session"
+    baseline_prompt: Optional[str] = None
+    model_name: Optional[str] = None
+    max_context_chars: Optional[int] = 120000
+
+class TextSessionUpdate(MissionOpsBaseModel):
+    title: Optional[str] = None
+    baseline_prompt: Optional[str] = None
+    working_prompt: Optional[str] = None
+    model_name: Optional[str] = None
+    max_context_chars: Optional[int] = None
+
+class TextSessionResponse(MissionOpsBaseModel):
+    id: int
+    owner_id: int
+    title: str
+    baseline_prompt: Optional[str]
+    working_prompt: Optional[str]
+    context_json: Optional[str]
+    model_name: Optional[str]
+    max_context_chars: int
+    created_at: str
+    updated_at: Optional[str]
+
+class TextMessageCreate(MissionOpsBaseModel):
+    content: str
+
+class TextMessageResponse(MissionOpsBaseModel):
+    id: int
+    session_id: int
+    role: str
+    content: str
+    tokens_used: Optional[int]
+    created_at: str
+
+class ContextItemCreate(MissionOpsBaseModel):
+    title: Optional[str] = "Context Upload"
+    text: str
+    importance: Optional[int] = 3
+    source_type: Optional[str] = "upload"  # upload, note, mission, task
+
+class ContextItemResponse(MissionOpsBaseModel):
+    id: int
+    session_id: int
+    source_type: str
+    title: Optional[str]
+    content: Optional[str]
+    importance: int
+    summary: Optional[str]
+    metadata: Optional[str]
+    created_at: str
+
 # Database initialization for MissionOps
 def init_missionops_db():
     """Initialize MissionOps database tables"""
@@ -422,6 +491,43 @@ def init_missionops_db():
             owner_id INTEGER NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_text_sessions (
+            id SERIAL PRIMARY KEY,
+            owner_id INTEGER NOT NULL,
+            title VARCHAR(255) DEFAULT 'MissionOps Session',
+            baseline_prompt TEXT,
+            working_prompt TEXT,
+            context_json TEXT,
+            model_name VARCHAR(100) DEFAULT 'gpt-4o-mini',
+            max_context_chars INTEGER DEFAULT 120000,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_text_messages (
+            id SERIAL PRIMARY KEY,
+            session_id INTEGER REFERENCES missionops_text_sessions(id) ON DELETE CASCADE,
+            role VARCHAR(20) NOT NULL,
+            content TEXT NOT NULL,
+            tokens_used INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_context_items (
+            id SERIAL PRIMARY KEY,
+            session_id INTEGER REFERENCES missionops_text_sessions(id) ON DELETE CASCADE,
+            source_type VARCHAR(50),
+            title VARCHAR(255),
+            content TEXT,
+            importance INTEGER DEFAULT 3,
+            summary TEXT,
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         ''',
         '''
@@ -613,6 +719,43 @@ def init_missionops_db():
         )
         ''',
         '''
+        CREATE TABLE IF NOT EXISTS missionops_text_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL,
+            title TEXT DEFAULT 'MissionOps Session',
+            baseline_prompt TEXT,
+            working_prompt TEXT,
+            context_json TEXT,
+            model_name TEXT DEFAULT 'gpt-4o-mini',
+            max_context_chars INTEGER DEFAULT 120000,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_text_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER REFERENCES missionops_text_sessions(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            tokens_used INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS missionops_context_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER REFERENCES missionops_text_sessions(id) ON DELETE CASCADE,
+            source_type TEXT,
+            title TEXT,
+            content TEXT,
+            importance INTEGER DEFAULT 3,
+            summary TEXT,
+            metadata TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''',
+        '''
         CREATE TABLE IF NOT EXISTS missionops_mission_relationships (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             from_mission_id INTEGER REFERENCES missionops_missions(id) ON DELETE CASCADE,
@@ -789,6 +932,10 @@ def init_missionops_db():
             index_queries = [
                 'CREATE INDEX IF NOT EXISTS idx_missionops_missions_owner ON missionops_missions(owner_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_missions_status ON missionops_missions(status)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_text_sessions_owner ON missionops_text_sessions(owner_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_text_messages_session ON missionops_text_messages(session_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_context_items_session ON missionops_context_items(session_id)',
+                'CREATE INDEX IF NOT EXISTS idx_missionops_context_items_importance ON missionops_context_items(importance)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_mission_relationships_from ON missionops_mission_relationships(from_mission_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_mission_relationships_to ON missionops_mission_relationships(to_mission_id)',
                 'CREATE INDEX IF NOT EXISTS idx_missionops_tasks_mission ON missionops_tasks(mission_id)',

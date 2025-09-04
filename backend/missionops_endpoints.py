@@ -26,12 +26,16 @@ from missionops_models import (
     DecisionConnectionCreate, DecisionConnectionResponse,
     AIInsightCreate, AIInsightResponse,
     DecisionLogCreateEnhanced, DecisionLogResponseEnhanced,
+    TextSessionCreate, TextSessionUpdate, TextSessionResponse,
+    TextMessageCreate, TextMessageResponse,
+    ContextItemCreate, ContextItemResponse,
     init_missionops_db, dict_from_row,
     get_user_missions_access, has_mission_access, get_mission_tasks_with_subtasks,
     get_task_by_id, get_mission_by_id
 )
 
 from shared_utils import get_current_user, get_db, get_placeholder, IS_PRODUCTION, DB_URL
+from missionops_ai import AI_PROVIDER
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +61,270 @@ def convert_datetime_to_string(obj):
         return [convert_datetime_to_string(item) for item in obj]
     else:
         return obj
+
+# ===== Text-based interface endpoints =====
+
+def _ensure_session_access(session_id: int, user_id: int) -> bool:
+    placeholder = get_placeholder()
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"SELECT owner_id FROM missionops_text_sessions WHERE id = {placeholder}", (session_id,))
+        row = c.fetchone()
+        if not row:
+            return False
+        owner_id = row[0] if isinstance(row, (tuple, list)) else row.get('owner_id')
+        return owner_id == user_id
+
+@missionops_router.post("/text/sessions", response_model=TextSessionResponse)
+async def create_text_session(payload: TextSessionCreate, current_user: dict = Depends(get_current_user)):
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            title = payload.title or "MissionOps Session"
+            baseline_prompt = payload.baseline_prompt
+            model_name = payload.model_name or "gpt-4o-mini"
+            max_chars = payload.max_context_chars or 120000
+            if IS_PRODUCTION and DB_URL:
+                c.execute(f'''INSERT INTO missionops_text_sessions (owner_id, title, baseline_prompt, working_prompt, context_json, model_name, max_context_chars)
+                              VALUES ({placeholder}, {placeholder}, {placeholder}, NULL, NULL, {placeholder}, {placeholder}) RETURNING *''',
+                          (current_user['id'], title, baseline_prompt, model_name, max_chars))
+                row = dict(c.fetchone())
+            else:
+                c.execute(f'''INSERT INTO missionops_text_sessions (owner_id, title, baseline_prompt, working_prompt, context_json, model_name, max_context_chars)
+                              VALUES ({placeholder}, {placeholder}, {placeholder}, NULL, NULL, {placeholder}, {placeholder}) RETURNING *''',
+                          (current_user['id'], title, baseline_prompt, model_name, max_chars))
+                row = dict(c.fetchone())
+            return convert_datetime_to_string(row)
+    except Exception as e:
+        logger.error(f"create_text_session error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create session")
+
+@missionops_router.get("/text/sessions", response_model=List[TextSessionResponse])
+async def list_text_sessions(current_user: dict = Depends(get_current_user)):
+    placeholder = get_placeholder()
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM missionops_text_sessions WHERE owner_id = {placeholder} ORDER BY updated_at DESC, created_at DESC", (current_user['id'],))
+        rows = c.fetchall() or []
+        result = [convert_datetime_to_string(dict(r)) for r in rows]
+        return result
+
+@missionops_router.get("/text/sessions/{session_id}", response_model=TextSessionResponse)
+async def get_text_session(session_id: int, current_user: dict = Depends(get_current_user)):
+    if not _ensure_session_access(session_id, current_user['id']):
+        raise HTTPException(status_code=404, detail="Session not found")
+    placeholder = get_placeholder()
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM missionops_text_sessions WHERE id = {placeholder}", (session_id,))
+        row = c.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return convert_datetime_to_string(dict(row))
+
+@missionops_router.put("/text/sessions/{session_id}", response_model=TextSessionResponse)
+async def update_text_session(session_id: int, payload: TextSessionUpdate, current_user: dict = Depends(get_current_user)):
+    if not _ensure_session_access(session_id, current_user['id']):
+        raise HTTPException(status_code=404, detail="Session not found")
+    placeholder = get_placeholder()
+    fields = []
+    values = []
+    for field, value in payload.dict(exclude_unset=True).items():
+        fields.append(f"{field} = {placeholder}")
+        values.append(value)
+    if not fields:
+        return await get_text_session(session_id, current_user)
+    values.append(datetime.utcnow())
+    values.append(session_id)
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"UPDATE missionops_text_sessions SET {', '.join(fields)}, updated_at = {placeholder} WHERE id = {placeholder} RETURNING *", values)
+        row = c.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return convert_datetime_to_string(dict(row))
+
+@missionops_router.get("/text/sessions/{session_id}/messages", response_model=List[TextMessageResponse])
+async def list_text_messages(session_id: int, current_user: dict = Depends(get_current_user)):
+    if not _ensure_session_access(session_id, current_user['id']):
+        raise HTTPException(status_code=404, detail="Session not found")
+    placeholder = get_placeholder()
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM missionops_text_messages WHERE session_id = {placeholder} ORDER BY id ASC", (session_id,))
+        rows = c.fetchall() or []
+        return [convert_datetime_to_string(dict(r)) for r in rows]
+
+@missionops_router.post("/text/sessions/{session_id}/messages", response_model=List[TextMessageResponse])
+async def send_text_message(session_id: int, payload: TextMessageCreate, current_user: dict = Depends(get_current_user)):
+    if not _ensure_session_access(session_id, current_user['id']):
+        raise HTTPException(status_code=404, detail="Session not found")
+    from missionops_ai import missionops_ai
+    placeholder = get_placeholder()
+    # Fetch session and messages
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM missionops_text_sessions WHERE id = {placeholder}", (session_id,))
+        sess = dict(c.fetchone())
+        c.execute(f"SELECT role, content FROM missionops_text_messages WHERE session_id = {placeholder} ORDER BY id ASC", (session_id,))
+        history = [{"role": r[0] if isinstance(r, (tuple, list)) else r.get('role'), "content": r[1] if isinstance(r, (tuple, list)) else r.get('content')} for r in c.fetchall() or []]
+    # Build prompts
+    system_prompt = missionops_ai.build_system_prompt(sess.get('baseline_prompt'))
+    working_prompt = (sess.get('working_prompt') or "").strip()
+    model_name = sess.get('model_name')
+    max_chars = int(sess.get('max_context_chars') or 120000)
+    # Compose message list
+    msgs = [{"role": "system", "content": system_prompt}]
+    if working_prompt:
+        msgs.append({"role": "system", "content": f"Working context: {working_prompt}"})
+    # Include aggregated context JSON (compact) if exists
+    ctx_json = (sess.get('context_json') or "").strip()
+    if ctx_json:
+        trimmed_ctx = ctx_json[:20000]
+        msgs.append({"role": "system", "content": f"Context JSON: {trimmed_ctx}"})
+    msgs.extend(history)
+    msgs.append({"role": "user", "content": payload.content})
+    # Trim by character budget
+    trimmed = missionops_ai.trim_messages_by_char_budget(msgs, max_chars)
+    # Call model
+    reply = missionops_ai.chat(trimmed, model_name=model_name, temperature=0.3, max_tokens=800)
+    if reply is None:
+        reply = "(AI unavailable. Please try again later.)"
+    # Persist user and assistant messages
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"INSERT INTO missionops_text_messages (session_id, role, content) VALUES ({placeholder}, {placeholder}, {placeholder})", (session_id, 'user', payload.content))
+        c.execute(f"INSERT INTO missionops_text_messages (session_id, role, content) VALUES ({placeholder}, {placeholder}, {placeholder})", (session_id, 'assistant', reply))
+        # Bump session updated_at
+        c.execute(f"UPDATE missionops_text_sessions SET updated_at = {placeholder} WHERE id = {placeholder}", (datetime.utcnow(), session_id))
+        conn.commit()
+        # Return full message list
+        c.execute(f"SELECT * FROM missionops_text_messages WHERE session_id = {placeholder} ORDER BY id ASC", (session_id,))
+        rows = c.fetchall() or []
+        return [convert_datetime_to_string(dict(r)) for r in rows]
+
+@missionops_router.post("/text/sessions/{session_id}/context", response_model=ContextItemResponse)
+async def upload_context_item(session_id: int, payload: ContextItemCreate, current_user: dict = Depends(get_current_user)):
+    if not _ensure_session_access(session_id, current_user['id']):
+        raise HTTPException(status_code=404, detail="Session not found")
+    from missionops_ai import missionops_ai
+    placeholder = get_placeholder()
+    # Save raw item
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f'''INSERT INTO missionops_context_items (session_id, source_type, title, content, importance)
+                      VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}) RETURNING *''',
+                  (session_id, payload.source_type, payload.title, payload.text, payload.importance))
+        item = dict(c.fetchone())
+    # Summarize to JSON and short summary
+    summary_json = missionops_ai.summarize_context_to_json(payload.text)
+    summary_text = None
+    metadata_str = None
+    if summary_json:
+        summary_text = json.dumps(summary_json, ensure_ascii=False)[:20000]
+        metadata_str = json.dumps({"generator": "missionops", "ts": datetime.utcnow().isoformat()})
+    # Update item and aggregate session.context_json
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute(f"UPDATE missionops_context_items SET summary = {placeholder}, metadata = {placeholder} WHERE id = {placeholder}", (summary_text, metadata_str, item['id']))
+        # Re-aggregate all context summaries for this session by importance
+        c.execute(f"SELECT summary, importance FROM missionops_context_items WHERE session_id = {placeholder} ORDER BY importance DESC, id DESC", (session_id,))
+        summaries = [row[0] if isinstance(row, (tuple, list)) else row.get('summary') for row in c.fetchall() or []]
+        merged = []
+        for s in summaries:
+            if s:
+                merged.append(s)
+        context_json = ("[" + ",".join(merged) + "]") if merged else None
+        c.execute(f"UPDATE missionops_text_sessions SET context_json = {placeholder}, updated_at = {placeholder} WHERE id = {placeholder}", (context_json, datetime.utcnow(), session_id))
+        conn.commit()
+        # Return item
+        c.execute(f"SELECT * FROM missionops_context_items WHERE id = {placeholder}", (item['id'],))
+        row = dict(c.fetchone())
+        return convert_datetime_to_string(row)
+
+# Reset a single session (clear messages and context, keep session row and baseline)
+@missionops_router.post("/text/sessions/{session_id}/reset")
+async def reset_text_session(session_id: int, current_user: dict = Depends(get_current_user)):
+    if not _ensure_session_access(session_id, current_user['id']):
+        raise HTTPException(status_code=404, detail="Session not found")
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute(f"DELETE FROM missionops_text_messages WHERE session_id = {placeholder}", (session_id,))
+            c.execute(f"DELETE FROM missionops_context_items WHERE session_id = {placeholder}", (session_id,))
+            c.execute(f"UPDATE missionops_text_sessions SET working_prompt = NULL, context_json = NULL, updated_at = {placeholder} WHERE id = {placeholder}", (datetime.utcnow(), session_id))
+            conn.commit()
+            c.execute(f"SELECT * FROM missionops_text_sessions WHERE id = {placeholder}", (session_id,))
+            row = c.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Session not found")
+            return convert_datetime_to_string(dict(row))
+    except Exception as e:
+        logger.error(f"reset_text_session error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset session")
+
+# Delete a single session (cascade deletes messages and context)
+@missionops_router.delete("/text/sessions/{session_id}")
+async def delete_text_session(session_id: int, current_user: dict = Depends(get_current_user)):
+    if not _ensure_session_access(session_id, current_user['id']):
+        raise HTTPException(status_code=404, detail="Session not found")
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute(f"DELETE FROM missionops_text_sessions WHERE id = {placeholder}", (session_id,))
+            if c.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Session not found")
+            conn.commit()
+            return {"detail": "Session deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"delete_text_session error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete session")
+
+# Reset all sessions for current user (clear messages/context across all sessions, keep sessions)
+@missionops_router.post("/text/sessions/reset-all")
+async def reset_all_text_sessions(current_user: dict = Depends(get_current_user)):
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            # Get session ids for user
+            c.execute(f"SELECT id FROM missionops_text_sessions WHERE owner_id = {placeholder}", (current_user['id'],))
+            ids = [row[0] if isinstance(row, (tuple, list)) else row.get('id') for row in (c.fetchall() or [])]
+            if not ids:
+                return {"detail": "No sessions to reset", "count": 0}
+            # Delete messages/context for those sessions
+            placeholders = ','.join(['?' if not (IS_PRODUCTION and DB_URL) else '%s' for _ in ids])
+            c.execute(f"DELETE FROM missionops_text_messages WHERE session_id IN ({placeholders})", tuple(ids))
+            c.execute(f"DELETE FROM missionops_context_items WHERE session_id IN ({placeholders})", tuple(ids))
+            # Null out working/context
+            for sid in ids:
+                c.execute(f"UPDATE missionops_text_sessions SET working_prompt = NULL, context_json = NULL, updated_at = {placeholder} WHERE id = {placeholder}", (datetime.utcnow(), sid))
+            conn.commit()
+            return {"detail": "All sessions reset", "count": len(ids)}
+    except Exception as e:
+        logger.error(f"reset_all_text_sessions error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset sessions")
+
+# Wipe all sessions for current user (delete sessions and cascades)
+@missionops_router.post("/text/sessions/wipe-all")
+async def wipe_all_text_sessions(current_user: dict = Depends(get_current_user)):
+    placeholder = get_placeholder()
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute(f"DELETE FROM missionops_text_sessions WHERE owner_id = {placeholder}", (current_user['id'],))
+            count = c.rowcount or 0
+            conn.commit()
+            return {"detail": "All sessions deleted", "count": count}
+    except Exception as e:
+        logger.error(f"wipe_all_text_sessions error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to wipe sessions")
+
 
 def normalize_tags(tags_input):
     """Normalize tags input to JSON array format"""

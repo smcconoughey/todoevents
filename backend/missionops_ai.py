@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 AI_PROVIDER = os.getenv("MISSIONOPS_AI_PROVIDER", "openai")  # "openai" or "groq"
-AI_MODEL = os.getenv("MISSIONOPS_AI_MODEL", "gpt-3.5-turbo")  # or "mixtral-8x7b-32768" for Groq
+AI_MODEL = os.getenv("MISSIONOPS_AI_MODEL", "gpt-4o-mini")  # default fast, cheap JSON-capable
 
 # LLM System Prompt
 SYSTEM_PROMPT = """You are the AI Agent for a planning system called **MissionOps**. Your job is to evaluate an entire user-defined planning system composed of missions, tasks, and interlinked deadlines. You will generate actionable insights that help the user move forward, remove blockers, and reduce ambiguity in their plan.
@@ -111,6 +111,76 @@ class MissionOpsAI:
             logger.warning("No AI provider configured for MissionOps")
             self.client = None
     
+    def _pick_model(self, override: Optional[str] = None) -> str:
+        if override and isinstance(override, str) and override.strip():
+            return override
+        return AI_MODEL
+
+    def trim_messages_by_char_budget(self, messages: List[Dict[str, str]], max_chars: int) -> List[Dict[str, str]]:
+        if max_chars <= 0:
+            return messages[-2:] if len(messages) >= 2 else messages
+        running = []
+        total = 0
+        # Always try to keep the last assistant/user exchange; iterate from end
+        for msg in reversed(messages):
+            chunk = (msg.get("content") or "")
+            add_len = len(chunk)
+            if total + add_len <= max_chars or not running:
+                running.append(msg)
+                total += add_len
+            else:
+                break
+        return list(reversed(running))
+
+    def build_system_prompt(self, baseline_prompt: Optional[str]) -> str:
+        default_prompt = (
+            "You are MissionOps, a text-only planning agent. Be concise, output plain ASCII. "
+            "Maintain context about the user's missions, tasks, responsibilities, and priorities. "
+            "When listing actions, number them. Avoid emojis and markdown unless code or JSON is explicitly requested."
+        )
+        if baseline_prompt and baseline_prompt.strip():
+            return baseline_prompt
+        return default_prompt
+
+    def chat(self, messages: List[Dict[str, str]], model_name: Optional[str] = None,
+             temperature: float = 0.3, max_tokens: int = 800, json_response: bool = False) -> Optional[str]:
+        if not self.client:
+            return None
+        try:
+            params = {
+                "model": self._pick_model(model_name),
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            if json_response:
+                params["response_format"] = {"type": "json_object"}
+            resp = self.client.chat.completions.create(**params)
+            return resp.choices[0].message.content
+        except Exception as e:
+            logger.error(f"MissionOps chat error: {e}")
+            return None
+
+    def summarize_context_to_json(self, raw_text: str, model_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if not self.client:
+            return None
+        try:
+            system = (
+                "You compress life/context text into a compact JSON with keys: areas, projects, tasks, deadlines, stakeholders, risks, notes. "
+                "Each key is an array of objects with fields you infer (title/desc/date/importance/etc.). Keep under 1200 words total."
+            )
+            user = raw_text[:120000]
+            content = self.chat([
+                {"role": "system", "content": system},
+                {"role": "user", "content": user}
+            ], model_name=model_name, temperature=0.1, max_tokens=1200, json_response=True)
+            if not content:
+                return None
+            return json.loads(content)
+        except Exception as e:
+            logger.error(f"summarize_context_to_json error: {e}")
+            return None
+
     def compose_mission_network(self, missions: List[Dict], tasks: List[Dict], 
                                relationships: List[Dict], dependencies: List[Dict]) -> Dict:
         """
