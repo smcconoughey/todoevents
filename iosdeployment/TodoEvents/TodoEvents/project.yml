@@ -1,0 +1,26 @@
+name: TodoEvents
+options:
+  bundleIdPrefix: com.todoevents
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: 1
+targets:
+  TodoEvents:
+    type: application
+    platform: iOS
+    sources:
+      - path: TodoEvents
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        INFOPLIST_FILE: TodoEvents/Config/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.todoevents.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: TodoEvents/Config/Info.plist
