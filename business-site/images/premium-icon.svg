@@ -1,0 +1,29 @@
+<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="premiumGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="50%" style="stop-color:#3C92FF"/>
+      <stop offset="100%" style="stop-color:#2684FF"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Shield background -->
+  <path d="M30 5 C35 5 45 8 45 8 C45 8 45 25 45 35 C45 45 30 55 30 55 C30 55 15 45 15 35 C15 25 15 8 15 8 C15 8 25 5 30 5 Z" fill="url(#premiumGradient)"/>
+  
+  <!-- Inner shield -->
+  <path d="M30 10 C33 10 40 12 40 12 C40 12 40 25 40 33 C40 41 30 48 30 48 C30 48 20 41 20 33 C20 25 20 12 20 12 C20 12 27 10 30 10 Z" fill="white"/>
+  
+  <!-- Premium star -->
+  <path d="M30 15 L32 24 L40 24 L34 29 L36 38 L30 33 L24 38 L26 29 L20 24 L28 24 Z" fill="url(#premiumGradient)"/>
+  
+  <!-- Enterprise elements -->
+  <circle cx="25" cy="42" r="1.5" fill="#3C92FF"/>
+  <circle cx="30" cy="42" r="1.5" fill="#3C92FF"/>
+  <circle cx="35" cy="42" r="1.5" fill="#3C92FF"/>
+  
+  <!-- Quality indicators -->
+  <circle cx="22" cy="18" r="1" fill="#FFD700"/>
+  <circle cx="38" cy="18" r="1" fill="#FFD700"/>
+  <circle cx="22" cy="35" r="1" fill="#FFD700"/>
+  <circle cx="38" cy="35" r="1" fill="#FFD700"/>
+</svg>

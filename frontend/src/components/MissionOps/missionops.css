@@ -1,0 +1,675 @@
+/* MissionOps Isolated Styles */
+/* All styles are scoped to avoid conflicts with todo-events */
+
+/* ==== DARK THEME (DEFAULT) ==== */
+.missionops-container {
+  /* Grid dot pattern */
+  --missionops-grid-size: 50px;
+  --missionops-dot-color: rgba(255, 255, 255, 0.1);
+  --missionops-timeline-now: #facc15; /* yellow-400 */
+  --missionops-timeline-month: rgba(96, 165, 250, 0.4); /* blue-400/40 */
+  --missionops-timeline-week: rgba(115, 115, 115, 0.6); /* neutral-600/60 */
+  
+  /* Dark theme colors */
+  --missionops-bg-primary: #0a0a0a; /* neutral-950 */
+  --missionops-bg-secondary: #171717; /* neutral-900 */
+  --missionops-border: #404040; /* neutral-600 */
+  --missionops-text-primary: #ffffff;
+  --missionops-text-secondary: #a3a3a3; /* neutral-400 */
+  --missionops-text-muted: #737373; /* neutral-500 */
+  
+  /* Accent colors */
+  --missionops-blue: #3b82f6; /* blue-500 */
+  --missionops-blue-dark: #1d4ed8; /* blue-700 */
+  --missionops-purple: #8b5cf6; /* purple-500 */
+  
+  /* Priority colors */
+  --missionops-priority-critical: #ef4444; /* red-500 */
+  --missionops-priority-high: #f97316; /* orange-500 */
+  --missionops-priority-medium: #eab308; /* yellow-500 */
+  --missionops-priority-low: #22c55e; /* green-500 */
+  
+  /* Status colors */
+  --missionops-status-active: #3b82f6; /* blue-500 */
+  --missionops-status-completed: #22c55e; /* green-500 */
+  --missionops-status-paused: #eab308; /* yellow-500 */
+  --missionops-status-cancelled: #ef4444; /* red-500 */
+  
+  /* Glass effect for dark theme */
+  --missionops-glass-bg: rgba(23, 23, 23, 0.8);
+  --missionops-glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* ==== LIGHT THEME ==== */
+.light-mode .missionops-container {
+  /* Grid dot pattern for light theme */
+  --missionops-dot-color: rgba(0, 0, 0, 0.1);
+  --missionops-timeline-now: #f59e0b; /* amber-500 */
+  --missionops-timeline-month: rgba(59, 130, 246, 0.3); /* blue-500/30 */
+  --missionops-timeline-week: rgba(107, 114, 128, 0.4); /* gray-500/40 */
+  
+  /* Light theme colors */
+  --missionops-bg-primary: #ffffff; /* white */
+  --missionops-bg-secondary: #f8fafc; /* slate-50 */
+  --missionops-border: #e2e8f0; /* slate-200 */
+  --missionops-text-primary: #1e293b; /* slate-800 */
+  --missionops-text-secondary: #64748b; /* slate-500 */
+  --missionops-text-muted: #94a3b8; /* slate-400 */
+  
+  /* Accent colors for light theme */
+  --missionops-blue: #2563eb; /* blue-600 */
+  --missionops-blue-dark: #1d4ed8; /* blue-700 */
+  --missionops-purple: #7c3aed; /* purple-600 */
+  
+  /* Priority colors for light theme (slightly darker for better contrast) */
+  --missionops-priority-critical: #dc2626; /* red-600 */
+  --missionops-priority-high: #ea580c; /* orange-600 */
+  --missionops-priority-medium: #ca8a04; /* yellow-600 */
+  --missionops-priority-low: #16a34a; /* green-600 */
+  
+  /* Status colors for light theme */
+  --missionops-status-active: #2563eb; /* blue-600 */
+  --missionops-status-completed: #16a34a; /* green-600 */
+  --missionops-status-paused: #ca8a04; /* yellow-600 */
+  --missionops-status-cancelled: #dc2626; /* red-600 */
+  
+  /* Glass effect for light theme */
+  --missionops-glass-bg: rgba(255, 255, 255, 0.8);
+  --missionops-glass-border: rgba(0, 0, 0, 0.1);
+}
+
+/* ==== GLASS THEME ==== */
+.glass-mode .missionops-container {
+  /* Grid dot pattern for glass theme */
+  --missionops-dot-color: rgba(59, 130, 246, 0.15);
+  --missionops-timeline-now: #f59e0b; /* amber-500 */
+  --missionops-timeline-month: rgba(96, 165, 250, 0.4); /* blue-400/40 */
+  --missionops-timeline-week: rgba(100, 116, 139, 0.3); /* slate-500/30 */
+  
+  /* Glass theme colors */
+  --missionops-bg-primary: rgba(248, 250, 252, 0.95); /* slate-50/95 */
+  --missionops-bg-secondary: rgba(241, 245, 249, 0.9); /* slate-100/90 */
+  --missionops-border: rgba(148, 163, 184, 0.3); /* slate-400/30 */
+  --missionops-text-primary: #1e293b; /* slate-800 */
+  --missionops-text-secondary: #475569; /* slate-600 */
+  --missionops-text-muted: #64748b; /* slate-500 */
+  
+  /* Accent colors for glass theme */
+  --missionops-blue: #3b82f6; /* blue-500 */
+  --missionops-blue-dark: #1d4ed8; /* blue-700 */
+  --missionops-purple: #8b5cf6; /* purple-500 */
+  
+  /* Priority colors for glass theme */
+  --missionops-priority-critical: #ef4444; /* red-500 */
+  --missionops-priority-high: #f97316; /* orange-500 */
+  --missionops-priority-medium: #eab308; /* yellow-500 */
+  --missionops-priority-low: #22c55e; /* green-500 */
+  
+  /* Status colors for glass theme */
+  --missionops-status-active: #3b82f6; /* blue-500 */
+  --missionops-status-completed: #22c55e; /* green-500 */
+  --missionops-status-paused: #eab308; /* yellow-500 */
+  --missionops-status-cancelled: #ef4444; /* red-500 */
+  
+  /* Glass effect for glass theme */
+  --missionops-glass-bg: rgba(255, 255, 255, 0.25);
+  --missionops-glass-border: rgba(255, 255, 255, 0.2);
+  
+  /* Pin-blue color variations for all themes */
+  --pin-blue: #3C92FF;
+  --pin-blue-600: #2684FF;
+  --pin-blue-hover: #2684FF;
+}
+
+/* Grid pattern background */
+.missionops-grid-pattern {
+  background-image: radial-gradient(
+    circle at 1px 1px, 
+    var(--missionops-dot-color) 1px, 
+    transparent 0
+  );
+  background-size: var(--missionops-grid-size) var(--missionops-grid-size);
+  background-position: 0 0;
+}
+
+/* Mission container animations */
+.missionops-mission-container {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.missionops-mission-container:hover {
+  transform: scale(1.05);
+}
+
+.missionops-mission-container.dragging {
+  transform: scale(1.05) rotate(1deg);
+  z-index: 50;
+  opacity: 0.8;
+}
+
+.missionops-mission-container.selected {
+  box-shadow: 0 0 0 2px var(--missionops-blue);
+}
+
+/* Timeline styles */
+.missionops-timeline-now {
+  background-color: var(--missionops-timeline-now);
+  box-shadow: 0 0 4px rgba(250, 204, 21, 0.5);
+}
+
+.missionops-timeline-month {
+  background-color: var(--missionops-timeline-month);
+}
+
+.missionops-timeline-week {
+  background-color: var(--missionops-timeline-week);
+}
+
+/* Priority indicators */
+.missionops-priority-critical {
+  border-color: var(--missionops-priority-critical);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.missionops-priority-high {
+  border-color: var(--missionops-priority-high);
+  background-color: rgba(249, 115, 22, 0.1);
+}
+
+.missionops-priority-medium {
+  border-color: var(--missionops-priority-medium);
+  background-color: rgba(234, 179, 8, 0.1);
+}
+
+.missionops-priority-low {
+  border-color: var(--missionops-priority-low);
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+/* Light mode priority indicators - higher opacity for better visibility */
+.light-mode .missionops-priority-critical {
+  background-color: rgba(220, 38, 38, 0.08);
+}
+
+.light-mode .missionops-priority-high {
+  background-color: rgba(234, 88, 12, 0.08);
+}
+
+.light-mode .missionops-priority-medium {
+  background-color: rgba(202, 138, 4, 0.08);
+}
+
+.light-mode .missionops-priority-low {
+  background-color: rgba(22, 163, 74, 0.08);
+}
+
+/* Glass mode priority indicators - balanced opacity */
+.glass-mode .missionops-priority-critical {
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+.glass-mode .missionops-priority-high {
+  background-color: rgba(249, 115, 22, 0.12);
+}
+
+.glass-mode .missionops-priority-medium {
+  background-color: rgba(234, 179, 8, 0.12);
+}
+
+.glass-mode .missionops-priority-low {
+  background-color: rgba(34, 197, 94, 0.12);
+}
+
+/* Glass effect for containers */
+.missionops-glass {
+  backdrop-filter: blur(12px);
+  background-color: var(--missionops-glass-bg);
+  border: 1px solid var(--missionops-glass-border);
+}
+
+/* Smooth scrolling for grid */
+.missionops-grid {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbars for webkit browsers */
+.missionops-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.missionops-scrollbar::-webkit-scrollbar-track {
+  background: var(--missionops-bg-secondary);
+}
+
+.missionops-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--missionops-border);
+  border-radius: 4px;
+}
+
+.missionops-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--missionops-text-muted);
+}
+
+/* Modal animations */
+.missionops-modal-enter {
+  animation: missionopsModalEnter 0.2s ease-out;
+}
+
+.missionops-modal-exit {
+  animation: missionopsModalExit 0.2s ease-in;
+}
+
+@keyframes missionopsModalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translate(-50%, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate(-50%, -50%);
+  }
+}
+
+@keyframes missionopsModalExit {
+  from {
+    opacity: 1;
+    transform: scale(1) translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translate(-50%, -50%);
+  }
+}
+
+/* Loading spinner */
+.missionops-spinner {
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-top: 2px solid var(--missionops-blue);
+  border-radius: 50%;
+  animation: missionopsSpinner 1s linear infinite;
+}
+
+/* Light mode spinner */
+.light-mode .missionops-spinner {
+  border: 2px solid rgba(37, 99, 235, 0.15);
+  border-top: 2px solid var(--missionops-blue);
+}
+
+/* Glass mode spinner */
+.glass-mode .missionops-spinner {
+  border: 2px solid rgba(59, 130, 246, 0.25);
+  border-top: 2px solid var(--missionops-blue);
+}
+
+@keyframes missionopsSpinner {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Hover effects */
+.missionops-hover-blue:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--missionops-blue);
+}
+
+/* Light mode hover effects */
+.light-mode .missionops-hover-blue:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--missionops-blue);
+}
+
+/* Glass mode hover effects */
+.glass-mode .missionops-hover-blue:hover {
+  background-color: rgba(59, 130, 246, 0.12);
+  color: var(--missionops-blue);
+}
+
+.missionops-hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Focus styles for accessibility */
+.missionops-focus:focus {
+  outline: 2px solid var(--missionops-blue);
+  outline-offset: 2px;
+}
+
+/* Drag and drop styles */
+.missionops-drag-handle {
+  cursor: grab;
+}
+
+.missionops-drag-handle:active {
+  cursor: grabbing;
+}
+
+.missionops-drop-zone {
+  border: 2px dashed var(--missionops-blue);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Light mode drop zone */
+.light-mode .missionops-drop-zone {
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+/* Glass mode drop zone */
+.glass-mode .missionops-drop-zone {
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+/* Position indicator */
+.missionops-position-indicator {
+  animation: missionopsPulse 1s ease-in-out infinite;
+}
+
+@keyframes missionopsPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Tag styles */
+.missionops-tag {
+  background-color: var(--missionops-bg-secondary);
+  border: 1px solid var(--missionops-border);
+  color: var(--missionops-text-secondary);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* Overdue indicator */
+.missionops-overdue {
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--missionops-priority-critical);
+  color: var(--missionops-priority-critical);
+}
+
+/* Light mode overdue indicator */
+.light-mode .missionops-overdue {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: var(--missionops-priority-critical);
+}
+
+/* Glass mode overdue indicator */
+.glass-mode .missionops-overdue {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--missionops-priority-critical);
+}
+
+/* Shared indicator */
+.missionops-shared {
+  background: linear-gradient(135deg, var(--missionops-purple), var(--missionops-blue));
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .missionops-container {
+    --missionops-grid-size: 40px;
+  }
+  
+  .missionops-mission-container {
+    min-width: 280px;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 480px) {
+  .missionops-container {
+    --missionops-grid-size: 30px;
+  }
+  
+  .missionops-mission-container {
+    min-width: 240px;
+    max-width: 280px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .missionops-container {
+    --missionops-dot-color: rgba(255, 255, 255, 0.4);
+    --missionops-border: #ffffff;
+  }
+  
+  /* Light mode high contrast */
+  .light-mode .missionops-container {
+    --missionops-dot-color: rgba(0, 0, 0, 0.4);
+    --missionops-border: #000000;
+    --missionops-text-primary: #000000;
+    --missionops-text-secondary: #333333;
+  }
+  
+  /* Glass mode high contrast */
+  .glass-mode .missionops-container {
+    --missionops-dot-color: rgba(59, 130, 246, 0.5);
+    --missionops-border: rgba(59, 130, 246, 0.8);
+    --missionops-text-primary: #000000;
+    --missionops-text-secondary: #1e293b;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .missionops-mission-container,
+  .missionops-hover-scale,
+  .missionops-position-indicator {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .missionops-container {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .missionops-mission-container {
+    border: 1px solid black !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ==== THEME OVERRIDES FOR COMMON ELEMENT STYLES ==== */
+/* These overrides ensure proper theming by targeting common class patterns */
+
+/* Light mode background overrides */
+.light-mode .missionops-container [class*="bg-neutral-900"] {
+  background-color: var(--missionops-bg-primary) !important;
+}
+
+.light-mode .missionops-container [class*="bg-neutral-800"] {
+  background-color: var(--missionops-bg-secondary) !important;
+}
+
+/* Light mode border overrides */
+.light-mode .missionops-container [class*="border-neutral-700"] {
+  border-color: var(--missionops-border) !important;
+}
+
+.light-mode .missionops-container [class*="border-neutral-600"] {
+  border-color: var(--missionops-border) !important;
+}
+
+/* Light mode text overrides */
+.light-mode .missionops-container [class*="text-white"] {
+  color: var(--missionops-text-primary) !important;
+}
+
+.light-mode .missionops-container [class*="text-neutral-400"] {
+  color: var(--missionops-text-secondary) !important;
+}
+
+.light-mode .missionops-container [class*="text-neutral-300"] {
+  color: var(--missionops-text-secondary) !important;
+}
+
+.light-mode .missionops-container [class*="text-neutral-600"] {
+  color: var(--missionops-text-secondary) !important;
+}
+
+.light-mode .missionops-container [class*="text-neutral-900"] {
+  color: var(--missionops-text-primary) !important;
+}
+
+/* Light mode priority colors */
+.light-mode .missionops-container [class*="border-red-400"] {
+  border-color: var(--missionops-priority-critical) !important;
+}
+
+.light-mode .missionops-container [class*="border-orange-400"] {
+  border-color: var(--missionops-priority-high) !important;
+}
+
+.light-mode .missionops-container [class*="border-yellow-400"] {
+  border-color: var(--missionops-priority-medium) !important;
+}
+
+.light-mode .missionops-container [class*="border-green-400"] {
+  border-color: var(--missionops-priority-low) !important;
+}
+
+/* Glass mode background overrides */
+.glass-mode .missionops-container [class*="bg-neutral-900"] {
+  background-color: var(--missionops-bg-primary) !important;
+}
+
+.glass-mode .missionops-container [class*="bg-neutral-800"] {
+  background-color: var(--missionops-bg-secondary) !important;
+}
+
+/* Glass mode border overrides */
+.glass-mode .missionops-container [class*="border-neutral-700"] {
+  border-color: var(--missionops-border) !important;
+}
+
+.glass-mode .missionops-container [class*="border-neutral-600"] {
+  border-color: var(--missionops-border) !important;
+}
+
+/* Glass mode text overrides */
+.glass-mode .missionops-container [class*="text-white"] {
+  color: var(--missionops-text-primary) !important;
+}
+
+.glass-mode .missionops-container [class*="text-neutral-400"] {
+  color: var(--missionops-text-secondary) !important;
+}
+
+.glass-mode .missionops-container [class*="text-neutral-300"] {
+  color: var(--missionops-text-secondary) !important;
+}
+
+.glass-mode .missionops-container [class*="text-neutral-600"] {
+  color: var(--missionops-text-secondary) !important;
+}
+
+.glass-mode .missionops-container [class*="text-neutral-900"] {
+  color: var(--missionops-text-primary) !important;
+}
+
+/* Modal backdrop overrides */
+.light-mode [class*="bg-black"] {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.glass-mode [class*="bg-black"] {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Pin-blue utility classes for MissionOps */
+.missionops-container [class*="text-pin-blue"] {
+  color: var(--pin-blue) !important;
+}
+
+.missionops-container [class*="bg-pin-blue"] {
+  background-color: var(--pin-blue) !important;
+}
+
+.missionops-container [class*="border-pin-blue"] {
+  border-color: var(--pin-blue) !important;
+}
+
+.missionops-container [class*="focus:ring-pin-blue"]:focus {
+  --tw-ring-color: var(--pin-blue) !important;
+}
+
+/* ==== MODAL THEME OVERRIDES ==== */
+/* These target MissionOps modals specifically, regardless of scope */
+
+/* Light mode modal overrides */
+.light-mode .missionops-modal [class*="bg-neutral-900"] {
+  background-color: #ffffff !important;
+}
+
+.light-mode .missionops-modal [class*="bg-neutral-800"] {
+  background-color: #f8fafc !important;
+}
+
+.light-mode .missionops-modal [class*="text-white"] {
+  color: #1e293b !important;
+}
+
+.light-mode .missionops-modal [class*="text-neutral-400"] {
+  color: #64748b !important;
+}
+
+.light-mode .missionops-modal [class*="border-neutral-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .missionops-modal [class*="border-neutral-600"] {
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .missionops-modal input,
+.light-mode .missionops-modal textarea,
+.light-mode .missionops-modal select {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .missionops-modal input::placeholder,
+.light-mode .missionops-modal textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Glass mode modal overrides */
+.glass-mode .missionops-modal [class*="bg-neutral-900"] {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.glass-mode .missionops-modal [class*="bg-neutral-800"] {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.glass-mode .missionops-modal [class*="text-white"] {
+  color: #1e293b !important;
+}
+
+.glass-mode .missionops-modal [class*="text-neutral-400"] {
+  color: #475569 !important;
+}
+
+.glass-mode .missionops-modal input,
+.glass-mode .missionops-modal textarea,
+.glass-mode .missionops-modal select {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(8px) !important;
+}

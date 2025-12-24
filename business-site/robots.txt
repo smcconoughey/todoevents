@@ -1,0 +1,107 @@
+User-agent: *
+Allow: /
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+Crawl-delay: 1
+
+# Specific rules for search engines
+User-agent: Googlebot
+Allow: /
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+Crawl-delay: 1
+
+User-agent: facebookexternalhit
+Allow: /
+Allow: /images/
+Disallow: /admin/
+Disallow: /private/
+
+User-agent: Twitterbot
+Allow: /
+Allow: /images/
+Disallow: /admin/
+Disallow: /private/
+
+# AI Search Tools and Crawlers
+User-agent: GPTBot
+Allow: /
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+
+User-agent: CCBot
+Allow: /
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+
+User-agent: anthropic-ai
+Allow: /
+Allow: /images/
+Allow: /styles.css
+Allow: /script.js
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+
+# Sitemap location
+Sitemap: https://watchtowerab.com/sitemap.xml
+
+# Additional instructions
+# This site contains information about enterprise event management solutions
+# for marketing agencies and small businesses. Beta access available.

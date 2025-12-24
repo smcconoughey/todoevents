@@ -1,0 +1,71 @@
+{
+  "name": "todo-events - Local Event Discovery",
+  "short_name": "todo-events",
+  "description": "Discover amazing local events in your community! Find food festivals, concerts, art shows, sports events, and more.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#FFEC3A",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["lifestyle", "entertainment", "social"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/pin-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Food & Drink Events",
+      "short_name": "Food",
+      "description": "Browse food festivals, tastings, and culinary events",
+      "url": "/?category=food-drink",
+      "icons": [
+        {
+          "src": "/favicon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Music Events",
+      "short_name": "Music",
+      "description": "Find concerts, live bands, and music events",
+      "url": "/?category=music",
+      "icons": [
+        {
+          "src": "/favicon.png", 
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Arts & Culture",
+      "short_name": "Arts",
+      "description": "Discover art shows, galleries, and cultural events",
+      "url": "/?category=arts",
+      "icons": [
+        {
+          "src": "/favicon.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+} 

@@ -1,0 +1,34 @@
+# 📧 Email Configuration (Zoho Mail)
+SMTP_SERVER=smtp.zoho.com
+SMTP_PORT=587
+SMTP_USERNAME=support@todo-events.com
+SMTP_PASSWORD=your-zoho-password-here
+FROM_EMAIL=support@todo-events.com
+FROM_NAME=Todo Events Support
+
+# 🔑 Security Settings  
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-here
+
+# 🗄️ Database Configuration
+DATABASE_URL=sqlite:///./events.db
+
+# 🐛 Debug Settings
+DEBUG=true
+ENVIRONMENT=development
+
+# 🚀 Production Settings (uncomment when deploying)
+# DEBUG=false
+# ENVIRONMENT=production
+# DATABASE_URL=postgresql://username:password@hostname:port/database_name
+
+# 📊 API Keys (if needed)
+# GOOGLE_MAPS_API_KEY=your-google-maps-key
+# ANALYTICS_KEY=your-analytics-key
+
+# 🔧 Optional Email Settings
+# EMAIL_USE_TLS=true
+# EMAIL_USE_SSL=false
+# EMAIL_TIMEOUT=30
+
+# Copy this file to .env and update with your actual values 

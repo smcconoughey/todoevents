@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 
 export const Dialog = ({ open, onOpenChange, children }) => {
   const dialogRef = useRef(null);
@@ -33,22 +33,44 @@ export const Dialog = ({ open, onOpenChange, children }) => {
   );
 };
 
-export const DialogContent = ({ children, className = "" }) => (
-  <div className={`bg-neutral-900 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto w-[90vw] max-w-[500px] ${className}`}>
-    {children}
-  </div>
-);
+export const DialogContent = ({ children, className = "", "aria-describedby": ariaDescribedby = "" }) => {
+  // Generate a unique ID using useId
+  const descId = React.useId();
+  const descriptionId = ariaDescribedby || `dialog-desc-${descId}`;
+
+  return (
+    <div 
+      className={`bg-themed-surface border border-themed rounded-lg shadow-xl max-h-[90vh] overflow-y-auto w-[90vw] max-w-[500px] mx-auto ${className}`}
+      role="dialog"
+      aria-modal="true"
+      aria-describedby={descriptionId}
+    >
+      {children}
+      {!ariaDescribedby && <span id={descriptionId} className="sr-only">Dialog content</span>}
+    </div>
+  );
+};
 
 export const DialogHeader = ({ children }) => (
-  <div className="p-6 border-b border-white/10">
+  <div className="p-6 border-b border-themed">
     {children}
   </div>
 );
 
 export const DialogTitle = ({ children }) => (
-  <h2 className="text-xl font-semibold text-white">
+  <h2 className="text-xl font-semibold text-themed-primary">
     {children}
   </h2>
+);
+
+// Add proper DialogDescription component that's visually styled
+export const DialogDescription = ({ children, id, className = "" }) => (
+  <p 
+    id={id}
+    className={`mt-2 text-sm text-themed-secondary ${className}`}
+  >
+    {children}
+  </p>
 );
 
 // Add DialogClose component

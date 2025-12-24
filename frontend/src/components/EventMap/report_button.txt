@@ -1,0 +1,11 @@
+            {/* Report Button - available to all users */}
+            <div className="pt-3 border-t border-white/10">
+              <Button
+                variant="ghost"
+                className="w-full text-white/70 hover:text-white hover:bg-white/5 font-medium transition-all duration-200 text-sm"
+                onClick={() => setShowReportDialog(true)}
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Report Event
+              </Button>
+            </div> 

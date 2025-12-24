@@ -1,22 +1,266 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 100%">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" 
-          content="width=device-width, 
-                   initial-scale=1.0, 
-                   maximum-scale=1.0, 
-                   user-scalable=no,
-                   shrink-to-fit=no" />
-    <script 
-      src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"
-      async
-    ></script>
-    <title>Event Map</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>todo-events - Discover Local Events Near You | Community Event Finder</title>
+    <meta name="title" content="todo-events - Discover Local Events Near You | Community Event Finder" />
+    <meta name="description" content="Find local events near you today! Discover food festivals, concerts, art shows, sports events, and community gatherings in your area. Real-time event discovery platform with interactive map and location-based search." />
+    <meta name="keywords" content="local events near me, events today, weekend events, community events, food festivals, concerts near me, art shows, sports events, events this weekend, things to do near me, local activities, community gatherings" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="author" content="todo-events" />
+    
+    <!-- Theme and Design -->
+    <meta name="theme-color" content="#3C92FF" />
+    <meta name="color-scheme" content="light dark" />
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-304631562">
+    </script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'AW-304631562');
+    </script>
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://todo-events.com/" />
+    <meta property="og:title" content="todo-events - Discover Local Events Near You" />
+    <meta property="og:description" content="Find amazing local events in your area! Discover food festivals, concerts, art shows, sports events, and community gatherings. Join your local community today!" />
+    <meta property="og:image" content="https://todo-events.com/images/pin-logo.svg" />
+    <meta property="og:site_name" content="todo-events" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://todo-events.com/" />
+    <meta property="twitter:title" content="todo-events - Discover Local Events Near You" />
+    <meta property="twitter:description" content="Find amazing local events in your area! Food festivals, concerts, art shows, sports events, and more. Join your community!" />
+    <meta property="twitter:image" content="https://todo-events.com/images/pin-logo.svg" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "todo-events",
+      "url": "https://todo-events.com",
+      "description": "Discover and share local events in your community",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://todo-events.com/?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "sameAs": []
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "todo-events",
+      "url": "https://todo-events.com",
+      "description": "Find and create local community events",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Discover local events",
+        "Create and share events", 
+        "Interactive event map",
+        "Event filtering by category",
+        "Location-based search"
+      ]
+    }
+    </script>
+    
+    <!-- AI Search Optimization: Local Event Discovery Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "todo-events - Local Event Discovery",
+      "description": "Find local events near you including food festivals, concerts, art shows, sports events, and community gatherings. Real-time event discovery platform for your area.",
+      "url": "https://todo-events.com",
+      "logo": "https://todo-events.com/images/pin-logo.svg",
+      "serviceType": "Event Discovery Platform",
+      "areaServed": [
+        {
+          "@type": "Country",
+          "name": "United States"
+        }
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Local Events Directory",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Local Event Discovery",
+              "description": "Find events happening near your location"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Food & Drink Events",
+              "description": "Discover local food festivals, restaurant events, and culinary experiences"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Music & Concerts",
+              "description": "Find live music, concerts, and musical performances in your area"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Arts & Culture",
+              "description": "Discover art shows, cultural events, and creative gatherings"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Sports & Recreation",
+              "description": "Find sports events, outdoor activities, and recreational gatherings"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Community Events",
+              "description": "Discover local community gatherings, meetups, and social events"
+            }
+          }
+        ]
+      },
+      "keywords": "local events near me, events today, weekend events, community events, food festivals, concerts near me, art shows, sports events",
+      "knowsAbout": [
+        "Local event discovery",
+        "Community event planning",
+        "Event categorization",
+        "Location-based event search",
+        "Real-time event updates"
+      ]
+    }
+    </script>
+
+    <!-- FAQ Schema for AI Search Tools -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I find local events near me?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Use todo-events.com to discover local events in your area. Simply visit the site, allow location access, and browse events on our interactive map. Filter by category (food, music, arts, sports, community) or search by specific dates and distance from your location."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What types of local events can I find?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "todo-events features food festivals, concerts, art shows, sports events, community gatherings, cultural events, outdoor activities, and social meetups. Events are categorized and updated in real-time."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are the events free to attend?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "todo-events lists both free and paid local events. Each event listing includes details about pricing, location, time, and description so you can choose events that fit your budget and interests."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How current are the event listings?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Events on todo-events are updated in real-time by community members and event organizers. You'll find current events happening today, tomorrow, this weekend, and upcoming weeks."
+          }
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://maps.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Preload critical Inter font weights for better performance -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"></noscript>
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://todo-events.com/" />
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="todo-events" />
+    
+    <!-- AI Search Optimization Meta Tags -->
+    <meta name="google-site-verification" content="" />
+    <meta name="application-name" content="Local Event Discovery" />
+    <meta name="classification" content="Event Discovery, Local Events, Community Platform" />
+    <meta name="coverage" content="Worldwide" />
+    <meta name="distribution" content="Global" />
+    <meta name="rating" content="General" />
+    <meta name="revisit-after" content="1 days" />
+    <meta name="subject" content="Local event discovery and community event planning" />
+    <meta name="summary" content="Real-time local event discovery platform helping users find events happening near their location including food, music, arts, sports, and community events." />
   </head>
-  <body style="margin: 0; height: 100%; overflow: hidden">
-    <div id="root" style="height: 100%"></div>
+  <body>
+    <div id="root"></div>
+    
+    <!-- Font loading script for better Inter font enforcement -->
+    <script>
+      // Ensure Inter font loads properly
+      if ('fonts' in document) {
+        Promise.all([
+          document.fonts.load('400 16px Inter'),
+          document.fonts.load('500 16px Inter'),
+          document.fonts.load('600 16px Inter')
+        ]).then(() => {
+          document.body.classList.add('fonts-loaded');
+        }).catch(() => {
+          console.log('Inter font failed to load, using fallback');
+        });
+      }
+    </script>
+    
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

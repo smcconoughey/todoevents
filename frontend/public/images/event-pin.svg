@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 140" width="100" height="140">
+  <defs>
+    <linearGradient id="eventBlueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1565C0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Pin shape -->
+  <path d="M50 10 C70 10 85 25 85 45 C85 65 70 80 50 120 C30 80 15 65 15 45 C15 25 30 10 50 10 Z" 
+        fill="url(#eventBlueGradient)" 
+        stroke="#0D47A1" 
+        stroke-width="2"/>
+  
+  <!-- Checkmark -->
+  <path d="M35 45 L45 55 L65 35" 
+        stroke="white" 
+        stroke-width="4" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+</svg> 

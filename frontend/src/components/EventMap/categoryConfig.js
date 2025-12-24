@@ -11,6 +11,26 @@ import {
   Laptop,
   Plane,
   Ship,
+  GraduationCap,
+  Award,
+  Flame,
+  Waves,
+  CalendarDays,
+  ShoppingBag,
+  Heart,
+  TreePine,
+  Camera,
+  Baby,
+  Gamepad2,
+  Home,
+  DollarSign,
+  Briefcase,
+  Cross,
+  Mountain,
+  Snowflake,
+  Tent,
+  Wheat,
+  Navigation
 } from 'lucide-react';
 
 // Helper function to create SVG marker with icon path
@@ -54,7 +74,54 @@ const iconPaths = {
   
   Church: '<path d="M10 9h4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 22v-4a2 2 0 0 0-4 0v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m18 7 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.618a1 1 0 0 1 .553-.894L6 7" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
-  BookOpen: '<path d="M12 7v14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  BookOpen: '<path d="M12 7v14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  GraduationCap: '<path d="M22 10v6M2 10l10-5 10 5-10 5z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Award: '<circle cx="12" cy="8" r="6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Laptop: '<rect width="20" height="14" x="2" y="3" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 21h12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Waves: '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  CalendarDays: '<path d="M8 2v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2v4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect width="18" height="18" x="3" y="4" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10h18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 14h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 18h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 18h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 10a4 4 0 0 1-8 0" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  TreePine: '<path d="M12 2 L8 8 h8 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 6 L6 12 h12 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 10 L4 16 h16 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><rect x="11" y="16" width="2" height="6" fill="white" stroke="white" stroke-width="1" stroke-linejoin="round"/>',
+  
+  Camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Baby: '<path d="M9 12h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 12h.01" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2.69 0 5.12 1.18 6.8 3.3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Gamepad2: '<line x1="6" x2="10" y1="12" y2="12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" x2="8" y1="10" y2="14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="15" x2="15.01" y1="13" y2="13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" x2="18.01" y1="11" y2="11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect width="20" height="12" x="2" y="6" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  DollarSign: '<line x1="12" x2="12" y1="2" y2="22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Briefcase: '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect width="20" height="14" x="2" y="6" rx="2" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Cross: '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  
+  Snowflake: '<path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 7.5L20.07 16.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.93 16.5L20.07 7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 8L16 16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 16L16 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  Tent: '<path d="M12 3L2 18h20L12 3z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 3v15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15h18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  // Wheat icon for agriculture
+  Wheat: '<path d="M2 22L22 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2L12 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 4L8 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 4L16 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 6L6 16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 6L18 16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="4" r="1" fill="white"/><circle cx="12" cy="2" r="1" fill="white"/><circle cx="16" cy="4" r="1" fill="white"/>',
+
+  // Custom Cow icon for livestock
+  Cow: '<ellipse cx="12" cy="14" rx="8" ry="4" fill="none" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><circle cx="16" cy="8" r="2" fill="none" stroke="white" stroke-width="2"/><path d="M6 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M18 8v2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="11" r="0.5" fill="white"/><circle cx="14" cy="11" r="0.5" fill="white"/><path d="M10 13h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>',
+
+  // Navigation/Route icon
+  Navigation: '<polygon points="3,11 22,2 13,21 11,13 3,11" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/>'
 };
 
 const categories = [
@@ -70,81 +137,219 @@ const categories = [
     id: 'food-drink',
     name: 'Food & Drink',
     icon: Utensils,
-    color: 'text-orange-400',
-    markerColor: '#F97316',
-    markerSVG: createCategoryMarkerSVG('#F97316', iconPaths.Utensils)
+    color: 'text-vibrant-magenta',
+    markerColor: '#FF5A87',
+    markerSVG: createCategoryMarkerSVG('#FF5A87', iconPaths.Utensils)
   },
   {
     id: 'music',
     name: 'Music',
     icon: Music,
-    color: 'text-purple-400',
-    markerColor: '#A855F7',
-    markerSVG: createCategoryMarkerSVG('#A855F7', iconPaths.Music)
+    color: 'text-pin-blue',
+    markerColor: '#2684FF',
+    markerSVG: createCategoryMarkerSVG('#2684FF', iconPaths.Music)
   },
   {
     id: 'arts',
     name: 'Arts',
     icon: Palette,
-    color: 'text-blue-400',
-    markerColor: '#3B82F6',
-    markerSVG: createCategoryMarkerSVG('#3B82F6', iconPaths.Palette)
+    color: 'text-fresh-teal',
+    markerColor: '#38D6C0',
+    markerSVG: createCategoryMarkerSVG('#38D6C0', iconPaths.Palette)
   },
   {
     id: 'sports',
     name: 'Sports',
     icon: Trophy,
-    color: 'text-green-400',
-    markerColor: '#22C55E',
-    markerSVG: createCategoryMarkerSVG('#22C55E', iconPaths.Trophy)
+    color: 'text-spark-yellow',
+    markerColor: '#F5C842',
+    markerSVG: createCategoryMarkerSVG('#F5C842', iconPaths.Trophy)
   },
   {
     id: 'automotive',
     name: 'Automotive',
     icon: Car,
-    color: 'text-red-400',
-    markerColor: '#EF4444',
-    markerSVG: createCategoryMarkerSVG('#EF4444', iconPaths.Car)
+    color: 'text-vibrant-magenta-600',
+    markerColor: '#FF2968',
+    markerSVG: createCategoryMarkerSVG('#FF2968', iconPaths.Car)
   },
   {
     id: 'airshows',
     name: 'Airshows',
     icon: Plane,
-    color: 'text-sky-400',
-    markerColor: '#0EA5E9',
-    markerSVG: createCategoryMarkerSVG('#0EA5E9', iconPaths.Plane)
+    color: 'text-pin-blue-600',
+    markerColor: '#0066FF',
+    markerSVG: createCategoryMarkerSVG('#0066FF', iconPaths.Plane)
   },
   {
     id: 'vehicle-sports',
     name: 'Vehicle Sports',
     icon: Ship,
-    color: 'text-yellow-500',
-    markerColor: '#FACC15',
-    markerSVG: createCategoryMarkerSVG('#FACC15', iconPaths.Ship)
+    color: 'text-spark-yellow-600',
+    markerColor: '#FFE916',
+    markerSVG: createCategoryMarkerSVG('#FFE916', iconPaths.Ship)
   },
   {
     id: 'community',
     name: 'Community',
     icon: Users,
-    color: 'text-yellow-400',
-    markerColor: '#EAB308',
-    markerSVG: createCategoryMarkerSVG('#EAB308', iconPaths.Users)
+    color: 'text-fresh-teal-600',
+    markerColor: '#1BC2A4',
+    markerSVG: createCategoryMarkerSVG('#1BC2A4', iconPaths.Users)
   },
   {
     id: 'religious',
     name: 'Religious',
     icon: Church,
-    color: 'text-indigo-400',
-    markerColor: '#6366F1',
-    markerSVG: createCategoryMarkerSVG('#6366F1', iconPaths.Church)
+    color: 'text-pin-blue-700',
+    markerColor: '#0052CC',
+    markerSVG: createCategoryMarkerSVG('#0052CC', iconPaths.Church)
   },
   {
     id: 'education',
     name: 'Tech & Education',
     icon: BookOpen,
-    color: 'text-teal-400',
-    markerColor: '#14B8A6',
-    markerSVG: createCategoryMarkerSVG('#14B8A6', iconPaths.BookOpen)
+    color: 'text-fresh-teal-700',
+    markerColor: '#159F87',
+    markerSVG: createCategoryMarkerSVG('#159F87', iconPaths.BookOpen)
+  },
+  {
+    id: 'veteran',
+    name: 'Veteran',
+    icon: Award,
+    color: 'text-pin-blue-800',
+    markerColor: '#2196F3',
+    markerSVG: createCategoryMarkerSVG('#2196F3', iconPaths.Award)
+  },
+  {
+    id: 'cookout',
+    name: 'Cookout',
+    icon: Flame,
+    color: 'text-vibrant-magenta-700',
+    markerColor: '#F70049',
+    markerSVG: createCategoryMarkerSVG('#F70049', iconPaths.Flame)
+  },
+
+  {
+    id: 'networking',
+    name: 'Networking',
+    icon: Laptop,
+    color: 'text-pin-blue-700',
+    markerColor: '#0052CC',
+    markerSVG: createCategoryMarkerSVG('#0052CC', iconPaths.Laptop)
+  },
+  {
+    id: 'fair-festival',
+    name: 'Fair/Festival',
+    icon: Tent,
+    color: 'text-vibrant-magenta-800',
+    markerColor: '#E60026',
+    markerSVG: createCategoryMarkerSVG('#E60026', iconPaths.Tent)
+  },
+  {
+    id: 'diving',
+    name: 'Diving',
+    icon: Waves,
+    color: 'text-pin-blue-500',
+    markerColor: '#4FC3F7',
+    markerSVG: createCategoryMarkerSVG('#4FC3F7', iconPaths.Waves)
+  },
+  {
+    id: 'shopping',
+    name: 'Shopping',
+    icon: ShoppingBag,
+    color: 'text-fresh-teal-500',
+    markerColor: '#26E6A0',
+    markerSVG: createCategoryMarkerSVG('#26E6A0', iconPaths.ShoppingBag)
+  },
+  {
+    id: 'health',
+    name: 'Health & Wellness',
+    icon: Heart,
+    color: 'text-vibrant-magenta-500',
+    markerColor: '#FF4081',
+    markerSVG: createCategoryMarkerSVG('#FF4081', iconPaths.Heart)
+  },
+  {
+    id: 'outdoors',
+    name: 'Outdoors & Nature',
+    icon: TreePine,
+    color: 'text-fresh-teal-800',
+    markerColor: '#26A69A',
+    markerSVG: createCategoryMarkerSVG('#26A69A', iconPaths.TreePine)
+  },
+  {
+    id: 'photography',
+    name: 'Photography',
+    icon: Camera,
+    color: 'text-spark-yellow-500',
+    markerColor: '#FFD54F',
+    markerSVG: createCategoryMarkerSVG('#FFD54F', iconPaths.Camera)
+  },
+  {
+    id: 'family',
+    name: 'Family & Kids',
+    icon: Baby,
+    color: 'text-pin-blue-400',
+    markerColor: '#81C784',
+    markerSVG: createCategoryMarkerSVG('#81C784', iconPaths.Baby)
+  },
+  {
+    id: 'gaming',
+    name: 'Gaming',
+    icon: Gamepad2,
+    color: 'text-vibrant-magenta-400',
+    markerColor: '#AB47BC',
+    markerSVG: createCategoryMarkerSVG('#AB47BC', iconPaths.Gamepad2)
+  },
+  {
+    id: 'real-estate',
+    name: 'Real Estate',
+    icon: Home,
+    color: 'text-spark-yellow-600',
+    markerColor: '#F57C00',
+    markerSVG: createCategoryMarkerSVG('#F57C00', iconPaths.Home)
+  },
+  {
+    id: 'agriculture',
+    name: 'Agriculture',
+    icon: Wheat,
+    color: 'text-fresh-teal-900',
+    markerColor: '#4CAF50',
+    markerSVG: createCategoryMarkerSVG('#4CAF50', iconPaths.Wheat)
+  },
+
+  {
+    id: 'adventure',
+    name: 'Adventure & Extreme',
+    icon: Mountain,
+    color: 'text-spark-yellow-800',
+    markerColor: '#BF360C',
+    markerSVG: createCategoryMarkerSVG('#BF360C', iconPaths.Mountain)
+  },
+  {
+    id: 'seasonal',
+    name: 'Seasonal',
+    icon: Snowflake,
+    color: 'text-pin-blue-300',
+    markerColor: '#64B5F6',
+    markerSVG: createCategoryMarkerSVG('#64B5F6', iconPaths.Snowflake)
+  },
+  {
+    id: 'navigation',
+    name: 'Route Waypoint',
+    icon: Navigation,
+    color: 'text-orange-500',
+    markerColor: '#FF9500',
+    markerSVG: createCategoryMarkerSVG('#FF9500', iconPaths.Navigation)
+  },
+  {
+    id: 'other',
+    name: 'Other',
+    icon: MapPin,
+    color: 'text-gray-500',
+    markerColor: '#9E9E9E',
+    markerSVG: createCategoryMarkerSVG('#9E9E9E', iconPaths.MapPin)
   }
 ];
 
