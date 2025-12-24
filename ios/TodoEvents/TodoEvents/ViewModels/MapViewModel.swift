@@ -107,26 +107,30 @@ final class MapViewModel: NSObject, ObservableObject {
 // MARK: - CLLocationManagerDelegate
 
 extension MapViewModel: CLLocationManagerDelegate {
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         
-        userLocation = location.coordinate
-        
-        // Center on user on first location update
-        if isTrackingUser && region.center.latitude == Config.defaultLatitude {
-            centerOnUser()
+        Task { @MainActor in
+            self.userLocation = location.coordinate
+            
+            // Center on user on first location update
+            if self.isTrackingUser && self.region.center.latitude == Config.defaultLatitude {
+                self.centerOnUser()
+            }
         }
     }
     
-    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        locationAuthorizationStatus = status
-        
-        if status == .authorizedWhenInUse || status == .authorizedAlways {
-            startTrackingLocation()
+    nonisolated func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        Task { @MainActor in
+            self.locationAuthorizationStatus = status
+            
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                self.startTrackingLocation()
+            }
         }
     }
     
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location manager error: \(error)")
     }
 }

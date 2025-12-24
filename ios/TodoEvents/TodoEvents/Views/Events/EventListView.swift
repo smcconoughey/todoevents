@@ -10,11 +10,19 @@ struct EventListView: View {
                 if eventsViewModel.isLoading && eventsViewModel.events.isEmpty {
                     ProgressView("Loading events...")
                 } else if eventsViewModel.filteredEvents.isEmpty {
-                    ContentUnavailableView(
-                        "No Events Found",
-                        systemImage: "calendar.badge.exclamationmark",
-                        description: Text("Try changing your filters or checking another area")
-                    )
+                    // iOS 16 compatible empty state
+                    VStack(spacing: 16) {
+                        Image(systemName: "calendar.badge.exclamationmark")
+                            .font(.system(size: 50))
+                            .foregroundStyle(.secondary)
+                        Text("No Events Found")
+                            .font(.title2.bold())
+                        Text("Try changing your filters or checking another area")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
                 } else {
                     List(eventsViewModel.filteredEvents) { event in
                         EventRowView(event: event, distance: eventsViewModel.formattedDistance(to: event))
