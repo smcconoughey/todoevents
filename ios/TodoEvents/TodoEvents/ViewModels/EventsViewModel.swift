@@ -14,12 +14,8 @@ final class EventsViewModel: ObservableObject {
     @Published var error: String?
     
     // Filters
-    @Published var selectedCategory: EventCategory = .all {
-        didSet { applyFilters() }
-    }
-    @Published var selectedDateRange: ClosedRange<Date>? {
-        didSet { applyFilters() }
-    }
+    @Published var selectedCategory: EventCategory = .all
+    @Published var selectedDateRange: ClosedRange<Date>?
     
     // Map state
     @Published var mapCenter: CLLocationCoordinate2D = CLLocationCoordinate2D(
@@ -29,16 +25,45 @@ final class EventsViewModel: ObservableObject {
     @Published var userLocation: CLLocationCoordinate2D?
     
     private let eventService = EventService.shared
+    private var hasInitiallyLoaded = false
     
-    init() {
-        // Initial load
-        Task {
-            await fetchEvents()
-        }
+    init() {}
+    
+    // MARK: - Initial Load
+    
+    func loadIfNeeded() async {
+        guard !hasInitiallyLoaded else { return }
+        hasInitiallyLoaded = true
+        await fetchAllEvents()
+    }
+    
+    // MARK: - Category Filter
+    
+    func setCategory(_ category: EventCategory) {
+        selectedCategory = category
+        applyFilters()
     }
     
     // MARK: - Fetch Events
     
+    /// Fetch ALL events from the database (no location filter)
+    func fetchAllEvents() async {
+        isLoading = true
+        error = nil
+        
+        do {
+            // Fetch ALL events - no location filter
+            let fetchedEvents = try await eventService.fetchAllEvents(limit: 2000)
+            events = fetchedEvents
+            applyFilters()
+            isLoading = false
+        } catch {
+            self.error = "Failed to load events"
+            isLoading = false
+        }
+    }
+    
+    /// Fetch events for the local area only
     func fetchEvents() async {
         isLoading = true
         error = nil
@@ -64,7 +89,7 @@ final class EventsViewModel: ObservableObject {
     
     func fetchEvents(at coordinate: CLLocationCoordinate2D) async {
         mapCenter = coordinate
-        await fetchEvents()
+        // Don't refetch - we already have all events
     }
     
     // MARK: - Filters
@@ -96,6 +121,7 @@ final class EventsViewModel: ObservableObject {
     func clearFilters() {
         selectedCategory = .all
         selectedDateRange = nil
+        applyFilters()
     }
     
     // MARK: - Event Selection
@@ -116,7 +142,6 @@ final class EventsViewModel: ObservableObject {
         let eventLocation = CLLocation(latitude: event.lat, longitude: event.lng)
         let userCLLocation = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
         
-        // Return distance in miles
         return userCLLocation.distance(from: eventLocation) / 1609.34
     }
     
@@ -136,17 +161,12 @@ final class EventsViewModel: ObservableObject {
     
     func createEvent(_ eventData: EventCreate) async throws -> Event {
         let newEvent = try await eventService.createEvent(eventData)
-        
-        // Refresh events list
-        await fetchEvents()
-        
+        await fetchAllEvents()
         return newEvent
     }
     
     func deleteEvent(_ event: Event) async throws {
         try await eventService.deleteEvent(id: event.id)
-        
-        // Remove from local list
         events.removeAll { $0.id == event.id }
         applyFilters()
         

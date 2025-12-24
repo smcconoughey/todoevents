@@ -11,6 +11,14 @@ actor EventService {
     
     // MARK: - Fetch Events
     
+    /// Fetch ALL events without location filter
+    func fetchAllEvents(limit: Int = 2000) async throws -> [Event] {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        return try await api.get("/events", queryItems: queryItems)
+    }
+    
     /// Fetch events near a location
     func fetchEvents(
         latitude: Double,

@@ -8,37 +8,35 @@ struct ContentView: View {
     @State private var showingCreateEvent = false
     
     var body: some View {
-        ZStack {
-            TabView(selection: $selectedTab) {
-                // Map Tab
-                MapTabView(
-                    eventsViewModel: eventsViewModel,
-                    showingCreateEvent: $showingCreateEvent
-                )
-                .tabItem {
-                    Image(systemName: "map")
-                    Text("Explore")
-                }
-                .tag(0)
-                
-                // Events List Tab
-                EventListView(eventsViewModel: eventsViewModel)
-                    .tabItem {
-                        Image(systemName: "list.bullet")
-                        Text("Events")
-                    }
-                    .tag(1)
-                
-                // Profile/Account Tab
-                ProfileView(showingLogin: $showingLogin)
-                    .tabItem {
-                        Image(systemName: "person")
-                        Text("Account")
-                    }
-                    .tag(2)
+        TabView(selection: $selectedTab) {
+            // Map Tab
+            MapTabView(
+                eventsViewModel: eventsViewModel,
+                showingCreateEvent: $showingCreateEvent
+            )
+            .tabItem {
+                Image(systemName: "map")
+                Text("Explore")
             }
-            .tint(.blue)
+            .tag(0)
+            
+            // Events List Tab
+            EventListView(eventsViewModel: eventsViewModel)
+                .tabItem {
+                    Image(systemName: "list.bullet")
+                    Text("Events")
+                }
+                .tag(1)
+            
+            // Profile/Account Tab
+            ProfileView(showingLogin: $showingLogin)
+                .tabItem {
+                    Image(systemName: "person")
+                    Text("Account")
+                }
+                .tag(2)
         }
+        .tint(.blue)
         .sheet(isPresented: $showingLogin) {
             NavigationStack {
                 LoginView()
@@ -48,6 +46,9 @@ struct ContentView: View {
             NavigationStack {
                 CreateEventView(eventsViewModel: eventsViewModel)
             }
+        }
+        .task {
+            await eventsViewModel.loadIfNeeded()
         }
     }
 }
@@ -59,14 +60,36 @@ struct MapTabView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            ZStack {
                 MapView(eventsViewModel: eventsViewModel)
                     .ignoresSafeArea(edges: .top)
                 
-                // Filter Bar
-                VStack(spacing: 0) {
+                // Overlay controls
+                VStack {
                     Spacer()
                     
+                    HStack {
+                        // Create Event Button - Bottom Left, Liquid Glass
+                        Button {
+                            showingCreateEvent = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 56, height: 56)
+                                .background(
+                                    Circle()
+                                        .fill(.blue)
+                                        .shadow(color: .blue.opacity(0.4), radius: 8, x: 0, y: 4)
+                                )
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                        .padding(.leading, 16)
+                        
+                        Spacer()
+                    }
+                    
+                    // Filter Bar
                     FilterBarView(eventsViewModel: eventsViewModel)
                         .padding(.horizontal)
                         .padding(.bottom, 8)
@@ -74,21 +97,11 @@ struct MapTabView: View {
             }
             .navigationTitle("Explore")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingCreateEvent = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                    }
-                }
-            }
         }
     }
 }
 
-// MARK: - Profile View (Placeholder)
+// MARK: - Profile View
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Binding var showingLogin: Bool
@@ -154,25 +167,29 @@ struct FilterBarView: View {
     @ObservedObject var eventsViewModel: EventsViewModel
     
     var body: some View {
-        VStack(spacing: 8) {
-            // Category Chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(EventCategory.allCases, id: \.self) { category in
-                        CategoryChip(
-                            category: category,
-                            isSelected: eventsViewModel.selectedCategory == category
-                        ) {
-                            eventsViewModel.selectedCategory = category
-                        }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(EventCategory.allCases, id: \.self) { category in
+                    CategoryChip(
+                        category: category,
+                        isSelected: eventsViewModel.selectedCategory == category
+                    ) {
+                        eventsViewModel.setCategory(category)
                     }
                 }
-                .padding(.horizontal, 4)
             }
+            .padding(.horizontal, 4)
         }
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.white.opacity(0.2), lineWidth: 0.5)
+        )
     }
 }
 
