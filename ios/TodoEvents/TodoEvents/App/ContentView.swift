@@ -36,7 +36,7 @@ struct ContentView: View {
                 }
                 .tag(2)
         }
-        .tint(.blue)
+        .tint(.cyan)
         .sheet(isPresented: $showingLogin) {
             NavigationStack {
                 LoginView()
@@ -49,6 +49,15 @@ struct ContentView: View {
         }
         .task {
             await eventsViewModel.loadIfNeeded()
+        }
+        .onChange(of: eventsViewModel.hidePastEvents) { _ in
+            eventsViewModel.applyFilters()
+        }
+        .onChange(of: eventsViewModel.dateFilter) { _ in
+            eventsViewModel.applyFilters()
+        }
+        .onChange(of: eventsViewModel.distanceFilter) { _ in
+            eventsViewModel.applyFilters()
         }
     }
 }
@@ -69,21 +78,27 @@ struct MapTabView: View {
                     Spacer()
                     
                     HStack {
-                        // Create Event Button - Bottom Left, Liquid Glass
+                        // Create Event Button - Bottom Left
                         Button {
                             showingCreateEvent = true
                         } label: {
                             Image(systemName: "plus")
-                                .font(.system(size: 22, weight: .semibold))
+                                .font(.system(size: 22, weight: .bold))
                                 .foregroundStyle(.white)
                                 .frame(width: 56, height: 56)
                                 .background(
                                     Circle()
-                                        .fill(.blue)
-                                        .shadow(color: .blue.opacity(0.4), radius: 8, x: 0, y: 4)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.blue, .purple],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: .purple.opacity(0.4), radius: 8, x: 0, y: 4)
                                 )
                         }
-                        .buttonStyle(ScaleButtonStyle())
+                        .buttonStyle(GameButtonStyle())
                         .padding(.leading, 16)
                         
                         Spacer()
@@ -114,7 +129,7 @@ struct ProfileView: View {
                         HStack {
                             Image(systemName: "person.circle.fill")
                                 .font(.system(size: 50))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.cyan)
                             VStack(alignment: .leading) {
                                 Text(authViewModel.currentUser?.email ?? "User")
                                     .font(.headline)
@@ -162,15 +177,15 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Filter Bar
+// MARK: - Filter Bar (Quick Category Access)
 struct FilterBarView: View {
     @ObservedObject var eventsViewModel: EventsViewModel
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(EventCategory.allCases, id: \.self) { category in
-                    CategoryChip(
+                ForEach(EventCategory.allCases.prefix(8), id: \.self) { category in
+                    QuickCategoryChip(
                         category: category,
                         isSelected: eventsViewModel.selectedCategory == category
                     ) {
@@ -180,21 +195,20 @@ struct FilterBarView: View {
             }
             .padding(.horizontal, 4)
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.2), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.black.opacity(0.6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(.white.opacity(0.1), lineWidth: 1)
+                )
         )
     }
 }
 
-// MARK: - Category Chip
-struct CategoryChip: View {
+// MARK: - Quick Category Chip
+struct QuickCategoryChip: View {
     let category: EventCategory
     let isSelected: Bool
     let action: () -> Void
@@ -203,16 +217,17 @@ struct CategoryChip: View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: category.icon)
-                    .font(.caption)
+                    .font(.system(size: 11, weight: .semibold))
                 Text(category.displayName)
-                    .font(.caption)
-                    .fontWeight(.medium)
+                    .font(.system(size: 11, weight: .medium))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(isSelected ? category.color : Color.gray.opacity(0.2))
-            .foregroundStyle(isSelected ? .white : .primary)
-            .clipShape(Capsule())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(isSelected ? category.color : Color.gray.opacity(0.3))
+            )
+            .foregroundStyle(isSelected ? .white : .white.opacity(0.8))
         }
         .buttonStyle(.plain)
     }
@@ -223,6 +238,16 @@ struct MyEventsView: View {
     var body: some View {
         Text("My Events")
             .navigationTitle("My Events")
+    }
+}
+
+// Need to define GameButtonStyle here if not already imported
+struct GameButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
+            .brightness(configuration.isPressed ? 0.2 : 0)
+            .animation(.spring(response: 0.15, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 

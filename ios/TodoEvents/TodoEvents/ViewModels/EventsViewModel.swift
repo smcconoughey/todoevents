@@ -13,9 +13,12 @@ final class EventsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     
-    // Filters
+    // Filter State
     @Published var selectedCategory: EventCategory = .all
-    @Published var selectedDateRange: ClosedRange<Date>?
+    @Published var selectedCategories: Set<EventCategory> = Set(EventCategory.allCases.filter { $0 != .all })
+    @Published var hidePastEvents: Bool = true
+    @Published var dateFilter: DateFilter = .all
+    @Published var distanceFilter: DistanceFilter = .any
     
     // Map state
     @Published var mapCenter: CLLocationCoordinate2D = CLLocationCoordinate2D(
@@ -37,22 +40,48 @@ final class EventsViewModel: ObservableObject {
         await fetchAllEvents()
     }
     
-    // MARK: - Category Filter
+    // MARK: - Category Management
     
     func setCategory(_ category: EventCategory) {
         selectedCategory = category
         applyFilters()
     }
     
+    func toggleCategory(_ category: EventCategory) {
+        if selectedCategories.contains(category) {
+            selectedCategories.remove(category)
+        } else {
+            selectedCategories.insert(category)
+        }
+        applyFilters()
+    }
+    
+    func selectAllCategories() {
+        selectedCategories = Set(EventCategory.allCases.filter { $0 != .all })
+        applyFilters()
+    }
+    
+    func clearAllCategories() {
+        selectedCategories.removeAll()
+        applyFilters()
+    }
+    
+    func resetFilters() {
+        selectedCategory = .all
+        selectedCategories = Set(EventCategory.allCases.filter { $0 != .all })
+        hidePastEvents = true
+        dateFilter = .all
+        distanceFilter = .any
+        applyFilters()
+    }
+    
     // MARK: - Fetch Events
     
-    /// Fetch ALL events from the database (no location filter)
     func fetchAllEvents() async {
         isLoading = true
         error = nil
         
         do {
-            // Fetch ALL events - no location filter
             let fetchedEvents = try await eventService.fetchAllEvents(limit: 2000)
             events = fetchedEvents
             applyFilters()
@@ -63,7 +92,6 @@ final class EventsViewModel: ObservableObject {
         }
     }
     
-    /// Fetch events for the local area only
     func fetchEvents() async {
         isLoading = true
         error = nil
@@ -89,42 +117,79 @@ final class EventsViewModel: ObservableObject {
     
     func fetchEvents(at coordinate: CLLocationCoordinate2D) async {
         mapCenter = coordinate
-        // Don't refetch - we already have all events
     }
     
     // MARK: - Filters
     
-    private func applyFilters() {
+    func applyFilters() {
         var result = events
         
-        // Category filter
+        // Category filter (using selectedCategories set)
         if selectedCategory != .all {
             result = result.filter { $0.category == selectedCategory.rawValue }
+        } else if !selectedCategories.isEmpty && selectedCategories.count < EventCategory.allCases.count - 1 {
+            // Use multi-category filter
+            let categoryRawValues = selectedCategories.map { $0.rawValue }
+            result = result.filter { categoryRawValues.contains($0.category) }
         }
         
-        // Date filter
-        if let dateRange = selectedDateRange {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            
+        // Date filters
+        let today = Calendar.current.startOfDay(for: Date())
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Hide past events
+        if hidePastEvents {
             result = result.filter { event in
-                guard let eventDate = dateFormatter.date(from: event.date) else {
-                    return true
-                }
-                return dateRange.contains(eventDate)
+                guard let eventDate = dateFormatter.date(from: event.date) else { return true }
+                return eventDate >= today
+            }
+        }
+        
+        // Date range filter
+        switch dateFilter {
+        case .all:
+            break
+        case .today:
+            result = result.filter { event in
+                guard let eventDate = dateFormatter.date(from: event.date) else { return false }
+                return Calendar.current.isDateInToday(eventDate)
+            }
+        case .thisWeek:
+            let endOfWeek = Calendar.current.date(byAdding: .day, value: 7, to: today)!
+            result = result.filter { event in
+                guard let eventDate = dateFormatter.date(from: event.date) else { return false }
+                return eventDate >= today && eventDate <= endOfWeek
+            }
+        case .thisMonth:
+            let endOfMonth = Calendar.current.date(byAdding: .month, value: 1, to: today)!
+            result = result.filter { event in
+                guard let eventDate = dateFormatter.date(from: event.date) else { return false }
+                return eventDate >= today && eventDate <= endOfMonth
+            }
+        case .next3Months:
+            let endDate = Calendar.current.date(byAdding: .month, value: 3, to: today)!
+            result = result.filter { event in
+                guard let eventDate = dateFormatter.date(from: event.date) else { return false }
+                return eventDate >= today && eventDate <= endDate
+            }
+        }
+        
+        // Distance filter
+        if distanceFilter != .any, let userLoc = userLocation {
+            let maxDistance = distanceFilter.rawValue
+            result = result.filter { event in
+                let eventLocation = CLLocation(latitude: event.lat, longitude: event.lng)
+                let userCLLocation = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+                let distanceInMiles = userCLLocation.distance(from: eventLocation) / 1609.34
+                return distanceInMiles <= maxDistance
             }
         }
         
         filteredEvents = result
     }
     
-    func clearFilters() {
-        selectedCategory = .all
-        selectedDateRange = nil
-        applyFilters()
-    }
-    
-    // MARK: - Event Selection
+    // MARK: - Selection
     
     func selectEvent(_ event: Event) {
         selectedEvent = event

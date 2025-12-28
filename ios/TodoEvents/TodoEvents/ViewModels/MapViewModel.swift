@@ -18,6 +18,7 @@ final class MapViewModel: NSObject, ObservableObject {
     @Published var userLocation: CLLocationCoordinate2D?
     @Published var locationAuthorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var isTrackingUser = false
+    @Published var hasReceivedInitialLocation = false
     
     private let locationManager = CLLocationManager()
     
@@ -25,12 +26,23 @@ final class MapViewModel: NSObject, ObservableObject {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 50 // Only update when moved 50 meters
     }
     
     // MARK: - Location Permissions
     
     func requestLocationPermission() {
-        locationManager.requestWhenInUseAuthorization()
+        let status = locationManager.authorizationStatus
+        locationAuthorizationStatus = status
+        
+        switch status {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            startTrackingLocation()
+        default:
+            break
+        }
     }
     
     func startTrackingLocation() {
@@ -52,23 +64,23 @@ final class MapViewModel: NSObject, ObservableObject {
     // MARK: - Map Actions
     
     func centerOnUser() {
-        guard let userLocation = userLocation else { return }
-        
-        withAnimation {
-            region = MKCoordinateRegion(
-                center: userLocation,
-                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-            )
+        guard let userLocation = userLocation else {
+            // Request location if we don't have it
+            startTrackingLocation()
+            return
         }
+        
+        region = MKCoordinateRegion(
+            center: userLocation,
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        )
     }
     
     func centerOnEvent(_ event: Event) {
-        withAnimation {
-            region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-            )
-        }
+        region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        )
     }
     
     func zoomToFitEvents(_ events: [Event]) {
@@ -98,9 +110,7 @@ final class MapViewModel: NSObject, ObservableObject {
             longitudeDelta: (maxLng - minLng) * 1.5
         )
         
-        withAnimation {
-            region = MKCoordinateRegion(center: center, span: span)
-        }
+        region = MKCoordinateRegion(center: center, span: span)
     }
 }
 
@@ -113,8 +123,9 @@ extension MapViewModel: CLLocationManagerDelegate {
         Task { @MainActor in
             self.userLocation = location.coordinate
             
-            // Center on user on first location update
-            if self.isTrackingUser && self.region.center.latitude == Config.defaultLatitude {
+            // Center on user on first location update only
+            if !self.hasReceivedInitialLocation && self.isTrackingUser {
+                self.hasReceivedInitialLocation = true
                 self.centerOnUser()
             }
         }
@@ -131,6 +142,6 @@ extension MapViewModel: CLLocationManagerDelegate {
     }
     
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("Location manager error: \(error)")
+        print("Location manager error: \(error.localizedDescription)")
     }
 }

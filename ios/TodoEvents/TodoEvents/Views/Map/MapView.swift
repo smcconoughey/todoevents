@@ -1,26 +1,26 @@
 import SwiftUI
 import MapKit
 
-/// Optimized MapView with zoom-based marker sizing and better performance
+/// Optimized MapView with video game styling and settings
 struct MapView: View {
     @ObservedObject var eventsViewModel: EventsViewModel
     @StateObject private var mapViewModel = MapViewModel()
     @State private var selectedEvent: Event?
     @State private var showEventDetail = false
+    @State private var showSettings = false
     @State private var zoomLevel: Double = 0.5
     @State private var isUpdatingZoom = false
     
     // Computed marker size based on zoom level
     private var markerSize: CGFloat {
         let span = mapViewModel.region.span.latitudeDelta
-        if span > 30 { return 12 }      // Very zoomed out - tiny dots
-        if span > 15 { return 18 }      // Country view - small
-        if span > 5 { return 24 }       // Regional view - medium
-        if span > 1 { return 30 }       // City view
-        return 36                        // Neighborhood view - full size
+        if span > 30 { return 14 }
+        if span > 15 { return 20 }
+        if span > 5 { return 26 }
+        if span > 1 { return 32 }
+        return 38
     }
     
-    // Should show icon inside marker
     private var showIcon: Bool {
         mapViewModel.region.span.latitudeDelta < 10
     }
@@ -30,23 +30,22 @@ struct MapView: View {
         let span = mapViewModel.region.span.latitudeDelta
         let events = eventsViewModel.filteredEvents
         
-        // When zoomed out, limit markers to reduce clutter
         if span > 20 {
-            return Array(events.prefix(100))
+            return Array(events.prefix(150))
         } else if span > 10 {
-            return Array(events.prefix(300))
+            return Array(events.prefix(400))
         } else if span > 5 {
-            return Array(events.prefix(500))
+            return Array(events.prefix(700))
         }
         return events
     }
     
     var body: some View {
         ZStack {
-            // Main Map - Use standard MapMarker for better performance when zoomed out
+            // Main Map with custom styling
             Map(coordinateRegion: $mapViewModel.region, showsUserLocation: true, annotationItems: visibleEvents) { event in
                 MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)) {
-                    OptimizedMarker(
+                    GameStyleMarker(
                         event: event,
                         size: markerSize,
                         showIcon: showIcon
@@ -56,9 +55,11 @@ struct MapView: View {
                     }
                 }
             }
+            .mapStyle(.standard(elevation: .realistic, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
             .ignoresSafeArea(edges: .all)
             .onAppear {
                 mapViewModel.requestLocationPermission()
+                mapViewModel.startTrackingLocation()
             }
             .onReceive(mapViewModel.$userLocation.compactMap { $0 }) { location in
                 Task { @MainActor in
@@ -71,42 +72,50 @@ struct MapView: View {
                 HStack {
                     Spacer()
                     
-                    // Map Control Buttons
+                    // Right side controls
                     VStack(spacing: 0) {
-                        LiquidGlassButton(icon: "location.fill", size: 50) {
-                            withAnimation(.easeOut(duration: 0.25)) {
+                        GameButton(icon: "location.fill", color: .cyan) {
+                            mapViewModel.startTrackingLocation()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 mapViewModel.centerOnUser()
                             }
                         }
                         
-                        Divider().frame(width: 40).opacity(0.3)
+                        Divider().frame(width: 36).opacity(0.2)
                         
-                        LiquidGlassButton(icon: "arrow.clockwise", size: 50) {
+                        GameButton(icon: "arrow.clockwise", color: .green) {
                             Task {
                                 await eventsViewModel.fetchAllEvents()
                             }
                         }
                         
-                        Divider().frame(width: 40).opacity(0.3)
+                        Divider().frame(width: 36).opacity(0.2)
                         
-                        LiquidGlassButton(icon: "plus", size: 50) {
+                        GameButton(icon: "plus", color: .white) {
                             zoomIn()
                         }
                         
-                        Divider().frame(width: 40).opacity(0.3)
+                        Divider().frame(width: 36).opacity(0.2)
                         
-                        LiquidGlassButton(icon: "minus", size: 50) {
+                        GameButton(icon: "minus", color: .white) {
                             zoomOut()
                         }
                     }
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(.white.opacity(0.3), lineWidth: 0.5)
+                            .fill(.black.opacity(0.7))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.cyan.opacity(0.5), .purple.opacity(0.5)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            )
+                            .shadow(color: .cyan.opacity(0.3), radius: 8)
                     )
                     .padding(.trailing, 12)
                     .padding(.top, 60)
@@ -114,33 +123,97 @@ struct MapView: View {
                 
                 Spacer()
                 
-                // Bottom Zoom Slider
+                HStack(alignment: .bottom) {
+                    // Bottom left - event count badge
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(.green)
+                                .frame(width: 8, height: 8)
+                            Text("\(visibleEvents.count) events")
+                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        }
+                        
+                        if eventsViewModel.hidePastEvents {
+                            Text("Upcoming only")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.black.opacity(0.7))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(.green.opacity(0.4), lineWidth: 1)
+                            )
+                    )
+                    .foregroundStyle(.green)
+                    
+                    Spacer()
+                    
+                    // Bottom right - settings button
+                    Button {
+                        showSettings = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "slider.horizontal.3")
+                            Text("Filters")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(.black.opacity(0.7))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [.orange.opacity(0.6), .pink.opacity(0.6)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            ),
+                                            lineWidth: 1
+                                        )
+                                )
+                                .shadow(color: .orange.opacity(0.2), radius: 6)
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+                
+                // Zoom Slider
                 HStack(spacing: 12) {
-                    Image(systemName: "minus.magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "minus")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.cyan)
                     
                     Slider(value: $zoomLevel, in: 0...1)
-                        .tint(.blue)
+                        .tint(.cyan)
                         .onChange(of: zoomLevel) { newValue in
                             guard !isUpdatingZoom else { return }
                             updateZoom(newValue)
                         }
                     
-                    Image(systemName: "plus.magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.cyan)
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(.ultraThinMaterial)
-                        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.3), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.black.opacity(0.7))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(.cyan.opacity(0.4), lineWidth: 1)
+                        )
+                        .shadow(color: .cyan.opacity(0.2), radius: 6)
                 )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
@@ -154,12 +227,16 @@ struct MapView: View {
                 .presentationDetents([.medium, .large])
             }
         }
+        .sheet(isPresented: $showSettings) {
+            MapSettingsView(eventsViewModel: eventsViewModel)
+                .presentationDetents([.large])
+        }
     }
     
     // MARK: - Zoom Functions
     
     private func zoomIn() {
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
             let newDelta = max(mapViewModel.region.span.latitudeDelta * 0.5, 0.002)
             mapViewModel.region.span = MKCoordinateSpan(
                 latitudeDelta: newDelta,
@@ -170,7 +247,7 @@ struct MapView: View {
     }
     
     private func zoomOut() {
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
             let newDelta = min(mapViewModel.region.span.latitudeDelta * 2, 120)
             mapViewModel.region.span = MKCoordinateSpan(
                 latitudeDelta: newDelta,
@@ -208,9 +285,9 @@ struct MapView: View {
     }
 }
 
-// MARK: - Optimized Marker (size-aware)
+// MARK: - Game Style Marker
 
-struct OptimizedMarker: View {
+struct GameStyleMarker: View {
     let event: Event
     let size: CGFloat
     let showIcon: Bool
@@ -219,62 +296,93 @@ struct OptimizedMarker: View {
     var body: some View {
         Button(action: onTap) {
             if showIcon {
-                // Full marker with icon
+                // Full marker with glow effect
                 VStack(spacing: 0) {
                     ZStack {
+                        // Outer glow
                         Circle()
-                            .fill(event.eventCategory.color)
+                            .fill(event.eventCategory.color.opacity(0.3))
+                            .frame(width: size + 8, height: size + 8)
+                            .blur(radius: 4)
+                        
+                        // Main circle with gradient
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [event.eventCategory.color, event.eventCategory.color.opacity(0.7)],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: size / 2
+                                )
+                            )
                             .frame(width: size, height: size)
-                            .shadow(color: event.eventCategory.color.opacity(0.4), radius: 3, x: 0, y: 2)
+                            .overlay(
+                                Circle()
+                                    .stroke(.white.opacity(0.5), lineWidth: 1.5)
+                            )
                         
                         Image(systemName: event.eventCategory.icon)
-                            .font(.system(size: size * 0.4, weight: .medium))
+                            .font(.system(size: size * 0.4, weight: .bold))
                             .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.5), radius: 1)
                     }
                     
                     if size >= 30 {
+                        // Pointer with glow
                         Triangle()
                             .fill(event.eventCategory.color)
-                            .frame(width: size * 0.35, height: size * 0.22)
+                            .frame(width: size * 0.4, height: size * 0.25)
+                            .shadow(color: event.eventCategory.color.opacity(0.5), radius: 2)
                             .offset(y: -2)
                     }
                 }
             } else {
-                // Simple dot for zoomed out view
-                Circle()
-                    .fill(event.eventCategory.color)
-                    .frame(width: size, height: size)
-                    .shadow(color: event.eventCategory.color.opacity(0.5), radius: 2)
+                // Simple glowing dot
+                ZStack {
+                    Circle()
+                        .fill(event.eventCategory.color.opacity(0.4))
+                        .frame(width: size + 4, height: size + 4)
+                        .blur(radius: 2)
+                    
+                    Circle()
+                        .fill(event.eventCategory.color)
+                        .frame(width: size, height: size)
+                        .overlay(
+                            Circle()
+                                .stroke(.white.opacity(0.6), lineWidth: 1)
+                        )
+                }
             }
         }
-        .buttonStyle(ScaleButtonStyle())
+        .buttonStyle(GameButtonStyle())
     }
 }
 
-// MARK: - Liquid Glass Button Component
+// MARK: - Game Button
 
-struct LiquidGlassButton: View {
+struct GameButton: View {
     let icon: String
-    let size: CGFloat
+    let color: Color
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: size * 0.36, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(width: size, height: size)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(color)
+                .frame(width: 50, height: 50)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(ScaleButtonStyle())
+        .buttonStyle(GameButtonStyle())
     }
 }
 
-struct ScaleButtonStyle: ButtonStyle {
+struct GameButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
+            .brightness(configuration.isPressed ? 0.2 : 0)
+            .animation(.spring(response: 0.15, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
