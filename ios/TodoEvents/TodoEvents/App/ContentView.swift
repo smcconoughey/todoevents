@@ -59,18 +59,24 @@ struct ContentView: View {
         .onChange(of: eventsViewModel.distanceFilter) { _ in
             eventsViewModel.applyFilters()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showLoginSheet)) { _ in
+            showingLogin = true
+        }
     }
 }
 
 // MARK: - Map Tab View
 struct MapTabView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
     @ObservedObject var eventsViewModel: EventsViewModel
     @Binding var showingCreateEvent: Bool
+    @State private var showingLoginPrompt = false
+    @State private var showingFilters = false
     
     var body: some View {
         NavigationStack {
             ZStack {
-                MapView(eventsViewModel: eventsViewModel)
+                MapView(eventsViewModel: eventsViewModel, showingFilters: $showingFilters)
                     .ignoresSafeArea(edges: .top)
                 
                 // Overlay controls
@@ -80,7 +86,11 @@ struct MapTabView: View {
                     HStack {
                         // Create Event Button - Bottom Left
                         Button {
-                            showingCreateEvent = true
+                            if authViewModel.isAuthenticated {
+                                showingCreateEvent = true
+                            } else {
+                                showingLoginPrompt = true
+                            }
                         } label: {
                             Image(systemName: "plus")
                                 .font(.system(size: 22, weight: .bold))
@@ -88,21 +98,31 @@ struct MapTabView: View {
                                 .frame(width: 56, height: 56)
                                 .background(
                                     Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [.blue, .purple],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .shadow(color: .purple.opacity(0.4), radius: 8, x: 0, y: 4)
+                                        .fill(authViewModel.isAuthenticated ? .blue : .gray)
+                                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                                 )
                         }
-                        .buttonStyle(GameButtonStyle())
                         .padding(.leading, 16)
                         
                         Spacer()
+                        
+                        // Filter Button - Bottom Right (same size)
+                        Button {
+                            showingFilters = true
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 56, height: 56)
+                                .background(
+                                    Circle()
+                                        .fill(.blue)
+                                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                                )
+                        }
+                        .padding(.trailing, 16)
                     }
+                    .padding(.bottom, 8)
                     
                     // Filter Bar
                     FilterBarView(eventsViewModel: eventsViewModel)
@@ -112,8 +132,24 @@ struct MapTabView: View {
             }
             .navigationTitle("Explore")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Sign In Required", isPresented: $showingLoginPrompt) {
+                Button("Sign In") {
+                    NotificationCenter.default.post(name: .showLoginSheet, object: nil)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please sign in to create events.")
+            }
+            .sheet(isPresented: $showingFilters) {
+                MapSettingsView(eventsViewModel: eventsViewModel)
+            }
         }
     }
+}
+
+// Notification for showing login
+extension Notification.Name {
+    static let showLoginSheet = Notification.Name("showLoginSheet")
 }
 
 // MARK: - Profile View
@@ -196,14 +232,9 @@ struct FilterBarView: View {
             .padding(.horizontal, 4)
         }
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(.black.opacity(0.6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
-        )
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.1), radius: 4)
     }
 }
 
@@ -225,9 +256,9 @@ struct QuickCategoryChip: View {
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(isSelected ? category.color : Color.gray.opacity(0.3))
+                    .fill(isSelected ? category.color : Color.gray.opacity(0.2))
             )
-            .foregroundStyle(isSelected ? .white : .white.opacity(0.8))
+            .foregroundStyle(isSelected ? .white : .primary)
         }
         .buttonStyle(.plain)
     }
@@ -241,17 +272,8 @@ struct MyEventsView: View {
     }
 }
 
-// Need to define GameButtonStyle here if not already imported
-struct GameButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
-            .brightness(configuration.isPressed ? 0.2 : 0)
-            .animation(.spring(response: 0.15, dampingFraction: 0.6), value: configuration.isPressed)
-    }
-}
-
 #Preview {
     ContentView()
         .environmentObject(AuthViewModel())
 }
+

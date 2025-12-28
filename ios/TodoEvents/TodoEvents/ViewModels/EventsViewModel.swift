@@ -2,6 +2,45 @@ import Foundation
 import CoreLocation
 import SwiftUI
 
+// MARK: - Filter Enums
+
+enum DateFilter: String, CaseIterable {
+    case all = "all"
+    case today = "today"
+    case thisWeek = "thisWeek"
+    case thisMonth = "thisMonth"
+    case next3Months = "next3Months"
+    
+    var displayName: String {
+        switch self {
+        case .all: return "All Dates"
+        case .today: return "Today"
+        case .thisWeek: return "This Week"
+        case .thisMonth: return "This Month"
+        case .next3Months: return "Next 3 Months"
+        }
+    }
+}
+
+enum DistanceFilter: Double, CaseIterable {
+    case any = 0
+    case miles5 = 5
+    case miles10 = 10
+    case miles25 = 25
+    case miles50 = 50
+    case miles100 = 100
+    
+    var displayName: String {
+        switch self {
+        case .any: return "Any Distance"
+        case .miles5: return "5 miles"
+        case .miles10: return "10 miles"
+        case .miles25: return "25 miles"
+        case .miles50: return "50 miles"
+        case .miles100: return "100 miles"
+        }
+    }
+}
 /// View model for events and map state
 @MainActor
 final class EventsViewModel: ObservableObject {
@@ -19,6 +58,7 @@ final class EventsViewModel: ObservableObject {
     @Published var hidePastEvents: Bool = true
     @Published var dateFilter: DateFilter = .all
     @Published var distanceFilter: DistanceFilter = .any
+    @Published var useMapCenterForDistance: Bool = false
     
     // Map state
     @Published var mapCenter: CLLocationCoordinate2D = CLLocationCoordinate2D(
@@ -175,13 +215,23 @@ final class EventsViewModel: ObservableObject {
             }
         }
         
-        // Distance filter
-        if distanceFilter != .any, let userLoc = userLocation {
+        // Distance filter - use map center or user location
+        if distanceFilter != .any {
+            let referenceLocation: CLLocationCoordinate2D
+            if useMapCenterForDistance {
+                referenceLocation = mapCenter
+            } else if let userLoc = userLocation {
+                referenceLocation = userLoc
+            } else {
+                // No location available, use map center as fallback
+                referenceLocation = mapCenter
+            }
+            
             let maxDistance = distanceFilter.rawValue
             result = result.filter { event in
                 let eventLocation = CLLocation(latitude: event.lat, longitude: event.lng)
-                let userCLLocation = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
-                let distanceInMiles = userCLLocation.distance(from: eventLocation) / 1609.34
+                let refCLLocation = CLLocation(latitude: referenceLocation.latitude, longitude: referenceLocation.longitude)
+                let distanceInMiles = refCLLocation.distance(from: eventLocation) / 1609.34
                 return distanceInMiles <= maxDistance
             }
         }

@@ -18,7 +18,7 @@ final class MapViewModel: NSObject, ObservableObject {
     @Published var userLocation: CLLocationCoordinate2D?
     @Published var locationAuthorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var isTrackingUser = false
-    @Published var hasReceivedInitialLocation = false
+    @Published var pendingCenterOnUser = false  // Flag to center when location arrives
     
     private let locationManager = CLLocationManager()
     
@@ -26,7 +26,7 @@ final class MapViewModel: NSObject, ObservableObject {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 50 // Only update when moved 50 meters
+        locationManager.distanceFilter = 10 // Update more frequently
     }
     
     // MARK: - Location Permissions
@@ -46,9 +46,12 @@ final class MapViewModel: NSObject, ObservableObject {
     }
     
     func startTrackingLocation() {
+        // Update current status
+        locationAuthorizationStatus = locationManager.authorizationStatus
+        
         guard locationAuthorizationStatus == .authorizedWhenInUse ||
               locationAuthorizationStatus == .authorizedAlways else {
-            requestLocationPermission()
+            locationManager.requestWhenInUseAuthorization()
             return
         }
         
@@ -63,24 +66,31 @@ final class MapViewModel: NSObject, ObservableObject {
     
     // MARK: - Map Actions
     
+    /// Center on user location - if not available yet, will center when location arrives
     func centerOnUser() {
-        guard let userLocation = userLocation else {
-            // Request location if we don't have it
+        if let userLocation = userLocation {
+            // We have location, center now
+            withAnimation(.easeOut(duration: 0.3)) {
+                region = MKCoordinateRegion(
+                    center: userLocation,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                )
+            }
+        } else {
+            // Request location and set flag to center when it arrives
+            pendingCenterOnUser = true
             startTrackingLocation()
-            return
+            locationManager.requestLocation() // Request single location update
         }
-        
-        region = MKCoordinateRegion(
-            center: userLocation,
-            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-        )
     }
     
     func centerOnEvent(_ event: Event) {
-        region = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-        )
+        withAnimation(.easeOut(duration: 0.3)) {
+            region = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+        }
     }
     
     func zoomToFitEvents(_ events: [Event]) {
@@ -110,7 +120,9 @@ final class MapViewModel: NSObject, ObservableObject {
             longitudeDelta: (maxLng - minLng) * 1.5
         )
         
-        region = MKCoordinateRegion(center: center, span: span)
+        withAnimation(.easeOut(duration: 0.3)) {
+            region = MKCoordinateRegion(center: center, span: span)
+        }
     }
 }
 
@@ -123,9 +135,9 @@ extension MapViewModel: CLLocationManagerDelegate {
         Task { @MainActor in
             self.userLocation = location.coordinate
             
-            // Center on user on first location update only
-            if !self.hasReceivedInitialLocation && self.isTrackingUser {
-                self.hasReceivedInitialLocation = true
+            // If we were waiting to center on user, do it now
+            if self.pendingCenterOnUser {
+                self.pendingCenterOnUser = false
                 self.centerOnUser()
             }
         }
@@ -137,11 +149,19 @@ extension MapViewModel: CLLocationManagerDelegate {
             
             if status == .authorizedWhenInUse || status == .authorizedAlways {
                 self.startTrackingLocation()
+                
+                // If we have a pending center request, trigger location update
+                if self.pendingCenterOnUser {
+                    manager.requestLocation()
+                }
             }
         }
     }
     
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location manager error: \(error.localizedDescription)")
+        Task { @MainActor in
+            self.pendingCenterOnUser = false
+        }
     }
 }

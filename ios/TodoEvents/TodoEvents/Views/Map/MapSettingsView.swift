@@ -131,25 +131,6 @@ struct MapSettingsView: View {
     }
 }
 
-// MARK: - Filter Enums
-
-enum DateFilter: String, CaseIterable {
-    case all = "all"
-    case today = "today"
-    case thisWeek = "thisWeek"
-    case thisMonth = "thisMonth"
-    case next3Months = "next3Months"
-}
-
-enum DistanceFilter: Double, CaseIterable {
-    case any = 0
-    case miles5 = 5
-    case miles10 = 10
-    case miles25 = 25
-    case miles50 = 50
-    case miles100 = 100
-}
-
 #Preview {
     MapSettingsView(eventsViewModel: EventsViewModel())
 }
