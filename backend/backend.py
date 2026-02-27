@@ -17,6 +17,7 @@ import threading
 import stripe
 from PIL import Image, ImageOps
 import io
+import anthropic
 
 # Import SEO utilities
 try:
@@ -5264,6 +5265,150 @@ async def toggle_event_verification(
     except Exception as e:
         logger.error(f"Error updating event verification {event_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error updating event verification")
+
+
+@app.post("/admin/ai-parse-events")
+async def ai_parse_events(
+    request_body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Use Claude AI to parse chaotic/unstructured event data into structured events.
+    Admin-only endpoint.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    raw_data = request_body.get("raw_data", "").strip()
+    if not raw_data:
+        raise HTTPException(status_code=400, detail="No data provided")
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Anthropic API key not configured on server",
+        )
+
+    valid_categories = [
+        "food-drink", "music", "arts", "sports", "automotive", "airshows",
+        "vehicle-sports", "community", "religious", "education", "veteran",
+        "cookout", "networking", "fair-festival", "diving", "shopping",
+        "health", "outdoors", "photography", "family", "gaming",
+        "real-estate", "adventure", "seasonal", "agriculture", "other",
+    ]
+
+    system_prompt = f"""You are an event data parser. Your job is to take messy, unstructured event data (from spreadsheets, emails, websites, lists, etc.) and convert each event into a clean JSON object.
+
+Output ONLY a valid JSON object with an "events" array. No other text.
+
+Each event object MUST have these required fields:
+- "title": string - event name
+- "description": string - detailed description (write a good one if only a short blurb is given, at least 2 sentences)
+- "date": string - YYYY-MM-DD format
+- "start_time": string - HH:MM in 24-hour format
+- "category": string - one of: {', '.join(valid_categories)}
+- "address": string - full address including city, state, country
+- "lat": number - latitude (look up or estimate from address)
+- "lng": number - longitude (look up or estimate from address)
+
+Optional fields (include when data is available):
+- "end_time": string - HH:MM in 24-hour format
+- "end_date": string - YYYY-MM-DD format (for multi-day events)
+- "secondary_category": string - one of the valid categories above
+- "recurring": boolean - true if event repeats
+- "frequency": string - "weekly" or "monthly" (only if recurring)
+- "fee_required": string - ticket/fee info (e.g., "Free admission", "$10 entry")
+- "event_url": string - event website URL
+- "host_name": string - organizer/host name
+- "verified": boolean - set to true
+
+Rules:
+1. If a date is ambiguous (e.g., "next Saturday"), use a reasonable date in 2026.
+2. If no time is given, use "09:00" as default.
+3. If no address details exist but a city is mentioned, use the city center coordinates.
+4. Always pick the best matching category from the valid list.
+5. Latitude and longitude must be realistic for the given address.
+6. Parse ALL events from the input, even if data is messy or incomplete.
+7. If the year is missing, assume 2026.
+8. Output valid JSON only - no markdown, no explanation."""
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=8192,
+            system=system_prompt,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Parse the following data into structured events:\n\n{raw_data}",
+                }
+            ],
+        )
+
+        response_text = message.content[0].text.strip()
+
+        # Try to extract JSON from the response
+        # Handle cases where the model wraps JSON in markdown code blocks
+        if response_text.startswith("```"):
+            lines = response_text.split("\n")
+            # Remove first and last lines (```json and ```)
+            json_lines = []
+            in_block = False
+            for line in lines:
+                if line.strip().startswith("```") and not in_block:
+                    in_block = True
+                    continue
+                elif line.strip() == "```" and in_block:
+                    break
+                elif in_block:
+                    json_lines.append(line)
+            response_text = "\n".join(json_lines)
+
+        parsed = json.loads(response_text)
+
+        if "events" not in parsed:
+            # Maybe it returned an array directly
+            if isinstance(parsed, list):
+                parsed = {"events": parsed}
+            else:
+                raise ValueError("Response missing 'events' key")
+
+        # Validate each event has required fields
+        required = ["title", "description", "date", "start_time", "category", "address", "lat", "lng"]
+        for i, event in enumerate(parsed["events"]):
+            missing = [f for f in required if f not in event or event[f] is None or event[f] == ""]
+            if missing:
+                logger.warning(f"AI-parsed event {i+1} missing fields: {missing}")
+
+            # Ensure category is valid
+            if event.get("category") not in valid_categories:
+                event["category"] = "other"
+            if event.get("secondary_category") and event["secondary_category"] not in valid_categories:
+                del event["secondary_category"]
+
+        return {
+            "events": parsed["events"],
+            "count": len(parsed["events"]),
+            "usage": {
+                "input_tokens": message.usage.input_tokens,
+                "output_tokens": message.usage.output_tokens,
+            },
+        }
+
+    except json.JSONDecodeError as e:
+        logger.error(f"AI response was not valid JSON: {e}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"AI returned invalid JSON. Try again or simplify input. Raw: {response_text[:500]}",
+        )
+    except anthropic.APIError as e:
+        logger.error(f"Anthropic API error: {e}")
+        raise HTTPException(status_code=502, detail=f"AI service error: {str(e)}")
+    except Exception as e:
+        logger.error(f"AI parse error: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse events: {str(e)}")
 
 
 def generate_browser_fingerprint(request: Request) -> str:

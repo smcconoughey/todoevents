@@ -69,6 +69,7 @@ struct MapView: View {
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.blue)
                                 .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
                         
                         Divider().frame(width: 30)
@@ -81,37 +82,18 @@ struct MapView: View {
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.green)
                                 .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
                         
                         Divider().frame(width: 30)
                         
-                        // Zoom in
-                        Button {
-                            withAnimation {
-                                let newDelta = max(mapViewModel.region.span.latitudeDelta * 0.5, 0.002)
-                                mapViewModel.region.span = MKCoordinateSpan(latitudeDelta: newDelta, longitudeDelta: newDelta)
-                            }
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: 44, height: 44)
-                        }
+                        // Zoom in - supports multi-tap for faster zoom
+                        ZoomButton(icon: "plus", isZoomIn: true, mapViewModel: mapViewModel)
                         
                         Divider().frame(width: 30)
                         
-                        // Zoom out
-                        Button {
-                            withAnimation {
-                                let newDelta = min(mapViewModel.region.span.latitudeDelta * 2, 120)
-                                mapViewModel.region.span = MKCoordinateSpan(latitudeDelta: newDelta, longitudeDelta: newDelta)
-                            }
-                        } label: {
-                            Image(systemName: "minus")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: 44, height: 44)
-                        }
+                        // Zoom out - supports multi-tap for faster zoom
+                        ZoomButton(icon: "minus", isZoomIn: false, mapViewModel: mapViewModel)
                     }
                     .background(.regularMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -183,6 +165,100 @@ struct Triangle: Shape {
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
         path.closeSubpath()
         return path
+    }
+}
+
+// MARK: - Zoom Button with Multi-Tap Support
+
+struct ZoomButton: View {
+    let icon: String
+    let isZoomIn: Bool
+    @ObservedObject var mapViewModel: MapViewModel
+    
+    @State private var tapCount = 0
+    @State private var tapTimer: Timer?
+    @State private var isPressed = false
+    
+    var body: some View {
+        Image(systemName: icon)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(.primary)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+            .scaleEffect(isPressed ? 0.85 : 1.0)
+            .animation(.easeOut(duration: 0.1), value: isPressed)
+            .onTapGesture {
+                // Immediate visual feedback
+                withAnimation(.easeOut(duration: 0.05)) {
+                    isPressed = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeOut(duration: 0.05)) {
+                        isPressed = false
+                    }
+                }
+                
+                // Count taps
+                tapCount += 1
+                tapTimer?.invalidate()
+                
+                // Wait 300ms to see if more taps come
+                tapTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
+                    Task { @MainActor in
+                        performZoom(multiplier: tapCount)
+                        tapCount = 0
+                    }
+                }
+            }
+            .onLongPressGesture(minimumDuration: 0.3, pressing: { pressing in
+                if pressing {
+                    // Start rapid zoom on long press
+                    isPressed = true
+                    startContinuousZoom()
+                } else {
+                    isPressed = false
+                    stopContinuousZoom()
+                }
+            }, perform: {})
+    }
+    
+    private func performZoom(multiplier: Int) {
+        // multiplier: 1 = normal, 2 = double, 3+ = triple
+        let zoomFactor: Double
+        switch multiplier {
+        case 1: zoomFactor = isZoomIn ? 0.5 : 2.0
+        case 2: zoomFactor = isZoomIn ? 0.25 : 4.0    // 4x faster
+        default: zoomFactor = isZoomIn ? 0.125 : 8.0  // 8x faster
+        }
+        
+        withAnimation(.easeOut(duration: 0.15)) {
+            let currentDelta = mapViewModel.region.span.latitudeDelta
+            let newDelta: Double
+            
+            if isZoomIn {
+                newDelta = max(currentDelta * zoomFactor, 0.002)
+            } else {
+                newDelta = min(currentDelta * zoomFactor, 120)
+            }
+            
+            mapViewModel.region.span = MKCoordinateSpan(latitudeDelta: newDelta, longitudeDelta: newDelta)
+        }
+    }
+    
+    @State private var zoomTimer: Timer?
+    
+    private func startContinuousZoom() {
+        zoomTimer?.invalidate()
+        zoomTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            Task { @MainActor in
+                performZoom(multiplier: 1)
+            }
+        }
+    }
+    
+    private func stopContinuousZoom() {
+        zoomTimer?.invalidate()
+        zoomTimer = nil
     }
 }
 
