@@ -83,7 +83,12 @@ actor EventService {
     
     /// Toggle interest in an event
     func toggleInterest(eventId: Int) async throws {
-        let _: EmptyResponse = try await api.post("/events/\(eventId)/interest", body: EmptyBody())
+        let _: InterestResponse = try await api.post("/events/\(eventId)/interest", body: EmptyBody())
+    }
+
+    /// Record a view for an event
+    func recordView(eventId: Int) async throws {
+        let _: ViewResponse = try await api.post("/events/\(eventId)/view", body: EmptyBody())
     }
 }
 
@@ -92,3 +97,38 @@ actor EventService {
 struct EmptyBody: Encodable {}
 
 struct EmptyResponse: Decodable {}
+
+struct InterestResponse: Decodable {
+    let interested: Bool?
+    let interestCount: Int?
+    let detail: String?
+
+    enum CodingKeys: String, CodingKey {
+        case interested
+        case interestCount = "interest_count"
+        case detail
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        interested = try container.decodeIfPresent(Bool.self, forKey: .interested)
+        interestCount = try container.decodeIfPresent(Int.self, forKey: .interestCount)
+        detail = try container.decodeIfPresent(String.self, forKey: .detail)
+    }
+}
+
+struct ViewResponse: Decodable {
+    let viewCount: Int?
+    let detail: String?
+
+    enum CodingKeys: String, CodingKey {
+        case viewCount = "view_count"
+        case detail
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        viewCount = try container.decodeIfPresent(Int.self, forKey: .viewCount)
+        detail = try container.decodeIfPresent(String.self, forKey: .detail)
+    }
+}

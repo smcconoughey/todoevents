@@ -838,6 +838,363 @@ const EVENT_CATEGORIES = [
   { id: 'other', name: 'Other', description: 'Events that don\'t fit into other categories' }
 ];
 
+// ==================== AI IMPORT (defined outside AdminDashboard to prevent remount) ====================
+const AIImport = ({ fetchData }) => {
+  const [rawInput, setRawInput] = useState('');
+  const [parsedEvents, setParsedEvents] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [aiSuccess, setAiSuccess] = useState(null);
+  const [importResults, setImportResults] = useState(null);
+  const [tokenUsage, setTokenUsage] = useState(null);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const fileInputRef = useRef(null);
+
+  const validCategories = [
+    'food-drink', 'music', 'arts', 'sports', 'automotive', 'airshows',
+    'vehicle-sports', 'community', 'religious', 'education', 'veteran',
+    'cookout', 'networking', 'fair-festival', 'diving', 'shopping',
+    'health', 'outdoors', 'photography', 'family', 'gaming',
+    'real-estate', 'adventure', 'seasonal', 'agriculture', 'other'
+  ];
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setRawInput(evt.target.result);
+      setAiError(null);
+      setParsedEvents(null);
+      setImportResults(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleAIParse = async () => {
+    if (!rawInput.trim()) {
+      setAiError('Please paste or upload some event data first');
+      return;
+    }
+    setIsProcessing(true);
+    setAiError(null);
+    setAiSuccess(null);
+    setParsedEvents(null);
+    setImportResults(null);
+    setTokenUsage(null);
+    try {
+      const result = await fetchData('/admin/ai-parse-events', 'POST', { raw_data: rawInput });
+      setParsedEvents(result.events);
+      setTokenUsage(result.usage);
+      setAiSuccess(`AI parsed ${result.count} event${result.count !== 1 ? 's' : ''} from your data`);
+    } catch (err) {
+      setAiError(err.message || 'Failed to parse events with AI');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRemoveEvent = (index) => {
+    setParsedEvents(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditEvent = (index) => {
+    setEditingIndex(index);
+    setEditForm({ ...parsedEvents[index] });
+  };
+
+  const handleSaveEdit = () => {
+    setParsedEvents(prev => prev.map((ev, i) => i === editingIndex ? { ...editForm } : ev));
+    setEditingIndex(null);
+    setEditForm({});
+  };
+
+  const handleImportAll = async () => {
+    if (!parsedEvents || parsedEvents.length === 0) return;
+    setIsImporting(true);
+    setAiError(null);
+    setAiSuccess(null);
+    let successCount = 0;
+    let errorCount = 0;
+    const errorDetails = [];
+    for (let i = 0; i < parsedEvents.length; i++) {
+      try {
+        const resp = await fetchData('/events', 'POST', parsedEvents[i]);
+        if (resp && resp.id) {
+          successCount++;
+        } else {
+          errorCount++;
+          errorDetails.push(`Event ${i + 1} (${parsedEvents[i].title}): Unexpected response`);
+        }
+      } catch (err) {
+        errorCount++;
+        errorDetails.push(`Event ${i + 1} (${parsedEvents[i].title}): ${err.message || 'Error'}`);
+      }
+    }
+    setImportResults({ success_count: successCount, error_count: errorCount, errors: errorDetails });
+    if (successCount > 0) {
+      setAiSuccess(`Successfully imported ${successCount} event${successCount !== 1 ? 's' : ''}!${errorCount > 0 ? ` ${errorCount} failed.` : ''}`);
+      if (errorCount === 0) {
+        setParsedEvents(null);
+        setRawInput('');
+      }
+    }
+    if (errorCount > 0 && successCount === 0) {
+      setAiError(`All ${errorCount} events failed to import.`);
+    }
+    setIsImporting(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-md p-6 text-white">
+        <h3 className="text-2xl font-bold mb-2 flex items-center">
+          <Lightbulb className="mr-3" size={28} />
+          AI Event Import
+        </h3>
+        <p className="text-purple-100">
+          Paste any messy data — spreadsheets, emails, lists, website copy — and AI will parse it into structured events ready to import.
+        </p>
+      </div>
+
+      {/* Messages */}
+      {aiSuccess && (
+        <div className="p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg flex items-start">
+          <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+          <div>
+            <div className="font-medium">{aiSuccess}</div>
+            {tokenUsage && (
+              <div className="text-xs mt-1 text-green-600">
+                Tokens used: {tokenUsage.input_tokens} input + {tokenUsage.output_tokens} output
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {aiError && (
+        <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-start">
+          <AlertTriangle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+          <div>
+            <div className="font-medium">Error</div>
+            <div className="text-sm mt-1">{aiError}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Input Section */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-lg font-semibold text-gray-800">Step 1: Provide Raw Data</h4>
+          <div className="flex items-center space-x-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".csv,.tsv,.txt,.json"
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center"
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              Upload File
+            </button>
+          </div>
+        </div>
+
+        <textarea
+          value={rawInput}
+          onChange={(e) => { setRawInput(e.target.value); setAiError(null); }}
+          className="w-full h-56 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-mono text-sm resize-y"
+          placeholder={`Paste any event data here. Examples:\n\n- Spreadsheet rows (copy-paste from Excel/Google Sheets)\n- Email text with event details\n- A list of events from a website\n- CSV data\n- Even messy notes like:\n  "Jazz night at Blue Note, March 15 8pm, $20 cover\n   Farmers market every Saturday 9am-1pm downtown Portland free"`}
+          spellCheck="false"
+        />
+
+        <div className="flex items-center justify-between mt-3">
+          <div className="text-xs text-gray-500">
+            {rawInput.length > 0 && `${rawInput.length} characters`}
+          </div>
+          <button
+            onClick={handleAIParse}
+            disabled={isProcessing || !rawInput.trim()}
+            className="bg-purple-600 text-white py-2 px-6 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center font-medium"
+          >
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                AI Processing...
+              </>
+            ) : (
+              <>
+                <Lightbulb className="mr-2" size={16} />
+                Parse with AI
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Parsed Events Review */}
+      {parsedEvents && parsedEvents.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-semibold text-gray-800">
+              Step 2: Review Parsed Events ({parsedEvents.length})
+            </h4>
+            <button
+              onClick={handleImportAll}
+              disabled={isImporting}
+              className="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center font-medium"
+            >
+              {isImporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2" size={16} />
+                  Import All {parsedEvents.length} Events
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {parsedEvents.map((event, index) => (
+              <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
+                {editingIndex === index ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Title</label>
+                        <input value={editForm.title || ''} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Category</label>
+                        <select value={editForm.category || 'other'} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} className="w-full p-2 border rounded text-sm">
+                          {validCategories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Date</label>
+                        <input type="date" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Start Time</label>
+                        <input type="time" value={editForm.start_time || ''} onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">End Time</label>
+                        <input type="time" value={editForm.end_time || ''} onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Address</label>
+                        <input value={editForm.address || ''} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Lat</label>
+                        <input type="number" step="any" value={editForm.lat || ''} onChange={(e) => setEditForm({ ...editForm, lat: parseFloat(e.target.value) })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Lng</label>
+                        <input type="number" step="any" value={editForm.lng || ''} onChange={(e) => setEditForm({ ...editForm, lng: parseFloat(e.target.value) })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Fee Info</label>
+                        <input value={editForm.fee_required || ''} onChange={(e) => setEditForm({ ...editForm, fee_required: e.target.value })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Host Name</label>
+                        <input value={editForm.host_name || ''} onChange={(e) => setEditForm({ ...editForm, host_name: e.target.value })} className="w-full p-2 border rounded text-sm" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">Description</label>
+                      <textarea value={editForm.description || ''} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full p-2 border rounded text-sm h-20 resize-y" />
+                    </div>
+                    <div className="flex space-x-2">
+                      <button onClick={handleSaveEdit} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">Save</button>
+                      <button onClick={() => { setEditingIndex(null); setEditForm({}); }} className="px-3 py-1.5 bg-gray-400 text-white rounded text-sm hover:bg-gray-500">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold text-gray-800">{event.title}</span>
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{event.category}</span>
+                        {event.secondary_category && (
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{event.secondary_category}</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-0.5">
+                        <div className="flex items-center"><Calendar className="w-3.5 h-3.5 mr-1.5" />{event.date} at {event.start_time}{event.end_time ? ` - ${event.end_time}` : ''}{event.end_date && ` (through ${event.end_date})`}</div>
+                        <div className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1.5" />{event.address}</div>
+                        {event.host_name && (<div className="flex items-center"><User className="w-3.5 h-3.5 mr-1.5" />{event.host_name}</div>)}
+                        {event.fee_required && (<div className="flex items-center"><DollarSign className="w-3.5 h-3.5 mr-1.5" />{event.fee_required}</div>)}
+                        <div className="text-xs text-gray-400 mt-1 line-clamp-2">{event.description}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1 ml-3">
+                      <button onClick={() => handleEditEvent(index)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit"><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => handleRemoveEvent(index)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Remove"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Import Results */}
+      {importResults && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4">Import Results</h4>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="text-3xl font-bold text-green-600">{importResults.success_count}</div>
+              <div className="text-sm text-green-700 font-medium">Imported</div>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+              <div className="text-3xl font-bold text-red-600">{importResults.error_count}</div>
+              <div className="text-sm text-red-700 font-medium">Failed</div>
+            </div>
+          </div>
+          {importResults.errors.length > 0 && (
+            <div className="mt-3">
+              <h5 className="font-medium text-red-600 mb-2">Errors:</h5>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {importResults.errors.map((err, i) => (
+                  <div key={i} className="text-sm text-red-600 bg-red-50 p-2 rounded">{err}</div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tips */}
+      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <h5 className="font-medium text-blue-800 mb-2">Tips for best results:</h5>
+        <ul className="text-sm text-blue-700 space-y-1 list-disc ml-4">
+          <li>Include dates, times, locations, and event names in your data</li>
+          <li>CSV/spreadsheet data with headers works great</li>
+          <li>The AI will estimate coordinates from addresses</li>
+          <li>Review and edit parsed events before importing</li>
+          <li>You can remove events you don't want to import</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
 // Main Admin Dashboard Component
 const AdminDashboard = () => {
   // State Management
@@ -877,480 +1234,6 @@ const AdminDashboard = () => {
   });
 
   // Bulk Operations Component
-  // ==================== AI IMPORT ====================
-  const AIImport = () => {
-    const [rawInput, setRawInput] = useState('');
-    const [parsedEvents, setParsedEvents] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [isImporting, setIsImporting] = useState(false);
-    const [aiError, setAiError] = useState(null);
-    const [aiSuccess, setAiSuccess] = useState(null);
-    const [importResults, setImportResults] = useState(null);
-    const [tokenUsage, setTokenUsage] = useState(null);
-    const [editingIndex, setEditingIndex] = useState(null);
-    const [editForm, setEditForm] = useState({});
-    const fileInputRef = useRef(null);
-
-    const validCategories = [
-      'food-drink', 'music', 'arts', 'sports', 'automotive', 'airshows',
-      'vehicle-sports', 'community', 'religious', 'education', 'veteran',
-      'cookout', 'networking', 'fair-festival', 'diving', 'shopping',
-      'health', 'outdoors', 'photography', 'family', 'gaming',
-      'real-estate', 'adventure', 'seasonal', 'agriculture', 'other'
-    ];
-
-    const handleFileUpload = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        setRawInput(evt.target.result);
-        setAiError(null);
-        setParsedEvents(null);
-        setImportResults(null);
-      };
-
-      if (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt')) {
-        reader.readAsText(file);
-      } else if (file.name.endsWith('.json')) {
-        reader.readAsText(file);
-      } else {
-        reader.readAsText(file);
-      }
-    };
-
-    const handleAIParse = async () => {
-      if (!rawInput.trim()) {
-        setAiError('Please paste or upload some event data first');
-        return;
-      }
-
-      setIsProcessing(true);
-      setAiError(null);
-      setAiSuccess(null);
-      setParsedEvents(null);
-      setImportResults(null);
-      setTokenUsage(null);
-
-      try {
-        const result = await fetchData('/admin/ai-parse-events', 'POST', {
-          raw_data: rawInput
-        });
-
-        setParsedEvents(result.events);
-        setTokenUsage(result.usage);
-        setAiSuccess(`AI parsed ${result.count} event${result.count !== 1 ? 's' : ''} from your data`);
-      } catch (err) {
-        setAiError(err.message || 'Failed to parse events with AI');
-      } finally {
-        setIsProcessing(false);
-      }
-    };
-
-    const handleRemoveEvent = (index) => {
-      setParsedEvents(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const handleEditEvent = (index) => {
-      setEditingIndex(index);
-      setEditForm({ ...parsedEvents[index] });
-    };
-
-    const handleSaveEdit = () => {
-      setParsedEvents(prev => prev.map((ev, i) => i === editingIndex ? { ...editForm } : ev));
-      setEditingIndex(null);
-      setEditForm({});
-    };
-
-    const handleImportAll = async () => {
-      if (!parsedEvents || parsedEvents.length === 0) return;
-
-      setIsImporting(true);
-      setAiError(null);
-      setAiSuccess(null);
-
-      let successCount = 0;
-      let errorCount = 0;
-      const errorDetails = [];
-
-      for (let i = 0; i < parsedEvents.length; i++) {
-        try {
-          const resp = await fetchData('/events', 'POST', parsedEvents[i]);
-          if (resp && resp.id) {
-            successCount++;
-          } else {
-            errorCount++;
-            errorDetails.push(`Event ${i + 1} (${parsedEvents[i].title}): Unexpected response`);
-          }
-        } catch (err) {
-          errorCount++;
-          errorDetails.push(`Event ${i + 1} (${parsedEvents[i].title}): ${err.message || 'Error'}`);
-        }
-      }
-
-      setImportResults({ success_count: successCount, error_count: errorCount, errors: errorDetails });
-
-      if (successCount > 0) {
-        setAiSuccess(`Successfully imported ${successCount} event${successCount !== 1 ? 's' : ''}!${errorCount > 0 ? ` ${errorCount} failed.` : ''}`);
-        if (errorCount === 0) {
-          setParsedEvents(null);
-          setRawInput('');
-        }
-      }
-      if (errorCount > 0 && successCount === 0) {
-        setAiError(`All ${errorCount} events failed to import.`);
-      }
-
-      setIsImporting(false);
-    };
-
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-md p-6 text-white">
-          <h3 className="text-2xl font-bold mb-2 flex items-center">
-            <Lightbulb className="mr-3" size={28} />
-            AI Event Import
-          </h3>
-          <p className="text-purple-100">
-            Paste any messy data — spreadsheets, emails, lists, website copy — and AI will parse it into structured events ready to import.
-          </p>
-        </div>
-
-        {/* Messages */}
-        {aiSuccess && (
-          <div className="p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg flex items-start">
-            <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="font-medium">{aiSuccess}</div>
-              {tokenUsage && (
-                <div className="text-xs mt-1 text-green-600">
-                  Tokens used: {tokenUsage.input_tokens} input + {tokenUsage.output_tokens} output
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {aiError && (
-          <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-start">
-            <AlertTriangle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="font-medium">Error</div>
-              <div className="text-sm mt-1">{aiError}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Input Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-gray-800">Step 1: Provide Raw Data</h4>
-            <div className="flex items-center space-x-2">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept=".csv,.tsv,.txt,.json"
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center"
-              >
-                <Upload className="w-4 h-4 mr-1" />
-                Upload File
-              </button>
-            </div>
-          </div>
-
-          <textarea
-            value={rawInput}
-            onChange={(e) => { setRawInput(e.target.value); setAiError(null); }}
-            className="w-full h-56 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-mono text-sm resize-y"
-            placeholder={`Paste any event data here. Examples:\n\n- Spreadsheet rows (copy-paste from Excel/Google Sheets)\n- Email text with event details\n- A list of events from a website\n- CSV data\n- Even messy notes like:\n  "Jazz night at Blue Note, March 15 8pm, $20 cover\n   Farmers market every Saturday 9am-1pm downtown Portland free"`}
-            spellCheck="false"
-          />
-
-          <div className="flex items-center justify-between mt-3">
-            <div className="text-xs text-gray-500">
-              {rawInput.length > 0 && `${rawInput.length} characters`}
-            </div>
-            <button
-              onClick={handleAIParse}
-              disabled={isProcessing || !rawInput.trim()}
-              className="bg-purple-600 text-white py-2 px-6 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center font-medium"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                  AI Processing...
-                </>
-              ) : (
-                <>
-                  <Lightbulb className="mr-2" size={16} />
-                  Parse with AI
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Parsed Events Review */}
-        {parsedEvents && parsedEvents.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-gray-800">
-                Step 2: Review Parsed Events ({parsedEvents.length})
-              </h4>
-              <button
-                onClick={handleImportAll}
-                disabled={isImporting}
-                className="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center font-medium"
-              >
-                {isImporting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2" size={16} />
-                    Import All {parsedEvents.length} Events
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {parsedEvents.map((event, index) => (
-                <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
-                  {editingIndex === index ? (
-                    /* Edit Mode */
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Title</label>
-                          <input
-                            value={editForm.title || ''}
-                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Category</label>
-                          <select
-                            value={editForm.category || 'other'}
-                            onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          >
-                            {validCategories.map(cat => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Date</label>
-                          <input
-                            type="date"
-                            value={editForm.date || ''}
-                            onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Start Time</label>
-                          <input
-                            type="time"
-                            value={editForm.start_time || ''}
-                            onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">End Time</label>
-                          <input
-                            type="time"
-                            value={editForm.end_time || ''}
-                            onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Address</label>
-                          <input
-                            value={editForm.address || ''}
-                            onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Lat</label>
-                          <input
-                            type="number"
-                            step="any"
-                            value={editForm.lat || ''}
-                            onChange={(e) => setEditForm({ ...editForm, lat: parseFloat(e.target.value) })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Lng</label>
-                          <input
-                            type="number"
-                            step="any"
-                            value={editForm.lng || ''}
-                            onChange={(e) => setEditForm({ ...editForm, lng: parseFloat(e.target.value) })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Fee Info</label>
-                          <input
-                            value={editForm.fee_required || ''}
-                            onChange={(e) => setEditForm({ ...editForm, fee_required: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Host Name</label>
-                          <input
-                            value={editForm.host_name || ''}
-                            onChange={(e) => setEditForm({ ...editForm, host_name: e.target.value })}
-                            className="w-full p-2 border rounded text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Description</label>
-                        <textarea
-                          value={editForm.description || ''}
-                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                          className="w-full p-2 border rounded text-sm h-20 resize-y"
-                        />
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => { setEditingIndex(null); setEditForm({}); }}
-                          className="px-3 py-1.5 bg-gray-400 text-white rounded text-sm hover:bg-gray-500"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* View Mode */
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="font-semibold text-gray-800">{event.title}</span>
-                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                            {event.category}
-                          </span>
-                          {event.secondary_category && (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                              {event.secondary_category}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-600 space-y-0.5">
-                          <div className="flex items-center">
-                            <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                            {event.date} at {event.start_time}{event.end_time ? ` - ${event.end_time}` : ''}
-                            {event.end_date && ` (through ${event.end_date})`}
-                          </div>
-                          <div className="flex items-center">
-                            <MapPin className="w-3.5 h-3.5 mr-1.5" />
-                            {event.address}
-                          </div>
-                          {event.host_name && (
-                            <div className="flex items-center">
-                              <User className="w-3.5 h-3.5 mr-1.5" />
-                              {event.host_name}
-                            </div>
-                          )}
-                          {event.fee_required && (
-                            <div className="flex items-center">
-                              <DollarSign className="w-3.5 h-3.5 mr-1.5" />
-                              {event.fee_required}
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-400 mt-1 line-clamp-2">{event.description}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-1 ml-3">
-                        <button
-                          onClick={() => handleEditEvent(index)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleRemoveEvent(index)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                          title="Remove"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Import Results */}
-        {importResults && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">Import Results</h4>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="text-3xl font-bold text-green-600">{importResults.success_count}</div>
-                <div className="text-sm text-green-700 font-medium">Imported</div>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
-                <div className="text-3xl font-bold text-red-600">{importResults.error_count}</div>
-                <div className="text-sm text-red-700 font-medium">Failed</div>
-              </div>
-            </div>
-            {importResults.errors.length > 0 && (
-              <div className="mt-3">
-                <h5 className="font-medium text-red-600 mb-2">Errors:</h5>
-                <div className="max-h-40 overflow-y-auto space-y-1">
-                  {importResults.errors.map((err, i) => (
-                    <div key={i} className="text-sm text-red-600 bg-red-50 p-2 rounded">{err}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tips */}
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <h5 className="font-medium text-blue-800 mb-2">Tips for best results:</h5>
-          <ul className="text-sm text-blue-700 space-y-1 list-disc ml-4">
-            <li>Include dates, times, locations, and event names in your data</li>
-            <li>CSV/spreadsheet data with headers works great</li>
-            <li>The AI will estimate coordinates from addresses</li>
-            <li>Review and edit parsed events before importing</li>
-            <li>You can remove events you don't want to import</li>
-          </ul>
-        </div>
-      </div>
-    );
-  };
-
   const BulkOperations = () => {
     const [jsonInput, setJsonInput] = useState('');
     const [importResults, setImportResults] = useState(null);
@@ -5494,7 +5377,7 @@ const AdminDashboard = () => {
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'media' && <MediaModeration />}
           {activeTab === 'moderation' && <ModerationTools />}
-          {activeTab === 'ai-import' && <AIImport />}
+          {activeTab === 'ai-import' && <AIImport fetchData={fetchData} />}
           {activeTab === 'bulk' && <BulkOperations />}
         </div>
       </div>
