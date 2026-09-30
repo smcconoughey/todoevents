@@ -6,9 +6,9 @@ The implementation is complete locally on `codex/chatgpt-plugin`, based on `2c4d
 
 | Check | Actual result |
 | --- | --- |
-| Combined `pytest backend/tests` | **193 passed, 0 failed, 0 skipped**; 125 legacy deprecation warnings; 4.09 seconds |
+| Combined `pytest backend/tests` | **217 passed, 0 failed, 0 skipped**; 125 legacy deprecation warnings |
 | OAuth verification and identity mapping | 33 tests passed, included above |
-| Local CLI fixture and overwrite protection | 2 tests passed, included above |
+| Local CLI fixture, overwrite and trusted-proxy protection | 26 tests passed, included above |
 | Domain discovery/review/publish/update/cancel | 43 tests passed, included above |
 | Real OAuth/MCP/shared legacy application integration | 11 tests passed, included above |
 | Actual PostgreSQL | **20 tests passed**, included above; PostgreSQL 18.6, temporary local Unix-socket instance |
@@ -21,7 +21,7 @@ The implementation is complete locally on `codex/chatgpt-plugin`, based on `2c4d
 | Dependency consistency | `pip check` passed in both integrated test and fresh standalone runtime environments |
 | Widget dependency audit | **0 reported vulnerabilities** on this date |
 
-Total across the backend, widget, and packaging suites: **257 passing tests**. The PostgreSQL tests actually ran; they were not counted from a skipped run. Each uses isolated schema/records; no production database was accessed. PostgreSQL tests include concurrent create/update retries, competing previews, update/cancel races, rollback, and actual legacy web event/account deletion with absent or sparse optional tables.
+Total across the backend, widget, and packaging suites: **281 passing tests**. The PostgreSQL tests actually ran; they were not counted from a skipped run. Each uses isolated schema/records; no production database was accessed. PostgreSQL tests include concurrent create/update retries, competing previews, update/cancel races, rollback, and actual legacy web event/account deletion with absent or sparse optional tables.
 
 ## The shared-record loop
 
@@ -65,6 +65,8 @@ Separate reviewers examined the final domain/transport/UI/package changes, inclu
 Review and integration testing resulted in fixes for: published-only reads across public APIs; caller-supplied signup roles; unprotected administrative routes; implicit administrator provisioning; radius expansion/deduplication; invalid/overnight event times; cancelled and unpublished web edits; stale timezone metadata; canonical slug stability; deletion cascades; child-first account deletion and sparse PostgreSQL optional tables. Existing commercial licensing and source assets remain unchanged.
 
 Review is evidence, not certification. Installed-client consent behavior, real provider configuration and deployed proxy/database behavior remain release gates.
+
+The final deployment review also found that ignoring all forwarded client addresses would make reverse-proxy traffic share a rate-limit bucket. The launcher now supports an explicit validated `PLUGIN_TRUSTED_PROXY_IPS` boundary and continues to reject forwarded headers by default. Wildcards, hostnames, unrestricted networks and invalid values are rejected. Tests verify that an approved proxy can forward distinct clients and an untrusted sender cannot spoof the peer. Actual provider proxy ranges and aggregate capacity still require deployment verification; the code does not guess or automatically trust a hosting network.
 
 ## Existing application failures and unrun checks
 
