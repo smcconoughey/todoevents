@@ -1,0 +1,12 @@
+.git
+.venv
+.test-runtime
+**/node_modules
+**/__pycache__
+**/.env*
+**/*.db
+**/*.db-*
+**/*.sqlite3
+**/*.log
+**/.DS_Store
+AGENTS.md

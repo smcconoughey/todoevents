@@ -172,4 +172,12 @@ Access to premium features (vendor portals, analytics, SMS alerts, public maps) 
 - Email: support@todo-events.com  
 - Website: todo-events.com
 
-See the LICENSE file for complete terms and conditions. 
+See the LICENSE file for complete terms and conditions.
+
+## ChatGPT and Codex plugin
+
+The independently deployable MCP plugin provides public event discovery and
+authenticated organizer draft review, publication, updates, and cancellation. The existing
+web app remains available. Start with [plugin setup and release status](docs/chatgpt-plugin/README.md)
+and [verification evidence](docs/chatgpt-plugin/TEST_REPORT.md). Local implementation
+does not mean the plugin has been deployed, submitted, or approved by OpenAI.

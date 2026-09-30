@@ -52,7 +52,10 @@ from fastapi.responses import FileResponse
 
 # MissionOps import
 try:
-    from missionops_endpoints import missionops_router
+    if os.getenv("TODOEVENTS_SKIP_STARTUP") == "1":
+        missionops_router = None
+    else:
+        from missionops_endpoints import missionops_router
 except ImportError:
     missionops_router = None
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -60,7 +63,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response, JSONResponse
 
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator, root_validator
+from event_safety import event_interval, overlaps_dates, distance_miles, canonical_event_url
 from passlib.context import CryptContext
 import jwt
 
@@ -80,6 +84,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 90))
 # Environment configuration
 IS_PRODUCTION = os.getenv("RENDER", False) or os.getenv("RAILWAY_ENVIRONMENT", False)
 DB_URL = os.getenv("DATABASE_URL", None)
+if IS_PRODUCTION and (SECRET_KEY == "fallback-secret-key-for-development-only" or len(SECRET_KEY) < 32):
+    raise RuntimeError("Production requires an explicitly provisioned SECRET_KEY of at least 32 characters")
 
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -245,7 +251,8 @@ app.add_middleware(
 )
 
 # Database file for SQLite (development only)
-DB_FILE = os.path.join(os.path.dirname(__file__), "events.db")
+DB_FILE = os.getenv("TODOEVENTS_DB_FILE", os.path.join(os.path.dirname(__file__), "events.db"))
+SKIP_STARTUP = os.getenv("TODOEVENTS_SKIP_STARTUP") == "1"
 
 
 # Enums
@@ -309,6 +316,7 @@ def get_db_transaction():
         # Local development with SQLite
         conn = sqlite3.connect(DB_FILE, timeout=10)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA cache_size=10000")
@@ -382,6 +390,7 @@ def get_db():
         # Local development with SQLite - optimized
         conn = sqlite3.connect(DB_FILE, timeout=10)  # Add timeout
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
         # Enable WAL mode for better concurrent access
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")  # Faster than FULL
@@ -1025,53 +1034,15 @@ def init_db():
 
 
 def create_default_admin_user(conn):
-    """Create default admin user if none exists"""
-    try:
-        cursor = conn.cursor()
-
-        # Check if any admin users exist
-        cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
-        admin_count = get_count_from_result(cursor.fetchone())
-
-        if admin_count == 0:
-            logger.info("No admin users found. Creating default admin user...")
-
-            # Use a secure random password that must be changed
-            import secrets
-            import string
-
-            # Generate a random 16-character password
-            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-            admin_password = "".join(secrets.choice(alphabet) for i in range(16))
-
-            hashed_password = get_password_hash(admin_password)
-
-            cursor.execute(
-                "INSERT INTO users (email, hashed_password, role) VALUES (?, ?, ?)",
-                ("admin@todo-events.com", hashed_password, "admin"),
-            )
-            conn.commit()
-
-            logger.info("✅ Default admin user created:")
-            logger.info(f"   📧 Email: admin@todo-events.com")
-            logger.info(f"   🔑 Password: {admin_password}")
-            logger.info("⚠️ IMPORTANT: Change this password after first login!")
-
-        else:
-            logger.info(
-                f"Found {admin_count} existing admin users. Default admin creation skipped."
-            )
-
-    except Exception as e:
-        logger.error(f"Error creating default admin user: {str(e)}")
-        return False
-
-    return True
+    """Legacy hook retained for compatibility; accounts need explicit provisioning."""
+    logger.info("Automatic administrator provisioning is disabled")
+    return False
 
 
 # Initialize database
 try:
-    init_db()
+    if not SKIP_STARTUP:
+        init_db()
 except Exception as e:
     logger.error(f"Database initialization failed: {str(e)}")
 
@@ -1190,24 +1161,24 @@ class AutomatedTaskManager:
 
                 # Use proper date comparison for both PostgreSQL and SQLite
                 if IS_PRODUCTION and DB_URL:
-                    # PostgreSQL - get ALL current and future events (removed is_published filter)
+                    # PostgreSQL - public current and future events
                     c.execute(
                         """
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
-                        WHERE CAST(date AS DATE) >= CURRENT_DATE 
+                        WHERE is_published = TRUE AND CAST(COALESCE(NULLIF(end_date, ''), date) AS DATE) >= CURRENT_DATE
                         ORDER BY CAST(date AS DATE), start_time
                     """
                     )
                 else:
-                    # SQLite - get ALL current and future events (removed is_published filter)
+                    # SQLite - public current and future events
                     c.execute(
                         """
                         SELECT id, title, description, date, start_time, end_time, end_date, category, 
                                address, lat, lng, created_at, slug, is_published, city, state
                         FROM events 
-                        WHERE date >= date('now') 
+                        WHERE is_published = TRUE AND COALESCE(NULLIF(end_date, ''), date) >= date('now')
                         ORDER BY date, start_time
                     """
                     )
@@ -1737,7 +1708,7 @@ class AutomatedTaskManager:
 task_manager = AutomatedTaskManager()
 
 # Start scheduler when in production
-if IS_PRODUCTION:
+if IS_PRODUCTION and not SKIP_STARTUP:
     task_manager.start_scheduler()
     logger.info("🤖 AI sync automation enabled for production environment")
 else:
@@ -1745,9 +1716,10 @@ else:
 
 # Create default admin user now that all functions are available
 try:
-    with get_db() as conn:
-        create_default_admin_user(conn)
-        logger.info("✅ Default admin user initialization completed")
+    if not SKIP_STARTUP:
+        with get_db() as conn:
+            create_default_admin_user(conn)
+            logger.info("✅ Default admin user initialization completed")
 except Exception as e:
     logger.error(f"❌ Error creating default admin user during startup: {str(e)}")
 
@@ -2039,7 +2011,13 @@ class EventBase(BaseModel):
 
 
 class EventCreate(EventBase):
-    pass
+    @root_validator(skip_on_failure=True)
+    def validate_interval(cls, values):
+        # Validate new submissions and edits without preventing existing records
+        # from being serialized. Older records may contain inconsistent intervals;
+        # discovery handles those conservatively through overlaps_dates.
+        event_interval(values)
+        return values
 
 
 class EventResponse(EventBase):
@@ -2063,6 +2041,12 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     role: UserRole = UserRole.USER
+
+    @validator("role")
+    def validate_signup_role(cls, value):
+        if value != UserRole.USER:
+            raise ValueError("Public signup can only create a user account")
+        return value
 
     @validator("password")
     def validate_password(cls, v):
@@ -2191,6 +2175,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
                 detail="Internal server error during login",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+
+async def require_admin(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
 
 
 async def get_current_user_optional(token: str = Depends(oauth2_scheme)):
@@ -2430,7 +2420,7 @@ async def create_user(user: UserCreate):
                     # PostgreSQL with RETURNING
                     c.execute(
                         f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder}) RETURNING id",
-                        (user.email, hashed_password, user.role),
+                        (user.email, hashed_password, UserRole.USER),
                     )
                     result = c.fetchone()
                     last_id = result["id"] if result else None
@@ -2438,7 +2428,7 @@ async def create_user(user: UserCreate):
                     # SQLite without RETURNING
                     c.execute(
                         f"INSERT INTO users (email, hashed_password, role) VALUES ({placeholder}, {placeholder}, {placeholder})",
-                        (user.email, hashed_password, user.role),
+                        (user.email, hashed_password, UserRole.USER),
                     )
                     last_id = c.lastrowid
 
@@ -2488,7 +2478,7 @@ async def create_user(user: UserCreate):
                 return {
                     "id": last_id,
                     "email": user.email,
-                    "role": user.role,
+                    "role": UserRole.USER,
                     "password_strength": password_validation["strength"],
                 }
 
@@ -2733,201 +2723,69 @@ async def reset_password(request: PasswordReset):
 # Event Endpoints
 @app.get("/events", response_model=List[EventResponse])
 async def list_events(
-    category: Optional[str] = None,
-    date: Optional[str] = None,
-    limit: Optional[int] = 500,  # Increased default limit to 500
-    offset: Optional[int] = 0,  # Add pagination
-    lat: Optional[float] = None,  # Add location filtering
-    lng: Optional[float] = None,  # Add location filtering
-    radius: Optional[float] = 25.0,  # Add radius filtering (miles)
+    category: Optional[str] = None, date: Optional[str] = None,
+    limit: Optional[int] = 500, offset: Optional[int] = 0,
+    lat: Optional[float] = None, lng: Optional[float] = None,
+    radius: Optional[float] = 25.0,
 ):
-    """
-    Retrieve events with optional filtering by category and date.
-    Open to all users, no authentication required.
-    Optimized for performance with pagination, location filtering, and caching.
-    """
-    placeholder = get_placeholder()
-
-    # Validate and limit pagination parameters
-    limit = min(max(limit or 500, 1), 1000)  # Between 1 and 1000
+    """List published events; apply exact location filters before pagination."""
+    limit = min(max(limit or 500, 1), 1000)
     offset = max(offset or 0, 0)
-
-    # Create cache key for this request
-    cache_key = f"events:{category or 'all'}:{date or 'all'}:{limit}:{offset}:{lat}:{lng}:{radius}"
-
-    # Try to get from cache first (for mobile performance)
-    cached_result = event_cache.get(cache_key)
-    if cached_result is not None:
-        logger.info(
-            f"Returning cached events for key: {cache_key} - {len(cached_result)} events"
-        )
-        logger.info(f"Cache stats: {event_cache.stats()}")
-        return cached_result
-
     try:
-        # Use connection manager with optimized query
+        if (lat is None) != (lng is None):
+            raise ValueError("Provide both latitude and longitude")
+        if lat is not None:
+            distance_miles(lat, lng, lat, lng)
+            if radius is None or not math.isfinite(radius) or not 0 < radius <= 500:
+                raise ValueError("Radius must be greater than 0 and at most 500 miles")
+        if date:
+            datetime.strptime(date, "%Y-%m-%d")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    placeholder = get_placeholder()
+    try:
         with get_db() as conn:
             cursor = conn.cursor()
-
-            # Build optimized query with proper indexing hints
-            where_conditions = []
+            conditions = ["is_published = TRUE"]
             params = []
-
-            # Category filter
             if category and category != "all":
-                where_conditions.append(f"category = {placeholder}")
+                conditions.append(f"category = {placeholder}")
                 params.append(category)
-
-            # Date filter
             if date:
-                where_conditions.append(f"date = {placeholder}")
+                conditions.append(f"date = {placeholder}")
                 params.append(date)
-
-            # Location filter (if coordinates provided)
-            location_select = ""
-            if lat is not None and lng is not None:
-                # Add distance calculation for location-based filtering
-                location_select = f"""
-                    , (6371 * acos(cos(radians({lat})) * cos(radians(lat)) * 
-                      cos(radians(lng) - radians({lng})) + sin(radians({lat})) * 
-                      sin(radians(lat)))) * 0.621371 as distance_miles
-                """
-
-            # Construct WHERE clause
-            where_clause = ""
-            if where_conditions:
-                where_clause = "WHERE " + " AND ".join(where_conditions)
-
-            # Database-specific date comparison logic
-            if IS_PRODUCTION and DB_URL:
-                # PostgreSQL syntax
-                date_comparison = "date::date >= CURRENT_DATE"
-            else:
-                # SQLite syntax
-                date_comparison = "date >= date('now')"
-
-            # Optimized query with specific columns and LIMIT, including ALL fields
-            base_query = f"""
-                SELECT id, title, description, short_description, date, start_time, end_time, end_date, 
-                       category, secondary_category, address, city, state, country, lat, lng, recurring, frequency, created_by, created_at,
-                       COALESCE(interest_count, 0) as interest_count,
-                       COALESCE(view_count, 0) as view_count,
-                       fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
-                       start_datetime, end_datetime, updated_at, verified, is_premium_event, banner_image, logo_image
-                       {location_select}
-                FROM events 
-                {where_clause}
-                ORDER BY 
-                    CASE 
-                        WHEN {date_comparison} THEN 0  -- Future/today events first
-                        ELSE 1                           -- Past events later  
-                    END,
-                    date ASC, start_time ASC
-                LIMIT {placeholder} OFFSET {placeholder}
-            """
-
-            params.extend([limit, offset])
-
-            # Execute optimized query
-            cursor.execute(base_query, params)
-            events = cursor.fetchall()
-
-            # Process results efficiently
-            result = []
-            for event in events:
-                try:
-                    # Convert to dict efficiently
-                    if hasattr(event, "_asdict"):
-                        event_dict = event._asdict()
-                    elif isinstance(event, dict):
-                        event_dict = dict(event)
-                    else:
-                        # Handle tuple/list results with known schema including ALL fields
-                        column_names = [
-                            "id",
-                            "title",
-                            "description",
-                            "short_description",
-                            "date",
-                            "start_time",
-                            "end_time",
-                            "end_date",
-                            "category",
-                            "address",
-                            "city",
-                            "state",
-                            "country",
-                            "lat",
-                            "lng",
-                            "recurring",
-                            "frequency",
-                            "created_by",
-                            "created_at",
-                            "interest_count",
-                            "view_count",
-                            "fee_required",
-                            "price",
-                            "currency",
-                            "event_url",
-                            "host_name",
-                            "organizer_url",
-                            "slug",
-                            "is_published",
-                            "start_datetime",
-                            "end_datetime",
-                            "updated_at",
-                            "verified",
-                        ]
-                        if location_select:
-                            column_names.append("distance_miles")
-
-                        event_dict = dict(zip(column_names, event))
-
-                    # Convert datetime objects and ensure proper field types
-                    event_dict = convert_event_datetime_fields(event_dict)
-
-                    # Ensure counters are integers
-                    event_dict["interest_count"] = int(
-                        event_dict.get("interest_count", 0) or 0
-                    )
-                    event_dict["view_count"] = int(event_dict.get("view_count", 0) or 0)
-
-                    # Filter by distance if location provided
-                    if (
-                        lat is not None
-                        and lng is not None
-                        and "distance_miles" in event_dict
-                    ):
-                        if event_dict["distance_miles"] <= radius:
-                            result.append(event_dict)
-                    else:
-                        result.append(event_dict)
-
-                except Exception as event_error:
-                    logger.warning(f"Error processing event {event}: {event_error}")
-                    continue
-
-            # Cache the result for mobile performance (shorter TTL for real-time updates)
-            event_cache.set(cache_key, result)
-            logger.info(f"Cached {len(result)} events for key: {cache_key}")
-            logger.info(
-                f"Database query returned {len(events)} raw events, processed {len(result)} events"
-            )
-            logger.info(f"Cache stats: {event_cache.stats()}")
-
+            # Public reads are deliberately uncached: an unpublish must take effect
+            # immediately even when another worker or the plugin performs the write.
+            cursor.execute(f"SELECT * FROM events WHERE {' AND '.join(conditions)} "
+                           f"ORDER BY CASE WHEN date >= {placeholder} THEN 0 ELSE 1 END, date, start_time, id",
+                           params + [datetime.utcnow().date().isoformat()])
+            result, skipped = [], 0
+            while len(result) < limit:
+                rows = cursor.fetchmany(200)
+                if not rows:
+                    break
+                for row in rows:
+                    event = dict(row)
+                    if lat is not None:
+                        try:
+                            distance = distance_miles(lat, lng, event["lat"], event["lng"])
+                        except (ValueError, TypeError):
+                            continue
+                        if distance > radius:
+                            continue
+                        event["distance_miles"] = distance
+                    if skipped < offset:
+                        skipped += 1
+                        continue
+                    result.append(convert_event_datetime_fields(event))
+                    if len(result) == limit:
+                        break
             return result
-
-    except Exception as e:
-        # Handle any other exceptions
-        error_msg = str(e)
-        logger.error(f"Error retrieving events: {error_msg}")
-
-        if "timeout" in error_msg.lower():
-            raise HTTPException(status_code=504, detail="Database query timed out")
-        elif "connection" in error_msg.lower():
-            raise HTTPException(status_code=503, detail="Database connection issues")
-        else:
-            raise HTTPException(status_code=500, detail="Error retrieving events")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error retrieving events")
+        raise HTTPException(status_code=503, detail="Event search is temporarily unavailable")
 
 
 @app.get("/events/{event_id}", response_model=EventResponse)
@@ -2949,7 +2807,7 @@ async def read_event(event_id: int):
                          fee_required, price, currency, event_url, host_name, organizer_url, slug, is_published,
                          start_datetime, end_datetime, updated_at, verified, banner_image, logo_image, secondary_category,
                          is_premium_event
-                         FROM events WHERE id = {placeholder}""",
+                         FROM events WHERE id = {placeholder} AND is_published = TRUE""",
                 (event_id,),
             )
             event = c.fetchone()
@@ -2993,7 +2851,7 @@ async def get_event_calendar(event_id: int):
                 SELECT id, title, description, date, start_time, end_time, end_date, 
                        address, city, state, country, lat, lng, host_name
                 FROM events 
-                WHERE id = {placeholder}
+                WHERE id = {placeholder} AND is_published = TRUE
             """, (event_id,))
             
             event = cursor.fetchone()
@@ -3047,13 +2905,11 @@ async def get_event_calendar(event_id: int):
                 if end_date == event_date and end_time < start_time:
                     end_dt = end_dt + timedelta(days=1)
                 
-                # Add timezone (UTC)
-                utc = pytz.UTC
-                start_dt = utc.localize(start_dt)
-                end_dt = utc.localize(end_dt)
-                
+                # Legacy records have no timezone. Export floating local times;
+                # falsely labeling them UTC shifts the event in calendar clients.
                 ical_event.add('dtstart', start_dt)
-                ical_event.add('dtend', end_dt)
+                if event_dict.get('end_time'):
+                    ical_event.add('dtend', end_dt)
             except ValueError:
                 # Fallback to all-day event if time parsing fails
                 start_date = datetime.strptime(event_date, "%Y-%m-%d").date()
@@ -3139,15 +2995,7 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
                 )
 
         result = cursor.fetchone()
-        count = (
-            (
-                result[0]
-                if isinstance(result, (tuple, list))
-                else result.get("count", result.get("COUNT(*)", 0))
-            )
-            if result
-            else 0
-        )
+        count = get_count_from_result(result)
 
         if count > 0:
             # Slug exists, append a number or event ID
@@ -3424,38 +3272,10 @@ def auto_populate_seo_fields(event_data: dict) -> dict:
 
         return 0.0
 
-    def build_datetimes_local(
-        date_str, start_time_str, end_time_str, end_date_str=None
-    ):
-        """Enhanced datetime building with end_time inference"""
-        if not date_str or not start_time_str:
-            return None, None
-
-        try:
-            # Build start datetime
-            start_dt_str = f"{date_str}T{start_time_str}:00"
-
-            # Build end datetime - ensure we always have an end_time
-            if not end_time_str:
-                # Infer end_time as 2 hours after start_time
-                from datetime import datetime, timedelta
-
-                try:
-                    start_time_obj = datetime.strptime(start_time_str, "%H:%M")
-                    end_time_obj = start_time_obj + timedelta(hours=2)
-                    end_time_str = end_time_obj.strftime("%H:%M")
-                except:
-                    end_time_str = "18:00"  # fallback
-
-            # Now build the end datetime string
-            if end_date_str:
-                end_dt_str = f"{end_date_str}T{end_time_str}:00"
-            else:
-                end_dt_str = f"{date_str}T{end_time_str}:00"
-
-            return start_dt_str, end_dt_str
-        except Exception:
-            return None, None
+    def build_datetimes_local(date_str, start_time_str, end_time_str, end_date_str=None):
+        start, end = event_interval({"date": date_str, "start_time": start_time_str,
+                                     "end_time": end_time_str, "end_date": end_date_str})
+        return start.isoformat(), end.isoformat() if end else None
 
     def make_short_description_local(description):
         """Enhanced short description generation"""
@@ -3880,8 +3700,9 @@ async def update_event(
                 cursor.execute("BEGIN")
 
                 # First, check if the event exists and who created it
+                row_lock = " FOR UPDATE" if IS_PRODUCTION and DB_URL else ""
                 cursor.execute(
-                    f"SELECT * FROM events WHERE id = {placeholder}", (event_id,)
+                    f"SELECT * FROM events WHERE id = {placeholder}{row_lock}", (event_id,)
                 )
                 existing_event = cursor.fetchone()
 
@@ -3898,6 +3719,58 @@ async def update_event(
                     raise HTTPException(
                         status_code=403, detail="Not authorized to update this event"
                     )
+
+                # The plugin is optional, so detect its sidecar without making an
+                # unmigrated web database fail. Locking the event above serializes
+                # this check with plugin publication/cancellation transactions.
+                if IS_PRODUCTION and DB_URL:
+                    cursor.execute(
+                        "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='plugin_publications'"
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='plugin_publications'"
+                    )
+                if cursor.fetchone():
+                    cursor.execute(
+                        f"SELECT status FROM plugin_publications WHERE event_id={placeholder}",
+                        (event_id,),
+                    )
+                    publication = cursor.fetchone()
+                    if publication and publication["status"] == "cancelled":
+                        raise HTTPException(
+                            status_code=409,
+                            detail="This listing was cancelled. Prepare and confirm a new public listing to publish again.",
+                        )
+                    supplied_fields = getattr(event, "model_fields_set", None)
+                    if supplied_fields is None:  # Pydantic 1 compatibility
+                        supplied_fields = event.__fields_set__
+                    if (
+                        publication
+                        and not existing_event["is_published"]
+                        and "is_published" not in supplied_fields
+                    ):
+                        event_data["is_published"] = False
+                    if publication:
+                        # ChatGPT and organizers may already have shared this
+                        # canonical link. Ordinary edits must not regenerate it.
+                        event_data["slug"] = existing_event["slug"]
+                        # The legacy form cannot review an IANA timezone. A move
+                        # or wall-time edit invalidates the plugin's confirmed
+                        # instants; preserve publication state and show uncertainty.
+                        time_and_venue_fields = (
+                            "date", "start_time", "end_time", "end_date", "address",
+                            "city", "state", "country", "lat", "lng",
+                        )
+                        if any(
+                            str(event_data.get(field) or "")
+                            != str(existing_event[field] or "")
+                            for field in time_and_venue_fields
+                        ):
+                            cursor.execute(
+                                f"UPDATE plugin_publications SET starts_at=NULL, ends_at=NULL, timezone=NULL WHERE event_id={placeholder}",
+                                (event_id,),
+                            )
 
                 # Ensure unique slug before updating
                 base_slug = event_data.get("slug", "")
@@ -4038,62 +3911,16 @@ async def delete_event(event_id: int, current_user: dict = Depends(get_current_u
                         status_code=403, detail="Not authorized to delete this event"
                     )
 
-                # Delete related records first to avoid foreign key constraint violations
-
-                # Delete media audit logs
-                try:
-                    cursor.execute(
-                        f"DELETE FROM media_audit_logs WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No media_audit_logs to delete for event {event_id}: {e}"
-                    )
-
-                # Delete media forensic data
-                try:
-                    cursor.execute(
-                        f"DELETE FROM media_forensic_data WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No media_forensic_data to delete for event {event_id}: {e}"
-                    )
-
-                # Delete event reports
-                try:
-                    cursor.execute(
-                        f"DELETE FROM event_reports WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No event_reports to delete for event {event_id}: {e}"
-                    )
-
-                # Delete interest tracking
-                try:
-                    cursor.execute(
-                        f"DELETE FROM event_interests WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No event_interests to delete for event {event_id}: {e}"
-                    )
-
-                # Delete view tracking
-                try:
-                    cursor.execute(
-                        f"DELETE FROM event_views WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No event_views to delete for event {event_id}: {e}"
-                    )
+                # Missing optional tables must not abort a PostgreSQL transaction.
+                for table in (
+                    "media_audit_logs", "media_forensic_data", "event_reports",
+                    "event_interests", "event_views",
+                ):
+                    if _optional_table_exists(cursor, table):
+                        cursor.execute(
+                            f"DELETE FROM {table} WHERE event_id = {placeholder}",
+                            (event_id,),
+                        )
 
                 # Delete the event itself
                 cursor.execute(
@@ -4219,6 +4046,18 @@ async def root():
 
 
 # New Admin Endpoints
+def _optional_table_exists(cursor, name):
+    """Check optional legacy tables without aborting a PostgreSQL transaction."""
+    if IS_PRODUCTION and DB_URL:
+        cursor.execute(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name=%s",
+            (name,),
+        )
+    else:
+        cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,))
+    return cursor.fetchone() is not None
+
+
 @app.delete("/admin/users/{user_id}")
 async def delete_user(user_id: int, current_user: dict = Depends(get_current_user)):
     """
@@ -4229,8 +4068,9 @@ async def delete_user(user_id: int, current_user: dict = Depends(get_current_use
 
     placeholder = get_placeholder()
     try:
-        with get_db() as conn:
+        with get_db_transaction() as conn:
             c = conn.cursor()
+            c.execute("BEGIN")
 
             # Check if user exists
             c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
@@ -4251,13 +4091,42 @@ async def delete_user(user_id: int, current_user: dict = Depends(get_current_use
                     status_code=400, detail="Cannot delete the last admin"
                 )
 
-            # Delete user
-            c.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
-
-            # Optionally, delete user's events
+            # Remove only this account's listings before its user row. Preserve
+            # audit/financial records under their existing retention policy by
+            # detaching nullable references, rather than deleting other users'
+            # activity. Optional tables must be checked before access on Postgres.
+            for table in ("media_audit_logs", "media_forensic_data"):
+                if _optional_table_exists(c, table):
+                    c.execute(
+                        f"UPDATE {table} SET event_id=NULL WHERE event_id IN (SELECT id FROM events WHERE created_by={placeholder})",
+                        (user_id,),
+                    )
+            for table, column in (
+                ("activity_logs", "user_id"),
+                ("media_audit_logs", "user_id"),
+                ("media_forensic_data", "user_id"),
+                ("user_forensic_data", "user_id"),
+                ("referral_links", "created_by"),
+                ("referral_commissions", "created_by"),
+                ("referral_tracking", "user_id"),
+            ):
+                if _optional_table_exists(c, table):
+                    c.execute(
+                        f"UPDATE {table} SET {column}=NULL WHERE {column}={placeholder}",
+                        (user_id,),
+                    )
+            for table in ("event_reports", "event_interests", "event_views"):
+                if _optional_table_exists(c, table):
+                    c.execute(
+                        f"DELETE FROM {table} WHERE event_id IN (SELECT id FROM events WHERE created_by={placeholder})",
+                        (user_id,),
+                    )
             c.execute(
                 f"DELETE FROM events WHERE created_by = {placeholder}", (user_id,)
             )
+            # Plugin identities, drafts, publications and retry keys cascade from
+            # the event/user foreign keys in the same transaction.
+            c.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
 
             conn.commit()
 
@@ -4772,196 +4641,114 @@ def _generate_ai_summary(event_dict):
 
 
 def _generate_structured_data(event_dict):
-    """Generate structured data with proper date/time handling"""
-    start_datetime = f"{event_dict['date']}T{event_dict['start_time']}:00"
-
-    # Calculate end datetime
-    end_date = event_dict.get("end_date") or event_dict["date"]
-    end_time = event_dict.get("end_time") or event_dict["start_time"]
-    end_datetime = f"{end_date}T{end_time}:00"
-
-    return {
-        "@type": "Event",
-        "name": event_dict["title"],
-        "startDate": start_datetime,
-        "endDate": end_datetime,
+    """Preserve known event times without inventing a timezone or duration."""
+    start, end = event_interval(event_dict)
+    data = {
+        "@type": "Event", "name": event_dict["title"],
+        "startDate": start.isoformat(),
         "location": {"@type": "Place", "address": event_dict["address"]},
         "description": event_dict["description"],
-        "eventStatus": "EventScheduled",
     }
+    if end:
+        data["endDate"] = end.isoformat()
+    return data
 
 
-# AI Search API Endpoints
 @app.get("/api/v1/local-events")
 async def get_local_events_for_ai(
     lat: Optional[float] = None,
     lng: Optional[float] = None,
-    radius: Optional[float] = 25.0,  # miles
+    radius: Optional[float] = 25.0,
     category: Optional[str] = None,
     limit: Optional[int] = 200,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ):
-    """
-    Public API endpoint for AI search tools to discover local events.
+    """Discover published events with explicit location and inclusive date filters.
 
-    This endpoint provides structured event data that AI tools can use
-    to answer queries like "local events near me" or "events this weekend".
+    Legacy events have local wall times and no timezone; the response says so.
+    Exact radius filtering happens before pagination and never expands the radius.
     """
+    try:
+        if (lat is None) != (lng is None):
+            raise ValueError("Provide both latitude and longitude")
+        if lat is not None:
+            distance_miles(lat, lng, lat, lng)
+        if radius is None or not math.isfinite(radius) or not 0 < radius <= 500:
+            raise ValueError("Radius must be greater than 0 and at most 500 miles")
+        if limit is None or not 1 <= limit <= 200:
+            raise ValueError("Limit must be between 1 and 200")
+        today = datetime.utcnow().date()
+        first = datetime.strptime(date_from, "%Y-%m-%d").date() if date_from else today
+        last = datetime.strptime(date_to, "%Y-%m-%d").date() if date_to else None
+        if last and first > last:
+            raise ValueError("date_to must be on or after date_from")
+        first = max(first, today)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     placeholder = get_placeholder()
-
     try:
         with get_db() as conn:
-            c = conn.cursor()
-
-            # Build base query including UX fields
-            query = """
-                SELECT id, title, description, date, start_time, end_time, end_date, category, 
-                       address, lat, lng, created_at, fee_required, event_url, host_name
-                FROM events 
-                WHERE date::date >= CURRENT_DATE
-            """
-            params = []
-
-            # Add category filter
+            cursor = conn.cursor()
+            # Include yesterday so an overnight event ending today is considered.
+            conditions = ["is_published = TRUE", f"COALESCE(NULLIF(end_date, ''), date) >= {placeholder}"]
+            params = [(first - timedelta(days=1)).isoformat()]
+            if last:
+                conditions.append(f"date <= {placeholder}")
+                params.append(last.isoformat())
             if category:
-                query += f" AND category = {placeholder}"
+                conditions.append(f"category = {placeholder}")
                 params.append(category)
-
-            # Add location-based filtering if coordinates provided
-            if lat is not None and lng is not None:
-                # Use Haversine formula for distance calculation
-                query += f"""
-                    AND (
-                        3959 * acos(
-                            cos(radians({placeholder})) * cos(radians(lat)) * 
-                            cos(radians(lng) - radians({placeholder})) + 
-                            sin(radians({placeholder})) * sin(radians(lat))
-                        )
-                    ) <= {placeholder}
-                """
-                params.extend([lat, lng, lat, radius])
-
-            # Order by date and limit results
-            query += f" ORDER BY date, start_time LIMIT {placeholder}"
-            params.append(limit)
-
-            c.execute(query, params)
-            events = c.fetchall()
-
-            # Format response for AI consumption
-            ai_response = {
-                "status": "success",
-                "message": "Local events discovered",
-                "search_context": {
-                    "query_type": "local_events_near_me",
-                    "location": {"lat": lat, "lng": lng} if lat and lng else None,
-                    "radius_miles": radius,
-                    "category_filter": category,
-                    "results_count": len(events),
-                },
-                "events": [],
-                "metadata": {
-                    "platform": "todo-events.com",
-                    "description": "Real-time local event discovery platform",
-                    "last_updated": datetime.utcnow().isoformat(),
-                    "categories": [
-                        "food-drink",
-                        "music",
-                        "arts",
-                        "sports",
-                        "community",
-                    ],
-                    "coverage_area": "United States",
-                    "features": [
-                        "Location-based event search",
-                        "Real-time event updates",
-                        "Community-driven content",
-                        "Interactive event mapping",
-                        "Category-based filtering",
-                    ],
-                },
-            }
-
-            # Process each event with AI-friendly formatting
-            for event in events:
-                event_dict = dict(event)
-
-                # Calculate distance if location provided
-                distance = None
-                if lat is not None and lng is not None:
-                    try:
-                        from math import radians, cos, sin, asin, sqrt
-
-                        def haversine(lat1, lon1, lat2, lon2):
-                            # Convert to radians
-                            lat1, lon1, lat2, lon2 = map(
-                                radians, [lat1, lon1, lat2, lon2]
-                            )
-
-                            # Haversine formula
-                            dlat = lat2 - lat1
-                            dlon = lon2 - lon1
-                            a = (
-                                sin(dlat / 2) ** 2
-                                + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-                            )
-                            c = 2 * asin(sqrt(a))
-                            r = 3959  # Earth radius in miles
-                            return c * r
-
-                        distance = round(
-                            haversine(lat, lng, event_dict["lat"], event_dict["lng"]), 1
-                        )
-                    except:
-                        distance = None
-
-                # Format event for AI consumption
-                ai_event = {
-                    "id": event_dict["id"],
-                    "title": event_dict["title"],
-                    "description": event_dict["description"],
-                    "date": event_dict["date"],
-                    "start_time": event_dict["start_time"],
-                    "end_time": event_dict["end_time"],
-                    "end_date": event_dict["end_date"],
-                    "category": event_dict["category"],
-                    "location": {
-                        "address": event_dict["address"],
-                        "coordinates": {
-                            "lat": event_dict["lat"],
-                            "lng": event_dict["lng"],
-                        },
-                        "distance_miles": distance,
-                    },
-                    "url": f"https://todo-events.com/?event={event_dict['id']}",
-                    "ai_summary": _generate_ai_summary(event_dict),
-                    "structured_data": _generate_structured_data(event_dict),
-                }
-
-                ai_response["events"].append(ai_event)
-
-            # Add helpful context for AI tools
-            if len(events) == 0:
-                ai_response["message"] = "No local events found matching your criteria"
-                ai_response["suggestions"] = [
-                    "Try expanding your search radius",
-                    "Remove category filters to see all event types",
-                    "Check for events on different dates",
-                    "Visit todo-events.com to create the first event in your area",
-                ]
-
-            return ai_response
-
-    except Exception as e:
-        logger.error(f"Error in AI events API: {str(e)}")
-        return {
-            "status": "error",
-            "message": "Unable to retrieve local events",
-            "error": str(e),
-            "metadata": {
-                "platform": "todo-events.com",
-                "support": "Visit https://todo-events.com for manual event discovery",
-            },
+            cursor.execute(f"SELECT * FROM events WHERE {' AND '.join(conditions)} ORDER BY date, start_time, id", params)
+            result = []
+            while len(result) < limit:
+                rows = cursor.fetchmany(200)
+                if not rows:
+                    break
+                for row in rows:
+                    event = dict(row)
+                    if not overlaps_dates(event, first, last):
+                        continue
+                    distance = None
+                    if lat is not None:
+                        try:
+                            distance = distance_miles(lat, lng, event["lat"], event["lng"])
+                        except (ValueError, TypeError):
+                            continue
+                        if distance > radius:
+                            continue
+                    result.append({
+                        "id": event["id"], "title": event["title"],
+                        "description": event["description"], "date": str(event["date"]),
+                        "start_time": str(event["start_time"]), "end_time": str(event["end_time"]) if event.get("end_time") else None,
+                        "end_date": str(event["end_date"]) if event.get("end_date") else None,
+                        "timezone": None, "time_note": "Local venue time; timezone not supplied by organizer",
+                        "category": event["category"],
+                        "location": {"address": event["address"], "coordinates": {"lat": event["lat"], "lng": event["lng"]},
+                                     "distance_miles": round(distance, 2) if distance is not None else None},
+                        "url": canonical_event_url(event), "ai_summary": _generate_ai_summary(event),
+                        "structured_data": _generate_structured_data(event),
+                    })
+                    if len(result) == limit:
+                        break
+        response = {
+            "status": "success", "message": "Local events discovered" if result else "No published events match these filters",
+            "search_context": {"location": {"lat": lat, "lng": lng} if lat is not None else None,
+                               "radius_miles": radius if lat is not None else None,
+                               "date_from": first.isoformat(), "date_to": last.isoformat() if last else None,
+                               "category_filter": category, "results_count": len(result)},
+            "events": result,
+            "metadata": {"platform": "todo-events.com", "last_updated": datetime.utcnow().isoformat() + "Z"},
         }
+        if not result:
+            response["suggestions"] = ["Choose different dates", "Remove the category filter", "Ask to increase the radius"]
+        return response
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error in AI events API")
+        raise HTTPException(status_code=503, detail="Event search is temporarily unavailable")
 
 
 # Automation Control Endpoints
@@ -5001,7 +4788,7 @@ async def get_automation_status():
     }
 
 
-@app.post("/api/v1/automation/trigger/{task_name}")
+@app.post("/api/v1/automation/trigger/{task_name}", dependencies=[Depends(require_admin)])
 async def trigger_automated_task(task_name: str, background_tasks: BackgroundTasks):
     """Manually trigger automated tasks"""
 
@@ -5038,15 +4825,7 @@ async def trigger_automated_task(task_name: str, background_tasks: BackgroundTas
 async def get_dynamic_sitemap():
     """Serve dynamically generated sitemap"""
     try:
-        # If we have a cached sitemap from automation, serve it
-        if hasattr(task_manager, "current_sitemap") and task_manager.current_sitemap:
-            return Response(
-                content=task_manager.current_sitemap,
-                media_type="application/xml",
-                headers={"Cache-Control": "public, max-age=3600"},  # Cache for 1 hour
-            )
-
-        # Otherwise, generate on-demand
+        # Re-read publication state so withdrawn listings disappear immediately.
         events = await task_manager.get_current_events()
         sitemap_content = await task_manager.build_sitemap_content(events)
 
@@ -5061,7 +4840,7 @@ async def get_dynamic_sitemap():
         raise HTTPException(status_code=500, detail="Error generating sitemap")
 
 
-@app.get("/api/debug/database-stats")
+@app.get("/api/debug/database-stats", dependencies=[Depends(require_admin)])
 async def get_database_stats():
     """Get database statistics for debugging"""
     try:
@@ -5125,7 +4904,7 @@ async def get_database_stats():
         return {"error": str(e), "message": "Failed to get database statistics"}
 
 
-@app.post("/api/sitemap/regenerate")
+@app.post("/api/sitemap/regenerate", dependencies=[Depends(require_admin)])
 async def force_regenerate_sitemap():
     """Force regenerate sitemap and update cache"""
     try:
@@ -5445,7 +5224,7 @@ async def track_event_view(
 
             # First, verify the event exists
             cursor.execute(
-                f"SELECT id FROM events WHERE id = {placeholder}", (event_id,)
+                f"SELECT id FROM events WHERE id = {placeholder} AND is_published = TRUE", (event_id,)
             )
             if not cursor.fetchone():
                 logger.warning(
@@ -5479,7 +5258,7 @@ async def track_event_view(
 
             # Update view count safely
             cursor.execute(
-                f"UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = {placeholder}",
+                f"UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = {placeholder} AND is_published = TRUE",
                 (event_id,),
             )
 
@@ -5523,7 +5302,7 @@ async def toggle_event_interest(
 
             # Verify event exists
             cursor.execute(
-                f"SELECT id FROM events WHERE id = {placeholder}", (event_id,)
+                f"SELECT id FROM events WHERE id = {placeholder} AND is_published = TRUE", (event_id,)
             )
             if not cursor.fetchone():
                 raise HTTPException(status_code=404, detail="Event not found")
@@ -5557,7 +5336,7 @@ async def toggle_event_interest(
 
                 # Decrease interest count
                 cursor.execute(
-                    f"UPDATE events SET interest_count = GREATEST(COALESCE(interest_count, 0) - 1, 0) WHERE id = {placeholder}",
+                    f"UPDATE events SET interest_count = GREATEST(COALESCE(interest_count, 0) - 1, 0) WHERE id = {placeholder} AND is_published = TRUE",
                     (event_id,),
                 )
 
@@ -5572,7 +5351,7 @@ async def toggle_event_interest(
 
                 # Increase interest count
                 cursor.execute(
-                    f"UPDATE events SET interest_count = COALESCE(interest_count, 0) + 1 WHERE id = {placeholder}",
+                    f"UPDATE events SET interest_count = COALESCE(interest_count, 0) + 1 WHERE id = {placeholder} AND is_published = TRUE",
                     (event_id,),
                 )
 
@@ -5581,7 +5360,7 @@ async def toggle_event_interest(
 
             # Get updated count with ultra-robust safety check
             cursor.execute(
-                f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder}",
+                f"SELECT COALESCE(interest_count, 0) FROM events WHERE id = {placeholder} AND is_published = TRUE",
                 (event_id,),
             )
             result = cursor.fetchone()
@@ -5657,7 +5436,7 @@ async def get_event_interest_status(
                         e.id = ei.event_id AND 
                         (ei.user_id = {placeholder} OR ei.browser_fingerprint = {placeholder})
                     )
-                    WHERE e.id = {placeholder}
+                    WHERE e.id = {placeholder} AND e.is_published = TRUE
                     LIMIT 1
                 """
                 cursor.execute(query, (user_id, browser_fingerprint, event_id))
@@ -5673,7 +5452,7 @@ async def get_event_interest_status(
                     LEFT JOIN event_interests ei ON (
                         e.id = ei.event_id AND ei.browser_fingerprint = {placeholder}
                     )
-                    WHERE e.id = {placeholder}
+                    WHERE e.id = {placeholder} AND e.is_published = TRUE
                     LIMIT 1
                 """
                 cursor.execute(query, (browser_fingerprint, event_id))
@@ -5734,7 +5513,7 @@ async def track_event_view_endpoint(
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder}",
+                f"SELECT COALESCE(view_count, 0) FROM events WHERE id = {placeholder} AND is_published = TRUE",
                 (event_id,),
             )
             result = cursor.fetchone()
@@ -7627,7 +7406,7 @@ async def test_webhook():
     }
 
 
-@app.post("/admin/quick-upgrade-user-3")
+@app.post("/admin/quick-upgrade-user-3", dependencies=[Depends(require_admin)])
 async def quick_upgrade_user_3():
     """Quick upgrade for user 3 since payment was successful but webhook may have been missed"""
     placeholder = get_placeholder()
@@ -9519,6 +9298,30 @@ class RouteEventRequest(BaseModel):
     )
 
 
+    @validator("radius")
+    def validate_radius(cls, value):
+        if not math.isfinite(value) or not 0 < value <= 500:
+            raise ValueError("Radius must be greater than 0 and at most 500 miles")
+        return value
+
+    @validator("coordinates")
+    def validate_coordinates(cls, value):
+        if len(value) > 50:
+            raise ValueError("At most 50 route coordinates are allowed")
+        for point in value:
+            distance_miles(point.get("lat"), point.get("lng"), point.get("lat"), point.get("lng"))
+        return value
+
+    @validator("dateRange")
+    def validate_date_range(cls, value):
+        if value:
+            first = datetime.strptime(value.get("startDate", ""), "%Y-%m-%d").date()
+            last = datetime.strptime(value.get("endDate", ""), "%Y-%m-%d").date()
+            if last < first:
+                raise ValueError("End date must be on or after start date")
+        return value
+
+
 # Premium Management Endpoints
 @app.get("/admin/premium-users")
 async def get_premium_users(current_user: dict = Depends(get_current_user)):
@@ -10313,7 +10116,7 @@ async def deactivate_trial_invite(invite_code: str, current_user: dict = Depends
 
 
 # Premium Trial Invite Code System
-@app.post("/generate-premium-trial-invite")
+@app.post("/generate-premium-trial-invite", dependencies=[Depends(require_admin)])
 async def generate_premium_trial_invite():
     """Generate a unique invite code for 7-day premium trial"""
     try:
@@ -11593,7 +11396,7 @@ async def notify_premium_granted(
 # ==================== REFERRAL SYSTEM ENDPOINTS ====================
 
 
-@app.post("/admin/referrals/create")
+@app.post("/admin/referrals/create", dependencies=[Depends(require_admin)])
 async def create_referral_link(
     request: Request,
     code: str = None,
@@ -11656,7 +11459,7 @@ async def create_referral_link(
         cursor.close()
 
 
-@app.get("/admin/referrals")
+@app.get("/admin/referrals", dependencies=[Depends(require_admin)])
 async def get_referral_links(request: Request):
     """Get all referral links with stats"""
     current_user = await get_current_admin_user(request)
@@ -11726,7 +11529,7 @@ async def get_referral_links(request: Request):
         cursor.close()
 
 
-@app.post("/admin/referrals/{link_id}/toggle")
+@app.post("/admin/referrals/{link_id}/toggle", dependencies=[Depends(require_admin)])
 async def toggle_referral_link(request: Request, link_id: int):
     """Toggle referral link active status"""
     current_user = await get_current_admin_user(request)
@@ -11761,7 +11564,7 @@ async def toggle_referral_link(request: Request, link_id: int):
         cursor.close()
 
 
-@app.get("/admin/referrals/analytics")
+@app.get("/admin/referrals/analytics", dependencies=[Depends(require_admin)])
 async def get_referral_analytics(request: Request, days: int = 30):
     """Get referral analytics data"""
     current_user = await get_current_admin_user(request)
@@ -11932,7 +11735,7 @@ async def track_referral_click(ref: str, request: Request):
 
 
 # Endpoint to link referral to user signup
-@app.post("/admin/referrals/link-signup")
+@app.post("/admin/referrals/link-signup", dependencies=[Depends(require_admin)])
 async def link_referral_signup(request: Request, user_id: int, referral_code: str):
     """Link a user signup to a referral"""
     current_user = await get_current_admin_user(request)
@@ -11973,7 +11776,7 @@ async def link_referral_signup(request: Request, user_id: int, referral_code: st
 
 
 # Endpoint to create commission records
-@app.post("/admin/referrals/create-commission")
+@app.post("/admin/referrals/create-commission", dependencies=[Depends(require_admin)])
 async def create_referral_commission(
     request: Request,
     referral_link_id: int,
@@ -12041,7 +11844,7 @@ async def create_referral_commission(
         cursor.close()
 
 
-@app.post("/admin/create-referral-tables")
+@app.post("/admin/create-referral-tables", dependencies=[Depends(require_admin)])
 async def create_referral_tables(request: Request):
     """Create referral system database tables"""
     current_user = await get_current_admin_user(request)
@@ -12411,7 +12214,7 @@ def ensure_unique_slug_failsafe(cursor, base_slug: str, placeholder: str) -> str
         return emergency_slug
 
 
-@app.post("/admin/migrate-database")
+@app.post("/admin/migrate-database", dependencies=[Depends(require_admin)])
 async def migrate_production_database():
     """Trigger PostgreSQL database migration (production only)"""
     try:
@@ -12438,7 +12241,7 @@ async def migrate_production_database():
         return {"status": "error", "message": f"Migration failed: {str(e)}"}
 
 
-@app.post("/admin/fix-production-database")
+@app.post("/admin/fix-production-database", dependencies=[Depends(require_admin)])
 async def fix_production_database():
     """Fix critical production database schema issues causing bulk import failures"""
     try:
@@ -12518,7 +12321,7 @@ async def fix_production_database():
                 "UPDATE events SET short_description = '' WHERE short_description IS NULL",
                 "UPDATE events SET interest_count = 0 WHERE interest_count IS NULL",
                 "UPDATE events SET view_count = 0 WHERE view_count IS NULL",
-                "UPDATE events SET is_published = TRUE WHERE is_published IS NULL",
+                "UPDATE events SET is_published = FALSE WHERE is_published IS NULL",
             ]
 
             updated_fields = []
@@ -12552,7 +12355,7 @@ async def fix_production_database():
         return {"status": "error", "message": f"Database fix failed: {str(e)}"}
 
 
-@app.post("/admin/test-bulk-import-fix")
+@app.post("/admin/test-bulk-import-fix", dependencies=[Depends(require_admin)])
 async def test_bulk_import_fix():
     """Test the PostgreSQL RETURNING clause fix for bulk import (admin only)"""
     try:
@@ -12708,7 +12511,7 @@ async def get_event_seo_data(event_id: int):
 
         # Get event with all SEO fields
         cursor.execute(
-            """
+            f"""
             SELECT 
                 id, title, slug, description, short_description,
                 date, start_time, end_time, end_date,
@@ -12719,7 +12522,7 @@ async def get_event_seo_data(event_id: int):
                 created_by, created_at, updated_at,
                 interest_count, view_count, is_published
             FROM events 
-            WHERE id = ? AND is_published = 1
+            WHERE id = {get_placeholder()} AND is_published = TRUE
         """,
             (event_id,),
         )
@@ -12760,7 +12563,7 @@ async def get_event_by_slug(slug: str):
                     created_by, created_at, updated_at,
                     interest_count, view_count, is_published
                 FROM events 
-                WHERE slug = %s AND (is_published = true OR is_published IS NULL)
+                WHERE slug = %s AND is_published = TRUE
             """,
                 (slug,),
             )
@@ -12778,7 +12581,7 @@ async def get_event_by_slug(slug: str):
                     created_by, created_at, updated_at,
                     interest_count, view_count, is_published
                 FROM events 
-                WHERE slug = ? AND (is_published = 1 OR is_published IS NULL)
+                WHERE slug = ? AND is_published = TRUE
             """,
                 (slug,),
             )
@@ -12814,8 +12617,8 @@ async def get_events_by_location(
                 FROM events 
                 WHERE LOWER(state) = %s 
                 AND LOWER(city) = %s 
-                AND (is_published = true OR is_published IS NULL)
-                AND CAST(date AS DATE) >= CURRENT_DATE
+                AND is_published = TRUE
+                AND CAST(COALESCE(NULLIF(end_date, ''), date) AS DATE) >= CURRENT_DATE
                 ORDER BY date ASC, start_time ASC
                 LIMIT %s OFFSET %s
             """,
@@ -12834,8 +12637,8 @@ async def get_events_by_location(
                 FROM events 
                 WHERE LOWER(state) = ? 
                 AND LOWER(city) = ? 
-                AND (is_published = 1 OR is_published IS NULL)
-                AND date::date >= CURRENT_DATE
+                AND is_published = TRUE
+                AND COALESCE(NULLIF(end_date, ''), date) >= date('now')
                 ORDER BY date ASC, start_time ASC
                 LIMIT ? OFFSET ?
             """,
@@ -12852,8 +12655,8 @@ async def get_events_by_location(
                 SELECT COUNT(*) FROM events 
                 WHERE LOWER(state) = %s 
                 AND LOWER(city) = %s 
-                AND (is_published = true OR is_published IS NULL)
-                AND CAST(date AS DATE) >= CURRENT_DATE
+                AND is_published = TRUE
+                AND CAST(COALESCE(NULLIF(end_date, ''), date) AS DATE) >= CURRENT_DATE
             """,
                 (state.lower(), city.lower()),
             )
@@ -12864,8 +12667,8 @@ async def get_events_by_location(
                 SELECT COUNT(*) FROM events 
                 WHERE LOWER(state) = ? 
                 AND LOWER(city) = ? 
-                AND (is_published = 1 OR is_published IS NULL)
-                AND date::date >= CURRENT_DATE
+                AND is_published = TRUE
+                AND COALESCE(NULLIF(end_date, ''), date) >= date('now')
             """,
                 (state.lower(), city.lower()),
             )
@@ -12902,7 +12705,7 @@ async def get_event_share_card(event_id: int):
                            city, state, category, secondary_category, verified, 
                            view_count, interest_count, host_name, fee_required
                     FROM events 
-                    WHERE id = %s AND (is_published = true OR is_published IS NULL)
+                    WHERE id = %s AND is_published = TRUE
                 """,
                     (event_id,),
                 )
@@ -12914,7 +12717,7 @@ async def get_event_share_card(event_id: int):
                            city, state, category, secondary_category, verified, 
                            view_count, interest_count, host_name, fee_required
                     FROM events 
-                    WHERE id = ? AND (is_published = 1 OR is_published IS NULL)
+                    WHERE id = ? AND is_published = TRUE
                 """,
                     (event_id,),
                 )
@@ -12963,6 +12766,8 @@ async def get_event_share_card(event_id: int):
 
             return share_card_data
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error generating share card for event {event_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating share card")
@@ -12983,7 +12788,7 @@ async def get_event_share_card_png(event_id: int):
                 cursor.execute(
                     """
                     SELECT title, category, verified FROM events 
-                    WHERE id = %s AND (is_published = true OR is_published IS NULL)
+                    WHERE id = %s AND is_published = TRUE
                 """,
                     (event_id,),
                 )
@@ -12991,7 +12796,7 @@ async def get_event_share_card_png(event_id: int):
                 cursor.execute(
                     """
                     SELECT title, category, verified FROM events 
-                    WHERE id = ? AND (is_published = 1 OR is_published IS NULL)
+                    WHERE id = ? AND is_published = TRUE
                 """,
                     (event_id,),
                 )
@@ -13010,6 +12815,8 @@ async def get_event_share_card_png(event_id: int):
 
             return RedirectResponse(url=placeholder_url, status_code=302)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error serving PNG share card for event {event_id}: {str(e)}")
         # Fallback to generic placeholder
@@ -13024,7 +12831,7 @@ async def get_event_share_card_png(event_id: int):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/api/seo/migrate-events")
+@app.post("/api/seo/migrate-events", dependencies=[Depends(require_admin)])
 async def migrate_events_for_seo(background_tasks: BackgroundTasks):
     """Trigger production SEO migration for existing events"""
 
@@ -13047,7 +12854,7 @@ async def migrate_events_for_seo(background_tasks: BackgroundTasks):
     }
 
 
-@app.post("/api/seo/migrate-events-sync")
+@app.post("/api/seo/migrate-events-sync", dependencies=[Depends(require_admin)])
 async def migrate_events_for_seo_sync():
     """Execute production SEO migration synchronously with real-time results"""
     try:
@@ -13067,7 +12874,7 @@ async def migrate_events_for_seo_sync():
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
 
 
-@app.post("/api/seo/populate-production-fields")
+@app.post("/api/seo/populate-production-fields", dependencies=[Depends(require_admin)])
 async def populate_production_seo_fields():
     """Populate SEO fields for all events in production PostgreSQL database"""
     try:
@@ -13101,7 +12908,7 @@ async def get_events_sitemap():
                 """
                 SELECT slug, city, state, updated_at, date
                 FROM events 
-                WHERE (is_published = true OR is_published IS NULL)
+                WHERE is_published = TRUE
                 AND slug IS NOT NULL
                 AND CAST(date AS DATE) >= (CURRENT_DATE - INTERVAL '30 days')::DATE
                 ORDER BY updated_at DESC
@@ -13113,9 +12920,9 @@ async def get_events_sitemap():
                 """
                 SELECT slug, city, state, updated_at, date
                 FROM events 
-                WHERE (is_published = 1 OR is_published IS NULL)
+                WHERE is_published = TRUE
                 AND slug IS NOT NULL
-                AND date::date >= CURRENT_DATE - INTERVAL '30 days'
+                AND date >= date('now', '-30 days')
                 ORDER BY updated_at DESC
             """
             )
@@ -13163,13 +12970,13 @@ async def validate_event_seo(event_id: int):
         cursor = conn.cursor()
 
         cursor.execute(
-            """
+            f"""
             SELECT 
                 id, title, slug, description, short_description,
                 date, start_time, end_time, category, address, 
                 city, state, lat, lng, host_name, is_published
             FROM events 
-            WHERE id = ?
+            WHERE id = {get_placeholder()} AND is_published = TRUE
         """,
             (event_id,),
         )
@@ -13202,7 +13009,7 @@ async def validate_event_seo(event_id: int):
         }
 
 
-@app.post("/api/fix/null-end-times")
+@app.post("/api/fix/null-end-times", dependencies=[Depends(require_admin)])
 async def fix_null_end_times():
     """Fix NULL end_time values in the database"""
     try:
@@ -15480,11 +15287,12 @@ async def get_route_events_batch(request: RouteEventRequest):
 
                 # Add distance condition for this coordinate
                 distance_condition = f"""
-                    (6371 * acos(cos(radians({lat})) * cos(radians(lat)) * 
-                     cos(radians(lng) - radians({lng})) + sin(radians({lat})) * 
-                     sin(radians(lat)))) * 0.621371 <= {request.radius}
+                    (6371 * acos(cos(radians({placeholder})) * cos(radians(lat)) *
+                     cos(radians(lng) - radians({placeholder})) + sin(radians({placeholder})) *
+                     sin(radians(lat)))) * 0.621371 <= {placeholder}
                 """
                 distance_conditions.append(distance_condition)
+                params.extend([lat, lng, lat, request.radius])
 
             if not distance_conditions:
                 return []
@@ -15502,14 +15310,14 @@ async def get_route_events_batch(request: RouteEventRequest):
 
                 if IS_PRODUCTION and DB_URL:
                     date_conditions.append(
-                        f"date::date BETWEEN '{start_date}' AND '{end_date}'"
+                        f"date::date BETWEEN {placeholder} AND {placeholder}"
                     )
                 else:
                     date_conditions.append(
-                        f"date BETWEEN '{start_date}' AND '{end_date}'"
+                        f"date BETWEEN {placeholder} AND {placeholder}"
                     )
 
-                params.extend([])  # No additional params needed for string literals
+                params.extend([start_date, end_date])
             else:
                 # Default: future events only
                 if IS_PRODUCTION and DB_URL:
@@ -15518,7 +15326,7 @@ async def get_route_events_batch(request: RouteEventRequest):
                     date_conditions.append("date >= date('now')")
 
             # Combine all conditions
-            all_conditions = [f"({' OR '.join(distance_conditions)})"]
+            all_conditions = ["is_published = TRUE", f"({' OR '.join(distance_conditions)})"]
             if date_conditions:
                 all_conditions.extend(date_conditions)
 

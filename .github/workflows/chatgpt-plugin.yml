@@ -1,0 +1,52 @@
+name: ChatGPT plugin checks
+on:
+  pull_request:
+    paths: ['backend/**', 'plugins/todoevents/**', 'scripts/*plugin*', 'Dockerfile.plugin', 'render.chatgpt-plugin.yaml', '.github/workflows/chatgpt-plugin.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: plugin_test
+          POSTGRES_PASSWORD: ephemeral-ci-test-only
+          POSTGRES_DB: plugin_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      PLUGIN_TEST_POSTGRES_DSN: postgresql://plugin_test:ephemeral-ci-test-only@localhost:5432/plugin_test
+      TODOEVENTS_SKIP_STARTUP: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: plugins/todoevents/ui/package-lock.json
+      - name: Install backend and plugin test dependencies
+        run: python -m pip install -r backend/requirements.txt -r backend/requirements-plugin.lock pytest ruff
+      - name: Test isolated SQLite, PostgreSQL, OAuth and MCP flows
+        run: python -m pytest backend/tests -q
+      - name: Lint plugin and focused regression code
+        run: ruff check backend/chatgpt_plugin backend/plugin_host.py backend/event_safety.py backend/recommendations_endpoints.py backend/tests scripts/*plugin*.py
+      - name: Test package generation and boundaries
+        run: python -m unittest discover -s scripts -p 'test_plugin_packaging.py'
+      - name: Validate package structure
+        run: python scripts/validate_plugin_package.py plugins/todoevents
+      - name: Install widget dependencies
+        working-directory: plugins/todoevents/ui
+        run: npm ci
+      - name: Test, typecheck and build widget
+        working-directory: plugins/todoevents/ui
+        run: npm run check
