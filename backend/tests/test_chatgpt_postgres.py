@@ -1,17 +1,20 @@
 """Opt-in integration tests against a disposable PostgreSQL database.
 
 Set PLUGIN_TEST_POSTGRES_DSN to a test database. Each test owns a random schema,
-uses the repository's actual legacy event-column definitions, and drops only
-that schema. No existing schema, event, identity, or user is read or changed.
+uses the legacy event-column definitions with verified production type
+overrides, and drops only that schema. No existing schema, event, identity, or
+user is read or changed.
 """
 
 import importlib.util
+import json
 import os
 import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, contextmanager
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -59,15 +62,29 @@ def postgres():
                     hashed_password TEXT NOT NULL, role TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )""")
-            # Canonical definitions include SQLite's double-quoted string
-            # defaults; quote those literals for the PostgreSQL fixture.
+            # Types verified by the parent through approved read-only production
+            # schema inspection. No production rows or credentials are used.
+            production_types = {
+                "id": "SERIAL PRIMARY KEY",
+                "start_datetime": "TIMESTAMP WITHOUT TIME ZONE",
+                "end_datetime": "TIMESTAMP WITHOUT TIME ZONE",
+                "updated_at": "TIMESTAMP WITHOUT TIME ZONE",
+                "price": "NUMERIC DEFAULT 0.0",
+                "slug": "VARCHAR",
+                "city": "VARCHAR",
+                "state": "VARCHAR",
+                "country": "VARCHAR DEFAULT 'USA'",
+                "currency": "VARCHAR DEFAULT 'USD'",
+            }
+            # Quote remaining SQLite string defaults for PostgreSQL.
             fields = [
                 (
                     name,
-                    "SERIAL PRIMARY KEY"
-                    if name == "id"
-                    else kind.replace('DEFAULT "USA"', "DEFAULT 'USA'").replace(
-                        'DEFAULT "USD"', "DEFAULT 'USD'"
+                    production_types.get(
+                        name,
+                        kind.replace('DEFAULT "USA"', "DEFAULT 'USA'").replace(
+                            'DEFAULT "USD"', "DEFAULT 'USD'"
+                        ),
                     ),
                 )
                 for name, kind in EVENT_FIELDS
@@ -127,6 +144,54 @@ def test_postgres_migration_is_repeatable_and_preserves_legacy_rows(postgres):
         assert before == after
         assert after["is_published"] is True
         assert tx.one("SELECT COUNT(*) AS n FROM plugin_drafts")["n"] == 0
+
+
+def test_postgres_production_numeric_prices_serialize_in_every_public_response(
+    organizer,
+):
+    service, owner, event, store = organizer
+    public = {**event, "price": 19.95}
+    # Use the exact strict JSON encoding required by MCP plain tool output.
+    json.dumps(service.search_events(), allow_nan=False)
+    prepared = service.prepare_event(owner, public)
+    publication = publish(service, owner, prepared, "numeric-price-publish")
+    event_id = publication["event"]["id"]
+    with store.transaction() as tx:
+        stored = tx.one(
+            "SELECT price,start_datetime,end_datetime FROM events WHERE id=?",
+            (event_id,),
+        )
+        assert isinstance(stored["price"], Decimal)
+        assert isinstance(stored["start_datetime"], datetime)
+        assert isinstance(stored["end_datetime"], datetime)
+    assert (
+        json.loads(json.dumps(publication, allow_nan=False))["event"]["price"] == 19.95
+    )
+    assert (
+        json.loads(json.dumps(service.get_event(event_id), allow_nan=False))["event"][
+            "price"
+        ]
+        == 19.95
+    )
+    json.dumps(service.search_events(), allow_nan=False)
+    json.dumps(service.list_organizer_events(owner), allow_nan=False)
+    admission_note = "USD 19.95 adults; children under 12 attend free"
+    with store.transaction(write=True) as tx:
+        tx.execute(
+            "UPDATE events SET fee_required=? WHERE id=?", (admission_note, event_id)
+        )
+    update = service.prepare_event(
+        owner, {**public, "title": "Reviewed numeric price"}, event_id=event_id
+    )
+    assert json.loads(json.dumps(update, allow_nan=False))["event"]["price"] == 19.95
+    publish(service, owner, update, "numeric-price-update")
+    with store.transaction() as tx:
+        assert (
+            tx.one("SELECT fee_required FROM events WHERE id=?", (event_id,))[
+                "fee_required"
+            ]
+            == admission_note
+        )
 
 
 def test_postgres_transaction_rolls_back_event_and_sidecar_together(postgres):
