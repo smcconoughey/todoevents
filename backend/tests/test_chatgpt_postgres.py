@@ -392,3 +392,138 @@ def test_postgres_organizer_account_deletion_removes_draft_content(organizer):
     with store.transaction() as tx:
         for table in ("plugin_drafts", "plugin_publications", "plugin_idempotency"):
             assert tx.one(f"SELECT COUNT(*) AS n FROM {table}")["n"] == 0
+
+
+def test_postgres_concurrent_update_retries_preserve_id_link_and_one_record(organizer):
+    service, owner, event, store = organizer
+    original = publish(service, owner, service.prepare_event(owner, event))
+    event_id, canonical = original["event"]["id"], original["event"]["url"]
+    # Production returns TIMESTAMP columns as datetime, not SQLite strings.
+    with store.transaction(write=True) as tx:
+        tx.execute(
+            "UPDATE events SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (event_id,)
+        )
+    changed = {**event, "title": "Updated paid workshop", "price": 25}
+    preview = service.prepare_event(owner, changed, event_id=event_id)
+    assert preview["action"] == "update"
+    assert preview["target_event_id"] == event_id
+    assert any(
+        change["field"] == "price" and change["after"] == 25
+        for change in preview["changes"]
+    )
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        results = list(
+            executor.map(
+                lambda i: publish(service, owner, preview, f"update-retry-{i}"),
+                range(4),
+            )
+        )
+    assert sum(not result["replayed"] for result in results) == 1
+    assert all(
+        result["event"]["id"] == event_id and result["event"]["url"] == canonical
+        for result in results
+    )
+    assert service.get_event(event_id)["event"]["title"] == changed["title"]
+    with store.transaction() as tx:
+        assert tx.one("SELECT COUNT(*) AS n FROM events")["n"] == 2
+        current = tx.one(
+            "SELECT price,fee_required FROM events WHERE id=?", (event_id,)
+        )
+        assert current["price"] == 25 and "25" in current["fee_required"]
+
+
+def test_postgres_competing_update_reviews_reject_stale_version(organizer):
+    service, owner, event, store = organizer
+    event_id = publish(service, owner, service.prepare_event(owner, event))["event"][
+        "id"
+    ]
+    first = service.prepare_event(
+        owner, {**event, "title": "Version A"}, event_id=event_id
+    )
+    second = service.prepare_event(
+        owner, {**event, "title": "Version B"}, event_id=event_id
+    )
+
+    def attempt(draft, key):
+        try:
+            return publish(service, owner, draft, key)
+        except DomainError as error:
+            return error.code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = [
+            future.result()
+            for future in (
+                executor.submit(attempt, first, "competing-version-a"),
+                executor.submit(attempt, second, "competing-version-b"),
+            )
+        ]
+    assert sum(isinstance(result, dict) for result in results) == 1
+    assert "stale_event" in results
+    with store.transaction() as tx:
+        assert tx.one("SELECT COUNT(*) AS n FROM events")["n"] == 2
+
+
+def test_postgres_update_and_cancel_race_cannot_resurrect_publication(organizer):
+    service, owner, event, store = organizer
+    original = service.prepare_event(owner, event)
+    event_id = publish(service, owner, original)["event"]["id"]
+    update = service.prepare_event(
+        owner, {**event, "title": "Racing update"}, event_id=event_id
+    )
+
+    def apply_update():
+        try:
+            return publish(service, owner, update, "racing-update-key")
+        except DomainError as error:
+            return error.code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        update_future = executor.submit(apply_update)
+        cancel_future = executor.submit(service.cancel_event, owner, event_id, True)
+        updated, cancelled = update_future.result(), cancel_future.result()
+    assert isinstance(updated, dict) or updated in {"stale_event", "event_unavailable"}
+    assert cancelled["status"] == "cancelled"
+    assert publish(service, owner, original)["status"] == "cancelled"
+    with pytest.raises(DomainError) as missing:
+        service.get_event(event_id)
+    assert missing.value.code == "not_found"
+    with store.transaction() as tx:
+        assert (
+            tx.one("SELECT is_published FROM events WHERE id=?", (event_id,))[
+                "is_published"
+            ]
+            is False
+        )
+
+
+def test_postgres_update_failure_rolls_back_public_event_and_review(organizer):
+    service, owner, event, store = organizer
+    created = service.prepare_event(owner, event)
+    event_id = publish(service, owner, created)["event"]["id"]
+    changed = service.prepare_event(
+        owner, {**event, "title": "Atomic update"}, event_id=event_id
+    )
+    with store.transaction(write=True) as tx:
+        before = tx.one("SELECT * FROM events WHERE id=?", (event_id,))
+        tx.execute(
+            "ALTER TABLE plugin_publications ADD CONSTRAINT update_failure CHECK (draft_id=?)",
+            (created["draft_id"],),
+        )
+    import psycopg2
+
+    with pytest.raises(psycopg2.errors.CheckViolation):
+        publish(service, owner, changed, "atomic-update-key")
+    with store.transaction(write=True) as tx:
+        assert tx.one("SELECT * FROM events WHERE id=?", (event_id,)) == before
+        assert (
+            tx.one(
+                "SELECT status FROM plugin_drafts WHERE id=?", (changed["draft_id"],)
+            )["status"]
+            == "draft"
+        )
+        tx.execute("ALTER TABLE plugin_publications DROP CONSTRAINT update_failure")
+    assert (
+        publish(service, owner, changed, "atomic-update-key")["event"]["title"]
+        == "Atomic update"
+    )
