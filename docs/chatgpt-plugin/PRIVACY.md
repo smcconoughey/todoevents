@@ -32,7 +32,7 @@ The proposed support contact is `support@todo-events.com`, already present in th
 
 ## Public publication notice
 
-Before publishing, show the exact title, description, start/end with timezone, public venue, host, category, optional URL, price/currency, and the fact that this will be a public Todo-Events listing. Authentication alone is not publication consent. A private/invitation-only or undecided plan must remain unpublished. The approval must match the current preview hash/version and organizer; changes require a new preview and renewed approval.
+Before publishing, show the exact title, description, start/end with timezone, public venue, host, category, optional URL, price/currency, and the fact that this will be a public Todo-Events listing. For an existing event update, identify the canonical event and the changes; the same shared record is updated only after approval. Authentication alone is not publication consent. A private/invitation-only or undecided plan must remain unpublished. The approval must match the current preview hash/version and organizer; draft or live-baseline changes require a fresh preview and renewed approval.
 
 ## Review before public adoption
 

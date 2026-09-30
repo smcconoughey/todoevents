@@ -17,7 +17,7 @@
       "interface": {
         "displayName": "Todo-Events",
         "shortDescription": "Find events and share public happenings",
-        "longDescription": "Search current published Todo-Events listings by area, date, and category, with canonical event links. Organizers can prepare and review a public listing, then explicitly confirm publication through their connected organizer account. Private invitations, ticket checkout, and paid upgrades are outside this plugin's scope.",
+        "longDescription": "Search current published Todo-Events listings by area, date, and category, with canonical event links. Organizers can prepare and review a new listing or an update to their existing event, then explicitly confirm publication through their connected organizer account. Private invitations, ticket checkout, and paid upgrades are outside this plugin's scope.",
         "developerName": "Watchtower AB, Inc",
         "category": "Productivity",
         "capabilities": ["Read", "Write"],

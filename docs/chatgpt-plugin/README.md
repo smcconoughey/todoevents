@@ -1,6 +1,6 @@
 # Todo-Events ChatGPT plugin
 
-The plugin adds anonymous discovery of current published events and an authenticated organizer workflow that previews exact public listing content before confirmed publication. The website and its existing database remain the source of listings. This implementation does not promise placement in ChatGPT recommendations, ticket checkout, private invitations, or paid organizer upgrades.
+The plugin adds anonymous discovery of current published events and an authenticated organizer workflow that previews exact public listing content before confirmed publication or update. Discovery links lead to canonical website events; authorized updates and cancellation operate on the same shared event records. The website and its existing database remain the source of listings. This implementation does not promise placement in ChatGPT recommendations, ticket checkout, private invitations, or paid organizer upgrades.
 
 ## Local development
 
@@ -68,4 +68,4 @@ python3 scripts/validate_plugin_package.py /absolute/path/to/new-release-directo
 
 The directory contains `todoevents.zip`, an unpacked copy, and a separate `service-config.json` to align MCP audience and widget domain. The ZIP includes the root `plugin.json`, `mcp.json`, scoped skills, unchanged licensed icon, README, and commercial license. It excludes the service/UI source, `.app.json` files, app references, hooks, local configuration, tests, and credentials. This structural checker does not fetch URLs or prove domain ownership or platform acceptance.
 
-Complete [SUBMISSION.md](SUBMISSION.md), [REVIEW_CASES.md](REVIEW_CASES.md), and [PRIVACY.md](PRIVACY.md) before requesting release approval. Local checks and remaining external gates are recorded separately in the test report.
+Complete [SUBMISSION.md](SUBMISSION.md), [REVIEW_CASES.md](REVIEW_CASES.md), and [PRIVACY.md](PRIVACY.md) before requesting release approval. The ordered proposal and exact approval choices are in [RELEASE_APPROVAL.md](RELEASE_APPROVAL.md). Local checks and remaining external gates are recorded separately in the test report.

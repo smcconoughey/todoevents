@@ -12,6 +12,7 @@ The plugin is a separate MCP service over the existing Todo-Events data model. A
 | Cross-owner draft/event mutation | Ownership checked in the transaction | Different organizer negative tests; guessed IDs must not reveal private draft content |
 | Publication without reviewed consent | Exact review hash/version and explicit confirmation; stale/expired previews rejected | Host confirmation and human review remain essential; a boolean tool field alone cannot prove human consent |
 | Changed content after review | Update invalidates review hash; supplied publication hash must match current draft | Stale-preview and changed-content tests |
+| Lost updates to shared website events | Existing-event update draft binds the live baseline; publication checks it again transactionally | Change the live event after preview and verify refusal; approved update retains ID/canonical link |
 | Duplicate writes on retries or concurrent requests | Owner-scoped idempotency record, transaction/locks, existing publication recovery | Repeat/interrupted/concurrent-flow tests; preserve idempotency records during rollout |
 | Private planning mistaken for public listing | `visibility: public` required; private/undecided intent rejected in skill and validation | Host tests for private party/guest details; do not silently convert visibility |
 | XSS or hostile listing text | Text-only rendering, bounded fields, safe link schemes; descriptions treated as untrusted data | Malicious markup/link/instruction test fixtures; verify rendered widget and plain output |

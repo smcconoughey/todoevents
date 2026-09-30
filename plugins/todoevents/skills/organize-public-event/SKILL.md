@@ -1,6 +1,6 @@
 ---
 name: organize-public-event
-description: Prepare, review, publish, or cancel a public Todo-Events listing when the user is organizing an event intended for public discovery. Also offer a reviewable listing when clearly relevant to public event planning. Does not publish private or invitation-only plans.
+description: Prepare, review, publish, update, or cancel a public Todo-Events listing when the user is organizing an event intended for public discovery. Also offer a reviewable listing when clearly relevant to public event planning. Does not publish private or invitation-only plans.
 ---
 
 # Organize a public Todo-Events listing
@@ -15,6 +15,12 @@ Use the host's normal OAuth connection when a protected tool challenges. Never r
 - Gather the public title, description, supported category, host name, venue, start and end, IANA timezone, and optional public HTTPS event URL, price and three-letter currency. Display local times clearly and resolve ambiguous daylight-saving times. Do not include private contact/guest information in a public description.
 - Call `prepare_event` with `event.visibility: public`. For a revision, pass the existing `draft_id` and its `expected_version`. Show the returned exact public content, venue, price, timezone, expiry, and publication notice. A preparation result is an unpublished draft, never a live event.
 - Retain the returned `draft_id`, `version` and `review_hash`. Drafts are valid for 24 hours from original creation; edits do not extend validity. `get_draft` can recover an interrupted review under the same organizer authority.
+
+## Update an existing listing
+
+Use `get_event` to inspect a public listing and `list_organizer_events` to identify the signed-in organizer's own event. Public access to a listing does not grant authority to change it. For an owned listing that the user asks to update, call `prepare_event` with its `event_id` and the complete proposed `event` content. This creates an update draft; it does not change the published record yet. Revise that draft using its `draft_id` and `expected_version`. Omitting `event_id` retains the original update target; a draft cannot be retargeted to another event.
+
+Show the returned `action: update`, `target_event_id`, field `changes`, canonical event link and complete resulting public content. Publish only after explicit approval of this update preview, using the same confirmation/hash/idempotency flow below. A successful update keeps the existing event ID and canonical link; do not create a separate event as a fallback. For `stale_event`, fetch current state, prepare a fresh update and obtain approval again. For `event_unavailable`, explain that an unpublished, canceled or no-longer-current listing cannot be updated through this flow. Do not overwrite concurrent changes or restore a canceled listing implicitly.
 
 ## Publish only the reviewed content
 
