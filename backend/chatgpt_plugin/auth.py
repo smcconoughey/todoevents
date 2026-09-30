@@ -35,9 +35,14 @@ def validate_url(value: str, *, allow_loopback: bool = False) -> str:
         or parsed.password
         or parsed.query
         or parsed.fragment
-        or (parsed.scheme != "https" and not (allow_loopback and local and parsed.scheme == "http"))
+        or (
+            parsed.scheme != "https"
+            and not (allow_loopback and local and parsed.scheme == "http")
+        )
     ):
-        raise ValueError("OAuth URLs must use HTTPS (HTTP loopback requires development mode)")
+        raise ValueError(
+            "OAuth URLs must use HTTPS (HTTP loopback requires development mode)"
+        )
     if parsed.port is not None and not 1 <= parsed.port <= 65535:
         raise ValueError("OAuth URL port must be between 1 and 65535")
     return value.rstrip("/")
@@ -61,7 +66,9 @@ class AuthSettings:
             validate_url(self.issuer, allow_loopback=self.development)
             validate_url(self.jwks_url, allow_loopback=self.development)
             if self.audience != self.resource_url:
-                raise ValueError("OAuth audience must exactly equal the MCP resource URL")
+                raise ValueError(
+                    "OAuth audience must exactly equal the MCP resource URL"
+                )
         if not 0 <= self.clock_leeway_seconds <= 60:
             raise ValueError("OAuth clock leeway must be between zero and 60 seconds")
 
@@ -105,7 +112,11 @@ class AuthenticationError(Exception):
     def challenge(self, settings: AuthSettings, scopes: frozenset[str]) -> str:
         # All values here are validated configuration or fixed server constants.
         result = f'Bearer resource_metadata="{settings.metadata_url}"'
-        code = "insufficient_scope" if self.code == "insufficient_scope" else "invalid_token"
+        code = (
+            "insufficient_scope"
+            if self.code == "insufficient_scope"
+            else "invalid_token"
+        )
         result += f', error="{code}", error_description="Connect an authorized Todo-Events organizer account"'
         if scopes:
             result += f', scope="{" ".join(sorted(scopes))}"'
@@ -142,7 +153,9 @@ class IdentityStore:
         finally:
             connection.close()
 
-    def resolve(self, issuer: str, subject: str, token_scopes: frozenset[str]) -> Principal:
+    def resolve(
+        self, issuer: str, subject: str, token_scopes: frozenset[str]
+    ) -> Principal:
         placeholder = "%s" if self.dialect == "postgres" else "?"
         connection = self.connection_factory()
         try:
@@ -158,13 +171,19 @@ class IdentityStore:
         finally:
             connection.close()
         if row is None:
-            raise AuthenticationError("invalid_token", "This organizer account is not linked or is disabled.", 403)
+            raise AuthenticationError(
+                "invalid_token",
+                "This organizer account is not linked or is disabled.",
+                403,
+            )
         if isinstance(row, dict):
             user_id, granted = row["user_id"], row["scopes"]
         else:
             user_id, granted = row[0], row[1]
         return Principal(
-            user_id=int(user_id), issuer=issuer, subject=subject,
+            user_id=int(user_id),
+            issuer=issuer,
+            subject=subject,
             scopes=token_scopes & frozenset(granted.split()) & SCOPES,
         )
 
@@ -172,7 +191,13 @@ class IdentityStore:
 class JWKSCache:
     """Bounded HTTPS fetch; neither token jku nor redirects choose a key source."""
 
-    def __init__(self, url: str, *, transport: httpx.AsyncBaseTransport | None = None, ttl: int = 300) -> None:
+    def __init__(
+        self,
+        url: str,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        ttl: int = 300,
+    ) -> None:
         self.url, self.transport, self.ttl = url, transport, ttl
         self.keys: dict[str, Any] = {}
         self.loaded_at = 0.0
@@ -190,8 +215,12 @@ class JWKSCache:
             if self.loaded_at and now - self.loaded_at < 10:
                 raise AuthenticationError("invalid_token", "Unknown signing key.")
             async with (
-                httpx.AsyncClient(timeout=5.0, follow_redirects=False, transport=self.transport) as client,
-                client.stream("GET", self.url, headers={"Accept": "application/json"}) as response,
+                httpx.AsyncClient(
+                    timeout=5.0, follow_redirects=False, transport=self.transport
+                ) as client,
+                client.stream(
+                    "GET", self.url, headers={"Accept": "application/json"}
+                ) as response,
             ):
                 response.raise_for_status()
                 body = bytearray()
@@ -206,7 +235,8 @@ class JWKSCache:
             keys: dict[str, Any] = {}
             for key in raw_keys:
                 if (
-                    key.get("kty") == "RSA" and key.get("use", "sig") == "sig"
+                    key.get("kty") == "RSA"
+                    and key.get("use", "sig") == "sig"
                     and key.get("alg", "RS256") == "RS256"
                     and isinstance(key.get("kid"), str)
                     and key.get("key_ops", ["verify"]) == ["verify"]
@@ -215,7 +245,9 @@ class JWKSCache:
                         raise ValueError("Duplicate JWKS key ID")
                     parsed_key = jwt.algorithms.RSAAlgorithm.from_jwk(key)
                     if parsed_key.key_size < 2048:
-                        raise ValueError("OAuth signing keys must be at least 2048 bits")
+                        raise ValueError(
+                            "OAuth signing keys must be at least 2048 bits"
+                        )
                     keys[key["kid"]] = parsed_key
             self.keys, self.loaded_at = keys, time.monotonic()
             if kid not in keys:
@@ -224,42 +256,90 @@ class JWKSCache:
 
 
 class OAuthVerifier:
-    def __init__(self, settings: AuthSettings, identities: IdentityStore, *, jwks: JWKSCache | None = None) -> None:
+    def __init__(
+        self,
+        settings: AuthSettings,
+        identities: IdentityStore,
+        *,
+        jwks: JWKSCache | None = None,
+    ) -> None:
         self.settings, self.identities = settings, identities
         self.jwks = jwks or JWKSCache(settings.jwks_url)
 
-    async def verify(self, authorization: str | None, required_scopes: frozenset[str]) -> Principal:
+    async def verify(
+        self, authorization: str | None, required_scopes: frozenset[str]
+    ) -> Principal:
         if not self.settings.configured:
-            raise AuthenticationError("auth_unavailable", "Organizer sign-in is not configured on this server.", 503)
+            raise AuthenticationError(
+                "auth_unavailable",
+                "Organizer sign-in is not configured on this server.",
+                503,
+            )
         if not authorization:
-            raise AuthenticationError("authentication_required", "Connect your Todo-Events organizer account to continue.")
+            raise AuthenticationError(
+                "authentication_required",
+                "Connect your Todo-Events organizer account to continue.",
+            )
         parts = authorization.split()
         if len(parts) != 2 or parts[0].lower() != "bearer" or len(parts[1]) > 16384:
             raise AuthenticationError("invalid_token", "Invalid access token.")
         token = parts[1]
         try:
             header = jwt.get_unverified_header(token)
-            if header.get("alg") != "RS256" or not isinstance(header.get("kid"), str) or not 1 <= len(header["kid"]) <= 128:
+            if (
+                header.get("alg") != "RS256"
+                or not isinstance(header.get("kid"), str)
+                or not 1 <= len(header["kid"]) <= 128
+            ):
                 raise AuthenticationError("invalid_token", "Invalid access token.")
             key = await self.jwks.get_key(header["kid"])
             claims = jwt.decode(
-                token, key=key, algorithms=["RS256"], issuer=self.settings.issuer,
-                audience=self.settings.audience, leeway=self.settings.clock_leeway_seconds,
+                token,
+                key=key,
+                algorithms=["RS256"],
+                issuer=self.settings.issuer,
+                audience=self.settings.audience,
+                leeway=self.settings.clock_leeway_seconds,
                 options={"require": ["exp", "iat", "iss", "aud", "sub"]},
             )
             if not isinstance(claims["sub"], str) or not 1 <= len(claims["sub"]) <= 512:
-                raise AuthenticationError("invalid_token", "Invalid access token subject.")
+                raise AuthenticationError(
+                    "invalid_token", "Invalid access token subject."
+                )
             scope = claims.get("scope", "")
             if not isinstance(scope, str):
-                raise AuthenticationError("invalid_token", "Access token scope must be a space-delimited string.")
-            principal = await asyncio.to_thread(self.identities.resolve, claims["iss"], claims["sub"], frozenset(scope.split()))
+                raise AuthenticationError(
+                    "invalid_token",
+                    "Access token scope must be a space-delimited string.",
+                )
+            principal = await asyncio.to_thread(
+                self.identities.resolve,
+                claims["iss"],
+                claims["sub"],
+                frozenset(scope.split()),
+            )
         except AuthenticationError:
             raise
-        except (jwt.PyJWTError, httpx.HTTPError, ValueError, TypeError, KeyError, AttributeError):
-            raise AuthenticationError("invalid_token", "The access token could not be verified.") from None
+        except (
+            jwt.PyJWTError,
+            httpx.HTTPError,
+            ValueError,
+            TypeError,
+            KeyError,
+            AttributeError,
+        ):
+            raise AuthenticationError(
+                "invalid_token", "The access token could not be verified."
+            ) from None
         except Exception:  # noqa: BLE001 - fail closed for unavailable identity storage
             # Database/schema failures never fall back to email, legacy JWT, or anonymous mutation.
-            raise AuthenticationError("auth_unavailable", "Organizer sign-in is temporarily unavailable.", 503) from None
+            raise AuthenticationError(
+                "auth_unavailable", "Organizer sign-in is temporarily unavailable.", 503
+            ) from None
         if not required_scopes <= principal.scopes:
-            raise AuthenticationError("insufficient_scope", "This account has not granted the required organizer permission.", 403)
+            raise AuthenticationError(
+                "insufficient_scope",
+                "This account has not granted the required organizer permission.",
+                403,
+            )
         return principal

@@ -1,0 +1,19 @@
+# Only the standalone plugin and compiled widget enter the production image.
+FROM node:24-bookworm-slim AS widget
+WORKDIR /widget
+COPY plugins/todoevents/ui/package.json plugins/todoevents/ui/package-lock.json ./
+RUN npm ci
+COPY plugins/todoevents/ui/ ./
+RUN npm run build
+
+FROM python:3.11-slim-bookworm AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PLUGIN_ENV=production PORT=8787
+WORKDIR /app
+COPY backend/requirements-plugin.lock /tmp/requirements-plugin.lock
+RUN pip install --no-cache-dir -r /tmp/requirements-plugin.lock
+COPY backend/__init__.py backend/database_schema.py ./backend/
+COPY backend/chatgpt_plugin/ ./backend/chatgpt_plugin/
+COPY --from=widget /widget/dist/events.html ./plugins/todoevents/ui/dist/events.html
+USER 10001:10001
+EXPOSE 8787
+CMD ["python", "-m", "backend.chatgpt_plugin", "serve", "--host", "0.0.0.0"]

@@ -1,0 +1,25 @@
+# Prepared only. Approve the workspace, region, plan and environment before use.
+# Existing web services and the shared event database remain separately managed.
+services:
+  - type: web
+    name: todoevents-plugin
+    runtime: docker
+    dockerfilePath: ./Dockerfile.plugin
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    envVars:
+      - key: PLUGIN_ENV
+        value: production
+      - key: PLUGIN_DATABASE_URL
+        sync: false
+      - key: PLUGIN_RESOURCE_URL
+        sync: false
+      - key: PLUGIN_OAUTH_ISSUER
+        sync: false
+      - key: PLUGIN_OAUTH_AUDIENCE
+        sync: false
+      - key: PLUGIN_OAUTH_JWKS_URL
+        sync: false
+      - key: PLUGIN_UI_DOMAIN
+        sync: false
