@@ -5,13 +5,17 @@ uses the repository's actual legacy event-column definitions, and drops only
 that schema. No existing schema, event, identity, or user is read or changed.
 """
 
+import importlib.util
 import os
+import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
+from starlette.testclient import TestClient
 
 from backend.chatgpt_plugin.auth import IdentityStore
 from backend.chatgpt_plugin.domain import EventService
@@ -527,3 +531,159 @@ def test_postgres_update_failure_rolls_back_public_event_and_review(organizer):
         publish(service, owner, changed, "atomic-update-key")["event"]["title"]
         == "Atomic update"
     )
+
+
+@pytest.fixture
+def postgres_web(postgres, monkeypatch):
+    """Use real web routes with the same isolated PostgreSQL schema as MCP."""
+    _, connect = postgres
+    backend_path = Path(__file__).resolve().parents[1]
+    monkeypatch.setenv("TODOEVENTS_SKIP_STARTUP", "1")
+    monkeypatch.setenv("RENDER", "")
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "")
+    monkeypatch.setattr(sys, "path", [*sys.path, str(backend_path)])
+    spec = importlib.util.spec_from_file_location(
+        "plugin_postgres_web", backend_path / "backend.py"
+    )
+    web = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(web)
+
+    @contextmanager
+    def database():
+        with closing(connect()) as connection:
+            # Match the existing production get_db factory. Mutation routes
+            # deliberately BEGIN/COMMIT their own transaction on this factory.
+            connection.autocommit = True
+            yield connection
+
+    @contextmanager
+    def transaction():
+        with closing(connect()) as connection:
+            yield connection
+
+    monkeypatch.setattr(web, "IS_PRODUCTION", True)
+    monkeypatch.setattr(web, "DB_URL", "isolated-postgres-test-schema")
+    monkeypatch.setattr(web, "get_db", database)
+    monkeypatch.setattr(web, "get_db_transaction", transaction)
+    monkeypatch.setattr(web, "log_activity", lambda *args, **kwargs: None)
+    web.event_cache.clear()
+    with TestClient(web.app) as client:
+        try:
+            yield web, client
+        finally:
+            web.app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize("with_optional_table", [False, True])
+def test_postgres_real_web_delete_handles_sparse_optional_tables(
+    organizer, postgres_web, with_optional_table
+):
+    service, owner, event, store = organizer
+    web, client = postgres_web
+    draft = service.prepare_event(owner, event)
+    event_id = publish(service, owner, draft)["event"]["id"]
+    with store.transaction(write=True) as tx:
+        other_id = tx.insert_event(legacy_event(created_by=2, slug="other-owner-event"))
+        if with_optional_table:
+            tx.execute(
+                "CREATE TABLE event_reports (id SERIAL PRIMARY KEY, event_id INTEGER REFERENCES events(id))"
+            )
+            tx.execute(
+                "INSERT INTO event_reports (event_id) VALUES (?),(?)",
+                (event_id, other_id),
+            )
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 2,
+        "role": "user",
+    }
+    assert client.delete(f"/events/{event_id}").status_code == 403
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 1,
+        "role": "user",
+    }
+    deleted = client.delete(f"/events/{event_id}")
+    assert deleted.status_code == 200, deleted.text
+    with store.transaction() as tx:
+        assert tx.one("SELECT id FROM events WHERE id=?", (event_id,)) is None
+        assert (
+            tx.one("SELECT created_by FROM events WHERE id=?", (other_id,))[
+                "created_by"
+            ]
+            == 2
+        )
+        assert tx.one("SELECT COUNT(*) AS n FROM plugin_publications")["n"] == 0
+        assert tx.one("SELECT COUNT(*) AS n FROM plugin_idempotency")["n"] == 0
+        assert (
+            tx.one(
+                "SELECT event_id FROM plugin_drafts WHERE id=?", (draft["draft_id"],)
+            )["event_id"]
+            is None
+        )
+        if with_optional_table:
+            assert tx.all("SELECT event_id FROM event_reports") == [
+                {"event_id": other_id}
+            ]
+    with pytest.raises(DomainError):
+        publish(service, owner, draft)
+
+
+@pytest.mark.parametrize("with_optional_tables", [False, True])
+def test_postgres_real_admin_delete_cascades_only_target_account(
+    organizer, postgres, postgres_web, with_optional_tables
+):
+    service, owner, event, store = organizer
+    _, connect = postgres
+    web, client = postgres_web
+    published_id = publish(service, owner, service.prepare_event(owner, event))[
+        "event"
+    ]["id"]
+    service.prepare_event(
+        owner, {**event, "description": "Private review awaiting approval"}
+    )
+    identities = IdentityStore(connect, "postgres")
+    identities.migrate()
+    with store.transaction(write=True) as tx:
+        other_id = tx.insert_event(legacy_event(created_by=2, slug="other-owner-event"))
+        tx.execute("UPDATE users SET role='admin' WHERE id=2")
+        tx.execute("""INSERT INTO plugin_oauth_identities (issuer,subject,user_id,scopes)
+                    VALUES ('https://issuer.example.test','owner',1,'events:read'),
+                           ('https://issuer.example.test','other',2,'events:read')""")
+        if with_optional_tables:
+            tx.execute(
+                "CREATE TABLE media_audit_logs (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), event_id INTEGER REFERENCES events(id), details TEXT)"
+            )
+            tx.execute(
+                "INSERT INTO media_audit_logs (user_id,event_id,details) VALUES (1,?,'retain audit'),(2,?,'other audit')",
+                (published_id, other_id),
+            )
+            tx.execute(
+                "CREATE TABLE event_reports (id SERIAL PRIMARY KEY, event_id INTEGER REFERENCES events(id))"
+            )
+            tx.execute(
+                "INSERT INTO event_reports (event_id) VALUES (?),(?)",
+                (published_id, other_id),
+            )
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 2,
+        "role": "admin",
+    }
+    deleted = client.delete("/admin/users/1")
+    assert deleted.status_code == 200, deleted.text
+    with store.transaction() as tx:
+        assert tx.all("SELECT id FROM users") == [{"id": 2}]
+        assert tx.all("SELECT id FROM events") == [{"id": other_id}]
+        assert tx.all("SELECT subject FROM plugin_oauth_identities") == [
+            {"subject": "other"}
+        ]
+        for table in ("plugin_drafts", "plugin_publications", "plugin_idempotency"):
+            assert tx.one(f"SELECT COUNT(*) AS n FROM {table}")["n"] == 0
+        if with_optional_tables:
+            assert tx.all(
+                "SELECT user_id,event_id,details FROM media_audit_logs ORDER BY id"
+            ) == [
+                {"user_id": None, "event_id": None, "details": "retain audit"},
+                {"user_id": 2, "event_id": other_id, "details": "other audit"},
+            ]
+            assert tx.all("SELECT event_id FROM event_reports") == [
+                {"event_id": other_id}
+            ]
