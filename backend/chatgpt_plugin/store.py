@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 import hashlib
 import sqlite3
+from contextlib import contextmanager
 
 from .models import DomainError
 
@@ -22,7 +22,10 @@ class Session:
         try:
             cursor.execute(self.sql(query), args)
             names = [part[0] for part in cursor.description]
-            return [dict(zip(names, row)) if not isinstance(row, dict) else dict(row) for row in cursor.fetchall()]
+            return [
+                dict(zip(names, row)) if not isinstance(row, dict) else dict(row)
+                for row in cursor.fetchall()
+            ]
         finally:
             cursor.close()
 
@@ -41,10 +44,21 @@ class Session:
     def insert_event(self, values):
         fields = tuple(values)
         # All field names originate in the service, never tool inputs.
-        query = "INSERT INTO events (" + ",".join(fields) + ") VALUES (" + ",".join("?" for _ in fields) + ")"
+        query = (
+            "INSERT INTO events ("
+            + ",".join(fields)
+            + ") VALUES ("
+            + ",".join("?" for _ in fields)
+            + ")"
+        )
         cursor = self.connection.cursor()
         try:
-            cursor.execute(self.sql(query + (" RETURNING id" if self.dialect == "postgres" else "")), tuple(values.values()))
+            cursor.execute(
+                self.sql(
+                    query + (" RETURNING id" if self.dialect == "postgres" else "")
+                ),
+                tuple(values.values()),
+            )
             if self.dialect == "postgres":
                 row = cursor.fetchone()
                 return row["id"] if isinstance(row, dict) else row[0]
@@ -54,7 +68,11 @@ class Session:
 
     def lock_idempotency(self, user_id, key):
         if self.dialect == "postgres":
-            lock = int.from_bytes(hashlib.sha256(f"{user_id}:{key}".encode()).digest()[:8], "big", signed=True)
+            lock = int.from_bytes(
+                hashlib.sha256(f"{user_id}:{key}".encode()).digest()[:8],
+                "big",
+                signed=True,
+            )
             self.one("SELECT pg_advisory_xact_lock(?)", (lock,))
 
     @property
@@ -98,10 +116,47 @@ class PluginStore:
             if self.dialect == "sqlite":
                 columns = {row["name"] for row in tx.all("PRAGMA table_info(events)")}
             else:
-                columns = {row["column_name"] for row in tx.all("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='events'")}
-            required = {"id", "title", "description", "date", "start_time", "end_time", "end_date", "category", "address", "city", "state", "country", "lat", "lng", "created_by", "slug", "is_published", "start_datetime", "end_datetime", "host_name", "event_url", "price", "currency"}
+                columns = {
+                    row["column_name"]
+                    for row in tx.all(
+                        "SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='events'"
+                    )
+                }
+            required = {
+                "id",
+                "title",
+                "description",
+                "short_description",
+                "date",
+                "start_time",
+                "end_time",
+                "end_date",
+                "category",
+                "address",
+                "city",
+                "state",
+                "country",
+                "lat",
+                "lng",
+                "created_by",
+                "slug",
+                "is_published",
+                "start_datetime",
+                "end_datetime",
+                "host_name",
+                "event_url",
+                "price",
+                "currency",
+                "fee_required",
+                "updated_at",
+            }
             if required - columns:
-                raise DomainError("schema_not_ready", "Legacy event migrations must run first; missing columns: " + ", ".join(sorted(required - columns)), 503)
+                raise DomainError(
+                    "schema_not_ready",
+                    "Legacy event migrations must run first; missing columns: "
+                    + ", ".join(sorted(required - columns)),
+                    503,
+                )
             tx.execute("""CREATE TABLE IF NOT EXISTS plugin_drafts (
                 id TEXT PRIMARY KEY, owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 payload TEXT, version INTEGER NOT NULL, review_hash TEXT NOT NULL,
@@ -118,7 +173,9 @@ class PluginStore:
                 request_hash TEXT NOT NULL, event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
                 created_at TEXT NOT NULL, PRIMARY KEY (owner_id, key)
             )""")
-            tx.execute("CREATE INDEX IF NOT EXISTS plugin_drafts_owner_status ON plugin_drafts(owner_id, status, expires_at)")
+            tx.execute(
+                "CREATE INDEX IF NOT EXISTS plugin_drafts_owner_status ON plugin_drafts(owner_id, status, expires_at)"
+            )
 
     def purge_expired(self, now_iso):
         """Erase draft contents; retain minimal retry/ownership tombstones.
@@ -127,7 +184,10 @@ class PluginStore:
         independently of cleanup. Published events have their own retention policy.
         """
         with self.transaction(write=True) as tx:
-            return tx.execute("UPDATE plugin_drafts SET payload=NULL, status=CASE WHEN status='draft' THEN 'expired' ELSE status END WHERE expires_at<=? AND payload IS NOT NULL", (now_iso,))
+            return tx.execute(
+                "UPDATE plugin_drafts SET payload=NULL, status=CASE WHEN status='draft' THEN 'expired' ELSE status END WHERE expires_at<=? AND payload IS NOT NULL",
+                (now_iso,),
+            )
 
 
 def sqlite_store(path):
