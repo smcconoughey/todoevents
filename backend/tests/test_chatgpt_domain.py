@@ -1,13 +1,16 @@
 """Offline contract/security regressions; run with unittest or pytest."""
 
+import json
 import sqlite3
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
+from unittest.mock import patch
 
-from backend.chatgpt_plugin.domain import EventService, distance_km
+from backend.chatgpt_plugin.domain import EventService, distance_km, json_price
 from backend.chatgpt_plugin.models import DomainError, Principal, iso_utc
 from backend.chatgpt_plugin.store import sqlite_store
 
@@ -776,6 +779,99 @@ class DomainTests(unittest.TestCase):
         self.assertEqual(
             "Atomic update",
             self.publish(draft, key="interrupted-update")["event"]["title"],
+        )
+
+    def test_decimal_price_normalization_preserves_numeric_contract_and_uncertainty(
+        self,
+    ):
+        for value, expected in (
+            (Decimal("19.95"), 19.95),
+            (Decimal(0), 0),
+            (25, 25),
+            (12.5, 12.5),
+        ):
+            self.assertEqual(expected, json_price(value))
+            json.dumps({"price": json_price(value)}, allow_nan=False)
+        for value in (
+            None,
+            True,
+            "19.95",
+            "invalid",
+            Decimal("NaN"),
+            Decimal("sNaN"),
+            Decimal("Infinity"),
+            Decimal("-Infinity"),
+            Decimal("-1.00"),
+            Decimal("1E10000"),
+            Decimal("1E-10000"),
+            float("nan"),
+            float("inf"),
+        ):
+            with self.subTest(value=str(value)):
+                self.assertIsNone(json_price(value))
+
+    def test_public_and_update_review_normalize_real_database_price_and_time_types(
+        self,
+    ):
+        with self.store.transaction() as tx:
+            row = tx.one("SELECT * FROM events WHERE id=1")
+        row.update(
+            price=Decimal("19.95"),
+            date=date(2026, 10, 2),
+            start_time=time(18, 0),
+            end_time=time(21, 0),
+            updated_at=datetime(2026, 9, 30, 12),  # noqa: DTZ001 - PostgreSQL TIMESTAMP has no timezone.
+            start_datetime=datetime(2026, 10, 2, 22),  # noqa: DTZ001 - Match the actual production column type.
+            end_datetime=datetime(2026, 10, 3, 1),  # noqa: DTZ001 - Match the actual production column type.
+        )
+        event = self.service._public_event(row)
+        self.assertEqual(19.95, event["price"])
+        self.assertEqual("2026-10-02", event["date"])
+        self.assertEqual("18:00:00", event["start_time"])
+        json.dumps(event, allow_nan=False)
+        before = self.service._before_update(row)
+        self.assertEqual(19.95, before["price"])
+        json.dumps(before, allow_nan=False)
+        self.assertEqual(64, len(self.service._event_baseline(row)))
+
+    def test_invalid_legacy_price_is_unknown_without_altering_source_record(self):
+        with self.store.transaction() as tx:
+            row = tx.one("SELECT * FROM events WHERE id=1")
+        for value in (None, Decimal("NaN"), Decimal("Infinity"), Decimal("-25.00")):
+            row["price"] = value
+            event = self.service._public_event(row)
+            self.assertIsNone(event["price"])
+            self.assertIn("Confirm ticket", event["price_notice"])
+            self.assertIs(row["price"], value)
+            json.dumps(event, allow_nan=False)
+
+    def test_unserializable_mutation_response_rolls_back_before_publication_commits(
+        self,
+    ):
+        draft = self.draft()
+        original_public_event = self.service._public_event
+
+        def unsupported_output(row):
+            return {**original_public_event(row), "future_unsupported_type": object()}
+
+        with (
+            patch.object(self.service, "_public_event", side_effect=unsupported_output),
+            self.assertRaises(TypeError),
+        ):
+            self.publish(draft, key="serialize-before-commit")
+        with self.store.transaction() as tx:
+            self.assertEqual(1, tx.one("SELECT COUNT(*) AS n FROM events")["n"])
+            self.assertEqual(
+                0, tx.one("SELECT COUNT(*) AS n FROM plugin_idempotency")["n"]
+            )
+            self.assertEqual(
+                "draft",
+                tx.one(
+                    "SELECT status FROM plugin_drafts WHERE id=?", (draft["draft_id"],)
+                )["status"],
+            )
+        self.assertEqual(
+            "published", self.publish(draft, key="serialize-before-commit")["status"]
         )
 
 

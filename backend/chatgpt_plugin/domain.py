@@ -9,6 +9,7 @@ import math
 import re
 import secrets
 from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from .models import (
@@ -62,6 +63,23 @@ def valid_coordinates(lat, lng):
         )
     except (ValueError, TypeError):
         return False
+
+
+def json_price(value):
+    """NUMERIC prices are Decimal on PostgreSQL; expose JSON numbers, not strings.
+
+    Missing or invalid legacy prices remain unknown, never silently free. Do not
+    modify the persisted source value merely to make it safe for discovery.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+        return None
+    try:
+        amount = float(value)
+    except (ValueError, OverflowError):
+        return None
+    if not math.isfinite(amount) or amount < 0 or (amount == 0 and value != 0):
+        return None
+    return amount
 
 
 class EventService:
@@ -289,6 +307,14 @@ class EventService:
                 "currency",
             )
         }
+        result["price"] = json_price(row.get("price"))
+        if result["price"] is None:
+            result["price_notice"] = (
+                "A reliable price is not recorded. Confirm ticket and fee details on the listing."
+            )
+        for field in ("date", "start_time", "end_time", "end_date"):
+            if isinstance(result[field], (date, datetime, time)):
+                result[field] = result[field].isoformat()
         confirmed = self._confirmed_times(row)
         result.update(
             url="https://todo-events.com/e/" + slug,
@@ -834,12 +860,17 @@ class EventService:
                 "The previously published listing is no longer available.",
                 404,
             )
-        return {
+        result = {
             "event": event,
             "draft_id": draft_id,
             "status": event["status"],
             "replayed": replayed,
         }
+        # Publication and its response are one transaction. If a future DB type
+        # escapes normalization, fail before commit so a serializer error cannot
+        # report failure after changing the public event.
+        json.dumps(result, allow_nan=False)
+        return result
 
     def publish_event(
         self, principal, draft_id, review_hash, confirmed, idempotency_key
@@ -977,7 +1008,7 @@ class EventService:
                     values["short_description"] = target.get("short_description")
                 if (
                     target
-                    and target.get("price") == payload["price"]
+                    and json_price(target.get("price")) == payload["price"]
                     and target.get("currency") == payload["currency"]
                 ):
                     # Preserve legacy ticket instructions on unrelated edits.
