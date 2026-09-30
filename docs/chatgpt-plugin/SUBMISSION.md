@@ -28,6 +28,7 @@ The implementation team reviewed the official pages in the **Codex in-app browse
 | --- | --- | --- |
 | Portable package | Root manifests, URL-only MCP server, two skills, logo and license; clean ZIP script | Supply approved reachable endpoint and regenerate artifact |
 | Public package restrictions | No app references or lifecycle hooks in distributable | Portal/package validation against final ZIP |
+| Service packaging | Prepared Dockerfile, pinned runtime lockfile and separate Render Blueprint with manual configuration | Docker image build/run/scan and Render current-schema validation are unrun; approved deployment and staging smoke checks still required |
 | Tool declarations | Narrow tool schemas, per-tool annotations and auth declarations | Installed-client inspection of final tool registration |
 | Authentication | Anonymous reads plus OAuth-protected organizer tools | Approved provider/client, redirect registration, token audience/scopes, organizer identity provisioning |
 | Review consent | Preview content/version/hash and explicit publication step | Demonstrate exact reviewed content in installed ChatGPT |

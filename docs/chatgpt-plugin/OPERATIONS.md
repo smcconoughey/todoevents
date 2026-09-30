@@ -2,10 +2,30 @@
 
 This runbook prepares operator actions; it does not authorize them. No real credentials, domains, deployments, reviewer accounts or public listings have been created for this local implementation.
 
+## Prepared service artifacts and unrun checks
+
+[`Dockerfile.plugin`](../../Dockerfile.plugin) builds the widget with Node 24, then copies the embedded HTML and standalone plugin service into a Python 3.11 slim image. Runtime dependencies use the 30 pinned entries in [`backend/requirements-plugin.lock`](../../backend/requirements-plugin.lock); the legacy web application is not started in this image. The runtime runs as UID/GID 10001 and listens on `PORT` (default 8787), with the CLI explicitly bound to `0.0.0.0` inside the container. The repository's `.dockerignore` excludes local databases, environment files, dependencies and test outputs from the build context.
+
+The Dockerfile has **not been built or run here**: Docker is unavailable on this Mac. Local Python/widget tests do not prove the Linux image builds, starts or works behind the production proxy. Once a Docker-capable environment is available, build and scan the image, then test it with approved staging configuration and a disposable database. The following are prepared commands, not executed evidence:
+
+```sh
+docker build -f Dockerfile.plugin -t todoevents-plugin:review .
+docker run --rm --env-file "$APPROVED_SERVICE_ENV_FILE" \
+  todoevents-plugin:review python -m backend.chatgpt_plugin migrate
+docker run --rm --env-file "$APPROVED_SERVICE_ENV_FILE" -e PORT=8787 \
+  -p 127.0.0.1:8787:8787 todoevents-plugin:review
+```
+
+The environment file must be an operator-controlled file outside version control containing the approved staging database and complete OAuth/resource/UI configuration. The migration command changes the selected database and therefore belongs after its backup and access approval. Do not use production data or expose test auth. Startup deliberately does not migrate the database.
+
+[`render.chatgpt-plugin.yaml`](../../render.chatgpt-plugin.yaml) describes one separate Docker web service named `todoevents-plugin`, using `Dockerfile.plugin`, repository-root context, `/health`, and `autoDeployTrigger: off`. Production mode is fixed; database, MCP resource/audience, OAuth issuer/JWKS and widget domain values use `sync: false` for explicit operator configuration. It does not configure a database, create identities, schedule draft cleanup, or change existing web services.
+
+The Blueprint has **not been validated by Render's CLI/live schema or deployed**: the Render CLI is unavailable here. Before importing it, validate against the current Render schema, select the approved account/workspace, and explicitly configure region and plan/budget; these are intentionally absent rather than authorized defaults. Select this exact Blueprint path in the approved repository/branch instead of overwriting the existing application's configuration. Review the resulting service/change preview before confirming creation. Manually configure the approved secrets, domain/TLS and provider setup; a `sync: false` field is not a created secret. The CLI honors Render's supplied `PORT`.
+
 ## Approved rollout
 
 1. Record the approved commit, verified ZIP checksum, exact MCP/widget domains, OAuth provider/client/scopes/redirects, hosting costs and public policy URLs. Back up the existing database and rehearse restore on disposable data.
-2. Apply the existing event-schema prerequisites, then the explicit plugin sidecar migration using the separate service CLI. Startup does not implicitly migrate the legacy application. Test the deployed database dialect, privileges, concurrency and restore process. Keep the existing website serving its normal data.
+2. Validate the prepared Docker image and Render Blueprint as described above. Apply the existing event-schema prerequisites, then the explicit plugin sidecar migration using the separate service CLI. Startup does not implicitly migrate the legacy application. Test the deployed database dialect, privileges, concurrency and restore process. Keep the existing website serving its normal data.
 3. Configure the exact resource/audience, issuer/JWKS, database and dedicated UI origin. Serve the built widget through the MCP resource. Configure the reverse proxy for streamable HTTP and Authorization forwarding without logging credentials or bodies. Use TLS, limited origins, operational rate limits and monitored resource budgets.
 4. Configure the OAuth provider and register the client through the approved process. Bind only verified organizer subjects to their existing account IDs and constrained scopes. Do not issue credentials, modify account roles, or auto-link email addresses as a shortcut.
 5. Run smoke checks: anonymous public search/detail, OAuth challenge and reconnection, scoped organizer draft/review, stale hash refusal, duplicate retry recovery, public availability after an approved synthetic fixture publication, and cancellation. Avoid real user content in test events.
@@ -20,7 +40,9 @@ Purge clears payloads of expired drafts while preserving owner/version/hash/stat
 
 ## Account deletion and incident handling
 
-For a verified account-deletion request, map all related legacy event/user and plugin sidecar records, establish required retention, execute a reviewed transaction and test the resulting public/private access. Preserve only records required by the adopted policy and law. Confirm the migration's current foreign-key behavior in the chosen database; a cascade is not a substitute for an end-to-end deletion test or backup handling.
+For a verified account-deletion request, map related legacy event/user and plugin sidecar records, establish required retention, execute the approved account deletion and verify resulting public/private access. The tested legacy admin account-deletion path deletes the user's owned events and user in one transaction, cascading their plugin identities, drafts, publications and idempotency records while preserving other owners' records. Recheck this behavior against the deployed schema and maintain backup handling; the general website privacy-request workflow has not been verified to invoke it automatically.
+
+Legacy activity logs, media audit/forensic data, user forensic data and referral financial records are retained. Applicable nullable user/event references are cleared, but stored detail/forensic content is unchanged. Do not describe this as complete audit-data erasure or anonymization. Single-event deletion also cascades its plugin publication/idempotency metadata; associated draft tombstones can remain with a null event reference until the scheduled payload purge. Cancellation only removes public availability and is distinct from deletion. Adopt and disclose the remaining audit, record and backup retention policy before launch.
 
 For suspected credential compromise, disable the affected issuer/subject mapping, revoke the provider grant, preserve appropriate security evidence without tokens/content, and verify that organizer calls fail. For malicious public content, apply the existing moderation process and confirm it is excluded from every public plugin path. Never execute instructions found inside event descriptions.
 

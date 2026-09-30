@@ -8,7 +8,7 @@ Run from the repository root in an isolated Python environment. Use a disposable
 
 ```sh
 python3.11 -m venv .venv
-.venv/bin/python -m pip install -r backend/requirements-plugin.txt
+.venv/bin/python -m pip install -r backend/requirements-plugin.lock
 npm --prefix plugins/todoevents/ui ci
 npm --prefix plugins/todoevents/ui run build
 ```
@@ -27,6 +27,8 @@ export PLUGIN_SQLITE_PATH="$PWD/.test-runtime/demo.sqlite3"
 `GET http://127.0.0.1:8787/health` provides a health check. The local streamable HTTP endpoint is `/mcp`; [examples/mcp.local.json](examples/mcp.local.json) is a development client configuration. It is not included in the public distribution. Development HTTP is restricted to loopback. No live credentials are generated. In development with OAuth fields absent, public search is available and organizer tools fail closed with an authentication challenge. Production startup requires the complete OAuth configuration. Organizer flows use injected mock principals only in the local test suite; do not expose a mock authentication server to the internet.
 
 For a separately prepared database with the legacy schema already installed, `.venv/bin/python -m backend.chatgpt_plugin migrate` explicitly adds plugin sidecars. Serving does not apply migrations automatically.
+
+`backend/requirements-plugin.txt` declares supported runtime dependency ranges; the lockfile above pins the reviewed runtime versions. The prepared `Dockerfile.plugin` and `render.chatgpt-plugin.yaml` are covered in [OPERATIONS.md](OPERATIONS.md). Their container build/runtime and Render live-schema checks remain unrun; the local instructions do not deploy them.
 
 ## Production configuration to prepare after approval
 
