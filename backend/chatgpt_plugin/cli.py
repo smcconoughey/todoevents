@@ -3,10 +3,53 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+
+def trusted_proxy_allowlist(value: str | None) -> str:
+    """Normalize an explicit proxy boundary without trusting arbitrary senders."""
+    if value is None or value == "":
+        return ""
+    normalized, networks = [], []
+    for entry in value.split(","):
+        item = entry.strip()
+        if not item or "*" in item or "%" in item:
+            raise ValueError(
+                "Trusted proxies must be comma-separated exact IP addresses or CIDR networks"
+            )
+        try:
+            if "/" in item:
+                network = ipaddress.ip_network(item, strict=True)
+                canonical = str(network)
+            else:
+                address = ipaddress.ip_address(item)
+                network = ipaddress.ip_network(address)
+                canonical = str(address)
+        except ValueError:
+            raise ValueError(
+                "Trusted proxies must be exact IP addresses or canonical CIDR networks; hostnames are not allowed"
+            ) from None
+        if network.prefixlen == 0 or network.network_address.is_unspecified:
+            raise ValueError(
+                "Trusted proxies cannot include unspecified addresses or unrestricted networks"
+            )
+        if canonical not in normalized:
+            normalized.append(canonical)
+            networks.append(network)
+    # Reject an unrestricted family even if expressed as multiple smaller CIDRs.
+    for version in (4, 6):
+        collapsed = ipaddress.collapse_addresses(
+            network for network in networks if network.version == version
+        )
+        if any(network.prefixlen == 0 for network in collapsed):
+            raise ValueError(
+                "Trusted proxy ranges cannot collectively trust the entire Internet"
+            )
+    return ",".join(normalized)
 
 
 def seed_demo(path: Path) -> None:
@@ -116,6 +159,12 @@ def main(argv=None) -> None:
 
         if not 1 <= args.port <= 65535:
             parser.error("Port must be between 1 and 65535")
+        try:
+            trusted_proxies = trusted_proxy_allowlist(
+                os.getenv("PLUGIN_TRUSTED_PROXY_IPS")
+            )
+        except ValueError as error:
+            parser.error(str(error))
         settings = ServerSettings.from_env()
         if settings.auth.development and args.host not in {
             "127.0.0.1",
@@ -128,7 +177,8 @@ def main(argv=None) -> None:
             host=args.host,
             port=args.port,
             access_log=False,
-            proxy_headers=False,
+            proxy_headers=bool(trusted_proxies),
+            forwarded_allow_ips=trusted_proxies,
         )
         return
 

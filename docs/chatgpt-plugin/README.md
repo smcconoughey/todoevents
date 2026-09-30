@@ -41,6 +41,7 @@ For a separately prepared database with the legacy schema already installed, `.v
 | `PLUGIN_UI_DOMAIN` | Dedicated registered HTTPS widget origin |
 | `PLUGIN_UI_PATH` | Absolute path to the built widget HTML |
 | `PLUGIN_AREA_CENTERS_PATH` | Optional path to reviewed public-area-center JSON; required for radius search in each configured area |
+| `PLUGIN_TRUSTED_PROXY_IPS` | Optional comma-separated approved proxy IPs/canonical CIDRs. Enables forwarded-client headers only from those peers; unset disables trust. Wildcards, hostnames and unrestricted networks are rejected. |
 | `PLUGIN_DATABASE_URL` or `PLUGIN_SQLITE_PATH` | Existing service database, using least-privilege connection handling |
 
 The issuer, audience, and JWKS configuration must be supplied together. Provision an issuer/subject-to-organizer mapping through the reviewed operator process; existing password JWTs and an email match are insufficient. `events:read`, `events:write`, and `events:publish` are constrained by both the token grant and the stored identity mapping. Public discovery does not require sign-in. See [SECURITY.md](SECURITY.md) for authorization boundaries and [OPERATIONS.md](OPERATIONS.md) for rollout/rollback.

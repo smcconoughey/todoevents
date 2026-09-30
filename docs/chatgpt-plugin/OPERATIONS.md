@@ -22,6 +22,12 @@ The environment file must be an operator-controlled file outside version control
 
 The Blueprint has **not been validated by Render's CLI/live schema or deployed**: the Render CLI is unavailable here. Before importing it, validate against the current Render schema, select the approved account/workspace, and explicitly configure region and plan/budget; these are intentionally absent rather than authorized defaults. Select this exact Blueprint path in the approved repository/branch instead of overwriting the existing application's configuration. Review the resulting service/change preview before confirming creation. Manually configure the approved secrets, domain/TLS and provider setup; a `sync: false` field is not a created secret. The CLI honors Render's supplied `PORT`.
 
+### Trusted reverse proxies and client rate limits
+
+The launcher ignores forwarded-client headers by default, including Uvicorn's ambient `FORWARDED_ALLOW_IPS`. Behind an approved reverse proxy, configure `PLUGIN_TRUSTED_PROXY_IPS` with the exact verified proxy IPs or canonical CIDR ranges, separated by commas. The launcher then enables Uvicorn's proxy-header handling only for those peers, so the application's per-client request limit uses the forwarded client address. Wildcards, hostnames, unspecified addresses, unrestricted networks and malformed entries stop startup. No production proxy range is assumed or configured by this repository.
+
+Verify the hosting provider's current trusted ingress ranges before setting this value, ensure the proxy overwrites or correctly appends `X-Forwarded-For`, and prevent bypassing the approved edge. In staging, prove that two clients behind the proxy receive separate limits and that a direct untrusted client cannot spoof its address. Without this setting, clients behind the same proxy intentionally share its 120-request/minute allowance. Shared edge rate limits and provider-specific ingress validation remain deployment checks.
+
 ## Approved rollout
 
 1. Record the approved commit, verified ZIP checksum, exact MCP/widget domains, OAuth provider/client/scopes/redirects, hosting costs and public policy URLs. Back up the existing database and rehearse restore on disposable data.
