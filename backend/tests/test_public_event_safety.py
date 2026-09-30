@@ -300,7 +300,15 @@ def test_cross_owner_write_rejected(client, db, web):
         web.app.dependency_overrides.clear()
 
 
-def test_invalid_interval_rejected(client, web):
+@pytest.mark.parametrize(
+    "interval",
+    [
+        {"end_date": "2030-01-01"},
+        {"end_date": "2030-01-02", "end_time": "09:00"},
+    ],
+)
+def test_invalid_interval_rejected_on_create_and_edit(client, db, web, interval):
+    event_id = add_event(db)
     web.app.dependency_overrides[web.get_current_user] = lambda: {
         "id": 1,
         "role": "user",
@@ -310,16 +318,49 @@ def test_invalid_interval_rejected(client, web):
             "title": "Backwards",
             "description": "No",
             "date": "2030-01-02",
-            "end_date": "2030-01-01",
             "start_time": "10:00",
             "category": "music",
             "address": "1 Main St",
             "lat": 0,
             "lng": 0,
+            **interval,
         }
         assert client.post("/events", json=payload).status_code == 422
+        assert client.put(f"/events/{event_id}", json=payload).status_code == 422
+        assert client.get(f"/events/{event_id}").json()["title"] == "Public concert"
     finally:
         web.app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize(
+    "interval",
+    [
+        {"end_date": "2030-01-01"},
+        {"end_date": "2030-01-02", "end_time": "09:00"},
+    ],
+)
+def test_historical_intervals_remain_readable_without_weakening_discovery(
+    client, db, interval
+):
+    valid_id = add_event(db)
+    historical_id = add_event(
+        db, title="Historical interval", slug="historical", date="2030-01-02",
+        start_time="10:00", **interval,
+    )
+    hidden_id = add_event(
+        db, title="Hidden interval", slug="hidden", date="2030-01-02",
+        start_time="10:00", is_published=False, **interval,
+    )
+    response = client.get("/events")
+    assert response.status_code == 200, response.text
+    assert {event["id"] for event in response.json()} == {valid_id, historical_id}
+    response = client.get(f"/events/{historical_id}")
+    assert response.status_code == 200, response.text
+    assert response.json()["end_date"] == interval["end_date"]
+    assert client.get(f"/events/{hidden_id}").status_code == 404
+    response = client.get("/api/v1/local-events")
+    assert response.status_code == 200, response.text
+    assert [event["id"] for event in response.json()["events"]] == [valid_id]
 
 
 def test_event_descriptions_remain_untrusted_data(client, db):

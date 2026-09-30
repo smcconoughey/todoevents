@@ -232,7 +232,7 @@ def populate_seo_data():
             
             # Get all events that need SEO data populated
             cursor.execute("""
-                SELECT id, title, description, address, date, start_time, end_time, end_date
+                SELECT id, title, description, address, date, start_time, end_time, end_date, slug
                 FROM events 
                 WHERE slug IS NULL OR slug = '' OR city IS NULL OR city = ''
                 ORDER BY id
@@ -248,7 +248,7 @@ def populate_seo_data():
             updated_count = 0
             
             for event in events:
-                event_id, title, description, address, date, start_time, end_time, end_date = event
+                event_id, title, description, address, date, start_time, end_time, end_date, existing_slug = event
                 
                 print(f"\n📝 Processing Event {event_id}: {title[:50]}...")
                 
@@ -260,10 +260,12 @@ def populate_seo_data():
                     if state:
                         print(f"  🏛️ Extracted state: {state}")
                     
-                    # Generate slug
-                    base_slug = slugify(title or "", city)
-                    slug = ensure_unique_slug(cursor, base_slug, event_id)
-                    print(f"  🏷️ Generated slug: {slug}")
+                    # Filling a missing city must not invalidate a canonical link.
+                    slug = existing_slug
+                    if not slug:
+                        base_slug = slugify(title or "", city)
+                        slug = ensure_unique_slug(cursor, base_slug, event_id)
+                        print(f"  🏷️ Generated slug: {slug}")
                     
                     # Generate short description
                     short_description = make_short_description_enhanced(description or "")
@@ -278,7 +280,7 @@ def populate_seo_data():
                     # Update the event with all SEO fields
                     update_query = """
                         UPDATE events 
-                        SET slug = %s, 
+                        SET slug = COALESCE(NULLIF(slug, ''), %s),
                             city = %s, 
                             state = %s, 
                             short_description = %s,
@@ -333,4 +335,4 @@ def main():
         raise
 
 if __name__ == "__main__":
-    main() 
+    main()

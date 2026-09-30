@@ -1858,11 +1858,6 @@ class EventBase(BaseModel):
     slug: Optional[str] = None  # URL-friendly slug
     is_published: Optional[bool] = True  # Publication status
 
-    @root_validator(skip_on_failure=True)
-    def validate_interval(cls, values):
-        event_interval(values)
-        return values
-
     @validator("date")
     def validate_date(cls, v):
         try:
@@ -2016,7 +2011,13 @@ class EventBase(BaseModel):
 
 
 class EventCreate(EventBase):
-    pass
+    @root_validator(skip_on_failure=True)
+    def validate_interval(cls, values):
+        # Validate new submissions and edits without preventing existing records
+        # from being serialized. Older records may contain inconsistent intervals;
+        # discovery handles those conservatively through overlaps_dates.
+        event_interval(values)
+        return values
 
 
 class EventResponse(EventBase):
