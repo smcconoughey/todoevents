@@ -55,6 +55,7 @@ class AuthSettings:
     audience: str = ""
     jwks_url: str = ""
     development: bool = False
+    public_only: bool = False
     clock_leeway_seconds: int = 30
 
     def __post_init__(self) -> None:
@@ -91,15 +92,23 @@ class AuthSettings:
         }
 
     @classmethod
-    def from_env(cls) -> AuthSettings:
+    def from_env(cls, *, mode: str | None = None) -> AuthSettings:
+        mode = mode if mode is not None else os.getenv("PLUGIN_MODE", "full")
+        if mode not in {"public", "full"}:
+            raise ValueError("A standalone plugin requires PLUGIN_MODE=public or full")
         settings = cls(
             resource_url=os.environ["PLUGIN_RESOURCE_URL"],
             issuer=os.getenv("PLUGIN_OAUTH_ISSUER", ""),
             audience=os.getenv("PLUGIN_OAUTH_AUDIENCE", ""),
             jwks_url=os.getenv("PLUGIN_OAUTH_JWKS_URL", ""),
             development=os.getenv("PLUGIN_ENV", "production") == "development",
+            public_only=mode == "public",
         )
-        if not settings.development and not settings.configured:
+        if (
+            not settings.development
+            and not settings.public_only
+            and not settings.configured
+        ):
             raise ValueError("Production requires a configured external OAuth provider")
         return settings
 
@@ -269,6 +278,12 @@ class OAuthVerifier:
     async def verify(
         self, authorization: str | None, required_scopes: frozenset[str]
     ) -> Principal:
+        if self.settings.public_only:
+            raise AuthenticationError(
+                "auth_unavailable",
+                "Organizer tools are disabled in public-only mode.",
+                503,
+            )
         if not self.settings.configured:
             raise AuthenticationError(
                 "auth_unavailable",
