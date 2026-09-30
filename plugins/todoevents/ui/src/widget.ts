@@ -226,6 +226,7 @@ export class TodoEventsWidget {
   private facts(parent: HTMLElement, event: PublicEvent): void {
     const list = el('dl', 'facts');
     [['Organizer', event.host_name || 'See listing'], ['Admission', priceLabel(event)], ['Time zone', event.timezone || 'Not supplied']].forEach(([label, value]) => { const row = el('div'); row.append(el('dt', '', label), el('dd', '', value)); list.append(row); }); parent.append(list);
+    if (event.price_notice) parent.append(el('p', 'helper', event.price_notice));
   }
   private renderReview(parent: HTMLElement): void {
     const draft = this.data as Draft;
@@ -279,13 +280,14 @@ export class TodoEventsWidget {
     const start = input('starts_at', localInput(event.starts_at, event.timezone) || legacyLocal(event.date, event.start_time), 'datetime-local'); start.required = true;
     const end = input('ends_at', localInput(event.ends_at, event.timezone) || legacyLocal(event.end_date || event.date, event.end_time), 'datetime-local'); end.required = true;
     const website = input('event_url', event.event_url, 'url');
-    const price = input('price', event.price === null || event.price === undefined ? '0' : String(event.price), 'number'); price.min = '0'; price.max = '100000'; price.step = '0.01'; price.required = true;
+    const price = input('price', event.price === null || event.price === undefined ? '' : String(event.price), 'number'); price.min = '0'; price.max = '100000'; price.step = '0.01'; price.required = true;
     const currency = input('currency', event.currency || 'USD'); currency.maxLength = 3;
     const pair = el('div', 'edit-grid'); pair.append(field('Category', category), field('Public organizer name', host), field('Start', start), field('End', end), field('Event time zone (e.g. America/New_York)', timezone), field('Organizer website (optional)', website), field('Admission price (0 = free)', price), field('Currency', currency));
     const venue = el('div', 'venue-fixed'); venue.append(el('strong', '', 'Public venue'), el('p', '', venueLabel(event.venue)), button('Choose another venue in ChatGPT', () => void this.ask(`Help me change the public venue for Todo Events ${this.editingEventId ? `published event ${this.editingEventId}` : `draft ${draft.draft_id}, version ${draft.version}`}. Use an existing public venue resource and prepare a new preview. Do not publish.`), 'text-button'));
     const save = button('Save new preview', () => {}, 'primary'); save.type = 'submit';
     const actions = el('div', 'actions'); actions.append(save, button(this.editingEventId ? 'Back without changes' : 'Back to current preview', () => { if (this.editingEventId) { this.screen = 'organizer'; this.data = this.organizerData; this.editingEventId = undefined; } else this.screen = 'review'; this.render(); }));
     form.append(field('Event title', title), field('Public description', description), pair, venue, actions);
+    if (event.price === null || event.price === undefined) pair.after(el('p', 'helper', 'Admission price was not recorded. Enter a verified price, or enter 0 only if the event is free.'));
     if (this.editValues) form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('[name]').forEach(control => { if (this.editValues?.[control.name] !== undefined) control.value = this.editValues[control.name]; });
     const preserveEdits = () => { this.editValues = Object.fromEntries([...new FormData(form)].map(([key, value]) => [key, String(value)])); };
     form.addEventListener('input', preserveEdits); form.addEventListener('change', preserveEdits);
@@ -295,7 +297,8 @@ export class TodoEventsWidget {
       try {
         const starts_at = toInstant(start.value, timezone.value); const ends_at = toInstant(end.value, timezone.value);
         if (Date.parse(ends_at) <= Date.parse(starts_at)) throw new Error('The event must end after it starts.');
-        const updated = { title: title.value.trim(), description: description.value.trim(), category: category.value.trim(), host_name: host.value.trim(), starts_at, ends_at, timezone: timezone.value.trim(), venue_id: event.venue_id || event.venue?.venue_id, visibility: 'public', ...(website.value.trim() ? { event_url: website.value.trim() } : {}), ...(price.value ? { price: Number(price.value) } : {}), currency: currency.value.toUpperCase() };
+        if (!price.value || !Number.isFinite(Number(price.value)) || Number(price.value) < 0 || Number(price.value) > 100000) throw new Error('Enter a verified admission price. Use 0 only if the event is free.');
+        const updated = { title: title.value.trim(), description: description.value.trim(), category: category.value.trim(), host_name: host.value.trim(), starts_at, ends_at, timezone: timezone.value.trim(), venue_id: event.venue_id || event.venue?.venue_id, visibility: 'public', ...(website.value.trim() ? { event_url: website.value.trim() } : {}), price: Number(price.value), currency: currency.value.toUpperCase() };
         void this.run('prepare_event', { event: updated, ...(this.editingEventId ? { event_id: this.editingEventId } : { draft_id: draft.draft_id, expected_version: draft.version }) });
       } catch (error) { this.error = error instanceof Error ? error.message : 'Check your dates and time zone.'; this.render(); }
     }); parent.append(form);

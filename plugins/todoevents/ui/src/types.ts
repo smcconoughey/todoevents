@@ -3,7 +3,7 @@ export interface PublicEvent {
   id?: number; title: string; description: string; category: string; url?: string;
   starts_at?: string | null; ends_at?: string | null; timezone?: string | null;
   time_status?: string; date?: string; start_time?: string; end_time?: string; end_date?: string;
-  venue?: Venue; venue_id?: string; host_name?: string; price?: number | null; currency?: string;
+  venue?: Venue; venue_id?: string; host_name?: string; price?: number | null; price_notice?: string; currency?: string;
   event_url?: string; visibility?: string; status?: string; distance_km?: number;
 }
 export interface Draft {

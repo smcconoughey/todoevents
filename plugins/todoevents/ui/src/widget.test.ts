@@ -190,4 +190,21 @@ describe('published event updates', () => {
     receive({ drafts: [], events: [{ ...event, starts_at: '2026-09-01T10:00:00Z', ends_at: '2026-09-01T11:00:00Z' }] });
     expect(root.textContent).toContain('Ended'); expect(root.textContent).not.toContain('Edit event'); expect(root.textContent).not.toContain('Details');
   });
+  it('does not show unknown admission as free in public discovery', () => {
+    receive({ events: [{ ...event, price: null, price_notice: 'Price was not recorded.' }] });
+    expect(root.querySelector('.price')?.textContent).toBe('See listing for admission'); expect(root.querySelector('.price')?.textContent).not.toBe('Free');
+  });
+  it('shows the admission uncertainty notice on event detail', () => {
+    receive({ event: { ...event, price: null, price_notice: 'Price was not recorded.' } });
+    expect(root.textContent).toContain('Price was not recorded.'); expect(root.textContent).toContain('See listing for admission');
+  });
+  it('does not silently change unknown admission to free while editing', () => {
+    receive({ drafts: [], events: [{ ...event, price: null }] }); btn('Edit event').click();
+    expect(getInput('price').value).toBe(''); expect(getInput('price').required).toBe(true); submit();
+    expect(bridge.call).not.toHaveBeenCalled(); expect(root.textContent).toContain('Enter a verified admission price'); expect(getInput('price').value).toBe('');
+  });
+  it('accepts an explicitly entered free price after unknown admission', () => {
+    receive({ drafts: [], events: [{ ...event, price: null }] }); btn('Edit event').click(); edit('price', '0'); submit();
+    expect(bridge.call).toHaveBeenCalledExactlyOnceWith('prepare_event', { event_id: event.id, event: expect.objectContaining({ price: 0 }) });
+  });
 });
