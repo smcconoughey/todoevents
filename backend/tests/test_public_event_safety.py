@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 BACKEND = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(BACKEND))
+sys.path.append(str(BACKEND))
 
 
 @pytest.fixture(scope="module")
@@ -52,6 +52,7 @@ def db(web, tmp_path, monkeypatch):
         conn.execute(
             "CREATE TABLE events ("
             + ",".join(f"{name} {kind}" for name, kind in fields)
+            + ", FOREIGN KEY (created_by) REFERENCES users(id)"
             + ")"
         )
         conn.execute(
@@ -398,4 +399,380 @@ def test_admin_is_not_created_implicitly(web, db):
                 0
             ]
             == 0
+        )
+
+
+def plugin_publication(db):
+    from backend.chatgpt_plugin.domain import EventService
+    from backend.chatgpt_plugin.models import Principal
+    from backend.chatgpt_plugin.store import sqlite_store
+
+    venue = add_event(db)
+    store = sqlite_store(db)
+    store.migrate()
+    service = EventService(store)
+    owner = Principal(
+        1,
+        "fixture",
+        "owner",
+        frozenset({"events:read", "events:write", "events:publish"}),
+    )
+    starts = (datetime.now(timezone.utc) + timedelta(days=7)).replace(
+        second=0, microsecond=0
+    )
+    draft = service.prepare_event(
+        owner,
+        {
+            "title": "Plugin listing",
+            "description": "Public workshop",
+            "category": "education",
+            "starts_at": starts.isoformat(),
+            "ends_at": (starts + timedelta(hours=1)).isoformat(),
+            "timezone": "UTC",
+            "venue_id": f"event:{venue}",
+            "host_name": "Organizer",
+            "visibility": "public",
+        },
+    )
+    result = service.publish_event(
+        owner, draft["draft_id"], draft["review_hash"], True, "web-compatibility-0001"
+    )
+    return service, owner, result["event"]["id"]
+
+
+@pytest.mark.parametrize("explicit_publication", [False, True])
+def test_web_edit_cannot_resurrect_plugin_cancellation(
+    client, db, web, explicit_publication
+):
+    service, owner, event_id = plugin_publication(db)
+    payload = client.get(f"/events/{event_id}").json()
+    service.cancel_event(owner, event_id, True)
+    payload["title"] = "Updated title"
+    if not explicit_publication:
+        payload.pop("is_published", None)
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 1,
+        "role": "user",
+    }
+    try:
+        for _ in range(2):
+            response = client.put(f"/events/{event_id}", json=payload)
+            assert response.status_code == 409, response.text
+        assert client.get(f"/events/{event_id}").status_code == 404
+        assert (
+            service.list_organizer_events(owner)["events"][0]["status"] == "cancelled"
+        )
+    finally:
+        web.app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize("factory", ["get_db", "get_db_transaction"])
+def test_legacy_sqlite_connections_enforce_foreign_keys(web, db, factory):
+    with getattr(web, factory)() as conn:
+        assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+
+
+@pytest.mark.parametrize("cancelled", [False, True])
+def test_actual_web_delete_cascades_plugin_metadata(client, db, web, cancelled):
+    service, owner, event_id = plugin_publication(db)
+    if cancelled:
+        service.cancel_event(owner, event_id, True)
+    with sqlite3.connect(db) as conn:
+        draft_id = conn.execute(
+            "SELECT id FROM plugin_drafts WHERE event_id=?", (event_id,)
+        ).fetchone()[0]
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 1,
+        "role": "user",
+    }
+    try:
+        assert client.delete(f"/events/{event_id}").status_code == 200
+        assert client.delete(f"/events/{event_id}").status_code == 404
+    finally:
+        web.app.dependency_overrides.clear()
+    with sqlite3.connect(db) as conn:
+        assert (
+            conn.execute(
+                "SELECT COUNT(*) FROM plugin_publications WHERE event_id=?", (event_id,)
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            conn.execute(
+                "SELECT COUNT(*) FROM plugin_idempotency WHERE event_id=?", (event_id,)
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            conn.execute(
+                "SELECT event_id FROM plugin_drafts WHERE id=?", (draft_id,)
+            ).fetchone()[0]
+            is None
+        )
+    # SQLite INTEGER PRIMARY KEY can reuse the last deleted ID. Stale sidecar
+    # status must not hide or attach timezone metadata to a replacement listing.
+    replacement = add_event(db, title="Replacement listing", slug="replacement")
+    assert replacement == event_id
+    assert service.get_event(replacement)["event"]["time_status"] == "timezone_unknown"
+
+
+@pytest.mark.parametrize("edit", ["description", "venue", "dates"])
+def test_web_edits_invalidate_only_changed_plugin_time_context(client, db, web, edit):
+    service, _, event_id = plugin_publication(db)
+    payload = client.get(f"/events/{event_id}").json()
+    canonical = service.get_event(event_id)["event"]["url"]
+    assert service.get_event(event_id)["event"]["time_status"] == "confirmed"
+    if edit == "description":
+        payload["description"] = "Updated workshop details"
+    elif edit == "venue":
+        payload.update(address="2 New Venue St", city="Another City", lat=35.0)
+    else:
+        payload["date"] = (
+            datetime.fromisoformat(payload["date"]).date() + timedelta(days=1)
+        ).isoformat()
+        payload["end_date"] = (
+            datetime.fromisoformat(payload["end_date"]).date() + timedelta(days=1)
+        ).isoformat()
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 1,
+        "role": "user",
+    }
+    try:
+        response = client.put(f"/events/{event_id}", json=payload)
+        assert response.status_code == 200, response.text
+    finally:
+        web.app.dependency_overrides.clear()
+    public = service.get_event(event_id)["event"]
+    assert public["url"] == canonical
+    assert public["status"] == "published"
+    assert public["time_status"] == (
+        "confirmed" if edit == "description" else "timezone_unknown"
+    )
+    with sqlite3.connect(db) as conn:
+        stored = conn.execute(
+            "SELECT starts_at,ends_at,timezone FROM plugin_publications WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+        if edit == "description":
+            assert all(stored)
+        else:
+            assert stored == (None, None, None)
+
+
+def test_web_edit_preserves_unpublished_plugin_listing(client, db, web):
+    _, _, event_id = plugin_publication(db)
+    payload = client.get(f"/events/{event_id}").json()
+    payload.pop("is_published", None)
+    payload["description"] = "A private edit after unpublishing"
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE events SET is_published=FALSE WHERE id=?", (event_id,))
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 1,
+        "role": "user",
+    }
+    try:
+        response = client.put(f"/events/{event_id}", json=payload)
+        assert response.status_code == 200, response.text
+        assert response.json()["is_published"] is False
+        assert client.get(f"/events/{event_id}").status_code == 404
+    finally:
+        web.app.dependency_overrides.clear()
+
+
+def account_deletion_fixture(db):
+    from backend.chatgpt_plugin.auth import IdentityStore
+    from backend.chatgpt_plugin.models import Principal
+
+    service, owner, published = plugin_publication(db)
+    other_venue = add_event(
+        db, title="Other owner's venue", created_by=2, slug="other-venue"
+    )
+    other = Principal(2, "fixture", "other", owner.scopes)
+    listing = service.get_event(published)["event"]
+    other_draft = service.prepare_event(
+        other,
+        {
+            **{
+                key: listing[key]
+                for key in (
+                    "title",
+                    "description",
+                    "category",
+                    "starts_at",
+                    "ends_at",
+                    "timezone",
+                    "host_name",
+                )
+            },
+            "venue_id": f"event:{other_venue}",
+            "visibility": "public",
+        },
+    )
+    other_publication = service.publish_event(
+        other,
+        other_draft["draft_id"],
+        other_draft["review_hash"],
+        True,
+        "other-owner-publication",
+    )["event"]["id"]
+    IdentityStore(lambda: sqlite3.connect(db)).migrate()
+    with sqlite3.connect(db) as conn:
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("UPDATE users SET role='admin' WHERE id=2")
+        conn.execute(
+            "CREATE TABLE activity_logs (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id), details TEXT)"
+        )
+        conn.execute(
+            "INSERT INTO activity_logs VALUES (1,1,'retained audit'),(2,2,'other audit')"
+        )
+        for table in ("media_audit_logs", "media_forensic_data"):
+            conn.execute(
+                f"CREATE TABLE {table} (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id), event_id INTEGER REFERENCES events(id), details TEXT)"
+            )
+            conn.execute(
+                f"INSERT INTO {table} VALUES (1,2,?,'other actor audit'),(2,1,?,'target actor audit')",
+                (published, other_venue),
+            )
+        conn.execute(
+            "CREATE TABLE user_forensic_data (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE REFERENCES users(id), details TEXT)"
+        )
+        conn.execute(
+            "INSERT INTO user_forensic_data VALUES (1,1,'retained forensic record'),(2,2,'other record')"
+        )
+        for table, column in (
+            ("referral_links", "created_by"),
+            ("referral_commissions", "created_by"),
+            ("referral_tracking", "user_id"),
+        ):
+            conn.execute(
+                f"CREATE TABLE {table} (id INTEGER PRIMARY KEY, {column} INTEGER REFERENCES users(id), details TEXT)"
+            )
+            conn.execute(
+                f"INSERT INTO {table} VALUES (1,1,'retained financial record'),(2,2,'other record')"
+            )
+        conn.executemany(
+            "INSERT INTO plugin_oauth_identities (issuer,subject,user_id,scopes) VALUES ('fixture',?,?,'events:read events:write events:publish')",
+            [("owner", 1), ("other", 2)],
+        )
+    return service, owner, other, published, other_venue, other_publication
+
+
+def test_admin_user_delete_cleans_only_owned_plugin_records_and_detaches_audit(
+    client, db, web
+):
+    service, _, other, _, other_venue, other_publication = account_deletion_fixture(db)
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 2,
+        "role": "admin",
+    }
+    try:
+        response = client.delete("/admin/users/1")
+        assert response.status_code == 200, response.text
+        assert client.delete("/admin/users/1").status_code == 404
+    finally:
+        web.app.dependency_overrides.clear()
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("SELECT id FROM users").fetchall() == [(2,)]
+        assert set(conn.execute("SELECT id FROM events").fetchall()) == {
+            (other_venue,),
+            (other_publication,),
+        }
+        for table in ("plugin_drafts", "plugin_publications", "plugin_idempotency"):
+            assert (
+                conn.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE owner_id=1"
+                ).fetchone()[0]
+                == 0
+            )
+            assert (
+                conn.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE owner_id=2"
+                ).fetchone()[0]
+                == 1
+            )
+        assert conn.execute(
+            "SELECT subject FROM plugin_oauth_identities"
+        ).fetchall() == [("other",)]
+        assert conn.execute(
+            "SELECT user_id,details FROM activity_logs ORDER BY id"
+        ).fetchall() == [(None, "retained audit"), (2, "other audit")]
+        for table in ("media_audit_logs", "media_forensic_data"):
+            assert conn.execute(
+                f"SELECT user_id,event_id FROM {table} ORDER BY id"
+            ).fetchall() == [(2, None), (None, other_venue)]
+        for table, column in (
+            ("user_forensic_data", "user_id"),
+            ("referral_links", "created_by"),
+            ("referral_commissions", "created_by"),
+            ("referral_tracking", "user_id"),
+        ):
+            assert conn.execute(
+                f"SELECT {column} FROM {table} ORDER BY id"
+            ).fetchall() == [(None,), (2,)]
+        assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert len(service.list_organizer_events(other)["events"]) == 2
+
+
+def test_admin_user_delete_is_atomic_when_an_unknown_reference_blocks_it(
+    client, db, web
+):
+    account_deletion_fixture(db)
+    with sqlite3.connect(db) as conn:
+        conn.execute(
+            "CREATE TABLE blocking_reference (user_id INTEGER NOT NULL REFERENCES users(id))"
+        )
+        conn.execute("INSERT INTO blocking_reference VALUES (1)")
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 2,
+        "role": "admin",
+    }
+    try:
+        assert client.delete("/admin/users/1").status_code == 500
+    finally:
+        web.app.dependency_overrides.clear()
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM users WHERE id=1").fetchone()[0] == 1
+        assert (
+            conn.execute("SELECT COUNT(*) FROM events WHERE created_by=1").fetchone()[0]
+            == 2
+        )
+        assert (
+            conn.execute(
+                "SELECT COUNT(*) FROM plugin_drafts WHERE owner_id=1"
+            ).fetchone()[0]
+            == 1
+        )
+        assert (
+            conn.execute(
+                "SELECT COUNT(*) FROM plugin_oauth_identities WHERE user_id=1"
+            ).fetchone()[0]
+            == 1
+        )
+        assert (
+            conn.execute("SELECT user_id FROM activity_logs WHERE id=1").fetchone()[0]
+            == 1
+        )
+
+
+def test_admin_user_delete_keeps_last_admin_and_denies_nonadmin(client, db, web):
+    account_deletion_fixture(db)
+    assert client.delete("/admin/users/1").status_code == 401
+    web.app.dependency_overrides[web.get_current_user] = lambda: {
+        "id": 1,
+        "role": "user",
+    }
+    try:
+        assert client.delete("/admin/users/2").status_code == 403
+        web.app.dependency_overrides[web.get_current_user] = lambda: {
+            "id": 2,
+            "role": "admin",
+        }
+        assert client.delete("/admin/users/2").status_code == 400
+    finally:
+        web.app.dependency_overrides.clear()
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 2
+        assert (
+            conn.execute("SELECT COUNT(*) FROM plugin_oauth_identities").fetchone()[0]
+            == 2
         )

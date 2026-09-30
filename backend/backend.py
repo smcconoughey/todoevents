@@ -316,6 +316,7 @@ def get_db_transaction():
         # Local development with SQLite
         conn = sqlite3.connect(DB_FILE, timeout=10)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA cache_size=10000")
@@ -389,6 +390,7 @@ def get_db():
         # Local development with SQLite - optimized
         conn = sqlite3.connect(DB_FILE, timeout=10)  # Add timeout
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
         # Enable WAL mode for better concurrent access
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")  # Faster than FULL
@@ -2992,15 +2994,7 @@ def ensure_unique_slug(cursor, base_slug: str, event_id: int = None) -> str:
                 )
 
         result = cursor.fetchone()
-        count = (
-            (
-                result[0]
-                if isinstance(result, (tuple, list))
-                else result.get("count", result.get("COUNT(*)", 0))
-            )
-            if result
-            else 0
-        )
+        count = get_count_from_result(result)
 
         if count > 0:
             # Slug exists, append a number or event ID
@@ -3705,8 +3699,9 @@ async def update_event(
                 cursor.execute("BEGIN")
 
                 # First, check if the event exists and who created it
+                row_lock = " FOR UPDATE" if IS_PRODUCTION and DB_URL else ""
                 cursor.execute(
-                    f"SELECT * FROM events WHERE id = {placeholder}", (event_id,)
+                    f"SELECT * FROM events WHERE id = {placeholder}{row_lock}", (event_id,)
                 )
                 existing_event = cursor.fetchone()
 
@@ -3723,6 +3718,58 @@ async def update_event(
                     raise HTTPException(
                         status_code=403, detail="Not authorized to update this event"
                     )
+
+                # The plugin is optional, so detect its sidecar without making an
+                # unmigrated web database fail. Locking the event above serializes
+                # this check with plugin publication/cancellation transactions.
+                if IS_PRODUCTION and DB_URL:
+                    cursor.execute(
+                        "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='plugin_publications'"
+                    )
+                else:
+                    cursor.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='plugin_publications'"
+                    )
+                if cursor.fetchone():
+                    cursor.execute(
+                        f"SELECT status FROM plugin_publications WHERE event_id={placeholder}",
+                        (event_id,),
+                    )
+                    publication = cursor.fetchone()
+                    if publication and publication["status"] == "cancelled":
+                        raise HTTPException(
+                            status_code=409,
+                            detail="This listing was cancelled. Prepare and confirm a new public listing to publish again.",
+                        )
+                    supplied_fields = getattr(event, "model_fields_set", None)
+                    if supplied_fields is None:  # Pydantic 1 compatibility
+                        supplied_fields = event.__fields_set__
+                    if (
+                        publication
+                        and not existing_event["is_published"]
+                        and "is_published" not in supplied_fields
+                    ):
+                        event_data["is_published"] = False
+                    if publication:
+                        # ChatGPT and organizers may already have shared this
+                        # canonical link. Ordinary edits must not regenerate it.
+                        event_data["slug"] = existing_event["slug"]
+                        # The legacy form cannot review an IANA timezone. A move
+                        # or wall-time edit invalidates the plugin's confirmed
+                        # instants; preserve publication state and show uncertainty.
+                        time_and_venue_fields = (
+                            "date", "start_time", "end_time", "end_date", "address",
+                            "city", "state", "country", "lat", "lng",
+                        )
+                        if any(
+                            str(event_data.get(field) or "")
+                            != str(existing_event[field] or "")
+                            for field in time_and_venue_fields
+                        ):
+                            cursor.execute(
+                                f"UPDATE plugin_publications SET starts_at=NULL, ends_at=NULL, timezone=NULL WHERE event_id={placeholder}",
+                                (event_id,),
+                            )
 
                 # Ensure unique slug before updating
                 base_slug = event_data.get("slug", "")
@@ -3863,62 +3910,16 @@ async def delete_event(event_id: int, current_user: dict = Depends(get_current_u
                         status_code=403, detail="Not authorized to delete this event"
                     )
 
-                # Delete related records first to avoid foreign key constraint violations
-
-                # Delete media audit logs
-                try:
-                    cursor.execute(
-                        f"DELETE FROM media_audit_logs WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No media_audit_logs to delete for event {event_id}: {e}"
-                    )
-
-                # Delete media forensic data
-                try:
-                    cursor.execute(
-                        f"DELETE FROM media_forensic_data WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No media_forensic_data to delete for event {event_id}: {e}"
-                    )
-
-                # Delete event reports
-                try:
-                    cursor.execute(
-                        f"DELETE FROM event_reports WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No event_reports to delete for event {event_id}: {e}"
-                    )
-
-                # Delete interest tracking
-                try:
-                    cursor.execute(
-                        f"DELETE FROM event_interests WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No event_interests to delete for event {event_id}: {e}"
-                    )
-
-                # Delete view tracking
-                try:
-                    cursor.execute(
-                        f"DELETE FROM event_views WHERE event_id = {placeholder}",
-                        (event_id,),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"No event_views to delete for event {event_id}: {e}"
-                    )
+                # Missing optional tables must not abort a PostgreSQL transaction.
+                for table in (
+                    "media_audit_logs", "media_forensic_data", "event_reports",
+                    "event_interests", "event_views",
+                ):
+                    if _optional_table_exists(cursor, table):
+                        cursor.execute(
+                            f"DELETE FROM {table} WHERE event_id = {placeholder}",
+                            (event_id,),
+                        )
 
                 # Delete the event itself
                 cursor.execute(
@@ -4044,6 +4045,18 @@ async def root():
 
 
 # New Admin Endpoints
+def _optional_table_exists(cursor, name):
+    """Check optional legacy tables without aborting a PostgreSQL transaction."""
+    if IS_PRODUCTION and DB_URL:
+        cursor.execute(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name=%s",
+            (name,),
+        )
+    else:
+        cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,))
+    return cursor.fetchone() is not None
+
+
 @app.delete("/admin/users/{user_id}")
 async def delete_user(user_id: int, current_user: dict = Depends(get_current_user)):
     """
@@ -4054,8 +4067,9 @@ async def delete_user(user_id: int, current_user: dict = Depends(get_current_use
 
     placeholder = get_placeholder()
     try:
-        with get_db() as conn:
+        with get_db_transaction() as conn:
             c = conn.cursor()
+            c.execute("BEGIN")
 
             # Check if user exists
             c.execute(f"SELECT * FROM users WHERE id = {placeholder}", (user_id,))
@@ -4076,13 +4090,42 @@ async def delete_user(user_id: int, current_user: dict = Depends(get_current_use
                     status_code=400, detail="Cannot delete the last admin"
                 )
 
-            # Delete user
-            c.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
-
-            # Optionally, delete user's events
+            # Remove only this account's listings before its user row. Preserve
+            # audit/financial records under their existing retention policy by
+            # detaching nullable references, rather than deleting other users'
+            # activity. Optional tables must be checked before access on Postgres.
+            for table in ("media_audit_logs", "media_forensic_data"):
+                if _optional_table_exists(c, table):
+                    c.execute(
+                        f"UPDATE {table} SET event_id=NULL WHERE event_id IN (SELECT id FROM events WHERE created_by={placeholder})",
+                        (user_id,),
+                    )
+            for table, column in (
+                ("activity_logs", "user_id"),
+                ("media_audit_logs", "user_id"),
+                ("media_forensic_data", "user_id"),
+                ("user_forensic_data", "user_id"),
+                ("referral_links", "created_by"),
+                ("referral_commissions", "created_by"),
+                ("referral_tracking", "user_id"),
+            ):
+                if _optional_table_exists(c, table):
+                    c.execute(
+                        f"UPDATE {table} SET {column}=NULL WHERE {column}={placeholder}",
+                        (user_id,),
+                    )
+            for table in ("event_reports", "event_interests", "event_views"):
+                if _optional_table_exists(c, table):
+                    c.execute(
+                        f"DELETE FROM {table} WHERE event_id IN (SELECT id FROM events WHERE created_by={placeholder})",
+                        (user_id,),
+                    )
             c.execute(
                 f"DELETE FROM events WHERE created_by = {placeholder}", (user_id,)
             )
+            # Plugin identities, drafts, publications and retry keys cascade from
+            # the event/user foreign keys in the same transaction.
+            c.execute(f"DELETE FROM users WHERE id = {placeholder}", (user_id,))
 
             conn.commit()
 
