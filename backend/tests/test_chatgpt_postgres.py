@@ -687,3 +687,105 @@ def test_postgres_real_admin_delete_cascades_only_target_account(
             assert tx.all("SELECT event_id FROM event_reports") == [
                 {"event_id": other_id}
             ]
+
+
+def test_postgres_seo_updater_preserves_reviewed_canonical_links(postgres, monkeypatch):
+    from psycopg2.extensions import cursor as TupleCursor
+
+    from backend import populate_production_seo_fields as seo
+
+    store, connect = postgres
+    with store.transaction(write=True) as tx:
+        reviewed = tx.insert_event(
+            legacy_event(
+                city="",
+                address="Public Hall, Test City, NY",
+                slug="reviewed-canonical-link",
+            )
+        )
+        missing = tx.insert_event(
+            legacy_event(
+                title="New workshop",
+                city="",
+                address="Public Hall, Test City, NY",
+                slug=None,
+                is_published=False,
+            )
+        )
+
+    @contextmanager
+    def database():
+        with closing(connect()) as connection:
+            # This independent legacy script uses psycopg2 tuple cursors.
+            connection.cursor_factory = TupleCursor
+            yield connection
+
+    monkeypatch.setattr(seo, "get_db", database)
+    seo.populate_seo_data()
+    seo.populate_seo_data()
+    with store.transaction() as tx:
+        kept = tx.one(
+            "SELECT slug,city,is_published FROM events WHERE id=?", (reviewed,)
+        )
+        generated = tx.one(
+            "SELECT slug,city,is_published FROM events WHERE id=?", (missing,)
+        )
+        assert kept["slug"] == "reviewed-canonical-link"
+        assert kept["city"] and kept["is_published"] is True
+        assert generated["slug"] and generated["slug"] != kept["slug"]
+        assert generated["city"] and generated["is_published"] is False
+
+
+def test_postgres_seo_updater_preserves_concurrent_slug_assignment(
+    postgres, monkeypatch
+):
+    from psycopg2.extensions import cursor as TupleCursor
+
+    from backend import populate_production_seo_fields as seo
+
+    store, connect = postgres
+    with store.transaction(write=True) as tx:
+        event_id = tx.insert_event(legacy_event(city="", slug=None))
+    assigned = False
+
+    class RacingCursor:
+        def __init__(self, cursor):
+            self.cursor = cursor
+
+        def __getattr__(self, name):
+            return getattr(self.cursor, name)
+
+        def execute(self, query, args=None):
+            nonlocal assigned
+            if "UPDATE events" in query and not assigned:
+                # An organizer sets the canonical link after the updater's
+                # snapshot read. Both writes execute against real PostgreSQL.
+                with store.transaction(write=True) as tx:
+                    tx.execute(
+                        "UPDATE events SET slug=? WHERE id=?",
+                        ("organizer-reviewed-during-update", event_id),
+                    )
+                assigned = True
+            return self.cursor.execute(query, args)
+
+    class RacingConnection:
+        def __init__(self, connection):
+            self.connection = connection
+
+        def __getattr__(self, name):
+            return getattr(self.connection, name)
+
+        def cursor(self):
+            return RacingCursor(self.connection.cursor(cursor_factory=TupleCursor))
+
+    @contextmanager
+    def database():
+        with closing(connect()) as connection:
+            yield RacingConnection(connection)
+
+    monkeypatch.setattr(seo, "get_db", database)
+    seo.populate_seo_data()
+    assert assigned
+    with store.transaction() as tx:
+        row = tx.one("SELECT slug,is_published FROM events WHERE id=?", (event_id,))
+        assert row == {"slug": "organizer-reviewed-during-update", "is_published": True}
