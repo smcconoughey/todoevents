@@ -1,0 +1,37 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "todoevents",
+  "version": "0.1.0",
+  "description": "Find published Todo-Events listings and prepare public event listings for organizer review and confirmed publication.",
+  "author": {
+    "name": "Watchtower AB, Inc",
+    "email": "support@todo-events.com",
+    "url": "https://todo-events.com"
+  },
+  "homepage": "https://todo-events.com",
+  "repository": "https://github.com/smcconoughey/todoevents",
+  "license": "LicenseRef-Todo-Events-Commercial",
+  "keywords": ["events", "community", "local-events", "event-planning"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Todo-Events",
+        "shortDescription": "Find events and share public happenings",
+        "longDescription": "Search current published Todo-Events listings by area, date, and category, with canonical event links. Organizers can prepare and review a public listing, then explicitly confirm publication through their connected organizer account. Private invitations, ticket checkout, and paid upgrades are outside this plugin's scope.",
+        "developerName": "Watchtower AB, Inc",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "websiteURL": "https://todo-events.com",
+        "privacyPolicyURL": "https://todo-events.com/privacy",
+        "termsOfServiceURL": "https://todo-events.com/terms",
+        "defaultPrompt": [
+          "Find published community events for this weekend in an area I choose.",
+          "Help me review a public listing for my community event."
+        ],
+        "brandColor": "#2196F3",
+        "composerIcon": "./assets/todo-events.png",
+        "logo": "./assets/todo-events.png"
+      }
+    }
+  }
+}
