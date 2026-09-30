@@ -39,7 +39,7 @@ jobs:
       - name: Test isolated SQLite, PostgreSQL, OAuth and MCP flows
         run: python -m pytest backend/tests -q
       - name: Lint plugin and focused regression code
-        run: ruff check backend/chatgpt_plugin backend/event_safety.py backend/recommendations_endpoints.py backend/tests scripts/*plugin*.py
+        run: ruff check backend/chatgpt_plugin backend/plugin_host.py backend/event_safety.py backend/recommendations_endpoints.py backend/tests scripts/*plugin*.py
       - name: Test package generation and boundaries
         run: python -m unittest discover -s scripts -p 'test_plugin_packaging.py'
       - name: Validate package structure
