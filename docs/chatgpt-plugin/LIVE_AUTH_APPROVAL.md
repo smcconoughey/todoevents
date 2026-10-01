@@ -8,7 +8,7 @@ The approved near-term path adds opt-in MCP to the **existing Ohio backend**, re
 
 Use `plugin_host:create_app` from the backend directory with `PLUGIN_MODE=public`, `PLUGIN_ENV=production`, and the actual existing HTTPS origin plus `/mcp` as `PLUGIN_RESOURCE_URL`. The adapter defaults to `off`, reuses `DATABASE_URL`, and does not migrate automatically. `/health` stays legacy; `/mcp/health` checks MCP. Invalid plugin configuration leaves the website available. Public mode has no OAuth metadata, and plain results do not require a widget domain.
 
-Public mode creates no drafts and needs no draft-purge job. `full` mode requires approved OAuth plus cleanup. The existing APScheduler could run hourly purge without another service charge; that job is not yet wired/tested.
+Public mode creates no drafts and needs no draft-purge job. `full` mode requires approved OAuth plus cleanup. The combined host uses the existing APScheduler for an initial purge and hourly cleanup without another service charge; its lifecycle and failure behavior have isolated automated tests. Verify the scheduled job and retention evidence on the actual deployment before organizer rollout. A rollback to public/off after creating drafts requires continued operator cleanup as described in OPERATIONS.md.
 
 ## Standalone alternative and verified costs
 

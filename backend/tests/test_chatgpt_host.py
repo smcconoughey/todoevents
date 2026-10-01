@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
+from apscheduler.schedulers.background import BackgroundScheduler
 from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -21,6 +22,16 @@ from backend.chatgpt_plugin.server import database_factory
 from backend.plugin_host import CombinedApp, create_host
 
 PUBLIC_NAMES = {"list_search_areas", "search_events", "get_event", "search_venues"}
+
+
+@pytest.fixture
+def scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.start()
+    try:
+        yield scheduler
+    finally:
+        scheduler.shutdown()
 
 
 @pytest.fixture
@@ -229,12 +240,13 @@ def test_invalid_plugin_configuration_does_not_break_legacy(
         assert "issuer.example" not in response.text
 
 
-def test_full_mode_preserves_oauth_challenge(config, monkeypatch):
+def test_full_mode_preserves_oauth_challenge(config, monkeypatch, scheduler):
     monkeypatch.setenv("PLUGIN_OAUTH_ISSUER", "https://issuer.example.test")
     monkeypatch.setenv("PLUGIN_OAUTH_AUDIENCE", "https://backend.example.test/mcp")
     monkeypatch.setenv("PLUGIN_OAUTH_JWKS_URL", "https://issuer.example.test/keys")
     with TestClient(
-        create_host(legacy([]), mode="full"), base_url="https://backend.example.test"
+        create_host(legacy([]), mode="full", scheduler=scheduler),
+        base_url="https://backend.example.test",
     ) as client:
         assert len(rpc(client, "tools/list")["tools"]) == 10
         result = rpc(

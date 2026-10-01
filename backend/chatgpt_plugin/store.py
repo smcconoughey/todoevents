@@ -184,6 +184,10 @@ class PluginStore:
         independently of cleanup. Published events have their own retention policy.
         """
         with self.transaction(write=True) as tx:
+            if self.dialect == "postgres":
+                # Bound lock waits and execution so optional cleanup cannot hang
+                # the combined application's startup or scheduler indefinitely.
+                tx.execute("SET LOCAL statement_timeout = '5000ms'")
             return tx.execute(
                 "UPDATE plugin_drafts SET payload=NULL, status=CASE WHEN status='draft' THEN 'expired' ELSE status END WHERE expires_at<=? AND payload IS NOT NULL",
                 (now_iso,),
