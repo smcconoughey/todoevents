@@ -146,6 +146,38 @@ def test_postgres_migration_is_repeatable_and_preserves_legacy_rows(postgres):
         assert tx.one("SELECT COUNT(*) AS n FROM plugin_drafts")["n"] == 0
 
 
+def test_postgres_cleanup_timeout_rolls_back_then_retry_preserves_records(postgres):
+    from psycopg2.errors import QueryCanceled
+
+    store, connect = postgres
+    store.migrate()
+    expired = "2000-01-01T00:00:00Z"
+    with store.transaction(write=True) as tx:
+        event_id = tx.insert_event(legacy_event())
+        before = tx.one("SELECT * FROM events WHERE id=?", (event_id,))
+        tx.execute(
+            "INSERT INTO plugin_drafts VALUES ('cleanup-fixture',1,'private fixture',1,?,'draft',?,?,?,?)",
+            ("a" * 64, event_id, expired, expired, expired),
+        )
+    with closing(connect()) as blocker, blocker, blocker.cursor() as cursor:
+        cursor.execute("LOCK TABLE plugin_drafts IN ACCESS EXCLUSIVE MODE")
+        with pytest.raises(QueryCanceled):
+            store.purge_expired(expired)
+    with store.transaction() as tx:
+        assert (
+            tx.one("SELECT payload FROM plugin_drafts")["payload"] == "private fixture"
+        )
+        assert tx.one("SHOW statement_timeout")["statement_timeout"] == "0"
+    assert store.purge_expired(expired) == 1
+    assert store.purge_expired(expired) == 0
+    with store.transaction() as tx:
+        assert tx.one("SELECT * FROM events WHERE id=?", (event_id,)) == before
+        assert tx.one("SELECT payload,status FROM plugin_drafts") == {
+            "payload": None,
+            "status": "expired",
+        }
+
+
 def test_postgres_production_numeric_prices_serialize_in_every_public_response(
     organizer,
 ):
